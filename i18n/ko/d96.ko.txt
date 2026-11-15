@@ -1,0 +1,164 @@
+@@ 1
+<span class="eyebrow">16주차 · 복습</span>
+@@ 2
+16주차 복습: raw IMU 샘플에서 keyframe 쌍마다 factor 하나로
+@@ 3
+오늘이 끝나면 작은 예제에서 IMU measurement model부터 preintegrated factor까지 손으로 따라가고, 보정하지 않은 관성 오차가 얼마나 빨리 자라는지 어림할 수 있습니다.
+@@ 4
+IMU는 몸체의 회전 속도와 specific force(가속도에서 gravity를 뺀 값)를 body 축 기준으로 내놓으며, 각각에는 천천히 drift하는 bias와 white noise가 있습니다. 가만히 서 있으면 specific force가 위를 향하므로 roll과 pitch는 정해지지만 yaw는 정해지지 않습니다. 측정값을 적분하면 회전, 속도, 위치를 얻지만 오차가 빠르게 자랍니다. accelerometer bias에 대해서는 시간의 제곱으로, gyroscope bias에 대해서는 세제곱으로 자라는데, 기울기 오차가 gravity를 수평 가속도로 새어 들게 하기 때문입니다. 샘플마다 state를 두지 않고 factor graph에서 IMU를 쓰기 위해, 두 keyframe 사이의 적분을 시작 state에도 gravity에도 의존하지 않는 increment로 재배열합니다. increment는 한 번 적분하고, bias 추정값이 움직이면 1차로 보정하며, 9차원 factor 하나와 bias random-walk factor 하나로 graph에 들어갑니다.
+@@ 5
+accelerometer 모델
+@@ 6
+=
+@@ 7
+gyroscope 모델
+@@ 8
+=
+@@ 9
+static alignment
+@@ 10
+=
+@@ 11
+이산 noise
+@@ 12
+샘플: \(\operatorname{Cov}(\boldsymbol{\eta}^{d}) = \tfrac{1}{\Delta t}\operatorname{Cov}(\boldsymbol{\eta})\); bias step: \(\boldsymbol{\Sigma}^{bd} = \Delta t_{ij}\operatorname{Cov}(\boldsymbol{\eta}^{b})\)
+@@ 13
+=
+@@ 14
+적분 한 step
+@@ 15
+=
+@@ 16
+bias로 인한 drift
+@@ 17
+\(\delta p \approx \tfrac12 b_a t^2\), \(\delta p \approx \tfrac16 g\,b_g t^3\)
+@@ 18
+Day 3 (책에는 없음)
+@@ 19
+increment
+@@ 20
+=
+@@ 21
+increment의 계산식
+@@ 22
+=
+@@ 23
+bias 갱신
+@@ 24
+\(\Delta\tilde{\mathbf{v}}_{ij}(\mathbf{b}) \simeq \Delta\tilde{\mathbf{v}}_{ij}(\bar{\mathbf{b}}) + \tfrac{\partial\Delta\bar{\mathbf{v}}_{ij}}{\partial\mathbf{b}^g}\delta\mathbf{b}^g + \tfrac{\partial\Delta\bar{\mathbf{v}}_{ij}}{\partial\mathbf{b}^a}\delta\mathbf{b}^a\), \(\Delta\tilde{\mathbf{p}}\)도 같음; 회전은 오른쪽에 \(\Exp(\cdot)\)를 곱함
+@@ 25
+=
+@@ 26
+bias factor
+@@ 27
+=
+@@ 28
+Q1. 수평한 IMU(z가 위)가 1.5 m/s²로 위로 가속하는 엘리베이터에 타고 있습니다. z축 accelerometer의 측정값은 무엇입니까?
+@@ 29
+specific force = a − g = 1.5 − (−9.81) = 11.31 m/s². 바닥이 정지해 있을 때보다 더 세게 밀어야 합니다.
+@@ 30
+Q2. 저가 IMU를 이용한 static alignment로 정할 수 없는 초기 orientation 성분은 무엇입니까?
+@@ 31
+=
+@@ 32
+=
+@@ 33
+=
+@@ 34
+셋 다 정할 수 있다
+@@ 35
+gravity가 유일한 기준입니다. gravity 둘레로 회전해도 측정값은 바뀌지 않으므로 yaw는 자유롭습니다.
+@@ 36
+Q3. accelerometer의 noise density가 0.02 m/s²/√Hz입니다. 25 s 동안 적분한 뒤 이 noise로 인한 1σ 속도 오차는 무엇입니까?
+@@ 37
+적분된 white noise는 random walk입니다: σ√t = 0.02 × √25 = 0.1 m/s. 샘플링 주파수와는 무관합니다.
+@@ 38
+Q4. 0.05°/s(8.73 × 10⁻⁴ rad/s)의 gyroscope bias가 10 s 동안 보정되지 않습니다. 이로 인한 위치 오차는 대략 얼마입니까?
+@@ 39
+Q5. (11.12)의 속도 갱신에 gΔt 항이 들어 있는 이유는 무엇입니까?
+@@ 40
+공기 저항을 모델링하려고
+@@ 41
+IMU가 낙하하고 있다고 가정하므로
+@@ 42
+accelerometer는 가속도에서 gravity를 뺀 값을 측정하므로, 가속도를 복원하려면 gravity를 다시 더해야 해서
+@@ 43
+accelerometer bias를 상쇄하려고
+@@ 44
+(11.1)을 실제 가속도에 대해 풀면 a = R(ã − b − η) + g입니다. g 항은 센서가 느낄 수 없는 것을 되돌려 놓습니다.
+@@ 45
+Q6. 수평한 IMU가 0.5 s 동안 가만히 있습니다. 속도 increment Δv_ij는 무엇입니까?
+@@ 46
+Δv = Rᵀ(v_j − v_i − gΔt) = −(0,0,−9.81)×0.5 = (0,0,4.905). 이것은 specific force의 적분이며, 속도의 변화가 아닙니다.
+@@ 47
+Q7. solver가 keyframe i의 회전과 속도를 수정합니다. 무엇을 다시 계산합니까?
+@@ 48
+naive: 아무것도 없음. preintegrated: increment
+@@ 49
+둘 다: raw IMU 샘플에 걸친 모든 합
+@@ 50
+naive: residual만. preintegrated: 모든 합
+@@ 51
+naive: raw 샘플에 걸친 모든 합. preintegrated: 저장된 increment로 residual만
+@@ 52
+(11.13)에서는 i의 state가 모든 항 안에 들어 있습니다. (11.14)에서는 그것을 밖으로 옮겼으므로 저장된 increment가 그대로 유효합니다.
+@@ 53
+Q8. Δv와 Δp의 1차 갱신 (11.30)이 정확한 것은 어떤 변화에 대해서입니까?
+@@ 54
+gyroscope bias의 변화
+@@ 55
+accelerometer bias의 변화
+@@ 56
+어느 bias의 변화든
+@@ 57
+어느 쪽도 아님: 항상 근사
+@@ 58
+계산식은 accelerometer bias에 대해 선형입니다. gyroscope bias는 비선형인 회전을 통해 들어가므로, 그 부분은 갱신량의 제곱에 비례하는 오차를 가집니다.
+@@ 59
+수평한 도로 위의 자동차가 3 m/s²로 감속합니다. IMU는 x가 앞, z가 위입니다. (a) bias와 noise를 무시하면 accelerometer의 측정값은 무엇입니까? (b) alignment 루틴이 자동차가 정지해 있다고 잘못 가정하면 pitch를 얼마로 보고합니까?
+@@ 60
+(a) \(\mathbf{a}^w = (-3, 0, 0)\), \(\mathbf{g}^w = (0,0,-9.81)\), \(\mathbf{R} = \mathbf{I}\). 측정값은 \(\mathbf{a}^w - \mathbf{g}^w = (-3, 0, 9.81)\) m/s²이고, 길이는 \(\sqrt{9 + 96.24} = 10.26\) m/s²입니다.
+@@ 61
+(b) 루틴은 측정값을 "위"로 받아들입니다. 측정값은 z축에서 \(-x\) 쪽으로 \(\arctan(3/9.81) = 17.0^\circ\) 기울어 있으므로, 자동차가 앞머리를 17° 숙인 것처럼 보입니다. 길이가 9.81이 아니라 10.26이라는 점이 정지 상태가 아니었다는 단서입니다.
+@@ 62
+정지한 로봇이 \((0, -2.54, 9.48)\) m/s²를 출력합니다. 식 (11.6)으로 \(\mathbf{R}^b_w\)를 계산하고 기울기를 설명하세요.
+@@ 63
+길이: \(\sqrt{2.54^2 + 9.48^2} = \sqrt{96.32} = 9.814\). 따라서 \(\mathbf{z} = (0, -0.2588, 0.9659)\).
+@@ 64
+\(\mathbf{e}_1\T\mathbf{z} = 0\)이므로 \(\mathbf{e}_1\)에서 제거되는 것이 없습니다: \(\mathbf{x} = (1, 0, 0)\).
+@@ 65
+\(\cos 15^\circ = 0.9659\), \(\sin 15^\circ = 0.2588\)이므로 이것은 x축 둘레로 15° 회전한 것입니다. 로봇은 15° roll되어 있고 pitch는 없습니다. 검산: \(\mathbf{R}^b_w(0,0,9.814)\T = (0, -2.54, 9.48)\T\).
+@@ 66
+IMU에 보정되지 않은 gyroscope bias 0.01°/s와 보정되지 않은 accelerometer bias 0.02 m/s²가 있습니다. gyroscope bias로 인한 위치 오차가 accelerometer bias로 인한 위치 오차를 앞지르는 것은 얼마 뒤이며, 그때 두 오차의 크기는 얼마입니까?
+@@ 67
+\(\tfrac16 g\,b_g t^3 = \tfrac12 b_a t^2\)로 놓으면 \(t = 3b_a/(g\,b_g)\)입니다. \(b_g = 0.01^\circ/\text{s} = 1.745\times10^{-4}\) rad/s이면 \(t = 0.06/(9.81\times1.745\times10^{-4}) = 35.0\) s입니다.
+@@ 68
+그 순간 각 오차는 \(\tfrac12\times0.02\times35.0^2 = 12.3\) m입니다. 35 s 이전에는 accelerometer bias가 우세하고, 이후에는 3차 항이 이겨서 점점 더 앞서 나갑니다.
+@@ 69
+손으로 하는 1-D preintegration. 센서가 회전하지 않고 수직축을 따라 움직입니다. z가 위, \(g = -9.81\) m/s²입니다. \(\Delta t = 0.1\) s 간격의 accelerometer 샘플 세 개가 10.81, 9.81, 8.81 m/s²이고 bias는 0입니다. (a) \(\Delta v_{ij}\)와 \(\Delta p_{ij}\)를 계산하세요. (b) \(v_i = 1\) m/s, \(p_i = 0\)에 대해 \(v_j\)와 \(p_j\)를 예측하고, (11.12)로 직접 적분해 확인하세요. (c) solver가 \(v_i\)를 1.5 m/s로 바꿉니다. 이제 \(p_j\)는 얼마입니까? (d) accelerometer bias 추정값이 0에서 0.1 m/s²로 바뀝니다. \(\Delta v_{ij}\)와 \(\Delta p_{ij}\)를 1차로 보정하고 재적분 결과와 비교하세요.
+@@ 70
+(a) 회전이 없으므로 \(\Delta R = 1\). \(\Delta v_{ij} = (10.81 + 9.81 + 8.81)\times0.1 = 2.943\) m/s. \(\Delta p_{ij} = \sum_k[\Delta v_{ik}\Delta t + \tfrac12\tilde a_k\Delta t^2]\)에서 누적 \(\Delta v_{ik}\)는 0, 1.081, 2.062입니다.
+@@ 71
+\(k=0\): \(0 + 0.05405\); \(k=1\): \(0.1081 + 0.04905\); \(k=2\): \(0.2062 + 0.04405\). 합: \(\Delta p_{ij} = 0.46145\) m.
+@@ 72
+직접 적분: 실제 가속도는 \(\tilde a + g = 1, 0, -1\)입니다. 속도: 1 → 1.1 → 1.1 → 1.0. 위치: \(0.1 + 0.005 = 0.105\); \(+0.11 = 0.215\); \(+0.11 - 0.005 = 0.32\). 두 결과가 일치합니다.
+@@ 73
+(c) \(v_i\Delta t_{ij}\) 항만 바뀝니다: \(p_j = 0.45 - 0.44145 + 0.46145 = 0.47\) m. 샘플은 하나도 건드리지 않습니다.
+@@ 74
+(d) 회전이 없으면 Jacobian은 \(\partial\Delta v/\partial b^a = -\Delta t_{ij} = -0.3\) s, \(\partial\Delta p/\partial b^a = -\tfrac12\Delta t_{ij}^2 = -0.045\) s²입니다. 보정 결과: \(\Delta v_{ij} = 2.943 - 0.03 = 2.913\) m/s, \(\Delta p_{ij} = 0.46145 - 0.0045 = 0.45695\) m. 샘플 10.71, 9.71, 8.71로 재적분하면 \(\Delta v = 2.913\), \(\Delta p = 0.05355 + (0.1071 + 0.04855) + (0.2042 + 0.04355) = 0.45695\)로, 계산식이 accelerometer bias에 대해 선형이므로 똑같습니다.
+@@ 75
+IMU measurement model을 쓰고, accelerometer가 정지 상태와 자유 낙하에서 무엇을 출력하는지 말할 수 있습니다.
+@@ 76
+gravity가 왜 roll과 pitch를 측정 가능하게 하고 yaw는 자유롭게 남기는지 설명할 수 있습니다.
+@@ 77
+visual-inertial 시스템이 keyframe마다 갖는 미지수, 즉 회전, 위치, 속도, 두 bias를 말할 수 있습니다.
+@@ 78
+기울기 오차와 accelerometer bias가 왜 비슷한 위치 오차를 만드는지 설명할 수 있습니다.
+@@ 79
+\(\Delta\mathbf{R}_{ij}\), \(\Delta\mathbf{v}_{ij}\), \(\Delta\mathbf{p}_{ij}\)를 정의하고, IMU factor가 어떤 변수들을 잇는지 말할 수 있습니다.
+@@ 80
+<em>SLAM Handbook</em>, 11장, §11.1–§11.2, pp. 304–319.
+@@ 81
+=
+@@ 82
+Titterton and Weston, <em>Strapdown Inertial Navigation Technology</em>, 2nd ed., 2004 (문제에서 쓴 오차 증가 규칙).

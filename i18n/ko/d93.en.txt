@@ -1,0 +1,180 @@
+@@ 1
+<span class="eyebrow">Week 16 · Day 3</span>
+@@ 2
+Motion integration: from IMU samples to a trajectory, and why it drifts
+@@ 3
+After today you can integrate IMU samples into rotation, velocity, and position with equation (11.12), predict how bias and noise grow into position error, and explain why a factor graph cannot afford to repeat that integration.
+@@ 4
+About 60 min · Read §11.2 opening and §11.2.1, pp. 308–310 (3 pages) · Needs Week 16 Day 1 and Week 4 Day 2
+@@ 5
+Read first: §11.2 opening and §11.2.1, pp. 308–310
+@@ 6
+The two reasons on p. 308 why putting raw IMU data into a factor graph is impractical, in discrete time and in continuous time.
+@@ 7
+The two assumptions made between equations (11.9) and (11.11) on p. 309, and the sentence after (11.12) about holding the orientation constant.
+@@ 8
+The relation between discrete-time and continuous-time noise at the bottom of p. 309.
+@@ 9
+The last paragraph of p. 310: what exactly must be recomputed in (11.13) when \(\mathbf{R}_i\) changes.
+@@ 10
+Turn the measurement model around and you can compute motion from the readings: rotate each accelerometer sample into the world, add gravity back, and integrate twice. This is dead reckoning. It needs the starting orientation and velocity, it drifts fast because every error is integrated two or three times, and its result depends on the starting state in a way that forces a full re-integration whenever that state is revised.
+@@ 11
+1. Why not one state per IMU sample?
+@@ 12
+The models of Day 1 relate each IMU sample to the robot state at that instant, so in principle each sample could be a factor in the MAP problem of <a href="#d8">Week 2 · Day 2</a>. The trouble is the rate. An IMU delivers 200 to 1000 samples per second, and each sample would need its own state in the graph. <span class="src">§11.2 · p. 308</span> One minute at 200 Hz is 12,000 states, each with a rotation, a position, a velocity, and two biases: 15 unknowns apiece, 180,000 in all, for a sensor that only tells you how the robot moved. A continuous-time trajectory (<a href="#d25">Week 5 · Day 1</a>) avoids the extra states but still needs one factor per sample. <span class="src">§11.2 · p. 308</span>
+@@ 13 attr
+Two factor graphs. Top: a chain of seventeen small state circles, one for every IMU sample, each joined to the next by a small square factor. Bottom: only two large state circles, keyframe i and keyframe j, joined by a single square factor that summarizes all the IMU samples in between, shown as tick marks.
+@@ 14
+A state at every IMU sample: 200 to 1000 new variables per second
+@@ 15
+A state only at keyframes: one summarizing factor between them
+@@ 16
+keyframe i
+@@ 17
+keyframe j
+@@ 18
+one IMU factor
+@@ 19
+The aim of §11.2. Squares are factors, circles are states. Today builds the summary by plain integration and finds its flaw; tomorrow fixes it.
+@@ 20
+2. The kinematic model
+@@ 21
+Integration starts from three differential equations: <span class="src">§11.2.1 · p. 308</span>
+@@ 22
+The last two are the definitions of acceleration and velocity. The wedge \((\cdot)^\wedge\) turns a 3-vector into a skew-symmetric matrix, so that \(\boldsymbol{\omega}^\wedge\mathbf{u} = \boldsymbol{\omega}\times\mathbf{u}\) (<a href="#d20">Week 4 · Day 2</a>).
+@@ 23
+Filling the gap: where the rotation equation comes from
+@@ 24
+During a short time \(dt\) the body turns by the small rotation vector \(\boldsymbol{\omega}^b_b\,dt\), measured in its own axes. A rotation expressed in the body's axes is applied on the right:
+@@ 25
+Subtract \(\mathbf{R}(t)\), divide by \(dt\), and let \(dt \to 0\): \(\dot{\mathbf{R}} = \mathbf{R}\,\boldsymbol{\omega}^\wedge\). The same line read backwards is the integration rule. If \(\boldsymbol{\omega}\) is constant over a step \(\Delta t\), then \(\mathbf{R}(t+\Delta t) = \mathbf{R}(t)\Exp(\boldsymbol{\omega}\Delta t)\) exactly. The book's (11.9) only needs the <em>direction</em> of \(\boldsymbol{\omega}\) to stay fixed during the step.
+@@ 26
+3. One integration step
+@@ 27
+Assume \(\mathbf{a}^w\) and \(\boldsymbol{\omega}^b_b\) are constant during one sampling period \(\Delta t\). Integrating (11.8) gives <span class="src">§11.2.1 · p. 309</span>
+@@ 28
+We do not have \(\mathbf{a}^w\) and \(\boldsymbol{\omega}^b_b\); we have readings. Solve the measurement model for the true quantities. From (11.2), \(\boldsymbol{\omega}^b_b = \tilde{\boldsymbol{\omega}} - \mathbf{b}^g - \boldsymbol{\eta}^g\). From (11.1), multiply by \(\mathbf{R} = \mathbf{R}^w_b\) to undo \(\mathbf{R}^b_w\):
+@@ 29
+Substituting into (11.11) gives the equation the rest of the chapter rests on: <span class="src">§11.2.1 · p. 309</span>
+@@ 30
+The frame labels are dropped from here on: \(\mathbf{R}\) is body-to-world, and \(\mathbf{v}\), \(\mathbf{p}\), \(\mathbf{g}\) are in world coordinates. The noises \(\boldsymbol{\eta}^{gd}\), \(\boldsymbol{\eta}^{ad}\) are the discrete-time versions from <a href="#d92">Day 2</a>, with covariance \(\tfrac{1}{\Delta t}\) times the continuous one. In practice the noise is unknown, so you run (11.12) with the noise set to zero and your best bias estimate:
+@@ 31
+Sanity check: a level robot at rest with a perfect sensor reads \(\tilde{\mathbf{a}} = (0,0,9.81)\). With \(\mathbf{R} = \mathbf{I}\) and \(\mathbf{g} = (0,0,-9.81)\), the velocity update is \(\mathbf{g}\Delta t + \tilde{\mathbf{a}}\Delta t = \mathbf{0}\). The reading and gravity cancel, and the robot stays put. That cancellation of two large numbers is the weak point, as the next section shows.
+@@ 32
+Equation (11.12) uses the orientation at the <em>start</em> of the step for the whole step. This is not exact when the body is rotating; a high IMU rate keeps the error small, and Day 5 returns to it. <span class="src">§11.2.1 · p. 309</span>
+@@ 33
+4. Dead reckoning drifts, and gravity makes it worse
+@@ 34
+Try it: the widget runs the loop above on a simulated planar IMU (one gyroscope, two accelerometer axes) carried over two hills. Start with the default 0.1°/s gyroscope bias. Then set it to zero and try an accelerometer bias of 0.05 m/s².
+@@ 35
+Notice that a gyroscope bias of only 0.1°/s puts the estimate about 22 m off after 20 s, on a 40 m drive, and that the error follows the cubic model curve. The tilt error at the end is just 2°, but 2° of tilt turns 0.34 m/s² of gravity into false horizontal acceleration. An accelerometer bias of 0.05 m/s² alone gives roughly 10 m, following the quadratic curve. With every slider at zero about 6 cm of error remains: the rectangle rule of (11.12) on a changing acceleration.
+@@ 36
+Filling the gap: how fast does each error grow?
+@@ 37
+The book says inertial odometry drifts but does not give rates. They follow from counting integrations.
+@@ 38
+<strong>Accelerometer bias</strong> \(b_a\). A constant acceleration error, integrated twice: velocity error \(b_a t\), position error \(\tfrac12 b_a t^2\).
+@@ 39
+<strong>Gyroscope bias</strong> \(b_g\). The orientation error grows as \(\delta\theta = b_g t\). The integrator rotates the measured specific force, which is mostly the 9.81 m/s² support force, with the wrong \(\mathbf{R}\). A vertical vector of length \(g\) tilted by a small angle \(\delta\theta\) acquires a horizontal component \(g\sin\delta\theta \approx g\,\delta\theta\). After adding \(\mathbf{g}\) back, the vertical parts still nearly cancel, but the horizontal part is left over as a false acceleration \(g\,b_g\,t\). Integrate twice:
+@@ 40
+With \(b_g = 0.1\)°/s \(= 1.745\times10^{-3}\) rad/s and \(t = 20\) s: \(\tfrac16 \times 9.81 \times 1.745\times10^{-3} \times 8000 = 22.8\) m, the number in the widget.
+@@ 41
+<strong>White noise.</strong> Accelerometer noise of density \(\sigma_a\) is a stream of independent kicks. A kick at time \(s\) changes the velocity for good, so by time \(t\) it has moved the position by an amount proportional to \(t-s\). Adding the variances of all kicks, \(\operatorname{var}(\delta p) = \sigma_a^2\int_0^t (t-s)^2 ds = \sigma_a^2 t^3/3\). The same argument with one more integration gives the gyroscope-noise entry in the table.
+@@ 42
+Error source
+@@ 43
+First effect
+@@ 44
+Position error after time t
+@@ 45
+At t = 20 s
+@@ 46
+Accelerometer bias \(b_a\)
+@@ 47
+velocity error \(b_a t\)
+@@ 48
+Gyroscope bias \(b_g\)
+@@ 49
+tilt \(b_g t\), false acceleration \(g\,b_g t\)
+@@ 50
+Accelerometer noise \(\sigma_a\)
+@@ 51
+velocity random walk \(\sigma_a\sqrt{t}\)
+@@ 52
+0.005 m/s²/√Hz → 0.26 m
+@@ 53
+Gyroscope noise \(\sigma_g\)
+@@ 54
+tilt random walk \(\sigma_g\sqrt{t}\)
+@@ 55
+0.01°/s/√Hz → 0.68 m
+@@ 56
+The integrator has to subtract gravity, a known vector of length 9.81, from a reading of about the same length. If it holds the reading at a slightly wrong angle, the subtraction leaves a sideways remainder. An IMU navigates well for exactly as long as it knows which way is down.
+@@ 57
+One more experiment: set the gyroscope bias to +0.10°/s and the accelerometer bias to about +0.11 m/s². The final error collapses to a few metres, because on this path the two errors push in opposite directions. A tilt error and an accelerometer bias look alike to the integrator. Next week's observability analysis is about telling such effects apart.
+@@ 58
+5. Keyframes, and the flaw of plain integration
+@@ 59
+Dead reckoning alone is hopeless beyond a few seconds, so the IMU is combined with a camera or LiDAR in a factor graph whose states sit at selected instants. The book calls them <strong>keyframe states</strong>, whatever sensor triggers them. <span class="src">§11.2.1 · p. 310</span> Between consecutive keyframes at times \(t_i\) and \(t_j\) there are many IMU samples, \(k = i, i+1, \dots, j-1\). Chaining (11.12) over all of them gives
+@@ 60
+with \(\Delta t_{ij} = \sum_{k=i}^{j-1}\Delta t\) the time between the keyframes. <span class="src">§11.2.1 · p. 310</span> This already is a relative-motion constraint between states \(i\) and \(j\). Its flaw is in how the unknowns enter. Every \(\mathbf{R}_k\) inside the sums is \(\mathbf{R}_i\) times a product of gyroscope terms, and every \(\mathbf{v}_k\) contains \(\mathbf{v}_i\). A nonlinear solver such as Gauss-Newton (<a href="#d10">Week 2 · Day 4</a>) changes its estimate of \(\mathbf{R}_i\) and \(\mathbf{v}_i\) at every iteration, and each change invalidates every term of the sums. <span class="src">§11.2.1 · p. 310</span>
+@@ 61
+Count the cost: 100 keyframe intervals, 200 samples each, 10 solver iterations is 200,000 sample integrations per solve, repeated every time the graph is re-optimized. Tomorrow's rearrangement brings it down to 20,000, done once.
+@@ 62
+<strong>"Integrate the accelerometer twice to get position."</strong> First rotate the reading into the world with the current \(\mathbf{R}\), then add \(\mathbf{g}\), then integrate. Skip the rotation and the reading is added along the wrong axes; skip gravity and a robot at rest accelerates upward at 9.81 m/s².
+@@ 63
+<strong>"Position drift from a gyroscope is small because gyroscopes are accurate."</strong> Tilt error is multiplied by \(g\) and integrated twice more. It grows as \(t^3\) and usually dominates.
+@@ 64
+<strong>"Equation (11.13) cannot be used in a factor graph."</strong> It can. It is just wasteful, because it must be re-evaluated from the raw samples whenever the state at \(i\) changes.
+@@ 65
+Q1. A level robot at rest, R = I, v = 0, g = (0, 0, −9.81), perfect accelerometer reading (0, 0, 9.81), Δt = 0.01 s. What velocity does (11.12) give after one step?
+@@ 66
+v + gΔt + R·ã·Δt = 0 + (0,0,−0.0981) + (0,0,+0.0981) = 0. The reading and gravity cancel.
+@@ 67
+Q2. An uncorrected accelerometer bias of 0.02 m/s² acts for 30 s. The position error it causes is about
+@@ 68
+½·b·t² = 0.5 × 0.02 × 900 = 9 m. (0.6 m/s is the velocity error.)
+@@ 69
+Q3. With a constant gyroscope bias, the dead-reckoning time is doubled from 10 s to 20 s. The position error from that bias grows by a factor of about
+@@ 70
+The error is g·b·t³/6, cubic in time: 2³ = 8.
+@@ 71
+Q4. Why must the sums in (11.13) be recomputed when the solver changes its estimate of the rotation at keyframe i?
+@@ 72
+The IMU noise covariance depends on that rotation
+@@ 73
+Every rotation between i and j is the rotation at i times gyroscope terms, and each one multiplies an accelerometer sample
+@@ 74
+The gravity vector changes with the rotation at i
+@@ 75
+The sampling period changes
+@@ 76
+Each R_k = R_i·(product of Exp terms) rotates sample k into the world. Change R_i and every rotated sample, hence every term of both sums, changes. Gravity in world coordinates and Δt are fixed.
+@@ 77
+Q5. In (11.12), which orientation is used to rotate the accelerometer sample taken at time t?
+@@ 78
+The orientation at t + Δt
+@@ 79
+The average of the orientations at t and t + Δt
+@@ 80
+The orientation at t, held fixed for the whole step
+@@ 81
+The initial orientation of the trajectory
+@@ 82
+The velocity and position lines use R(t). The scheme holds it constant over the step, which is an approximation whenever the body rotates.
+@@ 83
+One state per IMU sample makes the factor graph far too large; the goal is one IMU factor per pair of keyframes.
+@@ 84
+Kinematics (11.8) plus the measurement model give the integration step (11.12): rotate the reading into the world, add gravity, integrate.
+@@ 85
+Position error grows as \(\tfrac12 b_a t^2\) for accelerometer bias and \(\tfrac16 g\,b_g t^3\) for gyroscope bias, because a tilt error leaks gravity into horizontal acceleration.
+@@ 86
+Chaining the step between keyframes gives (11.13), a valid relative-motion constraint.
+@@ 87
+Its sums depend on \(\mathbf{R}_i\) and \(\mathbf{v}_i\), so they must be redone from the raw samples at every solver iteration. Preintegration removes that cost.
+@@ 88
+<em>SLAM Handbook</em>, §11.2 opening and §11.2.1 "Motion Integration", pp. 308–310.
+@@ 89
+Titterton and Weston, <em>Strapdown Inertial Navigation Technology</em>, 2nd ed., 2004 (strapdown kinematics; how tilt errors couple gravity into position error).
+@@ 90
+Woodman, <em>An Introduction to Inertial Navigation</em>, University of Cambridge technical report, 2007 (growth rates of position error from bias and from white noise).

@@ -1,0 +1,198 @@
+@@ 1
+<span class="eyebrow">1주차 · 복습</span>
+@@ 2
+1주차 복습: SLAM 문제와 그 도구
+@@ 3
+오늘이 끝나면 SLAM 시스템과 그 역사를 몇 문장으로 설명하고, information form으로 Gaussian 추정값을 융합하고, 작은 weighted least-squares 문제를 Cholesky 분해로 손으로 풀 수 있습니다.
+@@ 4
+SLAM은 로봇의 trajectory와 map을 함께 추정합니다. 센서마다 다른 front-end는 raw 데이터를 odometry, landmark 관측, loop closure로 바꾸고, back-end는 이들에 가장 잘 맞는 trajectory와 map을 찾습니다. odometry만으로는 drift가 생기고, loop closure가 drift를 묶어 둡니다. back-end는 빠른 제어 loop와 느린 계획 loop에 입력을 주며 online을 유지해야 합니다. 그 역사는 EKF에서 particle filter를 거쳐 factor-graph optimization으로 이어지며, factor-graph optimization이 이긴 것은 information matrix가 sparse하기 때문입니다. 밑에 깔린 수학은 짧습니다. belief는 Gaussian이고, Bayes' rule이 belief를 결합하고, 독립적인 information은 더해지며, Gaussian noise에서의 MAP 추정값은 weighted least-squares 문제이고, 이 문제는 역행렬이 아니라 행렬 분해로 풉니다.
+@@ 5
+=
+@@ 6
+=
+@@ 7
+Bayes' rule, MAP, MLE
+@@ 8
+§I.4.1, p. 15에서 언급 · <a href="#d2">Day 2</a>
+@@ 9
+Gaussian 밀도
+@@ 10
+식 (1.9), p. 27 · <a href="#d2">Day 2</a>
+@@ 11
+스칼라 prior와 측정값
+@@ 12
+=
+@@ 13
+Information form과 융합
+@@ 14
+\(\boldsymbol{\Lambda} = \boldsymbol{\Sigma}^{-1}\), \(\boldsymbol{\eta} = \boldsymbol{\Lambda}\boldsymbol{\mu}\); 융합: \(\boldsymbol{\Lambda} = \boldsymbol{\Lambda}_1+\boldsymbol{\Lambda}_2\), \(\boldsymbol{\eta} = \boldsymbol{\eta}_1+\boldsymbol{\eta}_2\)
+@@ 15
+=
+@@ 16
+noise σ인 측정 \(\mathbf{a}\T\mathbf{x}\) 하나가 더하는 information
+@@ 17
+\(\mathbf{a}\mathbf{a}\T/\sigma^2\), 따라서 \(\boldsymbol{\Lambda} = \mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{A}\)
+@@ 18
+=
+@@ 19
+=
+@@ 20
+\(\mathbf{A}\T\mathbf{A}\,\mathbf{x} = \mathbf{A}\T\mathbf{b}\); 가중: \(\mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{A}\,\mathbf{x} = \mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{b}\)
+@@ 21
+식 (1.25), p. 31 · <a href="#d4">Day 4</a>
+@@ 22
+Mahalanobis norm과 whitening
+@@ 23
+식 (1.10), p. 27, 그리고 (1.22), p. 30 · <a href="#d4">Day 4</a>
+@@ 24
+Cholesky 풀이
+@@ 25
+\(\boldsymbol{\Lambda} = \mathbf{R}\T\mathbf{R}\); \(\ \mathbf{R}\T\mathbf{y} = \mathbf{A}\T\mathbf{b}\), 그다음 \(\mathbf{R}\mathbf{x} = \mathbf{y}\)
+@@ 26
+식 (1.26)–(1.28), p. 31 · <a href="#d5">Day 5</a>
+@@ 27
+QR 풀이와 condition number
+@@ 28
+식 (1.29)–(1.33), p. 32 · <a href="#d5">Day 5</a>
+@@ 29
+Q1. 다음 중 loop closure는 무엇입니까?
+@@ 30
+연속한 두 LiDAR scan 사이의 상대 운동
+@@ 31
+IMU의 각속도 측정값
+@@ 32
+장소를 알아봐서 찾은, 현재 pose와 10분 전 pose 사이의 상대 pose
+@@ 33
+원점에 고정된 첫 pose
+@@ 34
+loop closure는 현재 pose를 훨씬 이전의 pose와 묶습니다. 첫째 보기는 odometry로, 이웃끼리만 잇기 때문에 drift합니다.
+@@ 35
+Q2. 책은 back-end가 "online을 유지해야 한다"고 말합니다. 이것은 무엇을 요구합니까?
+@@ 36
+로봇 자체 하드웨어에서, 데이터가 들어와도 한없이 늘어나지 않는 실행 시간
+@@ 37
+상시 네트워크 연결
+@@ 38
+몇 밀리초 안에 답하기
+@@ 39
+이전 pose를 절대 수정하지 않기
+@@ 40
+back-end는 front-end보다 몇 초 늦을 수 있지만, 임베디드 하드웨어에서 데이터 흐름을 따라가야 합니다. 이 요구 조건이 SLAM을 offline structure from motion과 구분했습니다.
+@@ 41
+Q3. Prior: x = 0 m, σ = 2 m. 측정값: z = 5 m, σ = 2 m. posterior는 무엇입니까?
+@@ 42
+평균 2.5 m, σ = 2 m
+@@ 43
+평균 2.5 m, σ ≈ 1.41 m
+@@ 44
+평균 5 m, σ = 1 m
+@@ 45
+평균 2.5 m, σ = 4 m
+@@ 46
+양쪽의 information이 같으면 중점이 됩니다. information이 더해집니다: 1/4 + 1/4 = 1/2, 따라서 σ² = 2이고 σ ≈ 1.41 m입니다.
+@@ 47
+Q4. 2005년에서 2015년 사이에 최적화 기반 SLAM을 실용적으로 만든 것은 무엇입니까?
+@@ 48
+particle이 더 많은 particle filter
+@@ 49
+loop closure 버리기
+@@ 50
+전체 covariance matrix를 더 간결하게 저장하기
+@@ 51
+과거 pose를 남겨 둘 때 information matrix의 sparsity
+@@ 52
+covariance는 dense하지만 그 역행렬은 예측 가능한 패턴으로 sparse하며, 그래서 거의 선형인 비용의 solver가 가능합니다 (p. 15).
+@@ 53
+Q5. 직선 위의 두 pose x₀, x₁. x₀의 prior는 σ = 1이고, x₁ − x₀의 odometry 측정값 하나는 σ = 0.5입니다. Λ는 무엇입니까?
+@@ 54
+행 (5, −4)와 (−4, 4)
+@@ 55
+행 (2, −1)과 (−1, 1)
+@@ 56
+행 (3, −2)와 (−2, 2)
+@@ 57
+행 (1.25, −0.25)와 (−0.25, 0.25)
+@@ 58
+prior는 왼쪽 위 원소에 1/1² = 1을 더합니다. odometry는 (1/0.5²) × [1 −1; −1 1] = [4 −4; −4 4]를 더합니다.
+@@ 59
+Q6. 한 미지수에 대한 세 측정값: 4 (σ = 1), 8 (σ = 1), 9 (σ = 0.5). weighted least-squares 추정값은 얼마입니까?
+@@ 60
+가중치 1/σ²는 1, 1, 4입니다. (4 + 8 + 4 × 9) / (1 + 1 + 4) = 48/6 = 8. 단순 평균이라면 7입니다.
+@@ 61
+Q7. A의 QR 분해에서 R의 행이 (3, 1)과 (0, 2)입니다. AᵀA는 무엇입니까?
+@@ 62
+행 (9, 1)과 (1, 4)
+@@ 63
+행 (10, 2)와 (2, 4)
+@@ 64
+행 (9, 3)과 (3, 5)
+@@ 65
+Q 없이는 구할 수 없다
+@@ 66
+AᵀA = RᵀQᵀQR = RᵀR = [3 0; 1 2][3 1; 0 2] = [9 3; 3 5]. 둘째 보기는 RRᵀ로, 순서가 틀렸습니다.
+@@ 67
+Q8. 배정밀도(약 16자리)에서 least-squares 문제의 κ(A) = 10⁵입니다. normal equations와 QR에서 각각 맞는 자릿수를 대략 몇 개 기대할 수 있습니까?
+@@ 68
+16과 16
+@@ 69
+11과 6
+@@ 70
+11과 11
+@@ 71
+6과 11
+@@ 72
+대략 log₁₀ κ자리를 잃습니다. normal equations는 κ² = 10¹⁰으로 작업하므로 약 6자리가 남습니다. QR은 κ = 10⁵로 작업하므로 약 11자리가 남습니다.
+@@ 73
+odometry로 보면 로봇이 아는 장소로 돌아왔을 확률은 2%입니다. place recognizer는 진짜 재방문이면 0.9, 아니면 0.05의 확률로 반응합니다. (a) recognizer가 반응했습니다. 진짜 재방문일 확률은 얼마입니까? (b) 같은 비율을 가진 독립적인 두 번째 recognizer도 반응합니다. 이제 확률은 얼마입니까?
+@@ 74
+(a) Bayes' rule: \(\dfrac{0.9\times 0.02}{0.9\times 0.02 + 0.05\times 0.98} = \dfrac{0.018}{0.067} \approx 0.27\). 여전히 재방문보다는 닮은 장소일 가능성이 큽니다.
+@@ 75
+(b) (a)의 posterior가 새 prior가 됩니다: \(\dfrac{0.9\times 0.269}{0.9\times 0.269 + 0.05\times 0.731} = \dfrac{0.242}{0.278} \approx 0.87\). 독립적인 증거는 누적됩니다. 서로 일치하는 확인 두 번은 한 번보다 훨씬 값어치가 있습니다.
+@@ 76
+landmark 위치에 대한 두 독립 추정값이 있습니다. \(\boldsymbol{\mu}_1 = (0, 0)\), \(\boldsymbol{\Sigma}_1 = \diag(1, 9)\)인 추정값과 \(\boldsymbol{\mu}_2 = (2, 3)\), \(\boldsymbol{\Sigma}_2 = \diag(4, 1)\)인 추정값입니다. 융합 평균과 covariance를 구하세요.
+@@ 77
+Information matrix: \(\boldsymbol{\Lambda}_1 = \diag(1,\ 1/9)\), \(\boldsymbol{\Lambda}_2 = \diag(1/4,\ 1)\). 합: \(\boldsymbol{\Lambda} = \diag(1.25,\ 1.111)\).
+@@ 78
+Information vector: \(\boldsymbol{\eta}_1 = (0, 0)\), \(\boldsymbol{\eta}_2 = (2/4,\ 3/1) = (0.5,\ 3)\). 합: \(\boldsymbol{\eta} = (0.5,\ 3)\).
+@@ 79
+평균: \(\boldsymbol{\mu} = (0.5/1.25,\ 3/1.111) = (0.4,\ 2.7)\). Covariance: \(\boldsymbol{\Sigma} = \diag(0.8,\ 0.9)\). \(x\)에서는 결과가 그 방향에서 더 날카로운 추정값 1 근처에 머물고, \(y\)에서는 추정값 2 쪽으로 거의 다 갑니다.
+@@ 80
+점 \((t, y) = (0, 0),\ (1, 1),\ (2, 4)\)에 직선 \(y = x_1 + x_2 t\)를 least squares로 맞추세요. normal equations를 세우고, Cholesky 분해로 풀고, residual이 \(\mathbf{A}\)의 두 열 모두와 직교하는지 확인하세요.
+@@ 81
+\(\mathbf{A}\)의 행은 \((1,0), (1,1), (1,2)\)이고 \(\mathbf{b} = (0,1,4)\)입니다. 따라서 \(\mathbf{A}\T\mathbf{A} = \begin{bmatrix} 3 & 3 \\ 3 & 5 \end{bmatrix}\)이고 \(\mathbf{A}\T\mathbf{b} = (5,\ 9)\)입니다.
+@@ 82
+=
+@@ 83
+전진 대입, \(\mathbf{R}\T\mathbf{y} = (5, 9)\): \(y_1 = 5/\sqrt3\); \(\sqrt3\,y_1 + \sqrt2\,y_2 = 9\)에서 \(y_2 = 4/\sqrt2 = 2\sqrt2\).
+@@ 84
+후진 대입, \(\mathbf{R}\mathbf{x} = \mathbf{y}\): \(x_2 = 2\sqrt2/\sqrt2 = 2\); \(\sqrt3\,x_1 + \sqrt3\cdot 2 = 5/\sqrt3\)에서 \(x_1 = 5/3 - 2 = -1/3\). 직선은 \(y = -\tfrac13 + 2t\)입니다.
+@@ 85
+Residual: \(\mathbf{r} = \mathbf{b}-\mathbf{A}\mathbf{x} = (\tfrac13,\ -\tfrac23,\ \tfrac13)\). \((1,1,1)\)과의 내적: \(\tfrac13-\tfrac23+\tfrac13 = 0\). \((0,1,2)\)와의 내적: \(-\tfrac23+\tfrac23 = 0\). cost는 \(\tfrac19+\tfrac49+\tfrac19 = \tfrac23\)입니다.
+@@ 86
+로봇이 직선 위에서 pose \(x_0, x_1, x_2\)를 지나 움직입니다. 측정값은 네 개이고 모두 \(\sigma = 1\)입니다. prior \(x_0 = 0\); odometry \(x_1 - x_0 = 1\)과 \(x_2 - x_1 = 1\); 그리고 GPS fix \(x_2 = 2.6\). (a) \(\mathbf{A}\)와 \(\mathbf{b}\)를 쓰세요. (b) \(\boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A}\)를 만들고 pose를 구하세요. (c) odometry와 GPS 사이의 0.6 m 불일치는 어떻게 나뉩니까? (d) \(x_2\)의 분산을 구하고, GPS가 없었던 <a href="#d3">Day 3</a>의 값 3과 비교하세요.
+@@ 87
+(a) 측정값마다 한 행:
+@@ 88
+(b) \(\boldsymbol{\Lambda} = \begin{bmatrix} 2 & -1 & 0 \\ -1 & 2 & -1 \\ 0 & -1 & 2 \end{bmatrix}\)이고 \(\mathbf{A}\T\mathbf{b} = (-1,\ 0,\ 3.6)\)입니다. Day 3의 행렬에 \(x_2\)에 대한 information이 한 단위 더해진 것입니다. 소거합니다. 1행에서 \(x_0 = (x_1-1)/2\). 이를 2행에 넣으면 \(1.5x_1 - x_2 = -0.5\). 3행에서 \(x_1 = 2x_2 - 3.6\). 대입하면 \(3x_2 - 5.4 - x_2 = -0.5\)이므로 \(x_2 = 2.45\)이고, 그러면 \(x_1 = 1.3\), \(x_0 = 0.15\)입니다.
+@@ 89
+(c) residual은 다음과 같습니다. prior \(0.15\), odometry \(1.15 - 1 = 0.15\) 두 번, GPS \(2.45 - 2.6 = -0.15\). 똑같이 신뢰하는 측정값 네 개가 각각 0.6 m의 4분의 1씩 흡수합니다. 이것이 <a href="#d1">Day 1</a> loop-closure 위젯의 "간격을 고르게 나누는" 동작입니다.
+@@ 90
+(d) \(x_2\)의 분산은 \(\boldsymbol{\Lambda}\mathbf{s} = (0,0,1)\)의 해의 마지막 원소입니다. 같은 소거로 \(\mathbf{s} = (0.25,\ 0.5,\ 0.75)\)를 얻으므로 분산은 0.75, 표준편차는 0.87 m입니다. GPS가 없을 때는 3이었습니다. 사슬 끝의 절대 측정값 하나가 drift의 대부분을 없앴습니다.
+@@ 91
+front-end가 back-end에 넘기는 것, 그리고 loop closure가 더하지만 odometry는 줄 수 없는 것 말하기.
+@@ 92
+Bayes' rule을 쓰고 어느 항이 prior, likelihood, posterior인지 말하기.
+@@ 93
+Gaussian의 곱을 최대화하는 것이 분산으로 나눈 제곱 오차의 합을 최소화하는 것임을 보이기.
+@@ 94
+information matrix와 information vector를 더해서 두 Gaussian 추정값 융합하기.
+@@ 95
+normal equations를 유도하고, 2 × 2 경우를 Cholesky 분해와 대입으로 풀기.
+@@ 96
+pose 사슬의 information matrix가 sparse한 이유와, solver가 그 역행렬을 구하지 않고 분해하는 이유 설명하기.
+@@ 97
+<em>SLAM Handbook</em>, Prelude to Part I, pp. 3–18; Notation, pp. xiv–xv; 식 (1.9)–(1.10), p. 27, 그리고 (1.22)–(1.33), pp. 30–32, 2주차에 앞서 미리 인용.
+@@ 98
+=
+@@ 99
+Strang, <em>Introduction to Linear Algebra</em>, 2016; Trefethen, Bau, <em>Numerical Linear Algebra</em>, 1997 (least squares, Cholesky 분해, QR, conditioning).

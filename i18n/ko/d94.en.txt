@@ -1,0 +1,166 @@
+@@ 1
+<span class="eyebrow">Week 16 · Day 4</span>
+@@ 2
+IMU preintegration: increments that do not depend on where you start
+@@ 3
+After today you can derive the preintegrated increments from the integration equations, show that they depend neither on the state at keyframe i nor on gravity, and explain how their noise covariance is obtained.
+@@ 4
+About 60 min · Read §11.2.2 to §11.2.2.2, pp. 311–314 (4 pages) · Needs Week 16 Day 3 and Week 4 Day 5
+@@ 5
+Read first: §11.2.2, §11.2.2.1, §11.2.2.2, pp. 311–314
+@@ 6
+These are the densest pages of the week. While you read, look for:
+@@ 7
+The "key insight" in the first paragraph of p. 311. It has two parts.
+@@ 8
+In equation (11.14): check that no right-hand side contains \(\mathbf{R}_i\), \(\mathbf{v}_i\), \(\mathbf{p}_i\), or \(\mathbf{g}\), and find the sentence warning that \(\Delta\mathbf{v}_{ij}\) and \(\Delta\mathbf{p}_{ij}\) are not physical changes.
+@@ 9
+On p. 312: how (11.16) and (11.17) are used to "move the noise to the end" in (11.18).
+@@ 10
+Equation (11.23) on p. 313, the final measurement model, and (11.28)–(11.29) on p. 314, the noise written as a sum over raw IMU noises.
+@@ 11
+Rearrange yesterday's integration so that everything depending on the state at keyframe \(i\), and everything depending on gravity, sits on one side of the equation. What remains on the other side is a rotation and two vectors computed from the IMU samples alone. They are integrated once, stored, and reused however often the optimizer changes its mind about the states. These are the <strong>preintegrated IMU measurements</strong>.
+@@ 12
+1. The rotation increment
+@@ 13
+Start with the first line of (11.13): \(\mathbf{R}_j = \mathbf{R}_i\prod_{k=i}^{j-1}\Exp(\cdot)\). The unknown \(\mathbf{R}_i\) only multiplies from the left, so move it across: <span class="src">§11.2.2 · p. 311</span>
+@@ 14
+The left side is the rotation of the body between the two keyframes, seen from the body at time \(i\). The right side contains gyroscope samples and nothing else. The same holds for every intermediate sample: \(\mathbf{R}_k = \mathbf{R}_i\,\Delta\mathbf{R}_{ik}\). This is the first part of the book's insight: express motion in a <em>local</em> frame, the body frame at \(i\), so it does not change when the global estimate changes. <span class="src">§11.2.2 · p. 311</span>
+@@ 15
+2. The velocity and position increments
+@@ 16
+Filling the gap: deriving the last two lines of (11.14)
+@@ 17
+<strong>Velocity.</strong> In the second line of (11.13) put \(\mathbf{R}_k = \mathbf{R}_i\Delta\mathbf{R}_{ik}\) and move the terms with \(\mathbf{v}_i\) and \(\mathbf{g}\) to the left:
+@@ 18
+Multiply both sides by \(\mathbf{R}_i\T\). The left side becomes the definition of \(\Delta\mathbf{v}_{ij}\).
+@@ 19
+<strong>Position.</strong> The third line of (11.13) contains \(\mathbf{v}_k\), which depends on \(\mathbf{v}_i\). Replace it using the velocity result for the shorter interval \(i\) to \(k\): \(\mathbf{v}_k = \mathbf{v}_i + \mathbf{g}\Delta t_{ik} + \mathbf{R}_i\Delta\mathbf{v}_{ik}\). Then
+@@ 20
+The gravity sum is a known number. With \(N = j-i\) samples and \(\Delta t_{ik} = (k-i)\Delta t\),
+@@ 21
+Move \(\mathbf{v}_i\Delta t_{ij}\) and \(\tfrac12\mathbf{g}\Delta t_{ij}^2\) to the left and multiply by \(\mathbf{R}_i\T\).
+@@ 22
+The result is the central definition of the chapter: <span class="src">§11.2.2 · p. 311</span>
+@@ 23
+Read each line as "definition in terms of states = recipe in terms of IMU samples". The middle expressions hold all the unknowns. The right-hand recipes hold none, apart from the biases, which Day 5 deals with. Gravity has moved to the left as well. That is the second part of the insight: gravity is a fact about the world frame, so it belongs with the states.
+@@ 24
+<strong>The increments are not physical displacements.</strong> Take a level IMU that sits still for one second, with \(\mathbf{R}_i = \mathbf{I}\) and \(\mathbf{g} = (0,0,-9.81)\). Nothing moves, yet
+@@ 25
+The recipe side agrees: 100 readings of \((0,0,9.81)\) at \(\Delta t = 0.01\) sum to \(9.81\) m/s. The increments are the integrals of the specific force, and gravity is put back when the states are compared with them. Only \(\Delta\mathbf{R}_{ij}\) is a true physical change. <span class="src">§11.2.2 · p. 311</span>
+@@ 26
+3. See it: one integration, any starting state
+@@ 27
+Try it: the sliders stand for the optimizer revising the state at keyframe \(i\). The curved pink path is naive integration (11.13), redone from scratch on every change. The three arrows are the middle column of (11.14) solved for \(\mathbf{p}_j\): \(\mathbf{p}_j = \mathbf{p}_i + \mathbf{v}_i\Delta t_{ij} + \tfrac12\mathbf{g}\Delta t_{ij}^2 + \mathbf{R}_i\Delta\mathbf{p}_{ij}\).
+@@ 28
+Notice that the stored increments (Δθ = 19.90°, Δv = (2.036, 10.787) m/s, Δp = (1.008, 5.402) m) never change, and that the arrow chain always ends exactly where the integrated path ends: the two predictions differ by about 10⁻¹⁵ m. Changing the velocity changes only the blue arrow (the other two are carried along unchanged). Changing the orientation only turns the green arrow. Meanwhile the count of IMU samples read by the naive method climbs by 100 with every change.
+@@ 29
+Naive integration is like giving directions from a fixed street address: "from the station, go north 200 m, then east 50 m". If the starting point turns out to be wrong, every instruction must be rewritten. Preintegration writes the directions relative to the walker: "200 m ahead, then 50 m to your right". They stay valid wherever the walk starts and whichever way the walker faced. Gravity's pull is the one thing that depends on the outside world, so it is kept out of the directions and added back afterwards.
+@@ 30
+4. Separating the noise from the measurement
+@@ 31
+To use (11.14) as a factor we need it in the standard form "measurement = function of states, plus zero-mean Gaussian noise" of <a href="#d8">Week 2 · Day 2</a>. In (11.14) the noise is buried inside products of exponentials. Assume for now that the bias is known and constant between the keyframes, equal to its value \(\mathbf{b}_i\) at \(i\) (equation (11.15)). The book then uses two properties of the exponential map of \(\SO(3)\): <span class="src">§11.2.2.1 · p. 312</span>
+@@ 32
+The first splits a slightly perturbed rotation into the clean rotation followed by a small one; \(\mathbf{J}_r\) is the right Jacobian of \(\SO(3)\) from <a href="#d23">Week 4 · Day 5</a>. The second lets a small rotation hop over a large one, at the price of re-expressing its axis.
+@@ 33
+Filling the gap: moving the noise to the end, with two samples
+@@ 34
+Write \(\mathbf{A}_k = \Exp((\tilde{\boldsymbol{\omega}}_k - \mathbf{b}^g_i)\Delta t)\) for the clean rotation of sample \(k\) and \(\boldsymbol{\epsilon}_k = \mathbf{J}^k_r\,\boldsymbol{\eta}^{gd}_k\Delta t\) for its small noise rotation. By (11.16), with \(\delta\boldsymbol{\phi} = -\boldsymbol{\eta}^{gd}_k\Delta t\), each factor of the product is \(\mathbf{A}_k\Exp(-\boldsymbol{\epsilon}_k)\). For two samples:
+@@ 35
+With more samples, the noise of sample \(k\) must hop over every later clean rotation, \(\mathbf{A}_{k+1}\cdots\mathbf{A}_{j-1} = \Delta\tilde{\mathbf{R}}_{k+1\,j}\), which is why that matrix appears transposed in (11.18). Equation (11.17) itself is the adjoint identity \(\mathbf{R}\,\Exp(\boldsymbol{\phi})\,\mathbf{R}\T = \Exp(\mathbf{R}\boldsymbol{\phi})\) of Week 4 · Day 5 with \(\mathbf{R}\) replaced by \(\mathbf{R}\T\) and both sides multiplied on the left by \(\mathbf{R}\).
+@@ 36
+The outcome is a clean product times one small rotation: <span class="src">§11.2.2.1 · p. 312</span>
+@@ 37
+\(\Delta\tilde{\mathbf{R}}_{ij}\) is the <strong>preintegrated rotation measurement</strong>: computable, noise-free in form. \(\delta\boldsymbol{\phi}_{ij}\) is its noise. For velocity, substitute \(\Delta\mathbf{R}_{ik} \simeq \Delta\tilde{\mathbf{R}}_{ik}(\mathbf{I} - \delta\boldsymbol{\phi}_{ik}^\wedge)\) into (11.14), using \(\Exp(-\delta\boldsymbol{\phi}) \approx \mathbf{I} - \delta\boldsymbol{\phi}^\wedge\) (11.19), drop products of two noise terms, and flip the cross product with \(\mathbf{a}^\wedge\mathbf{b} = -\mathbf{b}^\wedge\mathbf{a}\) (11.20):
+@@ 38
+The position works the same way (11.22). Putting the three results back into the definitions gives the <strong>preintegrated measurement model</strong>: <span class="src">§11.2.2.1 · p. 313</span>
+@@ 39
+Left: three quantities computed from IMU data. Right: a function of the states at \(i\) and \(j\), "plus" noise (for the rotation, "plus" means multiplying by a small rotation on the right, as in Week 4). This is a relative-motion measurement of exactly the kind a factor graph wants.
+@@ 40
+5. How noisy are the increments?
+@@ 41
+The factor needs the covariance \(\boldsymbol{\Sigma}_{ij}\) of the 9-vector \(\boldsymbol{\eta}^\Delta_{ij} = [\delta\boldsymbol{\phi}_{ij}\T, \delta\mathbf{v}_{ij}\T, \delta\mathbf{p}_{ij}\T]\T\) (11.24). To first order, the rotation noise is a weighted sum of the raw gyroscope noises: <span class="src">§11.2.2.2 · p. 314</span>
+@@ 42
+\(\delta\mathbf{v}_{ij}\), shown in (11.21), and \(\delta\mathbf{p}_{ij}\) are in turn sums of accelerometer noises and of the rotation noise (11.29). A linear combination of independent zero-mean Gaussians is a zero-mean Gaussian, and its covariance follows by the rule \(\operatorname{Cov}(\mathbf{C}\boldsymbol{\eta}) = \mathbf{C}\operatorname{Cov}(\boldsymbol{\eta})\mathbf{C}\T\). The book notes that the covariance can also be built up incrementally, one sample at a time. <span class="src">§11.2.2.2 · p. 314</span>
+@@ 43
+Filling the gap: the incremental form, in the plane
+@@ 44
+In the widget's planar world a rotation is one angle, \(\mathbf{J}_r = 1\), and rotations commute, so (11.28) is simply \(\delta\theta_{ij} = \sum_k\eta^{gd}_k\Delta t\). The cross-product term \(-\mathbf{f}^\wedge\delta\boldsymbol{\phi}\) becomes \(\mathbf{J}\mathbf{f}\,\delta\theta\), with \(\mathbf{J}\) the 90° rotation matrix and \(\mathbf{f}_k = \tilde{\mathbf{a}}_k - \mathbf{b}^a_i\). Each new sample updates the noise state as
+@@ 45
+This has the form \(\boldsymbol{\eta}^\Delta_{i,k+1} = \mathbf{A}_k\boldsymbol{\eta}^\Delta_{ik} + \mathbf{B}_k\boldsymbol{\eta}^d_k\), so the covariance obeys \(\boldsymbol{\Sigma}_{i,k+1} = \mathbf{A}_k\boldsymbol{\Sigma}_{ik}\mathbf{A}_k\T + \mathbf{B}_k\operatorname{Cov}(\boldsymbol{\eta}^d_k)\mathbf{B}_k\T\), starting from \(\boldsymbol{\Sigma}_{ii} = \mathbf{0}\). It is the covariance propagation of <a href="#d22">Week 4 · Day 4</a>, run alongside the integration. The widget does exactly this. A check by hand for the angle: \(N\) samples each contribute variance \((\sigma_g^2/\Delta t)\Delta t^2\), so \(\operatorname{var}(\delta\theta_{ij}) = \sigma_g^2\Delta t_{ij}\). With the widget's \(\sigma_g = 0.002\) rad/s/√Hz and \(\Delta t_{ij} = 1\) s the standard deviation is 0.002 rad = 0.115°, the value it displays.
+@@ 46
+Two things to remember about \(\boldsymbol{\Sigma}_{ij}\). It grows with the time between keyframes, so widely spaced keyframes give weaker IMU factors. And it is not diagonal: an error in the integrated rotation mis-rotates every later accelerometer sample, so the velocity and position noises are correlated with the rotation noise.
+@@ 47
+<strong>"\(\Delta\mathbf{p}_{ij}\) is how far the robot moved."</strong> It is the double integral of the specific force in the frame of keyframe \(i\). A robot at rest for 1 s has \(\Delta\mathbf{p}_{ij} = 4.9\) m.
+@@ 48
+<strong>"Preintegration is a cheaper, approximate integration."</strong> The increments are an exact regrouping of (11.13), as the 10⁻¹⁵ m in the widget shows. Approximations enter only in the first-order treatment of noise, and tomorrow in the bias correction.
+@@ 49
+<strong>"The increments depend on nothing but the IMU data."</strong> They still depend on the bias estimate used while integrating.
+@@ 50
+Q1. A level IMU (R_i = I, z up) stays perfectly still for 2 s. What is the position increment Δp_ij?
+@@ 51
+With p_j = p_i and v_i = 0, the definition gives −½·g·Δt² = −½·(0,0,−9.81)·4 = (0,0,19.62) m. The increment integrates the specific force, which points up at rest.
+@@ 52
+Q2. Which of these does NOT appear in the right-hand (recipe) sides of (11.14)?
+@@ 53
+The gyroscope samples
+@@ 54
+The accelerometer samples
+@@ 55
+The bias
+@@ 56
+The velocity at keyframe i
+@@ 57
+The recipes use only IMU samples and the bias. The states at i and gravity were moved to the definition side, which is the whole point.
+@@ 58
+Q3. During optimization the estimate of R_i changes by 5°. With a preintegrated factor, what has to be redone?
+@@ 59
+Only the evaluation of (11.23) with the new state: a few matrix products
+@@ 60
+The product over all gyroscope samples
+@@ 61
+The sums over all accelerometer samples
+@@ 62
+The whole preintegration and its covariance
+@@ 63
+The left sides of (11.23) are stored numbers. Only the state-dependent right sides are re-evaluated, with no pass over the IMU samples.
+@@ 64
+Q4. Planar case: gyroscope noise density 0.001 rad/s/√Hz and 4 s between keyframes. The standard deviation of the preintegrated angle noise is
+@@ 65
+0.004 rad
+@@ 66
+0.001 rad
+@@ 67
+0.002 rad
+@@ 68
+0.0005 rad
+@@ 69
+var = σ²·Δt_ij, so the standard deviation is 0.001 × √4 = 0.002 rad. It does not depend on the IMU rate.
+@@ 70
+Q5. What is identity (11.17), Exp(φ)R = R·Exp(Rᵀφ), used for in the derivation?
+@@ 71
+To remove gravity from the increments
+@@ 72
+To move each sample's small noise rotation past all later rotations, collecting the noise at the right end
+@@ 73
+To make the increments independent of the bias
+@@ 74
+To convert body-frame acceleration to the world frame
+@@ 75
+After (11.16) the product alternates clean and noise rotations. (11.17) swaps a noise rotation with the clean one after it, so all noise ends up in a single factor Exp(−δφ).
+@@ 76
+Moving \(\mathbf{R}_i\), \(\mathbf{v}_i\), \(\mathbf{p}_i\), and \(\mathbf{g}\) to one side of (11.13) defines \(\Delta\mathbf{R}_{ij}\), \(\Delta\mathbf{v}_{ij}\), \(\Delta\mathbf{p}_{ij}\), equation (11.14).
+@@ 77
+Their recipes use only IMU samples (and the bias), so they are integrated once and never again when states change.
+@@ 78
+\(\Delta\mathbf{v}\) and \(\Delta\mathbf{p}\) are integrals of specific force in the frame of keyframe \(i\), not physical changes.
+@@ 79
+Pushing the noise to the end gives the measurement model (11.23): computed increment = function of states "plus" noise.
+@@ 80
+The noise is a linear function of the raw IMU noises, so it is Gaussian to first order with a covariance \(\boldsymbol{\Sigma}_{ij}\) propagated sample by sample.
+@@ 81
+<em>SLAM Handbook</em>, §11.2.2 "IMU Preintegration on Manifold", §11.2.2.1, §11.2.2.2, pp. 311–314.
+@@ 82
+Forster, Carlone, Dellaert, Scaramuzza, <em>On-Manifold Preintegration for Real-Time Visual-Inertial Odometry</em>, IEEE Transactions on Robotics, 2017 (the presentation the book follows; full derivation and the incremental covariance).
+@@ 83
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (the adjoint identity and the right Jacobian of SO(3)).

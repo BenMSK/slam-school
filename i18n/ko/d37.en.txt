@@ -1,0 +1,238 @@
+@@ 1
+<span class="eyebrow">Week 7 · Day 1</span>
+@@ 2
+Why differentiate through the back-end, and how autodiff does it
+@@ 3
+After today you can write SLAM with a learned front-end as a bilevel optimization problem, name the one Jacobian that makes it hard, and run forward- and reverse-mode automatic differentiation by hand on a small computation graph.
+@@ 4
+About 60 min · Read the Chapter 4 introduction, §4.1, and the start of §4.2, pp. 101–104 (4 pages) · Needs Week 2 Day 4
+@@ 5
+Read first: Chapter 4 introduction, §4.1, §4.2 up to §4.2.1, pp. 101–104
+@@ 6
+The sentence on p. 101 that says what "differentiating through an optimization problem" tells you, in words.
+@@ 7
+Equation (4.1) on p. 102, where each residual is a weight times a cost. Both the weight and the cost are places where a network can enter.
+@@ 8
+Equations (4.2a) and (4.2b) on p. 103: which problem is nested inside which, and which variables belong to each.
+@@ 9
+Equation (4.3) on p. 104 and the sentence after it that says which term is the hard one.
+@@ 10
+A learned front-end produces the measurements, and the back-end turns them into the estimate \(\mathbf{x}^*\). To train the front-end on how good the <em>final</em> estimate is, you need to know how \(\mathbf{x}^*\) moves when the front-end's parameters \(\mathbf{y}\) move. That is the Jacobian \(\partial\mathbf{x}^*/\partial\mathbf{y}\) of an <em>arg min</em>, and the whole chapter is about computing it.
+@@ 11
+1. From a one-way pipeline to a loop
+@@ 12
+In <a href="#d1">Week 1 · Day 1</a> the front-end handed pseudo-measurements to the back-end and never heard back. Neural networks now do parts of the front-end well, such as feature detection, matching, and frame-to-frame motion estimation, while geometric optimization remains the tool that makes the result globally consistent. <span class="src">Ch. 4 intro · p. 101</span> You could train the network on its own task (say, matching accuracy), freeze it, and plug it in. But the network would then never learn which of its mistakes actually hurt the SLAM estimate.
+@@ 13
+The alternative is to let the back-end send a training signal to the front-end. For that, the error measured <em>after</em> the back-end must be turned into a gradient with respect to the network's weights, and the gradient has to pass through the optimizer on the way. <span class="src">Ch. 4 intro · pp. 101–102</span>
+@@ 14 attr
+Three boxes in a row: a front-end neural network with weights y, a back-end nonlinear least squares solver with variables x, and a training loss U. Solid arrows go left to right carrying factors and then the solution x-star. Dashed arrows go right to left carrying the derivative of U with respect to x-star and then the derivative of x-star with respect to y.
+@@ 15
+neural network
+@@ 16
+Back-end
+@@ 17
+nonlinear least squares
+@@ 18
+Training loss
+@@ 19
+factors
+@@ 20
+upper-level variables y
+@@ 21
+lower-level variables x
+@@ 22
+upper-level cost
+@@ 23
+solid: forward computation · dashed: gradient sent back to the network
+@@ 24
+The left dashed arrow is the new ingredient. The back-end is not a formula but an iterative solver, so "its derivative" needs a definition and a method.
+@@ 25
+2. Recap: the back-end is a nonlinear least squares problem
+@@ 26
+The back-end solves a <strong>nonlinear least squares (NLS)</strong> problem: <span class="src">§4.1 · p. 102</span>
+@@ 27
+Each <strong>residual</strong> \(\mathbf{r}_i\) depends on a small subset \(\mathbf{x}_i\) of the variables (one factor of the factor graph) and is written as a scalar weight \(w_i\) times a vector cost \(\mathbf{c}_i\). The solver is the one from <a href="#d10">Week 2 · Day 4</a>: linearize, solve the normal equations for a step \(\delta\mathbf{x}\), update, repeat. With \(\mathbf{J}_i = \partial\mathbf{r}_i/\partial\mathbf{x}\), <strong>Gauss-Newton (GN)</strong> uses \(\sum_i \mathbf{J}_i\T\mathbf{J}_i\) as an approximation of the Hessian, and Levenberg-Marquardt and dogleg modify the step to make it safer. <span class="src">§4.1 · pp. 102–103</span>
+@@ 28
+Filling the gap: the sign in the normal equations
+@@ 29
+Page 102 writes the linear system compactly as \((\sum_i \mathbf{J}_i\T\mathbf{J}_i)\,\delta\mathbf{x} = \sum_i \mathbf{J}_i\T\mathbf{r}_i\). Whether a minus sign appears on the right depends on how the residual is defined. This week the residual is always "prediction minus measurement", and then minimizing \(\tfrac12\norm{\mathbf{r} + \mathbf{J}\,\delta\mathbf{x}}^2\) gives
+@@ 30
+which is the form the book itself uses later in equation (4.43) on p. 115.
+@@ 31
+<strong>The toy problem of the week.</strong> One unknown \(x\) (a position on a line), two residuals:
+@@ 32
+The first residual is a nonlinear sensor: it predicts the reading \(x^2\) and compares it with the measured value \(y\). The second is a prior that pulls \(x\) toward 1. The number \(y\) is what the front-end outputs. Take \(y = 2\) and start at \(x_0 = 1\). The residuals are \(\mathbf{r} = (x^2 - y,\; x - 1)\) and \(\mathbf{J} = (2x,\; 1)\T\), so one GN step is \(x \leftarrow x - \dfrac{2x(x^2-y) + (x-1)}{4x^2+1}\):
+@@ 33
+Iteration
+@@ 34
+It converges to \(x^* = (1+\sqrt3)/2 \approx 1.3660\). Notice that \(x^*\) is not \(\sqrt{2} \approx 1.414\) (what the sensor alone says) and not 1 (what the prior says): it is the compromise. Change \(y\) and the compromise moves. How fast it moves is the question of the week.
+@@ 35
+3. Two nested problems: bilevel optimization
+@@ 36
+Call the network's parameters \(\mathbf{y} \in \R^m\) and the back-end's variables \(\mathbf{x} \in \R^n\). Training the network on the back-end's result is a <strong>bilevel optimization (BLO)</strong> problem: <span class="src">§4.2 · p. 103</span>
+@@ 37
+\(\mathcal{L}\) is the <strong>lower-level (LL) cost</strong>: the SLAM objective, minimized over \(\mathbf{x}\) with \(\mathbf{y}\) held fixed. \(\mathcal{U}\) is the <strong>upper-level (UL) cost</strong>: the training loss, minimized over \(\mathbf{y}\), and it is evaluated at the solution \(\mathbf{x}^*\) of the lower level. The constraint "s.t." is itself an optimization problem, which is what "bilevel" means. The variables \(\mathbf{x}\) usually have a physical meaning (poses, landmarks); the variables \(\mathbf{y}\) usually do not (network weights). <span class="src">§4.2 · p. 103</span>
+@@ 38
+Keep to this definition of the two symbols. The sentence just before (4.2) on p. 103 uses the names of the two levels loosely; the equations and Figure 4.1 are the reference.
+@@ 39
+Case
+@@ 40
+Upper level: y and U
+@@ 41
+Lower level: x and L
+@@ 42
+Example 4.1, visual SLAM with learned features (p. 104)
+@@ 43
+y: weights of the feature network. U: feature-matching error
+@@ 44
+x: camera poses and landmarks. L: reprojection error of bundle adjustment
+@@ 45
+Example 4.2, pose-graph optimization (p. 104)
+@@ 46
+y: weights of a network that estimates relative poses. U: pose-graph error
+@@ 47
+x: the poses. L: the same pose-graph error
+@@ 48
+Our toy problem
+@@ 49
+y: the measured value itself. U = ½(x* − 1.5)², the error against a ground truth of 1.5
+@@ 50
+x: the position. L = ½(x² − y)² + ½(x − 1)²
+@@ 51
+In Example 4.2 both levels use the same error, and that is not a mistake: the lower level picks the poses for the given measurements, the upper level changes the network so that the measurements it produces leave less error after optimization. <span class="src">§4.2 · p. 104</span>
+@@ 52
+A cook (the front-end) prepares ingredients. A chef (the back-end) always makes the best possible dish from whatever arrives. A critic scores the dish. To improve, the cook needs to know: "if I had cut the onions a little finer, how would the chef's best dish have changed, and would the critic have liked it more?" The chef's reaction to a small change in the ingredients is \(\partial\mathbf{x}^*/\partial\mathbf{y}\).
+@@ 53
+4. The gradient the upper level needs
+@@ 54
+The upper level is trained by gradient descent, \(\mathbf{y} \leftarrow \mathbf{y} + \delta\mathbf{y}\) with \(\delta\mathbf{y}\) along the negative gradient. Because \(\mathbf{x}^*\) depends on \(\mathbf{y}\), the chain rule gives two terms: <span class="src">§4.2 · p. 104</span>
+@@ 55
+Filling the gap: shapes, and which term is hard
+@@ 56
+\(\mathcal{U}\) is a scalar, \(\mathbf{y}\) has \(m\) entries, \(\mathbf{x}\) has \(n\). With gradients written as rows:
+@@ 57
+\(\partial\mathcal{U}/\partial\mathbf{y}\) is \(1\times m\): the <strong>direct</strong> dependence, with \(\mathbf{x}^*\) treated as a constant. Ordinary backpropagation gives it.
+@@ 58
+\(\partial\mathcal{U}/\partial\mathbf{x}^*\) is \(1\times n\): also ordinary.
+@@ 59
+\(\partial\mathbf{x}^*/\partial\mathbf{y}\) is \(n\times m\): entry \((j,k)\) says how much the \(j\)-th solution variable moves per unit change of the \(k\)-th parameter. This is the <strong>indirect</strong> part and the hard one, because \(\mathbf{x}^*\) is defined as "the result of running a solver", not by a formula.
+@@ 60
+In the toy problem \(\mathcal{U} = \tfrac12(x^*-1.5)^2\) does not contain \(y\) directly, so the first term is zero and \(\nabla_y\,\mathcal{U} = (x^* - 1.5)\cdot \dfrac{dx^*}{dy}\). You can estimate the derivative by brute force: solve the lower level at \(y = 2.01\) and \(y = 1.99\), which gives \(x^* = 1.36936\) and \(1.36269\), so
+@@ 61
+The gradient is negative: raising \(y\) lowers the loss, which makes sense because \(x^* = 1.366\) is below the target 1.5. But this method needs two full solves <em>per parameter</em>. With a million network weights that is two million SLAM solves for one training step. The book offers two practical routes, <strong>unrolled differentiation</strong> (tomorrow) and <strong>implicit differentiation</strong> (Day 3). <span class="src">§4.2 · p. 104</span>
+@@ 62
+5. The tool underneath: automatic differentiation
+@@ 63
+Both routes rest on <strong>automatic differentiation (AutoDiff)</strong>. Page 105 mentions that it comes in a forward mode and a reverse mode and leaves the details to the libraries. Here they are, because the costs of the two modes decide everything tomorrow.
+@@ 64
+A program computes its output through a sequence of elementary operations (add, multiply, square, sin, …), each with a derivative you know. AutoDiff applies the chain rule to that sequence with numbers, not symbols. It is exact up to rounding: it is neither a finite-difference approximation nor a symbolic manipulation of formulas.
+@@ 65
+Filling the gap: the two modes
+@@ 66
+Write the program as intermediate values \(v_1, v_2, \dots\), each computed from earlier ones.
+@@ 67
+<strong>Forward mode</strong> picks one input, say \(x\), and carries next to every value its <strong>tangent</strong> \(\dot v = \partial v/\partial x\). The inputs are seeded with \(\dot x = 1\) and 0 for the others, and each operation updates the tangent with its own derivative rule: if \(v = a\,b\) then \(\dot v = \dot a\, b + a\, \dot b\). One pass, done together with the evaluation, gives the derivative of <em>every output</em> with respect to <em>that one input</em>.
+@@ 68
+<strong>Reverse mode</strong> first runs the program and stores every intermediate value. Then it walks the operations backward and carries for every value its <strong>adjoint</strong> \(\bar v = \partial(\text{output})/\partial v\). The output is seeded with 1, and each node passes its adjoint to the values it was computed from: if \(v = a\,b\) then \(\bar a\) receives \(\bar v\, b\) and \(\bar b\) receives \(\bar v\, a\). A value used in several places adds up what it receives. One backward pass gives the derivative of <em>that one output</em> with respect to <em>every input</em>. Applied to neural networks this is backpropagation.
+@@ 69
+Split the toy cost into elementary steps: \(v_1 = x^2\), \(v_2 = v_1 - y\), \(v_3 = x - 1\), \(v_4 = \tfrac12 v_2^2\), \(v_5 = \tfrac12 v_3^2\), \(\mathcal{L} = v_4 + v_5\). At \(x = 1.5\), \(y = 2\):
+@@ 70
+Node
+@@ 71
+Value
+@@ 72
+Forward tangent (seed x)
+@@ 73
+Reverse adjoint ∂L/∂node
+@@ 74
+1 (seed)
+@@ 75
+Read the forward column top to bottom and the reverse column bottom to top. Both find \(\partial\mathcal{L}/\partial x = 1.25\), which agrees with the formula \(2x(x^2-y) + (x-1) = 0.75 + 0.5\). Only the reverse pass also produced \(\partial\mathcal{L}/\partial y = -0.25\).
+@@ 76
+Try it: step through each mode with the Step slider, then change x and y.
+@@ 77
+Notice that at the default x = 1.5, y = 2 the forward pass seeded on x ends with 1.250 at L and says nothing about y; seeded on y it ends with −0.250. The reverse pass delivers both numbers, at the x and y nodes, in one sweep, and its arrows run against the direction of evaluation.
+@@ 78
+For f from m inputs to p outputs
+@@ 79
+Forward mode
+@@ 80
+Reverse mode
+@@ 81
+One pass computes
+@@ 82
+Jacobian times a vector, J·u (one column if u is a unit vector)
+@@ 83
+a vector times the Jacobian, wᵀ·J (one row if w is a unit vector)
+@@ 84
+Passes for the full Jacobian
+@@ 85
+Extra memory
+@@ 86
+none beyond the tangents
+@@ 87
+every intermediate value must be kept until the backward pass
+@@ 88
+Good when
+@@ 89
+few inputs, many outputs
+@@ 90
+many inputs, one output: a training loss
+@@ 91
+A training loss has one output and millions of inputs, so learning uses reverse mode. The price is the last-but-one row: memory proportional to the length of the computation. Tomorrow the "computation" will be every iteration of the back-end solver, and that price becomes the main problem.
+@@ 92
+<strong>"U does not contain y, so its gradient with respect to y is zero."</strong> Only the direct term of (4.3) is zero. \(\mathcal{U}\) depends on \(\mathbf{y}\) through \(\mathbf{x}^*(\mathbf{y})\), and that indirect term is usually the whole signal.
+@@ 93
+<strong>"AutoDiff is finite differences done by a library."</strong> Finite differences evaluate the function at shifted inputs and have truncation error. AutoDiff propagates exact derivative rules through the same operations and has none.
+@@ 94
+<strong>"Reverse mode is always the faster one."</strong> It needs one pass per output and stores the whole computation. For a function with few inputs and many outputs, forward mode is cheaper.
+@@ 95
+<strong>"The lower level and the upper level must use different costs."</strong> Example 4.2 uses the same pose-graph error at both levels; they differ in which variables are free.
+@@ 96
+Q1. In Example 4.2 (a network estimates relative poses, pose-graph optimization removes the drift), what are the lower-level variables x?
+@@ 97
+The weights of the network
+@@ 98
+The images
+@@ 99
+The robot poses
+@@ 100
+The learning rate
+@@ 101
+The lower level is the back-end: it optimizes the poses for fixed network outputs. The network weights are the upper-level variables y.
+@@ 102
+Q2. For the toy cost L = ½(x² − y)² + ½(x − 1)², use the computation graph at x = 2, y = 3. What is ∂L/∂x?
+@@ 103
+v1 = 4, v2 = 1, v3 = 1. Reverse: the adjoints of v2 and v3 are 1 and 1, so ∂L/∂x = 1 · 2x + 1 · 1 = 4 + 1 = 5. (And ∂L/∂y = −1.)
+@@ 104
+Q3. A back-end has n = 600 variables and the network has m = 1,000,000 weights. What is the shape of ∂x*/∂y, and how many AutoDiff passes would it take to compute the single row vector ∇U in reverse mode?
+@@ 105
+1,000,000 × 600; 600 passes
+@@ 106
+600 × 600; 1 pass
+@@ 107
+600 × 1,000,000; 1,000,000 passes
+@@ 108
+600 × 1,000,000; 1 pass
+@@ 109
+Rows index solution variables, columns index parameters: n × m. The loss U is one scalar output, so one reverse pass gives its whole gradient. You never need the full 600 × 1,000,000 matrix, only its product with the row ∂U/∂x*.
+@@ 110
+Q4. In the toy problem, the solution moves from x* = 1.3660 at y = 2 to x* = 1.3991 at y = 2.1. Using this finite difference, about how much does U = ½(x* − 1.5)² change per unit of y near y = 2?
+@@ 111
+dx*/dy ≈ (1.3991 − 1.3660)/0.1 = 0.331, and ∂U/∂x* = 1.3660 − 1.5 = −0.134. Their product is about −0.044. The direct term is zero.
+@@ 112
+Differentiating through the back-end tells you how the SLAM solution changes when the front-end's output changes, which lets the front-end be trained on the final accuracy.
+@@ 113
+This is a bilevel problem: the upper-level cost \(\mathcal{U}\) trains \(\mathbf{y}\); the lower-level cost \(\mathcal{L}\) is the NLS problem (4.1) solved for \(\mathbf{x}^*\).
+@@ 114
+The gradient (4.3) has a direct term and an indirect term. The indirect term needs \(\partial\mathbf{x}^*/\partial\mathbf{y}\), an \(n\times m\) Jacobian of an arg min.
+@@ 115
+Forward-mode AutoDiff costs one pass per input; reverse mode costs one pass per output but stores the whole computation.
+@@ 116
+<em>SLAM Handbook</em>, Chapter 4 "Differentiable Optimization" (Wang, Jatavallabhula, Mukadam), introduction, §4.1, and §4.2 up to §4.2.1, pp. 101–104; Figure 4.1; Examples 4.1 and 4.2.
+@@ 117
+Griewank and Walther, <em>Evaluating Derivatives: Principles and Techniques of Algorithmic Differentiation</em>, 2nd ed., 2008 (forward and reverse mode, their costs).
+@@ 118
+Baydin, Pearlmutter, Radul, Siskind, <em>Automatic differentiation in machine learning: a survey</em>, 2018.
+@@ 119
+Nocedal and Wright, <em>Numerical Optimization</em>, 2006 (Gauss-Newton and its sign conventions). The toy problem and its numbers are this app's own.

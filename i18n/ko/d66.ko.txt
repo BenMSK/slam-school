@@ -1,0 +1,174 @@
+@@ 1
+<span class="eyebrow">11주차 · 복습</span>
+@@ 2
+11주차 복습: 카메라, feature, pipeline
+@@ 3
+오늘이 끝나면 카메라 모델로 project와 unproject를 하고, corner의 점수를 매기고, descriptor를 매칭하고, reprojection cost와 bundle adjustment를 쓰고, epipolar constraint로 두 view를 연결하고, trajectory를 평가할 수 있습니다.
+@@ 4
+Part II는 back-end에서 front-end로 넘어갑니다. 각 센서가 odometry factor, loop-closure factor, unary factor를 어떻게 만드는지, 그리고 그 결과를 어떻게 평가하는지(ATE, RPE, precision과 recall)를 다룹니다. visual SLAM은 첫 번째이자 기준이 되는 경우입니다. 카메라는 calibration된 intrinsics를 가진 projection 함수 \(\pi\)로 3D 점을 픽셀에 보내며, 그 과정에서 depth를 잃습니다. depth는 두 번째 view를 통해서만 돌아오고, 그 불확실성은 \(z^2\)에 비례해 커지며 baseline이 클수록 줄어듭니다. feature-based 시스템은 각 이미지를 keypoint로 줄이고(second-moment matrix로 corner를 찾고, 벡터나 비트 문자열로 기술하고, 거리로 매칭), reprojection error를 최소화해 카메라와 점을 추정합니다. 이를 모든 것에 대해 한꺼번에 하면 bundle adjustment입니다. 실시간 시스템은 keyframe으로 이를 감당할 만한 크기로 유지하고, 두 view 기하로 시작점을 얻습니다.
+@@ 5
+=
+@@ 6
+\(\sqrt{\tfrac1n\sum_i\norm{\mathbf{q}_i - (\mathbf{R}\mathbf{p}_i + \mathbf{t})}^2}\), 최적의 강체 정렬 \((\mathbf{R},\mathbf{t})\) 후
+@@ 7
+Day 1 (보충; §II.3, p. 191이 가리킴)
+@@ 8
+=
+@@ 9
+\(\mathbf{E}_i = (\mathbf{Q}_i^{-1}\mathbf{Q}_{i+\Delta})^{-1}(\mathbf{P}_i^{-1}\mathbf{P}_{i+\Delta})\), 그다음 그 이동 부분의 RMS
+@@ 10
+Day 1 (보충)
+@@ 11
+Precision과 recall
+@@ 12
+\(\dfrac{TP}{TP+FP}\)와 \(\dfrac{TP}{TP+FN}\)
+@@ 13
+=
+@@ 14
+disparity로 구한 depth
+@@ 15
+Day 2 (보충)
+@@ 16
+Pinhole projection과 unprojection
+@@ 17
+=
+@@ 18
+=
+@@ 19
+\(x'' = x'(1 + k_1 r^2 + k_2 r^4)\), \(y''\)도 같음, 여기서 \(x' = x/z\), \(r^2 = x'^2 + y'^2\)
+@@ 20
+=
+@@ 21
+Second-moment matrix와 corner score
+@@ 22
+=
+@@ 23
+=
+@@ 24
+=
+@@ 25
+Day 5; 식 (7.1), p. 204
+@@ 26
+=
+@@ 27
+Day 5; 식 (7.3), p. 205
+@@ 28
+=
+@@ 29
+\(\mathbf{b}_2\T\mathbf{E}\,\mathbf{b}_1 = 0\), \(\mathbf{E} = [\mathbf{t}]_\times\mathbf{R}\); 픽셀 단위로 \(\mathbf{p}_2\T\mathbf{F}\,\mathbf{p}_1 = 0\), \(\mathbf{F} = \mathbf{K}^{-\top}\mathbf{E}\,\mathbf{K}^{-1}\)
+@@ 30
+Day 5 (보충)
+@@ 31
+Q1. place recognition이 현재 LiDAR scan이 scan 87과 비슷하다는 것을 찾아냈습니다. back-end가 이를 쓰려면 그 전에 무엇이 필요합니까?
+@@ 32
+필요 없음: index 쌍 자체가 factor
+@@ 33
+두 scan을 registration해 relative pose를 추정하고, 이것이 binary factor가 됨
+@@ 34
+현재 node에 unary prior를 추가
+@@ 35
+두 node 사이의 odometry를 다시 적분
+@@ 36
+Loop closure는 두 단계입니다. detection이 후보를 주고, relative pose 추정이 이를 두 node 사이의 측정값으로 바꿉니다.
+@@ 37
+Q2. 로봇이 직선을 따라 움직입니다. 실제 위치는 0, 1, 2, 3 m이고 추정값은 0, 1.1, 2.2, 3.3 m입니다. Δ = 1에 대한 translational RPE는 얼마입니까?
+@@ 38
+추정한 step은 모두 1.1 m이고 실제는 1.0 m이므로 각각 0.1 m의 오차가 있고, RMS는 0.1 m입니다. 0.3 m는 끝에서의 누적 오차입니다.
+@@ 39
+Q3. stereo rig의 f = 700 px, baseline은 0.1 m입니다. 7 m 떨어진 점에 대해 disparity noise가 0.5 px이면 depth 표준편차는 대략 얼마입니까?
+@@ 40
+σ_z ≈ z²σ_d/(f·b) = 49 × 0.5 / 70 = 0.35 m. (disparity 자체는 700 × 0.1 / 7 = 10 px입니다.)
+@@ 41
+Q4. direct 방법과 달리 feature-based(indirect) visual odometry에 해당하는 설명은 무엇입니까?
+@@ 42
+이미지 간 밝기 차이를 최소화함
+@@ 43
+수렴하려면 coarse-to-fine으로 실행해야 함
+@@ 44
+data association이 명시적임: 움직임을 추정하기 전에 match가 고정됨
+@@ 45
+outlier 제거가 필요 없음
+@@ 46
+feature-based 방법은 검출하고, 매칭하고, reprojection error를 최소화합니다. match 덕분에 basin of convergence가 넓어지지만 일부 match는 틀리므로 outlier 제거가 필수입니다.
+@@ 47
+Q5. pinhole 카메라가 \(f_u = f_v = 600\), principal point (400, 300)입니다. \(\mathbf{x}^c = (-0.5, 0.25, 5)\)는 어디로 투영됩니까?
+@@ 48
+u = 600·(−0.5/5) + 400 = 340, v = 600·(0.25/5) + 300 = 330입니다.
+@@ 49
+Q6. 책이 fisheye 렌즈에 적합하고 closed-form unprojection을 갖는다고 설명하는 카메라 모델은 무엇입니까?
+@@ 50
+=
+@@ 51
+=
+@@ 52
+=
+@@ 53
+=
+@@ 54
+Double Sphere 모델은 closed-form unprojection을 가지며, 비슷한 reprojection error에서 Kannala-Brandt보다 계산이 약 다섯 배 빠르다고 보고됩니다(p. 199).
+@@ 55
+Q7. \(\mathbf{M} = \begin{bmatrix} 6 & 2 \\ 2 & 3 \end{bmatrix}\)인 patch의 Shi-Tomasi score는 얼마입니까?
+@@ 56
+eigenvalue는 4.5 ± √(1.5² + 2²) = 4.5 ± 2.5, 즉 7과 2입니다. Shi-Tomasi는 작은 쪽인 2를 씁니다.
+@@ 57
+Q8. 카메라가 회전 없이 곧장 앞으로 움직입니다: \(\mathbf{R} = \mathbf{I}\), \(\mathbf{t}\)는 optical axis 방향. 두 번째 이미지의 epipolar line은 어떤 모양입니까?
+@@ 58
+가로 행
+@@ 59
+세로 열
+@@ 60
+principal point에서 방사상으로 뻗는 직선
+@@ 61
+principal point를 둘러싼 원
+@@ 62
+t = (0, 0, t_z)이면 E b₁은 (−y′₁, x′₁, 0)에 비례하므로 constraint는 x′₁y′₂ − y′₁x′₂ = 0입니다. match는 이미지 중심과 원래 점을 지나는 직선 위에 있습니다. 점들은 이 직선을 따라 바깥으로 흘러가는 것처럼 보입니다.
+@@ 63
+카메라가 \(f_u = f_v = 800\), principal point \((640, 360)\)입니다. pose는 \(\mathbf{R}^i_w = \mathbf{I}\), \(\mathbf{t}^i_w = (-1, 0, 0)\)입니다. landmark를 \(\mathbf{x}^w = (2, 1, 10)\)으로 추정했고, 표준편차 2 픽셀의 등방성 noise로 픽셀 \((722, 437)\)에서 관측했습니다. 카메라 좌표의 점, 예측 픽셀, reprojection error, 그리고 (7.1)에서의 항을 계산하십시오.
+@@ 64
+카메라 좌표: \(\mathbf{x}^c = \mathbf{R}^i_w\mathbf{x}^w + \mathbf{t}^i_w = (2-1, 1, 10) = (1, 1, 10)\).
+@@ 65
+예측: \(u = 800\cdot\tfrac{1}{10} + 640 = 720\), \(v = 800\cdot\tfrac{1}{10} + 360 = 440\).
+@@ 66
+오차: \(\mathbf{e} = (722, 437) - (720, 440) = (2, -3)\)이므로 \(\norm{\mathbf{e}}^2 = 13\)입니다.
+@@ 67
+Cost 항: covariance가 \(\sigma^2\mathbf{I} = 4\,\mathbf{I}\)이면 \(\tfrac12\mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e} = \tfrac{13}{2\cdot4} = 1.625\)입니다.
+@@ 68
+렌즈가 \(k_1 = -0.3\), \(k_2 = 0.1\)이고 tangential distortion은 없으며, \(f_u = f_v = 400\), principal point \((320, 240)\)입니다. (a) \(\mathbf{x}^c = (1, 1, 2)\)를 distortion이 있을 때와 없을 때 각각 투영하십시오. (b) distortion된 normalized 좌표에서 출발해 Day 3의 fixed-point undistortion을 두 번 반복하십시오.
+@@ 69
+(a) \(x' = y' = 0.5\), \(r^2 = 0.5\), \(r^4 = 0.25\). 배율: \(1 - 0.3\cdot0.5 + 0.1\cdot0.25 = 0.875\). 따라서 \(x'' = y'' = 0.4375\)이고 픽셀은 \((400\cdot0.4375 + 320,\ 400\cdot0.4375 + 240) = (495, 415)\)입니다. distortion이 없으면 \((520, 440)\)이므로, 점은 각 방향으로 25 픽셀, 중심 쪽으로 약 35 픽셀 움직였습니다.
+@@ 70
+(b) \(x' = y' = 0.4375\)에서 시작합니다. Iteration 1: \(r^2 = 2\cdot0.4375^2 = 0.3828\), \(r^4 = 0.1465\), \(g = 1 - 0.1148 + 0.0147 = 0.8998\), \(x' = 0.4375/0.8998 = 0.4862\). Iteration 2: \(r^2 = 2\cdot0.4862^2 = 0.4728\), \(r^4 = 0.2235\), \(g = 1 - 0.1418 + 0.0224 = 0.8805\), \(x' = 0.4375/0.8805 = 0.4969\). 반복값이 참값 0.5에 다가갑니다.
+@@ 71
+\(2\times2\) 픽셀 patch 두 개의 네 픽셀에서 이미지 gradient \((I_u, I_v)\)가 다음과 같습니다. Patch A: \((2,0), (2,0), (0,1), (0,1)\). Patch B: \((1,1), (1,1), (1,1), (1,1)\). 각각에 대해 \(\mathbf{M}\), 그 eigenvalue, Shi-Tomasi score, \(k = 0.04\)인 Harris response를 계산하십시오. 어느 쪽이 corner입니까?
+@@ 72
+Patch A: \(\sum I_u^2 = 4+4 = 8\), \(\sum I_v^2 = 1+1 = 2\), \(\sum I_uI_v = 0\). \(\mathbf{M} = \begin{bmatrix} 8 & 0 \\ 0 & 2 \end{bmatrix}\), eigenvalue는 8과 2. Shi-Tomasi score는 2. Harris: \(16 - 0.04\cdot10^2 = 12\). 두 eigenvalue가 모두 0보다 충분히 크고 \(R \gt 0\)이므로 corner입니다(gradient가 서로 다른 두 방향을 가리킵니다).
+@@ 73
+Patch B: 모든 원소의 합이 4입니다. \(\mathbf{M} = \begin{bmatrix} 4 & 4 \\ 4 & 4 \end{bmatrix}\), eigenvalue는 \(4 \pm 4\), 즉 8과 0. Shi-Tomasi score는 0. Harris: \(0 - 0.04\cdot8^2 = -2.56\). 대각선 방향으로 뻗은 edge입니다. 모든 gradient가 평행하므로 patch를 \((1,-1)\) 방향으로 밀어도 아무것도 변하지 않습니다. \(\mathbf{M}\)의 대각 원소만으로는 이를 알 수 없다는 점에 주의하십시오. 비대각 원소가 중요합니다.
+@@ 74
+(심화.) 똑같은 카메라 두 대가 \(f = 500\), principal point \((320, 240)\)이고, \(\mathbf{R} = \mathbf{I}\), \(\mathbf{t} = (-0.5, 0, 0)\)으로 연결됩니다. 이미지 1의 keypoint는 \(\mathbf{z}_1 = (420, 190)\)입니다. (a) essential matrix로 이미지 2에서의 epipolar line을 구하십시오. (b) 그 직선 위 \(u_2 = 395\)에서 match를 찾았습니다. 카메라 1 좌표에서 3D 점을 구하고, 카메라 2에 투영해 확인하십시오. (c) disparity의 표준편차가 0.5 px이면 depth는 얼마나 불확실합니까? (d) 실제 baseline이 0.5 m가 아니라 1 m였다면 무엇이 달라집니까?
+@@ 75
+(a) \(\mathbf{b}_1 = \big(\tfrac{420-320}{500}, \tfrac{190-240}{500}, 1\big) = (0.2, -0.1, 1)\). \(\mathbf{t} = (-0.5, 0, 0)\)이면 \(\mathbf{E} = [\mathbf{t}]_\times = \begin{bmatrix} 0 & 0 & 0 \\ 0 & 0 & 0.5 \\ 0 & -0.5 & 0 \end{bmatrix}\)이고 \(\mathbf{E}\mathbf{b}_1 = (0, 0.5, 0.05)\)입니다. constraint \(\mathbf{b}_2\T\mathbf{E}\mathbf{b}_1 = 0.5\,y'_2 + 0.05 = 0\)에서 \(y'_2 = -0.1\), 즉 \(v_2 = 500\cdot(-0.1) + 240 = 190\)입니다. epipolar line은 행 \(v = 190\)입니다.
+@@ 76
+(b) disparity \(d = 420 - 395 = 25\) px이므로 \(z = f\,b/d = 500\cdot0.5/25 = 10\) m이고, \(\mathbf{x}^1 = 10\,\mathbf{b}_1 = (2, -1, 10)\)입니다. 확인: \(\mathbf{x}^2 = \mathbf{x}^1 + \mathbf{t} = (1.5, -1, 10)\)은 \(u = 500\cdot0.15 + 320 = 395\), \(v = 500\cdot(-0.1) + 240 = 190\)으로 투영됩니다. 일치합니다.
+@@ 77
+(d) 픽셀이 같으므로 ray도 같습니다. \(z = 500\cdot1/25 = 20\) m이고 점은 \((4, -2, 20)\)이 됩니다. 모든 것이 두 배가 됩니다. 이미지만으로는 두 경우를 구별할 수 없으며, 이것이 monocular scale ambiguity입니다. \(b\)가 calibration된 stereo rig나 IMU가 이를 해결합니다.
+@@ 78
+odometry, loop closure, unary factor가 무엇인지 말하고, 각각의 센서 예를 하나씩 들 수 있습니다.
+@@ 79
+\(\pi_p\)로 점을 투영하고, 픽셀을 ray로 unproject하고, depth가 사라지는 이유를 설명할 수 있습니다.
+@@ 80
+\(\mathbf{M}\)의 eigenvalue를 이용해 corner가 edge보다 좋은 keypoint인 이유를 설명할 수 있습니다.
+@@ 81
+식 (7.1)을 쓰고, \(\tfrac12\)과 \(\boldsymbol{\Sigma}_j\)가 어디서 오는지 말할 수 있습니다.
+@@ 82
+bundle adjustment (7.3)의 미지수를 말하고, keyframe이 문제를 sparse하게 유지하는 이유를 설명할 수 있습니다.
+@@ 83
+epipolar constraint를 쓰고, monocular 재구성에 절대 scale이 없는 이유를 설명할 수 있습니다.
+@@ 84
+<em>SLAM Handbook</em>, Prelude to Part II, pp. 185–192, 그리고 7장, §7.1–7.3, pp. 193–207.
+@@ 85
+Hartley와 Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (두 view 기하, stereo depth).
+@@ 86
+Sturm, Engelhard, Endres, Burgard, Cremers, <em>A Benchmark for the Evaluation of RGB-D SLAM Systems</em>, 2012 (ATE와 RPE).
+@@ 87
+Harris와 Stephens, <em>A Combined Corner and Edge Detector</em>, 1988; Shi와 Tomasi, <em>Good Features to Track</em>, 1994.

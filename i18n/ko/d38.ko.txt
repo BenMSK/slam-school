@@ -1,0 +1,206 @@
+@@ 1
+<span class="eyebrow">7주차 · Day 2</span>
+@@ 2
+Unrolled differentiation: solver의 iteration을 거슬러 backpropagation하기
+@@ 3
+오늘이 끝나면 solver iteration T번의 결과를 chain rule로 문제의 parameter에 대해 미분하고, 그 시간·메모리 비용을 말하고, backward pass를 truncate하거나 step 하나만 쓸 때 생기는 bias를 정량화할 수 있습니다.
+@@ 4
+약 60분 · §4.2.1–4.2.2, pp. 104–106 읽기 (3쪽) · 7주차 Day 1 필요
+@@ 5
+먼저 읽기: §4.2.1–4.2.2, pp. 104–106
+@@ 6
+p. 104의 식 (4.4)와 p. 105의 (4.6): update map의 합성으로 쓴 solver.
+@@ 7
+p. 105의 Algorithm 1: 5행(unrolled)과 6행(implicit)은 같은 gradient를 채우는 두 가지 방법입니다.
+@@ 8
+p. 105의 각주: gradient descent는 예시일 뿐이며, 같은 아이디어가 Gauss-Newton에도 적용됩니다.
+@@ 9
+p. 106에서 "마지막 M개 iteration만 저장"하면 얻는 것, 그리고 식 (4.8)–(4.10)이 계산하지 않고 피하는 것.
+@@ 10
+iterative solver는 하나의 프로그램, 곧 update rule을 \(T\)번 적용한 것입니다. <strong>Unrolled differentiation</strong>은 그 \(T\)번의 업데이트를 network의 \(T\)개 layer로 보고 backpropagation합니다. 실제로 실행된 프로그램에 대해서는 정확하고, 미분 가능한 어떤 solver에도 쓸 수 있으며, 그 대가로 \(T\)에 따라 커지는 메모리를 치릅니다. backward pass를 truncate하면 그 메모리를 작고 예측 가능한 bias와 맞바꿀 수 있습니다.
+@@ 11
+1. map의 사슬로 본 solver
+@@ 12
+initial guess \(\mathbf{x}_0 = \Phi_0(\mathbf{y})\)에서 시작해 update map을 \(T\)번 적용합니다: <span class="src">§4.2.1 · pp. 104–105</span>
+@@ 13
+책이 드는 update map의 예는 learning rate \(\eta_t\)로 lower-level cost에 gradient descent를 한 step 적용하는 것입니다:
+@@ 14
+Gauss-Newton이나 Levenberg-Marquardt step도 올바른 \(\Phi_t\)입니다(p. 105 각주 1). \(T\) step 후에 멈추고 실제 minimizer 대신 \(\mathbf{x}_T\)를 씁니다:
+@@ 15
+그러면 bilevel 문제 (4.2)는 평범한 단일 수준 문제 \(\min_{\mathbf{y}} \mathcal{U}(\mathbf{y}, \Phi(\mathbf{y}))\), 곧 식 (4.7)로 줄어듭니다. 여기서 \(\Phi\)는 \(\mathbf{y}\)의 깊은 함수일 뿐이고, AutoDiff로 미분할 수 있습니다. <span class="src">§4.2.1 · p. 105</span>
+@@ 16 attr
+update map Phi 1, Phi 2부터 Phi T까지의 사슬. iterate x0이 Phi 1에 들어가고, x1이 나와 Phi 2에 들어가며, 이렇게 x T가 upper-level cost U에 들어갈 때까지 이어집니다. front-end 출력 y가 위에서 모든 update map에 들어갑니다. 점선 화살표 하나가 사슬 전체 아래로 U에서 Phi 1까지 거꾸로 이어집니다.
+@@ 17
+front-end 출력 y (모든 step에 같은 y가 들어감)
+@@ 18
+reverse mode는 저장된 모든 iterate를 거꾸로 거쳐 감
+@@ 19
+unrolling은 solver를 입력 y를 공유하는 T-layer network로 바꿉니다. parameter y는 모든 layer를 통해 결과에 영향을 주므로, gradient는 T개 경로 전체에 대한 합입니다.
+@@ 20
+2. 사슬을 따라가는 chain rule
+@@ 21
+책은 "AutoDiff로 \(\partial\Phi(\mathbf{y})/\partial\mathbf{y}\)를 계산한다"에서 멈춥니다. AutoDiff가 실제로 무엇을 계산하는지 볼 가치가 있습니다. 그 식이 비용을 설명해 주기 때문입니다.
+@@ 22
+빈틈 채우기: sensitivity 점화식
+@@ 23
+(4.4)를 \(\mathbf{y}\)에 대해 미분합니다. \(\Phi_t\)는 \(\mathbf{y}\)에 두 가지 방식으로 의존합니다. 직접, 그리고 \(\mathbf{x}_{t-1}\)을 통해서입니다. 두 편미분을 다음과 같이 부르고
+@@ 24
+구하려는 양을 \(\mathbf{S}_t = \partial\mathbf{x}_t/\partial\mathbf{y}\)라 하면
+@@ 25
+이것을 solver와 나란히 실행하는 것이 <strong>forward mode</strong>입니다. gradient-descent map (4.5)에 대해 한 번 더 미분하면
+@@ 26
+점화식을 펼치면 "경로에 대한 합"이 보입니다:
+@@ 27
+<strong>Reverse mode</strong>는 같은 합을 반대쪽 끝에서 계산하며, \(n\times m\) 행렬을 한 번도 만들지 않습니다. adjoint \(\boldsymbol{\lambda}_T = (\partial\mathcal{U}/\partial\mathbf{x}_T)\T\)에서 시작해 거꾸로 걸어갑니다:
+@@ 28
+backward step마다 \(\mathbf{A}_t\)와 \(\mathbf{B}_t\)가 필요하고, 이들은 \(\mathbf{x}_{t-1}\)에서 계산됩니다. 그래서 backward pass가 도달할 때까지 모든 iterate가 메모리에 남아 있어야 합니다.
+@@ 29
+<strong>풀어 본 예제.</strong> <a href="#d37">Day 1</a>의 toy problem: \(\mathcal{L} = \tfrac12(x^2-y)^2 + \tfrac12(x-1)^2\)이고 \(\partial\mathcal{L}/\partial x = 2x(x^2-y) + (x-1)\), \(\partial^2\mathcal{L}/\partial x^2 = 6x^2 - 2y + 1\), \(\partial^2\mathcal{L}/\partial x\,\partial y = -2x\)입니다. 따라서 \(A_t = 1 - \eta(6x_{t-1}^2 - 2y + 1)\), \(B_t = 2\eta\,x_{t-1}\)입니다. \(y = 2\), \(x_0 = 1\), \(\eta = 0.1\)로 두면:
+@@ 30
+t − 1에서의 x
+@@ 31
+t에서의 A
+@@ 32
+t에서의 B
+@@ 33
+t에서의 x
+@@ 34
+t에서의 S = A·S + B
+@@ 35
+두 step 후 forward mode는 \(\nabla_y\,\mathcal{U} = (x_2 - 1.5)\,S_2 = (-0.1856)(0.3272) = -0.0607\)을 줍니다. 같은 두 step에 reverse mode를 쓰면 \(\lambda_2 = -0.1856\), \(\lambda_1 = A_2\lambda_2 = -0.0809\), 그리고 \(\lambda_2 B_2 + \lambda_1 B_1 = -0.0445 - 0.0162 = -0.0607\)입니다. 당연히 같은 숫자입니다. Day 1에서 구한 실제 gradient는 \(-0.0447\)입니다. step이 두 번뿐이라 아직 수렴하지 않은 solver를 미분하고 있는 것입니다.
+@@ 36
+3. 문제가 아니라 프로그램에 대해 정확하다
+@@ 37
+직접 해 보기: 차트는 dU/dy의 각 추정값을 inner step 수 K에 대해 그립니다. K를 올린 다음, inner solver를 Gauss-Newton으로 바꿔 보세요.
+@@ 38
+눈여겨볼 점: 기본값(gradient descent, η = 0.1, K = 2)에서 unrolled gradient는 풀어 본 예제의 값인 −0.0607이고, 기준값은 −0.0447입니다. K = 8이면 둘이 일치합니다. η를 0.05로 낮추면 K = 20쯤 걸리고, Gauss-Newton으로 바꾸면 K = 2로 충분합니다. unrolled gradient는 언제나 U(x_K)의 정확한 미분이며, 그 품질은 x_K가 x*에 얼마나 가까운가에 달려 있습니다.
+@@ 39
+비용은 점화식에서 바로 나옵니다: <span class="src">§4.2.1–4.2.2 · pp. 105–106</span>
+@@ 40
+unroll 방식
+@@ 41
+저장하는 것
+@@ 42
+T번의 solver step 외의 작업
+@@ 43
+=
+@@ 44
+n × m 행렬 S, 제자리에서 갱신
+@@ 45
+모든 step에 tangent m개를 들고 감: solver의 약 m배
+@@ 46
+없음 (T에서의 x에 대해)
+@@ 47
+=
+@@ 48
+T개 iterate 전부와 각 step이 그것으로 계산한 것
+@@ 49
+T step에 걸친 backward sweep 한 번
+@@ 50
+Truncated reverse, 마지막 M step
+@@ 51
+마지막 M개 iterate
+@@ 52
+M step에 걸친 backward sweep
+@@ 53
+버린 항들, 아래 §4 참고
+@@ 54
+step 하나, (4.8)
+@@ 55
+iterate 하나
+@@ 56
+2차 도함수 곱 하나
+@@ 57
+step 하나로 문제가 거의 풀리지 않으면 큼
+@@ 58
+\(m\)이 수백만이면 forward mode는 쓸 수 없습니다. 남는 것은 reverse mode이고, 그러면 메모리가 \(T\)에 비례해 커집니다. 책은 이것을 "long-term dependencies"의 어려움이라 부르며, \(\mathbf{x}\)와 \(\mathbf{y}\)가 모두 고차원일 때 더 심해집니다. <span class="src">§4.2.2 · p. 106</span>
+@@ 59
+reverse-mode unrolling은 테이프를 거꾸로 돌려 가며 계산을 검산하는 것과 같습니다. 테이프 전체를 보관했을 때만 할 수 있습니다. iteration이 100번 필요한 solver는 답이 마지막 상태 하나뿐인데도 상태 100개 길이의 테이프를 만듭니다.
+@@ 60
+4. Truncated unrolling: 마지막 M step만 남기기
+@@ 61
+<strong>Truncated unrolled differentiation</strong>은 backward 걸음을 \(M\) step 후에 멈춥니다. \(t = T, T-1, \dots\)만 쓰고, \(\mathbf{y}\)가 그보다 앞선 iterate에 준 영향은 무시합니다. 마지막 \(M\)개 iterate만 저장합니다. 책은 (참고문헌 [992]를 인용해) 몇 번의 backward step만으로도 훨씬 적은 메모리와 계산으로 정확한 gradient와 비슷한 성능을 낼 수 있다고 전합니다. <span class="src">§4.2.2 · p. 106</span>
+@@ 62
+빈틈 채우기: truncation bias는 얼마나 큰가?
+@@ 63
+truncation은 위의 \(\mathbf{S}_T\)에 대한 합에서 처음 \(M\)개 항만 남기고 나머지를 버립니다. 버린 항에는 모두 \(\mathbf{A}\)가 적어도 \(M\)번 곱해져 있습니다. 해 근처에서는 iterate가 거의 변하지 않으므로 \(\mathbf{A}_t \approx \mathbf{A}\), \(\mathbf{B}_t \approx \mathbf{B}\)가 거의 상수이고, 수렴하는 solver라면 \(\mathbf{A}\)를 거듭 곱할 때 벡터가 줄어듭니다(수렴이 바로 그런 뜻입니다). 스칼라 toy problem에서는 이것이 등비급수입니다:
+@@ 64
+truncated gradient는 전체 gradient에 \(1 - A^M\)을 곱한 것입니다. 비율 \(A^M\)만큼이 빠집니다. \(\eta = 0.1\)인 gradient descent의 해 \(x^* = 1.366\)에서 \(A = 1 - 0.1\times 8.196 = 0.18\)입니다. 따라서 \(M = 1\)이면 18%, \(M = 2\)이면 3.2%, \(M = 3\)이면 0.6%를 잃습니다. 위젯에서 K = 30으로 두고 "마지막 M step만 backprop"을 1로 두면 truncated gradient는 −0.0366으로, −0.0447의 82%입니다.
+@@ 65
+기억할 규칙: inner solver가 느리게 수렴할수록(\(A\)가 1에 가까울수록) 더 많은 backward step이 필요합니다. Gauss-Newton 같은 second-order solver는 해 근처에서 \(A\)가 작으므로 짧은 truncation과 잘 맞습니다.
+@@ 66
+5. 극단적인 경우: inner step 하나
+@@ 67
+메모리와 시간 제약이 빡빡하면 어떤 방법들은 step 하나만 unroll해 \(\mathbf{x}_1(\mathbf{y}) = \Phi_1(\mathbf{x}_0;\mathbf{y})\)로 두고 다음 식을 씁니다: <span class="src">§4.2.2 · p. 106</span>
+@@ 68
+식 (4.9)는 learning rate를 1로 둔 gradient step에 대한 §2의 \(\mathbf{B}_1\)입니다. 일반적인 learning rate라면 \(-\eta\,\partial^2\mathcal{L}/\partial\mathbf{x}_0\partial\mathbf{y}\)입니다. 혼합 2차 도함수 행렬은 \(n\times m\)이라 계산 비용이 크지만, (4.8)에는 그것과 행벡터 \(\partial\mathcal{U}/\partial\mathbf{x}_1\)의 곱만 필요합니다.
+@@ 69
+빈틈 채우기: finite difference (4.10)은 어디서 오는가
+@@ 70
+\(\mathbf{v} = (\partial\mathcal{U}/\partial\mathbf{x}_1)\T\)라 합시다. 구하려는 것은 \(\mathbf{v}\T\,\dfrac{\partial^2\mathcal{L}}{\partial\mathbf{x}\,\partial\mathbf{y}}\)입니다. 그 전치는 \(\dfrac{\partial^2\mathcal{L}}{\partial\mathbf{y}\,\partial\mathbf{x}}\,\mathbf{v}\)이고, 이는 방향 미분, 곧 \(\mathbf{x}\)가 \(\mathbf{v}\) 방향으로 움직일 때 gradient \(\partial\mathcal{L}/\partial\mathbf{y}\)가 변하는 비율입니다. central difference는 \(\mathbf{x}_0^{\pm} = \mathbf{x}_0 \pm \epsilon\,\mathbf{v}\)에서 gradient를 두 번 계산해 이것을 추정합니다:
+@@ 71
+이것이 책의 (4.10) 우변입니다. (4.8)의 둘째 항을 얻으려면 (4.9)의 인자인 \(-1\), 일반적인 learning rate라면 \(-\eta\)를 곱합니다. 구현할 때 이 부호에 주의해야 합니다.
+@@ 72
+\(x_0 = 1\), \(y = 2\), \(\eta = 0.1\)로 toy 확인: \(x_1 = 1.2\)이므로 \(v = x_1 - 1.5 = -0.3\)입니다. 여기서 \(\partial\mathcal{L}/\partial y = y - x^2\)입니다. \(\epsilon = 0.01\)이면 \(x_0^{+} = 0.997\), \(x_0^{-} = 1.003\)이고
+@@ 73
+정확한 값: \((-2x_0)\,v = (-2)(-0.3) = 0.6\). gradient 항은 \(-\eta\times 0.6 = -0.06\)이며, 위젯이 K = 1에서 보여 주는 값입니다.
+@@ 74
+책의 주의 사항 하나: perturbation \(\mathbf{x}_0 \pm \epsilon\,\mathbf{v}\)가 단순한 덧셈인 것은 벡터 변수일 때뿐입니다. \(\mathbf{x}\)에 회전이나 pose가 들어 있다면 perturbation을 manifold 위에서 적용해야 하며, 이것이 <a href="#d40">Day 4</a>의 주제입니다. <span class="src">§4.2.2 · p. 106</span>
+@@ 75
+<strong>"Unrolling은 bilevel 문제의 gradient를 준다."</strong> unrolling이 주는 것은 \(\mathcal{U}(\mathbf{x}_T)\)의 gradient입니다. 둘은 \(\mathbf{x}_T\)가 수렴했을 때만 일치합니다.
+@@ 76
+<strong>"inner step이 많을수록 언제나 메모리가 더 든다."</strong> truncation 없는 reverse mode에서만 그렇습니다. truncation을 하면 메모리는 \(T\)가 아니라 \(M\)으로 정해집니다.
+@@ 77
+<strong>"initial guess가 좋으면 잃는 gradient가 없다."</strong> inner step이 0번이면 \(\mathbf{x}_0\)는 (initializer가 그렇게 만들지 않는 한) \(\mathbf{y}\)에 전혀 의존하지 않으므로, guess가 아무리 좋아도 간접 gradient는 정확히 0입니다.
+@@ 78
+Q1. toy problem, y = 2에서 x₀ = 1부터 η = 0.1로 gradient descent를 합니다. initial guess는 y에 의존하지 않습니다. dx₁/dy는 무엇입니까?
+@@ 79
+S₁ = B₁ = −η · ∂²L/∂x∂y = −0.1 · (−2 · 1) = 0.2. 0.333은 수렴했을 때의 sensitivity이고, 0.4는 Gauss-Newton step 한 번이 주는 값입니다.
+@@ 80
+Q2. reverse mode로 solver iteration T = 200번을 unroll합니다. 각 iterate는 8-byte float로 저장된 숫자 n = 500,000개입니다. 저장된 iterate만으로 메모리가 얼마나 필요합니까?
+@@ 81
+=
+@@ 82
+=
+@@ 83
+=
+@@ 84
+=
+@@ 85
+200 × 500,000 × 8 bytes = 800,000,000 bytes = 800 MB. iterate 하나는 4 MB에 불과합니다. 인자 T가 unrolling의 비용입니다.
+@@ 86
+Q3. 해 근처에서 backward step마다 adjoint에 A = 0.5가 곱해집니다. backward pass를 마지막 M = 3 step으로 truncate하면 수렴한 gradient 가운데 얼마의 비율이 빠집니까?
+@@ 87
+truncated 합은 전체의 (1 − A^M)이므로 빠지는 비율은 A^M = 0.5³ = 0.125입니다.
+@@ 88
+Q4. 위젯에서 η = 0.1, K = 2일 때 unrolled gradient는 −0.0607이지만 finite-difference 기준값은 −0.0447입니다. 이 차이는 무엇으로 설명됩니까?
+@@ 89
+AutoDiff의 반올림 오차
+@@ 90
+reverse mode는 근사이고, forward mode라면 기준값과 일치할 것
+@@ 91
+U(x₂)의 정확한 미분이며, x₂ = 1.314는 아직 x* = 1.366에 도달하지 않았음
+@@ 92
+finite-difference 기준값이 부정확함
+@@ 93
+unrolling은 실행된 프로그램을 미분합니다. gradient descent 두 step은 수렴한 해와는 다른 y의 함수를 정의합니다. forward mode와 reverse mode는 똑같이 −0.0607을 줍니다.
+@@ 94
+Q5. learning rate η = 0.1인 one-step 근사입니다. v = ∂U/∂x₁ 방향의 ∂L/∂y central difference가 0.6을 반환합니다. (4.8)의 둘째 항은 무엇입니까?
+@@ 95
+finite difference는 (∂²L/∂y∂x)·v를 추정합니다. (4.8)의 항은 여기에 (4.9)에서 온 ∂x₁/∂y의 인자 −η를 곱한 것입니다: −0.1 × 0.6 = −0.06.
+@@ 96
+unrolling은 solver를 \(\mathbf{x}_T = (\Phi_T\circ\dots\circ\Phi_0)(\mathbf{y})\)로 쓰고 그 합성을 AutoDiff로 미분합니다.
+@@ 97
+sensitivity는 \(\mathbf{S}_t = \mathbf{A}_t\mathbf{S}_{t-1} + \mathbf{B}_t\)를 따릅니다. reverse mode는 같은 합을 adjoint \(\boldsymbol{\lambda}_{t-1} = \mathbf{A}_t\T\boldsymbol{\lambda}_t\)로 거꾸로 계산하며, 모든 iterate를 저장해야 합니다.
+@@ 98
+결과는 \(\mathbf{x}_T\)에 대해 정확하며, inner solver가 수렴할수록 실제 bilevel gradient에 가까워집니다.
+@@ 99
+마지막 \(M\) step으로 truncate하면 크기가 대략 \(A^M\)인 항들이 빠집니다. 빠른 inner solver는 짧은 truncation을 견딥니다.
+@@ 100
+one-step 버전 (4.8)–(4.10)은 gradient 계산이 두 번만 더 필요하지만, step 하나가 lower level을 푸는 데서 멀면 bias가 큽니다.
+@@ 101
+<em>SLAM Handbook</em>, §4.2.1 "Unrolled Differentiation", §4.2.2 "Truncated Unrolled Differentiation", pp. 104–106; Algorithm 1; 식 (4.4)–(4.10).
+@@ 102
+Griewank, Walther, <em>Evaluating Derivatives: Principles and Techniques of Algorithmic Differentiation</em>, 2nd ed., 2008 (iteration을 거치는 forward / reverse accumulation, reverse sweep의 메모리).
+@@ 103
+Nocedal, Wright, <em>Numerical Optimization</em>, 2006 (gradient descent와 Gauss-Newton의 수렴 속도, finite-difference 방향 미분). sensitivity 점화식, 등비급수로 구한 bias 추정, toy 숫자는 표준적인 내용을 이 앱이 직접 풀어 본 것입니다.

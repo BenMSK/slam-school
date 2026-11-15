@@ -1,0 +1,176 @@
+@@ 1
+Today's big idea
+@@ 2
+In plain words
+@@ 3
+Intuition
+@@ 4
+Common mistakes
+@@ 5
+Recap
+@@ 6
+Localization
+@@ 7
+Front-end
+@@ 8
+Place recognition
+@@ 9
+Model
+@@ 10
+Check yourself
+@@ 11
+20 cm
+@@ 12
+2 cm
+@@ 13
+Sources
+@@ 14
+While you read, look for:
+@@ 15
+Question
+@@ 16
+No
+@@ 17
+Approach
+@@ 18
+prior
+@@ 19
+Residual
+@@ 20
+Yes
+@@ 21
+Step
+@@ 22
+Works on
+@@ 23
+About 60 min · No new pages
+@@ 24
+The week in one paragraph
+@@ 25
+1. Formula sheet
+@@ 26
+What it is
+@@ 27
+Formula
+@@ 28
+Where
+@@ 29
+2. Mixed quiz
+@@ 30
+3. Pen-and-paper problems
+@@ 31
+Solution
+@@ 32
+You are ready for next week if you can
+@@ 33
+Factor graph
+@@ 34
+Factor
+@@ 35
+Pose-graph optimization
+@@ 36
+start
+@@ 37
+Gauss-Newton
+@@ 38
+Uses
+@@ 39
+None
+@@ 40
+It doubles
+@@ 41
+It halves
+@@ 42
+none
+@@ 43
+All four
+@@ 44
+Group
+@@ 45
+Representation
+@@ 46
+What it does
+@@ 47
+Operation
+@@ 48
+In words
+@@ 49
+Zero
+@@ 50
+The identity
+@@ 51
+Dataset
+@@ 52
+Size
+@@ 53
+Idea
+@@ 54
+Problem
+@@ 55
+Loss
+@@ 56
+Bias
+@@ 57
+Part
+@@ 58
+How
+@@ 59
+Why
+@@ 60
+yes
+@@ 61
+Quantity
+@@ 62
+Meaning
+@@ 63
+Chapter
+@@ 64
+Sensor
+@@ 65
+In this course
+@@ 66
+LiDAR
+@@ 67
+Radar
+@@ 68
+odometry
+@@ 69
+Event camera
+@@ 70
+Term
+@@ 71
+Camera
+@@ 72
+Aspect
+@@ 73
+Direct
+@@ 74
+Descriptor
+@@ 75
+time
+@@ 76
+1 px
+@@ 77
+System
+@@ 78
+camera
+@@ 79
+IMU
+@@ 80
+Photometric loss
+@@ 81
+Strength
+@@ 82
+Weakness
+@@ 83
+Difficulty
+@@ 84
+Property
+@@ 85
+Family
+@@ 86
+How it works
+@@ 87
+Cost
+@@ 88
+It stays the same

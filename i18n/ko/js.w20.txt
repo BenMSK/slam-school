@@ -1,0 +1,344 @@
+@@ w20
+"aria-label":"Three stacked plots along one camera ray: the density profile with its samples, the transmittance, and the weight of each sample"
+==
+"aria-label":"카메라 ray 하나를 따라 쌓은 세 그래프: 샘플이 표시된 density 분포, transmittance, 각 샘플의 weight"
+@@ w20
+"fog "+R.wf.toFixed(2)+" · wall "+R.ww.toFixed(2)+" · background "+R.bg.toFixed(2)
+==
+"안개 "+R.wf.toFixed(2)+" · 벽 "+R.ww.toFixed(2)+" · 배경 "+R.bg.toFixed(2)
+@@ w20
+"density σ(t), square-root scale. Drag the two round handles."
+==
+"density σ(t), 제곱근 눈금. 둥근 손잡이 두 개를 끌어 보세요."
+@@ w20
+"transmittance T(t): line = exact, dots = T at the samples"
+==
+"transmittance T(t): 선 = 정확값, 점 = 샘플에서의 T"
+@@ w20
+"weight of each sample, w = T·α"
+==
+"각 샘플의 weight, w = T·α"
+@@ w20
+stat("Pixel from "+N+" samples",
+==
+stat("샘플 "+N+"개로 만든 픽셀",
+@@ w20
+stat("Exact pixel",
+==
+stat("정확한 픽셀",
+@@ w20
+"exact "+E.depth.toFixed(2)
+==
+"정확값 "+E.depth.toFixed(2)
+@@ w20
+stat("Weight error",
+==
+stat("Weight 오차",
+@@ w20
+"fog and wall, against exact"
+==
+"안개와 벽, 정확값 대비"
+@@ w20
+button("Random position in each bin",
+==
+button("구간마다 무작위 위치",
+@@ w20
+h("div",{class:"vt"},"One camera ray through fog and a wall")
+==
+h("div",{class:"vt"},"안개와 벽을 지나는 카메라 ray 하나")
+@@ w20
+"The camera is at the left (t = 0) and looks right, to the far bound t = 6. Pink density is fog, blue density is a wall. Equation (14.2) turns the samples into one pixel."
+==
+"카메라는 왼쪽(t = 0)에 있고 오른쪽의 먼 경계 t = 6까지 봅니다. 분홍 density는 안개, 파랑 density는 벽입니다. 식 (14.2)가 샘플들을 픽셀 하나로 바꿉니다."
+@@ w20
+range("Fog density",
+==
+range("안개 density",
+@@ w20
+range("Wall density",
+==
+range("벽 density",
+@@ w20
+range("Samples N",
+==
+range("샘플 수 N",
+@@ w20
+button("New random draw",
+==
+button("새로 무작위 추출",
+@@ w20
+["var(--c3)","fog"]
+==
+["var(--c3)","안개"]
+@@ w20
+["var(--c5)","wall"]
+==
+["var(--c5)","벽"]
+@@ w20
+["var(--ink)","samples"]
+==
+["var(--ink)","샘플"]
+@@ w20
+["var(--acc)","T at each sample"]
+==
+["var(--acc)","각 샘플의 T"]
+@@ w20
+"aria-label":"A 1-D field over position: the true field, the stored model, a gap that is never observed, and a region that is observed only after exploring"
+==
+"aria-label":"위치에 대한 1-D field: 실제 field, 저장된 모델, 한 번도 관측되지 않는 공백, 탐색 후에만 관측되는 영역"
+@@ w20
+isNaN(v)?"empty":
+==
+isNaN(v)?"비어 있음":
+@@ w20
+"gap, never seen"
+==
+"공백, 관측 안 됨"
+@@ w20
+stage?"new region, now seen":"new region, not seen yet"
+==
+stage?"새 영역, 이제 관측됨":"새 영역, 아직 관측 안 됨"
+@@ w20
+"old region"
+==
+"이전 영역"
+@@ w20
+"position x = 0"
+==
+"위치 x = 0"
+@@ w20
+stat("Numbers stored",
+==
+stat("저장된 숫자",
+@@ w20
+"one value per point, resolution not used":"parameters"
+==
+"point마다 값 하나, 해상도 미사용":"parameter"
+@@ w20
+stat("Error, old region",
+==
+stat("오차, 이전 영역",
+@@ w20
+"was "+fmt(rms(m.f0,m.obs0))+" before exploring":"before exploring"
+==
+"탐색 전 "+fmt(rms(m.f0,m.obs0)):"탐색 전"
+@@ w20
+stat("Error in the gap",
+==
+stat("공백의 오차",
+@@ w20
+"never observed"
+==
+"관측된 적 없음"
+@@ w20
+stat("Error, new region",
+==
+stat("오차, 새 영역",
+@@ w20
+"trained on old and new":"trained on new data only"):"press Explore"
+==
+"이전+새 데이터로 학습":"새 데이터로만 학습"):"탐색을 누르세요"
+@@ w20
+button("Explore the new region",
+==
+button("새 영역 탐색",
+@@ w20
+button("Replay old keyframes",
+==
+button("이전 keyframe replay",
+@@ w20
+h("div",{class:"vt"},"One field, three ways to store it")
+==
+h("div",{class:"vt"},"하나의 field, 세 가지 저장 방식")
+@@ w20
+"A 1-D stand-in for a scene: the true field (dashed) is observed in the old region except for a gap. Explore then fits the new region. Without replay it uses the new samples only and changes the stored numbers as little as it can."
+==
+"scene을 대신하는 1-D 예: 실제 field(점선)는 이전 영역에서 공백을 빼고 관측됩니다. 탐색은 그다음 새 영역을 맞춥니다. replay가 없으면 새 샘플만 쓰고 저장된 숫자를 가능한 한 적게 바꿉니다."
+@@ w20
+select("Representation",
+==
+select("표현",
+@@ w20
+"One global function (stands in for an MLP)"
+==
+"전역 함수 하나 (MLP 대용)"
+@@ w20
+"Grid of cells, linear interpolation"
+==
+"cell grid, linear interpolation"
+@@ w20
+["points","Points"]
+==
+["points","Point"]
+@@ w20
+range("Resolution",
+==
+range("해상도",
+@@ w20
+button("Reset",
+==
+button("초기화",
+@@ w20
+["var(--line2)","true field"]
+==
+["var(--line2)","실제 field"]
+@@ w20
+["var(--acc)","stored model"]
+==
+["var(--acc)","저장된 모델"]
+@@ w20
+["var(--c3)","model before exploring"]
+==
+["var(--c3)","탐색 전 모델"]
+@@ w20
+GNAME=["pink","blue","green"]
+==
+GNAME=["분홍","파랑","초록"]
+@@ w20
+"aria-label":"Top view of three coloured Gaussians in front of a camera, the weight of each Gaussian at every pixel, the rendered 1-D image, and the target 1-D image"
+==
+"aria-label":"카메라 앞의 색깔 있는 Gaussian 세 개를 위에서 본 모습, 픽셀마다 각 Gaussian의 weight, rendering된 1-D 이미지, 목표 1-D 이미지"
+@@ w20
+range("Rotation",
+==
+range("회전",
+@@ w20
+select("Edit Gaussian",
+==
+select("편집할 Gaussian",
+@@ w20
+"camera",{"font-size":11,class:"mut"}
+==
+"카메라",{"font-size":11,class:"mut"}
+@@ w20
+"image line z = 1"
+==
+"이미지 선 z = 1"
+@@ w20
+"weight of each Gaussian at every pixel"
+==
+"픽셀마다 각 Gaussian의 weight"
+@@ w20
+"now",{
+==
+"현재",{
+@@ w20
+"goal",{
+==
+"목표",{
+@@ w20
+["Front to back","depth z","centre u′","width σ′","α at pixel","T in front","weight"]
+==
+["앞에서 뒤로","depth z","중심 u′","폭 σ′","픽셀의 α","앞쪽 T","weight"]
+@@ w20
+h("td",{},"background")
+==
+h("td",{},"배경")
+@@ w20
+stat("Pixel u = "
+==
+stat("픽셀 u = "
+@@ w20
+"blend of the rows below"
+==
+"아래 행들을 섞은 색"
+@@ w20
+stat("Loss against the goal image",
+==
+stat("목표 이미지 대비 loss",
+@@ w20
+steps+" gradient steps so far"
+==
+"지금까지 gradient step "+steps+"번"
+@@ w20
+h("div",{class:"vt"},"Splatting three Gaussians onto a 1-D image")
+==
+h("div",{class:"vt"},"Gaussian 세 개를 1-D 이미지에 splatting하기")
+@@ w20
+"Top view. Each Gaussian is projected onto the image line with equation (14.5), then the pixels are blended front to back with equations (14.6) and (14.7). Drag a Gaussian by its centre dot."
+==
+"위에서 본 모습. 각 Gaussian을 식 (14.5)로 이미지 선에 투영한 다음, 식 (14.6)과 (14.7)로 픽셀을 앞에서 뒤로 섞습니다. Gaussian은 중심 점을 잡고 끌어 옮깁니다."
+@@ w20
+range("Pixel u",
+==
+range("픽셀 u",
+@@ w20
+button("10 gradient steps toward the goal",
+==
+button("목표 쪽으로 gradient step 10번",
+@@ w20
+"aria-label":"Top view of a fixed map of three Gaussians with the true camera and the estimated camera, the image the true camera recorded, and the image rendered from the estimate"
+==
+"aria-label":"Gaussian 세 개로 된 고정 map과 실제 카메라, 추정 카메라를 위에서 본 모습, 실제 카메라가 기록한 이미지, 추정값에서 rendering한 이미지"
+@@ w20
+"image the camera recorded (true position x = 0)"
+==
+"카메라가 기록한 이미지 (실제 위치 x = 0)"
+@@ w20
+"image rendered from the estimated position"
+==
+"추정 위치에서 rendering한 이미지"
+@@ w20
+aria:"Photometric loss as a function of the assumed camera position, with the current estimate marked"
+==
+aria:"가정한 카메라 위치에 따른 photometric loss, 현재 추정값 표시"
+@@ w20
+label:"assumed camera position x"
+==
+label:"가정한 카메라 위치 x"
+@@ w20
+stat("Estimated camera x",
+==
+stat("추정 카메라 x",
+@@ w20
+"true value 0"
+==
+"실제값 0"
+@@ w20
+"mean squared image difference"
+==
+"이미지 차이의 평균 제곱"
+@@ w20
+stat("Gradient steps",
+==
+stat("Gradient step 수",
+@@ w20
+pb.textContent="Run"
+==
+pb.textContent="실행"
+@@ w20
+pb.textContent="Pause"
+==
+pb.textContent="일시정지"
+@@ w20
+button("Run",
+==
+button("실행",
+@@ w20
+h("div",{class:"vt"},"Tracking a camera against a splat map")
+==
+h("div",{class:"vt"},"splat map에 대해 카메라 tracking하기")
+@@ w20
+"The three Gaussians are a finished map. The camera took one image at x = 0. Tracking renders the map from a guessed position and slides the guess downhill on the image difference."
+==
+"Gaussian 세 개는 완성된 map입니다. 카메라는 x = 0에서 이미지 하나를 찍었습니다. tracking은 추측한 위치에서 map을 rendering하고, 이미지 차이가 줄어드는 내리막 쪽으로 추측을 밀어 갑니다."
+@@ w20
+range("Starting guess x",
+==
+range("시작 추정 x",
+@@ w20
+range("Image noise",
+==
+range("이미지 noise",
+@@ w20
+button("Gradient step",
+==
+button("gradient 한 step",
+@@ w20
+["var(--muted)","true camera"]
+==
+["var(--muted)","실제 카메라"]
+@@ w20
+["var(--acc)","estimated camera"]
+==
+["var(--acc)","추정 카메라"]

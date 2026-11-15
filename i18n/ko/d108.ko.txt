@@ -1,0 +1,374 @@
+@@ 1
+<span class="eyebrow">18주차 · 복습</span>
+@@ 2
+18주차 복습: leg odometry, 그리고 Part II 전체
+@@ 3
+오늘이 끝나면 joint 각도에서 factor까지 leg odometry 문제를 풀고, Part II의 여섯 가지 센싱 modality를 무엇을 측정하는지, odometry가 어디서 나오는지, 어떻게 실패하는지로 비교할 수 있습니다.
+@@ 4
+약 75분 · 새로 읽을 쪽 없음
+@@ 5
+legged robot은 자기 joint로 자신의 움직임을 읽을 수 있습니다. Encoder는 joint 각도를 주고, forward kinematics는 이를 base frame에서 본 발의 pose로, Jacobian은 joint 속도를 발 속도로 바꿉니다. 발이 가만히 서 있는 동안, 몸체에서 본 발의 움직임은 부호만 바꾸면 땅에서 본 몸체의 움직임입니다. 여기서 relative pose 측정 \(\mathbf{f}_p(\mathbf{q}) = \mathbf{R}\T(\mathbf{c}_i - \mathbf{t})\)와 속도 측정 \(\mathbf{v} = -\boldsymbol{\omega} \times \mathbf{f}_p - \mathbf{J}_v\dot{\mathbf{q}}\)가 나옵니다. 둘 다 어느 발이 정말 정지해 있는지 알아야 하고, 이것은 friction cone 대신 수직항력에 임계값을 걸어 정합니다. encoder noise와 slip 모델에서 얻은 covariance를 붙이면 측정이 factor가 됩니다. 이족 보행 로봇에는 forward kinematics factor와 contact factor, 사족 보행 로봇에는 preintegration된 velocity factor입니다. slip, 무른 땅, 휘는 다리는 가정을 깨고 bias가 있는 움직임으로 나타납니다.
+@@ 6
+Forward kinematics와 Jacobian
+@@ 7
+=
+@@ 8
+평면 two-link 다리
+@@ 9
+이 코스 · <a href="#d104">Day 2</a>
+@@ 10
+joint 토크로 본 발의 힘
+@@ 11
+(12.5)에서, p. 338 · <a href="#d104">Day 2</a>
+@@ 12
+stance 발로 구하는 relative pose
+@@ 13
+=
+@@ 14
+Leg odometry 측정
+@@ 15
+=
+@@ 16
+stance 발로 구하는 몸체 속도
+@@ 17
+=
+@@ 18
+Friction cone (미끄러지지 않음)
+@@ 19
+=
+@@ 20
+joint 토크로 구하는 땅의 힘
+@@ 21
+=
+@@ 22
+발에서의 encoder noise
+@@ 23
+=
+@@ 24
+Contact factor와 velocity factor
+@@ 25
+\(\mathbf{r}_{\mathcal{C}} = \begin{bmatrix} \Log(\mathbf{B}_i\T\mathbf{B}_j) \\ \mathbf{B}_i\T(\mathbf{c}_j - \mathbf{c}_i) \end{bmatrix}\)이고 \(\boldsymbol{\Sigma}_{\mathcal{C}} \propto \Delta t_{ij}\); \(\ \mathbf{r}_{\mathcal{V}} = \mathbf{R}_i\T(\mathbf{t}_j - \mathbf{t}_i) - \Delta\mathbf{t}_{ij}\)
+@@ 26
+=
+@@ 27
+2. 종합 퀴즈: 18주차
+@@ 28
+Q1. state (12.1)에서 base 좌표로 표현되는 양은 무엇입니까?
+@@ 29
+위치와 방향
+@@ 30
+선속도와 각속도
+@@ 31
+각속도만
+@@ 32
+t와 R은 world에서의 base pose를 줍니다. twist (v, ω)는 base 자신의 축을 따라 씁니다.
+@@ 33
+Q2. 평면 다리가 l₁ = l₂ = 0.4 m이고 knee 각도가 q₂ = −30°입니다. Jacobian J_v의 행렬식은 얼마입니까?
+@@ 34
+det J_v = l₁ l₂ sin q₂ = 0.16 × (−0.5) = −0.08 m². hip 각도와 무관하고, 다리를 곧게 폈을 때만 0이 됩니다.
+@@ 35
+Q3. stance 발이 f_p = (0.1, 0, −0.6) m에 있고 J_v q̇ = (−0.5, 0, 0) m/s이며, gyroscope는 순수한 yaw 각속도 ω = (0, 0, 1) rad/s를 읽습니다. (12.21)로 구한 v는 무엇입니까?
+@@ 36
+ω × f_p = (0 × (−0.6) − 1 × 0, 1 × 0.1 − 0, 0) = (0, 0.1, 0). 따라서 v = −(0, 0.1, 0) − (−0.5, 0, 0) = (0.5, −0.1, 0) m/s입니다.
+@@ 37
+Q4. Encoder noise는 걸음마다 독립적인 5 mm (1σ) 위치 오차를 더하고, slip은 걸음마다 늘 뒤쪽으로 2 mm를 더합니다. 100걸음 뒤 두 기여는 각각 얼마입니까?
+@@ 38
+noise 500 mm, slip 200 mm
+@@ 39
+noise 50 mm, slip 20 mm
+@@ 40
+noise 50 mm (1σ), slip 200 mm
+@@ 41
+noise 5 mm, slip 2 mm
+@@ 42
+독립 오차는 분산으로 더해집니다. 5 × √100 = 50 mm. bias는 선형으로 더해집니다. 2 × 100 = 200 mm. 걸음당 오차가 더 작았던 쪽이 결국 네 배 더 커집니다.
+@@ 43
+Q5. 발의 힘 센서가 막 커지기 시작한 작은 힘을 보여 줍니다. leg odometry는 그 다리를 어떻게 다뤄야 합니까?
+@@ 44
+발이 땅에 닿았으므로 stance 다리로
+@@ 45
+아직 stance가 아닌 다리로: 측정을 버리거나 더 큰 불확실성을 줌
+@@ 46
+충격은 정보가 많으므로 가장 믿을 만한 다리로
+@@ 47
+그 stride의 나머지 동안 swing 다리로
+@@ 48
+작고 커지는 힘은 발이 닿는 중이지만 아직 미끄러질 수 있다는 뜻입니다. odometry에서 접촉이란 정지한 접촉점을 뜻하므로, 하중이 실릴 때까지 그 다리를 믿지 않습니다.
+@@ 49
+Q6. contact factor (12.34)에서 어떤 stance가 다른 stance보다 네 배 오래 지속됩니다. 접촉점 위치의 1σ 불확실성은 몇 배로 커집니까?
+@@ 50
+변하지 않음
+@@ 51
+covariance가 Δt에 비례하므로 표준편차는 √Δt에 비례합니다. √4 = 2.
+@@ 52
+평면 다리가 \(l_1 = l_2 = 0.3\) m이고 joint 각도가 \(q = (45^\circ, -90^\circ)\)입니다. (a) 발 위치 \(\mathbf{f}_p\)와 Jacobian \(\mathbf{J}_v\)를 구하세요. (b) 행렬식을 \(l_1 l_2 \sin q_2\)와 비교해 확인하세요. (c) joint 속도가 \(\dot{\mathbf{q}} = (-2,\ 1)\) rad/s이고, 발은 stance에 있으며, 몸체는 회전하지 않습니다. 몸체 속도는 얼마입니까?
+@@ 53
+(a) \(q_1 + q_2 = -45^\circ\)이고 \(\sin 45^\circ = \cos 45^\circ = 0.707\)입니다. \(x = 0.3(0.707) + 0.3(-0.707) = 0\), \(z = -0.3(0.707) - 0.3(0.707) = -0.424\) m입니다. Jacobian은 다음과 같습니다.
+@@ 54
+(b) \(\det = 0.424 \times (-0.212) = -0.090\)이고 \(l_1 l_2 \sin q_2 = 0.09 \times (-1) = -0.09\)입니다. 둘이 일치합니다.
+@@ 55
+(c) 발 속도: \(\mathbf{J}_v\dot{\mathbf{q}} = (0.424(-2) + 0.212(1),\ -0.212(1)) = (-0.636,\ -0.212)\) m/s. 회전이 없으므로 \(\mathbf{v} = -\mathbf{J}_v\dot{\mathbf{q}} = (0.636,\ 0.212)\) m/s입니다. 몸체는 앞으로 가면서 올라갑니다.
+@@ 56
+똑바로 선 평면 이족 보행 로봇이 base를 \(\mathbf{t} = (0,\ 0.50)\) m에 두고 출발합니다. 다리 A가 \(\mathbf{f}_p^A = (0.10,\ -0.50)\) m로 stance에 있습니다. A의 stance가 끝날 때 \(\mathbf{f}_p^A = (-0.10,\ -0.50)\)이고, 다리 B가 \(\mathbf{f}_p^B = (0.12,\ -0.50)\)로 착지합니다. B의 stance 중 나중에 \(\mathbf{f}_p^B = (-0.08,\ -0.52)\)입니다. (a) 두 접촉점과 최종 base 위치를 구하세요. (b) 사실은 발 A가 stance 동안 3 cm 뒤로 미끄러졌다면 base는 실제로 어디에 있고, B가 땅을 디디면 오차가 사라집니까?
+@@ 57
+(a) 착지 때는 \(\mathbf{c} = \mathbf{t} + \mathbf{f}_p\), 그 뒤에는 \(\mathbf{t} = \mathbf{c} - \mathbf{f}_p\)를 씁니다. \(\mathbf{c}_A = (0, 0.50) + (0.10, -0.50) = (0.10,\ 0)\). A의 stance 끝: \(\mathbf{t} = (0.10, 0) - (-0.10, -0.50) = (0.20,\ 0.50)\). 다음으로 \(\mathbf{c}_B = (0.20, 0.50) + (0.12, -0.50) = (0.32,\ 0)\). 마지막으로 \(\mathbf{t} = (0.32, 0) - (-0.08, -0.52) = (0.40,\ 0.52)\) m입니다.
+@@ 58
+(b) A의 stance 동안 몸체는 실제로 \(0.20 - 0.03 = 0.17\) m 나아갔으므로 실제 최종 위치는 \(x = 0.37\) m입니다. 오차는 사라지지 않습니다. \(\mathbf{c}_B\)를 틀린 \(\mathbf{t}\)로 계산했으므로 3 cm 너무 앞에 있고, 이후의 모든 추정값이 그 오차를 물려받습니다.
+@@ 59
+문제 1의 다리가 가만히 서 있고(\(\mathbf{h}\)는 무시) 모터가 \(\boldsymbol{\tau} = (-8.49,\ 15.0)\) N·m를 유지합니다. (a) ground reaction force \((f_x, f_z)\)를 구하세요. (b) \(\mu = 0.3\)인 바닥에서 발이 버팁니까? \(\mu = 0.2\)에서는요? (c) \(f_z\)에 50 N 임계값을 걸면 각 경우에 어떤 결론을 내립니까?
+@@ 60
+(a) \(\mathbf{J}_v\T = \begin{bmatrix} 0.424 & 0 \\ 0.212 & -0.212 \end{bmatrix}\)로 \(\mathbf{J}_v\T\mathbf{f} = -\boldsymbol{\tau}\)를 풉니다. 첫째 행: \(0.424 f_x = 8.49\)이므로 \(f_x = 20.0\) N. 둘째 행: \(0.212(20.0) - 0.212 f_z = -15.0\)이므로 \(f_z = (15.0 + 4.24)/0.212 = 90.7\) N.
+@@ 61
+(b) 원뿔이 허용하는 값은 \(\mu f_z\)입니다. \(0.3 \times 90.7 = 27.2\) N으로 20 N보다 크므로 발은 버팁니다. \(\mu = 0.2\)이면 한계는 18.1 N으로 20 N보다 작아서 발이 미끄러집니다.
+@@ 62
+(c) \(f_z = 90.7\) N은 두 경우 모두 50 N을 넘으므로 검출기는 두 번 다 접촉이라고 보고합니다. 미끄러운 바닥에서는 이것이 틀렸고, leg odometry는 움직이는 발을 쓰게 됩니다.
+@@ 63
+(심화) <a href="#d105">Day 3</a>의 걷기 위젯에서 joint noise를 발의 \(x\) 좌표로 보내는 \(\mathbf{J}_v\)의 행은 들리는 다리에서 \((0.65,\ 0.275)\), 착지하는 다리에서 \((0.65,\ 0.375)\)이고 단위는 m/rad입니다. 각 encoder 값에는 독립 noise \(\sigma_q = 0.3^\circ\)가 있습니다. (a) 발 바꾸기 한 번에 더해지는 \(x\)의 1σ 오차를 구하세요. (b) 발은 걸음마다 3 mm씩 미끄러지기도 합니다. 몇 걸음 뒤에 slip이 noise로 인한 오차를 넘어섭니까? (c) 100걸음 뒤 두 오차를 걸은 거리 30 m에 대한 비율로 나타내세요.
+@@ 64
+(a) \(\sigma_q = 0.3 \times \pi/180 = 0.00524\) rad입니다. 각 다리는 \(\sigma_q\)에 자기 행의 길이를 곱한 만큼 기여합니다. \(0.00524\sqrt{0.65^2 + 0.275^2} = 0.00524 \times 0.706 = 3.7\) mm와 \(0.00524\sqrt{0.65^2 + 0.375^2} = 0.00524 \times 0.750 = 3.9\) mm입니다. 둘은 독립이므로 \(\sigma_{\text{step}} = \sqrt{3.7^2 + 3.9^2} = 5.4\) mm입니다.
+@@ 65
+(b) noise는 \(5.4\sqrt{n}\) mm로, slip은 \(3n\) mm로 커집니다. \(\sqrt{n} = 5.4/3 = 1.8\), 즉 \(n = 3.2\)일 때 둘이 같습니다. 네 번째 걸음부터는 slip이 더 큰 오차입니다.
+@@ 66
+(c) noise: \(5.4\sqrt{100} = 54\) mm로 30 m의 0.18%. slip: \(300\) mm로 1%. 긴 거리에서는 bias가 drift 속도를 정하고, encoder를 아무리 좋은 것으로 바꿔도 이것은 바뀌지 않습니다.
+@@ 67
+4. Part II 돌아보기: 센서 여섯 개, factor graph 하나
+@@ 68
+Part I은 back-end를 만들었습니다. factor graph와 그것을 최적화하는 도구입니다. Part II는 front-end에 관한 것이었습니다. 각 센서의 원시 데이터가 어떻게 factor가 되는지입니다. Prelude의 핵심 아이디어는 거의 모든 front-end가 같은 모듈로 이루어진다는 것입니다. <strong>odometry</strong> 모듈은 연속한 node 사이의 상대 측정을 만듭니다. <strong>loop closure</strong> 모듈은 먼저 장소를 알아본 다음 오래된 node에 대한 relative pose를 추정합니다. GPS처럼 일부 센서는 node 하나에 붙는 <strong>unary factor</strong>를 더합니다. <span class="src">§II.1 · pp. 185–187</span> 그리고 각 장은 센서 하나에 대해 이 모듈들을 채워 넣었습니다.
+@@ 69
+측정하는 것
+@@ 70
+odometry의 출처
+@@ 71
+강점
+@@ 72
+약점
+@@ 73
+레슨
+@@ 74
+RGB 카메라
+@@ 75
+픽셀 격자 위의 밝기: 장면 점들의 방향, range 없음
+@@ 76
+frame 사이의 keypoint 매칭(reprojection error) 또는 픽셀 매칭(photometric error)
+@@ 77
+싸고 작음. 풍부한 외관 정보와 의미 정보
+@@ 78
+빛이 필요함. 눈부심, 번짐, 안개, 연기. 카메라 하나로는 metric scale을 얻지 못함
+@@ 79
+7장 · <a href="#d61">11</a>–<a href="#d67">12주차</a>
+@@ 80
+레이저 빔 방향의 range: 3-D point cloud
+@@ 81
+Scan registration (ICP와 그 변형)
+@@ 82
+직접적이고 정확한 기하. 조명과 무관
+@@ 83
+비용, 크기, 전력, 데이터 양. 폭우, 안개, 눈. 움직이는 동안 scan이 왜곡됨
+@@ 84
+8장 · <a href="#d73">13주차</a>
+@@ 85
+전파로 얻는 range와 반경 방향(Doppler) 속도
+@@ 86
+Doppler로 얻는 ego-velocity, 또는 radar scan의 registration
+@@ 87
+카메라와 LiDAR가 못 버티는 조건에서도 동작. 속도를 측정
+@@ 88
+noise가 많고 sparse한 데이터. LiDAR보다 낮은 정확도. 무거운 신호 처리
+@@ 89
+9장 · <a href="#d79">14주차</a>
+@@ 90
+픽셀마다 log 밝기의 변화, 비동기적으로
+@@ 91
+event stream에서 추적한 feature나 edge. motion compensation
+@@ 92
+마이크로초 단위 타이밍, motion blur 없음, 높은 dynamic range, 저전력
+@@ 93
+noise. 절대 밝기나 세밀한 texture가 없음
+@@ 94
+10장 · <a href="#d85">15주차</a>
+@@ 95
+각속도와 specific force, 높은 빈도로
+@@ 96
+keyframe 사이의 적분을 preintegration factor로 묶음
+@@ 97
+어디서나 동작. 중력 방향과 metric scale을 줌
+@@ 98
+bias와 noise가 적분되어 빠른 drift가 됨. 다른 센서가 필요함. global 위치와 yaw는 unobservable로 남음
+@@ 99
+11장 · <a href="#d91">16</a>–<a href="#d97">17주차</a>
+@@ 100
+다리
+@@ 101
+joint 각도, 그리고 힘이나 접촉 비트
+@@ 102
+정지한 stance 발: forward kinematics 또는 발 속도
+@@ 103
+높은 빈도. 장면이 어떻게 보이든 무관
+@@ 104
+slip, 무른 땅, 휘는 다리. 공중에 뜬 구간에는 아무것도 없음
+@@ 105
+12장 · <a href="#d103">18주차</a>
+@@ 106
+<span class="src">§II.2.1–II.2.2 · pp. 188–190, and Chapters 7–12</span> 어느 행도 모든 곳에서 좋지는 않기 때문에 실제 시스템은 센서를 융합합니다. IMU가 공통 파트너입니다(visual-inertial, LiDAR-inertial, radar-inertial, legged-inertial). 싸고, 더 느린 측정 사이의 빈틈을 메워 주기 때문입니다. <span class="src">§II.2.2 · p. 189</span>
+@@ 107
+5. 센서마다 식 하나
+@@ 108
+기억할 식
+@@ 109
+관측한 픽셀 빼기 투영한 3-D 점
+@@ 110
+(7.1), p. 204 · <a href="#d63">11주차 · Day 3</a>
+@@ 111
+매칭된 점들을 가장 잘 맞추는 강체 운동. 다시 매칭하고 반복
+@@ 112
+(8.1), p. 228 · <a href="#d74">13주차 · Day 2</a>
+@@ 113
+반사파의 지연으로 얻는 range. Doppler가 반경 방향 속도를 더함
+@@ 114
+(9.1), p. 254 · <a href="#d79">14주차 · Day 1</a>
+@@ 115
+log 밝기가 임계값 \(C\)만큼 바뀌면 픽셀이 event를 냄
+@@ 116
+(10.1), p. 283 · <a href="#d85">15주차 · Day 1</a>
+@@ 117
+측정값은 실제 움직임에 중력의 영향, 천천히 변하는 bias, noise를 더한 것
+@@ 118
+(11.1), (11.2), p. 306 · <a href="#d91">16주차 · Day 1</a>
+@@ 119
+다리가 몸체에서 고정된 접촉점을 "관측"함
+@@ 120
+(12.17), p. 344 · <a href="#d105">18주차 · Day 3</a>
+@@ 121
+여러 장에 걸쳐 세 가지 아이디어가 되풀이되었습니다. 센서가 무엇이든 odometry는 drift하고, loop closure나 절대 측정만이 그것을 묶어 둡니다(<a href="#d61">11주차 · Day 1</a>). 높은 빈도의 측정은 keyframe 사이에서 preintegration으로 요약됩니다. 처음에는 IMU에 대해(<a href="#d94">16주차 · Day 4</a>), 다음에는 접촉과 다리 속도에 대해서였습니다(<a href="#d107">Day 5</a>). 그리고 모든 센서는 어떤 방향을 unobservable로 남깁니다. 카메라 하나라면 scale, IMU가 달린 카메라라면 global 위치와 yaw입니다(<a href="#d98">17주차 · Day 2</a>). 그래서 그것을 채우려고 두 번째 modality를 더합니다.
+@@ 122
+6. 종합 퀴즈: Part II 전체
+@@ 123
+Q1. SLAM factor graph에 GPS 측위값을 더합니다. 이것은 어떤 종류의 factor입니까?
+@@ 124
+연속한 node 사이의 odometry factor
+@@ 125
+멀리 떨어진 node 사이의 loop closure factor
+@@ 126
+node 하나에 붙는 unary factor
+@@ 127
+preintegration factor
+@@ 128
+GPS는 두 node 사이의 관계가 아니라 node 하나의 속성, 즉 위치를 측정합니다 (§II.1.3, p. 187).
+@@ 129
+Q2. pinhole 카메라의 focal length가 500 px이고 principal point가 (320, 240)입니다. landmark가 카메라 좌표 (0.2, −0.1, 2.0) m에 있고 픽셀 (373, 211)에서 관측됩니다. reprojection error는 얼마입니까?
+@@ 130
+=
+@@ 131
+=
+@@ 132
+=
+@@ 133
+투영: u = 500 × 0.2 / 2.0 + 320 = 370, v = 500 × (−0.1) / 2.0 + 240 = 215. 오차는 (373 − 370, 211 − 215) = (3, −4)이고 길이는 5 px입니다.
+@@ 134
+Q3. vision만 쓰는 시스템에는 어떤 측정으로도 정해지지 않는 미지수가 7개 있습니다. IMU를 더하면 4개가 남습니다. 어떤 4개입니까?
+@@ 135
+scale, roll, pitch, yaw
+@@ 136
+roll, pitch, yaw, gyroscope bias
+@@ 137
+global 위치와 scale
+@@ 138
+global 위치 (x, y, z)와 yaw
+@@ 139
+accelerometer는 중력을 감지해 roll과 pitch를 정하고, metric scale을 줍니다. world 원점이 어디인지와 북쪽이 어느 방향인지는 여전히 자유롭습니다 (p. 221, §11.3.2, p. 324).
+@@ 140
+Q4. ICP는 어떤 두 단계를 번갈아 합니까?
+@@ 141
+feature 추출, 그리고 descriptor 매칭
+@@ 142
+현재 변환으로 correspondence 찾기, 그리고 그것들을 가장 잘 맞추는 변환 구하기
+@@ 143
+scan deskewing, 그리고 voxel filtering
+@@ 144
+loop closure 검출, 그리고 pose graph 최적화
+@@ 145
+각 iteration은 최신 변환으로 correspondence 집합을 다시 계산한 뒤, R과 t에 대해 registration error (8.1)을 최소화합니다 (§8.2.1, p. 228).
+@@ 146
+Q5. radar echo가 송신 1마이크로초 뒤에 돌아옵니다. 목표물은 얼마나 멀리 있습니까? (c = 3 × 10⁸ m/s)
+@@ 147
+d = c t₀ / 2 = 3 × 10⁸ × 10⁻⁶ / 2 = 150 m. 2로 나누는 것은 전파가 갔다가 돌아오기 때문입니다.
+@@ 148
+Q6. Prelude에 따르면, 연속한 측정을 매칭하지 않고 측정한 속도를 적분해 odometry를 계산할 수 있는 두 modality는 무엇입니까?
+@@ 149
+Radar (Doppler)와 leg odometry
+@@ 150
+RGB 카메라와 LiDAR
+@@ 151
+LiDAR와 event camera
+@@ 152
+RGB 카메라와 radar
+@@ 153
+Doppler는 반경 방향 속도를 주고 거기서 ego-velocity가 나옵니다. 다리는 kinematics와 접촉으로 몸체 속도를 줍니다 (§II.1.1, p. 186). 카메라와 LiDAR는 frame 사이에서 픽셀, 점, feature를 매칭합니다.
+@@ 154
+Q7. contrast threshold가 C = 0.2인 event camera 픽셀에서 log 밝기가 꾸준히 0.45만큼 올라갑니다. 픽셀은 무엇을 출력합니까?
+@@ 155
+값 0.45를 담은 event 하나
+@@ 156
+다음 frame까지 아무것도 없음
+@@ 157
+음의 event 두 개
+@@ 158
+양의 event 두 개
+@@ 159
+픽셀은 마지막 event 이후의 변화가 C에 이를 때마다 event를 냅니다. +0.2와 +0.4에서, 둘 다 polarity +1입니다. 남은 0.05는 임계값 아래입니다. event는 크기가 아니라 부호를 담습니다.
+@@ 160
+Q8. IMU가 탁자 위에 수평으로 가만히 놓여 있습니다. (11.1)에 따르면 bias와 noise가 0일 때 accelerometer는 무엇을 읽습니까?
+@@ 161
+가속하지 않으므로 0
+@@ 162
+약 9.81 m/s², 위쪽
+@@ 163
+약 9.81 m/s², 아래쪽
+@@ 164
+향하는 방향에 따라 다름
+@@ 165
+a = R(a^w − g^w)이고 a^w = 0이므로 측정값은 body frame으로 회전한 −g, 즉 위쪽으로 9.81 m/s²입니다. accelerometer는 specific force를 측정하며, 여기서는 탁자가 미는 힘입니다.
+@@ 166
+Q9. IMU 측정을 factor graph에 넣기 전에 preintegration하는 이유는 무엇입니까?
+@@ 167
+원시 IMU 데이터는 noise가 너무 커서 쓸 수 없기 때문
+@@ 168
+graph가 속도 변수를 담을 수 없기 때문
+@@ 169
+두 keyframe 사이의 수백 개 측정을, optimizer가 state를 바꿔도 다시 적분할 필요가 없는 relative motion 측정 하나로 만들기 위해
+@@ 170
+중력을 먼저 하드웨어에서 제거해야 하기 때문
+@@ 171
+단순 적분은 초기 state에 의존하므로 solver iteration마다 다시 해야 합니다. Preintegration은 state에 의존하는 부분과 측정에만 의존하는 부분을 분리합니다 (§11.2, p. 308).
+@@ 172
+Q10. 로봇이 연기로 가득한 터널을 mapping해야 합니다. Prelude가 이런 조건에 맞는 것으로 꼽는 외부 센서는 무엇이고, 그 대가는 무엇입니까?
+@@ 173
+LiDAR, 높은 비용이라는 대가
+@@ 174
+Radar, noise가 많고 sparse한 데이터와 LiDAR보다 낮은 정확도라는 대가
+@@ 175
+event camera, 절대 밝기를 잃는다는 대가
+@@ 176
+RGB 카메라, 더 많은 빛이 필요하다는 대가
+@@ 177
+Radar는 환경의 영향을 가장 적게 받고, LiDAR와 카메라가 제대로 동작하지 않는 곳에서도 계속 동작하는 몇 안 되는 센서 중 하나지만, 데이터에 noise가 많고 sparse합니다 (§II.2.1, p. 189).
+@@ 178
+joint 각도와 속도로 발의 위치와 속도를 계산하고, stance 다리라면 이를 몸체의 움직임으로 바꿀 수 있습니다.
+@@ 179
+leg odometry에서 "접촉 중"이 무슨 뜻인지, 왜 힘 임계값이 그것을 대신하는지 말할 수 있습니다.
+@@ 180
+leg odometry factor 하나의 residual과 covariance를 쓸 수 있습니다.
+@@ 181
+여섯 modality 각각에 대해 무엇을 측정하는지, odometry가 어디서 나오는지, 실패하는 조건 하나를 말할 수 있습니다.
+@@ 182
+센서를 왜 융합하는지, 그리고 모든 조합에서 IMU가 무엇을 보태는지 설명할 수 있습니다.
+@@ 183
+<a href="#d63">11주차</a>와 <a href="#d69">12주차</a>의 reprojection error와 bundle adjustment의 아이디어를 떠올릴 수 있습니다. Part III는 학습 기반 시스템을 그 위에 세웁니다.
+@@ 184
+<em>SLAM Handbook</em>, 12장 "Leg Odometry for SLAM", pp. 333–357.
+@@ 185
+<em>SLAM Handbook</em>, Part II 서두(Prelude), §II.1–II.4, pp. 185–192, 그리고 7–11장에서 인용한 식: (7.1) p. 204, (8.1) p. 228, (9.1) p. 254, (10.1) p. 283, (11.1)–(11.2) p. 306. 미지수 7개와 4개는 p. 221.
+@@ 186
+Siciliano, Sciavicco, Villani, Oriolo, <em>Robotics: Modelling, Planning and Control</em>, 2009 (문제에 쓴 평면 two-link의 kinematics와 정역학).
+@@ 187
+Hartley와 Zisserman, <em>Multiple View Geometry</em>, 2004 (Part II 퀴즈 Q2에 쓴 pinhole 투영).

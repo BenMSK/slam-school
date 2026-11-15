@@ -1,0 +1,118 @@
+@@ 1
+<span class="eyebrow">22주차 · Day 2</span>
+@@ 2
+Ellipsoid, mesh, 그리고 학습된 shape
+@@ 3
+오늘이 끝나면 ellipsoid를 dual quadric으로 바꾸고, image conic으로 투영해서 bounding box를 읽어 내고, mesh를 segmentation mask에, signed distance function을 depth 점에 맞추는 residual을 쓸 수 있습니다.
+@@ 4
+약 60분 · §16.2.1.2–16.2.1.4, pp. 458–466 읽기 (9쪽, 그중 5쪽은 대부분 그림) · 22주차 Day 1 필요
+@@ 5
+먼저 읽기: §16.2.1.2부터 §16.2.1.4까지, pp. 458–466
+@@ 6
+(16.4), (16.5), (16.6)에서 세 가지 방식으로 쓴 같은 ellipsoid, pp. 458–459.
+@@ 7
+residual (16.10)이 비교하는 두 conic: map에서 나오는 (16.8), p. 460, 그리고 detector에서 나오는 (16.9), p. 461.
+@@ 8
+p. 466: SDF decoder를 학습할 때 최적화하는 것과 사용할 때 최적화하는 것.
+@@ 9
+모든 shape model은 detector 출력 하나와 짝을 이룹니다. ellipsoid는 bounding box와, mesh는 segmentation mask와, signed distance function은 depth 점과 짝입니다. residual의 형태는 언제나 같습니다. 현재의 물체와 카메라에 대해 detector가 무엇을 보고할지 예측하고, 실제 보고와 비교합니다.
+@@ 10
+1. Quadric으로서의 ellipsoid
+@@ 11
+쓸모 있는 shape 가운데 가장 거친 것은 object frame의 원점에 중심을 두고 반축 길이가 \(\mathbf{s} \in \R^3\)인 ellipsoid입니다.
+@@ 12
+\(\mathbf{x}\)에 1을 덧붙이면(homogeneous coordinates) "\(\le 1\)"이 행렬 안으로 들어갑니다.
+@@ 13
+대칭 \(4\times 4\) 행렬로 된 이런 이차 형식의 영점 집합인 곡면을 <strong>quadric</strong>(이차 곡면)이라고 합니다. quadric의 장점은 이미지에서의 윤곽이 closed form으로 나온다는 것입니다. <span class="src">§16.2.1.2 · pp. 458–459</span>
+@@ 14
+2. Dual quadric: 접평면으로 표면 기술하기
+@@ 15
+책은 <strong>dual</strong>(쌍대) 표현으로 넘어갑니다. ellipsoid에 접하는 평면들의 집합입니다.
+@@ 16
+여기서 \(\mathbf{Q}^*_{\mathbf{s}}\)는 \(\mathbf{Q}_{\mathbf{s}}\)의 adjugate(수반행렬)입니다. quadric은 행렬에 상수를 곱해도 변하지 않으므로, adjugate \(\det(\mathbf{Q}_{\mathbf{s}})\mathbf{Q}_{\mathbf{s}}^{-1}\)를 \(\mathbf{Q}_{\mathbf{s}}^{-1} = \diag(s_1^2, s_2^2, s_3^2, -1)\)로 바꿔 써도 됩니다. 이미지의 윤곽은 물체에 접하는 ray들로 이루어지므로, 카메라가 보는 것은 바로 이 접평면 표현입니다. <span class="src">§16.2.1.2 · pp. 459–460</span>
+@@ 17
+빈틈 채우기: 왜 \(\mathbf{Q}^* = \mathbf{Q}^{-1}\)인가, 그리고 왜 dual은 투영하기 쉬운가
+@@ 18
+<strong>접평면.</strong> 평면을 \(\{\mathbf{x} : \mathbf{y}\T\mathbf{x} + 1 = 0\}\)로 씁니다. homogeneous 벡터로는 \([\mathbf{y}; 1]\)입니다. ellipsoid의 모든 점은 \(\norm{\mathbf{u}} \le 1\)인 \(\mathbf{x} = \diag(\mathbf{s})\,\mathbf{u}\)로 쓸 수 있습니다. 그러면 \(\mathbf{y}\T\mathbf{x} = (\diag(\mathbf{s})\mathbf{y})\T\mathbf{u}\)이고, \(\mathbf{u}\)가 단위 공 위를 움직이는 동안 이 값은 \(-\norm{\diag(\mathbf{s})\mathbf{y}}\)와 \(+\norm{\diag(\mathbf{s})\mathbf{y}}\) 사이의 모든 값을 가집니다. 평면 위의 점이 되려면 값이 \(-1\)이어야 합니다. 따라서 평면은 \(\norm{\diag(\mathbf{s})\mathbf{y}} \lt 1\)이면 ellipsoid를 비껴가고, \(\gt 1\)이면 관통하며, 정확히 다음 조건일 때 한 점에서 접합니다.
+@@ 19
+가운데 행렬이 \(\mathbf{Q}_{\mathbf{s}}^{-1}\)이고, 접평면들은 (16.6)에 나온 집합의 경계입니다.
+@@ 20
+<strong>물체 옮기기.</strong> 점들이 \(4\times4\) 행렬 \(\mathbf{H}\)로 움직이면(\(\mathbf{x}' = \mathbf{H}\mathbf{x}\)) 평면 \(\boldsymbol{\pi}\)는 \(\boldsymbol{\pi}' = \mathbf{H}^{-\top}\boldsymbol{\pi}\)로 움직입니다. 그래야 \(\boldsymbol{\pi}'^{\top}\mathbf{x}' = \boldsymbol{\pi}\T\mathbf{H}^{-1}\mathbf{H}\mathbf{x} = 0\)이 계속 성립하기 때문입니다. \(\boldsymbol{\pi} = \mathbf{H}\T\boldsymbol{\pi}'\)를 \(\boldsymbol{\pi}\T\mathbf{Q}^*\boldsymbol{\pi} = 0\)에 대입하면 \(\boldsymbol{\pi}'^{\top}(\mathbf{H}\mathbf{Q}^*\mathbf{H}\T)\boldsymbol{\pi}' = 0\)이 됩니다. 즉 dual은 역행렬 없이 \(\mathbf{H}\mathbf{Q}^*\mathbf{H}\T\)로 움직입니다.
+@@ 21
+<strong>투영하기.</strong> 이미지 직선 \(\mathbf{l}\)과 카메라 중심은 평면 \(\boldsymbol{\pi} = \mathbf{M}\T\mathbf{l}\)을 이룹니다. 여기서 \(\mathbf{M}\)은 \(3\times4\) 카메라 행렬입니다. 이 직선이 물체의 윤곽에 접하는 것은 정확히 그 평면이 물체에 접할 때입니다: \(\mathbf{l}\T(\mathbf{M}\mathbf{Q}^*\mathbf{M}\T)\mathbf{l} = 0\). 따라서 윤곽은 dual이 \(\mathbf{M}\mathbf{Q}^*\mathbf{M}\T\)인 conic입니다. 점 형태 \(\mathbf{Q}\)로 하려면 \(\mathbf{M}\)의 역행렬이 필요한데, \(3\times4\) 행렬에는 역행렬이 없습니다.
+@@ 22
+3. 물체에서 bounding-box residual까지
+@@ 23
+두 규칙을 적용합니다. \(\lambda\)로 scale하고 pose \(\mathbf{q}\)로 물체를 놓으면 world frame의 dual quadric이 나오고(책은 \(\mathbf{H}\)를 두 행렬로 풀어 씁니다), pose \(\mathbf{T}\)의 카메라가 이것을 대칭 \(3\times3\) 행렬인 dual conic으로 바꿉니다. <span class="src">§16.2.1.2 · p. 460</span>
+@@ 24
+detector는 정규화 이미지 좌표로 박스 \(\mathbf{z} = [u\ v\ w\ h]\T\)를 보고합니다. 모서리 하나, 폭, 높이입니다. 책은 이것을 박스 안에 꼭 맞는 축 정렬 타원의 dual conic으로 바꿉니다. 타원의 중심은 \((c_u, c_v) = (u + w/2,\ v + h/2)\)입니다. (16.9)의 세 행렬을 곱해서 풀면 다음과 같습니다.
+@@ 25
+이 식은 어떤 dual conic에서든 박스를 읽어 내는 방법도 알려 줍니다. 오른쪽 아래 원소가 \(-1\)이 되도록 scale하면, 중심은 마지막 열에 마이너스를 붙인 것이고 반폭은 \(\sqrt{C^*_{11} + c_u^2}\)입니다. residual은 두 conic을 비교합니다. <span class="src">§16.2.1.2 · p. 461</span>
+@@ 26
+두 번째 형태는 각 대칭 행렬을 서로 다른 원소들의 벡터로 펼칩니다(\(\operatorname{vech}\)). 박스 conic은 \(\mathbf{b}_j\)에 원소 6개, \(\mathbf{T}_i^{-1}\mathbf{Q}^*_{\boldsymbol{\ell}_i}\mathbf{T}_i^{-\top}\)는 \(\mathbf{v}\)에 원소 10개입니다. 상수 \(6\times10\) 행렬 \(\mathbf{A}\)가 양쪽에서 \(\mathbf{P}\)를 적용합니다.
+@@ 27
+<strong>손으로 계산하는 구.</strong> 반지름 1, 중심 \(\mathbf{t} = (0, 0, 5)\), 카메라는 원점에 있고 \(\mathbf{T} = \mathbf{I}\)입니다. 그러면 \(\mathbf{Q}^*_{\mathbf{s}} = \diag(1,1,1,-1)\)이고, 이것을 \(\mathbf{t}\)만큼 옮기면 왼쪽 위 block이 \(\mathbf{I}_3 - \mathbf{t}\mathbf{t}\T\)인 행렬이 됩니다. \(\mathbf{P}\)는 정확히 그 block만 남깁니다.
+@@ 28
+여기서 \(\beta = 24\)입니다. 중심은 \((0, 0)\)이고 반폭은 \(1/\sqrt{24} = 0.204\)입니다. 검산: 구를 스치는 ray가 축과 이루는 각 \(\alpha\)는 \(\sin\alpha = 1/5\)를 만족하므로 \(\tan\alpha = 1/\sqrt{24}\)입니다. "반지름 나누기 depth"인 0.2는 조금 작습니다. 스치는 ray는 구의 중심보다 앞쪽에서 구에 닿기 때문입니다.
+@@ 29
+직접 해 보기: yaw를 90°로 돌렸다가 다시 30°로 돌려 보세요. 그다음 scale을 1.5, 거리를 9 m로 맞춰 보세요.
+@@ 30
+눈여겨볼 점: 박스는 방향에 따라 달라집니다. 긴 축이 카메라를 향하면 폭이 0.76에서 0.39로 줄어듭니다. 그리고 \(\lambda = 1.5\), \(d = 9\) m에서는 residual이 다시 정확히 0이 됩니다. 박스 하나로는 멀리 있는 큰 물체와 가까이 있는 작은 물체를 구별할 수 없습니다.
+@@ 31
+4. Segmentation mask와 비교하는 mesh
+@@ 32
+vertex \(\mathcal{V} = \{\mathbf{s}_j\}_j\)와 face \(\mathcal{F}\)로 된 삼각형 <strong>mesh</strong>는 실제 표면을 따라갈 수 있습니다. mesh는 <strong>segmentation mask</strong> \(\mathbf{z}_i \subset \R^2\), 즉 detector가 그 물체에 배정한 픽셀 집합과 비교됩니다. <strong>rasterization function</strong> \(\rho(\mathcal{V}, \mathcal{F})\)는 vertex를 (16.3)처럼 투영한 뒤 mesh가 덮는 픽셀을 채웁니다. 이렇게 rendering된 집합을 \(\hat{\mathbf{z}}_i = \rho(\{\pi(\mathbf{q}_i^{-1}\mathbf{T}_i, \lambda_i\mathbf{s}_{i,j})\}_j, \mathcal{F})\)라고 합시다. residual은 intersection-over-union의 역수입니다. <span class="src">§16.2.1.3 · pp. 461–462</span>
+@@ 33
+rendering이 500 픽셀, mask가 400 픽셀을 덮고 둘이 300 픽셀을 공유하면, 합집합은 \(500 + 400 - 300 = 600\)이고 \(r = 600/300 = 2\)입니다. 완벽히 일치하면 최솟값 \(r = 1\)이 됩니다.
+@@ 34
+문제는 gradient입니다. 픽셀은 덮이거나 안 덮이거나 둘 중 하나이므로, \(\rho\)는 vertex 위치에 대해 구간별 상수이고 그 도함수는 거의 모든 곳에서 0입니다. <strong>Differentiable rendering</strong>은 <a href="#d115">20주차 · Day 1</a>에서처럼 이것을 근사 gradient로 대신합니다. vertex는 직접 최적화할 수도 있고 (16.2)의 coefficient를 통해 최적화할 수도 있습니다. <span class="src">§16.2.1.3 · pp. 461–462</span>
+@@ 35
+5. Implicit shape: 표면 대신 함수
+@@ 36
+지금까지의 모델은 explicit, 즉 표면을 직접 나열합니다. <strong>implicit</strong>(음함수) 모델은 level set이 표면이 되는 공간의 함수입니다. 물체 \(\mathcal{S}\) 안에서 \(-1\), 밖에서 \(+1\)인 <strong>occupancy function</strong> (16.13), 또는 다음과 같은 <strong>signed distance function</strong>(부호 거리 함수)입니다. <span class="src">§16.2.1.4 · pp. 464–465</span>
+@@ 37
+단위 구라면 \(d_{\mathcal{S}}(\mathbf{x}) = \norm{\mathbf{x}} - 1\)이므로 \((0.5, 0, 0)\)에서 \(-0.5\), \((3, 0, 0)\)에서 \(2\)입니다. SDF는 <a href="#d44">8주차 · Day 2</a>에서 map으로 만났습니다. 여기서는 SDF 하나가 물체 하나를 기술하고, network \(d_\theta(\mathbf{x}, \mathbf{s})\)가 그것을 만들어 냅니다. category 전체가 공유하는 weight \(\theta\)를 가진 decoder와, 그 category 안에서 shape 하나를 고르는 <strong>shape code</strong> \(\mathbf{s} \in \R^d\)로 이루어집니다.
+@@ 38
+pose \(\mathbf{T}_i\)의 depth 센서는 물체 근처의 점 \(\mathbf{y}_{i,j}\)와, 그 점에서 물체 표면까지 측정한 거리 \(z_{i,j}\)를 줍니다. residual은 각 점에서의 거리를 decoder에게 묻습니다. <span class="src">§16.2.1.4 · p. 465</span>
+@@ 39
+\(d_\theta\)의 인자는 점을 로봇 frame에서 world로, 다시 object frame으로 옮긴 다음 \(\lambda_i\)로 나눕니다. 그래서 decoder는 언제나 자신의 canonical frame에서 query됩니다. 식보다 이 말로 된 설명을 믿으세요. 어제의 \(\mathbf{T}\)와 \(\mathbf{q}\) 규약으로 같은 사슬을 쓰면 \(\lambda^{-1}\mathbf{q}^{-1}\mathbf{T}\mathbf{y}\)입니다.
+@@ 40
+<strong>Training</strong>(학습)은 offline에서 category마다 한 번 하며, pose와 scale을 고정하고 학습 물체마다 code 하나를 두어 \(\theta\)를 최적화합니다. <strong>Testing</strong>은 SLAM 안에서 online으로 하며, \(\theta\)를 고정하고 처음 보는 물체에 대해 \(\mathbf{T}_i\), \(\mathbf{q}_i\), \(\lambda_i\), \(\mathbf{s}_i\)를 최적화합니다. <span class="src">§16.2.1.4 · p. 466</span>
+@@ 41
+Q1. 반지름 2 m인 구의 중심이 광축 위 depth 4 m에 있습니다. 정규화 이미지 좌표에서 이 구 윤곽의 반폭은 얼마입니까?
+@@ 42
+반지름이 ρ이면 block은 ρ²I − t tᵀ = diag(4, 4, −12) ∝ diag(1/3, 1/3, −1)입니다. 반폭은 √(1/3) = 0.58입니다.
+@@ 43
+Q2. detection이 z = (u, v, w, h) = (0.1, −0.2, 0.4, 0.2)입니다. 오른쪽 아래 원소를 −1로 scale했을 때, 이 detection의 dual conic (16.9)에서 왼쪽 위 원소는 얼마입니까?
+@@ 44
+중심은 c_u = 0.1 + 0.2 = 0.3입니다. 원소는 (w/2)² − c_u² = 0.04 − 0.09 = −0.05입니다.
+@@ 45
+Q3. rendering된 mesh가 300 픽셀, segmentation mask가 300 픽셀을 덮고, 그중 200 픽셀이 양쪽에 다 있습니다. residual (16.12)는 얼마입니까?
+@@ 46
+합집합 = 300 + 300 − 200 = 400, 교집합 = 200이므로 residual은 2입니다 (IoU는 0.5).
+@@ 47
+Q4. 로봇이 처음 보는 의자를 만났고, 의자 SDF decoder는 이미 학습되어 있습니다. (16.15)를 최소화하면 무엇이 조정됩니까?
+@@ 48
+decoder weight θ만
+@@ 49
+weight θ와 shape code
+@@ 50
+shape code만
+@@ 51
+로봇 pose, 물체 pose와 scale, shape code
+@@ 52
+online에서는 θ가 고정됩니다. state는 x = (T, q, λ, s)입니다.
+@@ 53
+ellipsoid는 quadric입니다. 그 dual \(\mathbf{Q}^* \propto \mathbf{Q}^{-1}\)은 ellipsoid를 접평면으로 기술하고, \(\mathbf{H}\mathbf{Q}^*\mathbf{H}\T\)로 움직이며, dual conic (16.8)으로 투영됩니다.
+@@ 54
+bounding box는 dual conic (16.9)가 되고, residual (16.10)은 두 conic의 차이입니다. 박스 하나로는 크기와 거리가 묶인 채로 남습니다.
+@@ 55
+mesh는 differentiable rasterizer를 써서 IoU의 역수 (16.12)로 segmentation mask에 맞춥니다.
+@@ 56
+implicit shape는 decoder \(d_\theta(\mathbf{x}, \mathbf{s})\)입니다. weight는 offline으로 학습하고, code, pose, scale은 (16.15)로 online에서 추정합니다.
+@@ 57
+=
+@@ 58
+Hartley와 Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (dual quadric, 평면의 변환 방식, quadric을 conic으로 투영하기).
+@@ 59
+Magnus와 Neudecker, <em>Matrix Differential Calculus with Applications in Statistics and Econometrics</em>, 1988 (vec, vech, Kronecker product 항등식).

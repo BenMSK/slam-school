@@ -1,0 +1,164 @@
+@@ 1
+<span class="eyebrow">20주차 · 복습</span>
+@@ 2
+20주차 복습: rendering으로 만드는 map
+@@ 3
+오늘이 끝나면 density나 Gaussian으로부터 픽셀을 손으로 rendering하고, Gaussian covariance를 이미지로 투영하고, NeRF 방식 map과 splat map을 SLAM의 요구에 비추어 비교할 수 있습니다.
+@@ 4
+14장은 map을, 미분 가능한 절차로 이미지를 rendering할 수 있다면 어떤 parameter 집합이든 될 수 있는 것으로 다룹니다. rendering하고, 카메라 이미지와 비교하고, 그 차이의 gradient를 parameter로 되돌려 보내는데, 이 parameter에는 카메라 pose도 들어갈 수 있습니다. NeRF는 density와 색을 field로 저장하고 각 픽셀의 ray를 따라 나아가며 rendering합니다: 픽셀은 샘플 색들을 transmittance 곱하기 opacity로 가중한 합입니다. field를 어떻게 저장하느냐(MLP 하나, grid, point)가 속도, 크기, 구멍을 메우는지, 커질 수 있는지, 잊어버리는지를 결정합니다. 3D Gaussian splatting은 같은 blending 합을 유지하되 이미지에 투영된 명시적 Gaussian primitive에서 opacity를 얻으며, 그래서 훨씬 빠르게 rendering하고 SLAM이 추가하고 옮길 수 있는 primitive를 제공합니다. 둘 다 최적화가 느리고, tracker로서는 아직 고전적인 sparse 방법보다 덜 정확합니다.
+@@ 5
+Radiance field와 카메라 ray
+@@ 6
+=
+@@ 7
+=
+@@ 8
+=
+@@ 9
+Volume rendering 적분
+@@ 10
+=
+@@ 11
+=
+@@ 12
+=
+@@ 13
+Weight와 expected depth
+@@ 14
+Day 2 (depth는 p. 403에 말로 설명)
+@@ 15
+=
+@@ 16
+Grid 위의 linear interpolation
+@@ 17
+\(f = (1 - s)f_i + s f_{i+1}\); trilinear: 8개 꼭짓점에 대해 이런 weight 세 개의 곱
+@@ 18
+=
+@@ 19
+=
+@@ 20
+=
+@@ 21
+투영된 covariance
+@@ 22
+=
+@@ 23
+=
+@@ 24
+=
+@@ 25
+=
+@@ 26
+=
+@@ 27
+Q1. volume rendering은 단단한 표면의 rendering이 주지 못하는 무엇을 optimizer에 줍니까?
+@@ 28
+더 빠른 rendering
+@@ 29
+아직 표면이 생기지 않은 ray 위의 점에서 0이 아닌 gradient
+@@ 30
+모든 픽셀의 정확한 depth
+@@ 31
+카메라 pose가 필요 없음
+@@ 32
+ray 위의 모든 샘플이 opacity를 통해 픽셀에 기여하므로, loss는 빈 점에 물질을 요구할 수 있습니다. 단단한 표면은 윤곽을 제외하면 위치에 대한 gradient가 0입니다.
+@@ 33
+Q2. ray 구간 하나의 density가 σ = 1이고 길이가 δ = 0.2입니다. opacity는 얼마입니까?
+@@ 34
+α = 1 − e^(−0.2) = 0.181. σδ가 작으면 이 값은 σδ = 0.2에 가깝지만, 결코 그보다 크지 않습니다.
+@@ 35
+Q3. ray 위 세 샘플의 opacity가 가까운 것부터 0.2, 0.5, 1.0입니다. 각 weight는 얼마입니까?
+@@ 36
+w₁ = 0.2. T₂ = 0.8이므로 w₂ = 0.8 × 0.5 = 0.4. T₃ = 0.8 × 0.5 = 0.4이므로 w₃ = 0.4 × 1.0 = 0.4. 마지막 샘플이 불투명하므로 합이 1입니다.
+@@ 37
+Q4. Table 14.1이 MLP 하나에 "좋음"으로 평가하는 두 성질은 무엇입니까?
+@@ 38
+Inference 속도와 dynamic allocation
+@@ 39
+Dynamic allocation과 forgetting에 대한 저항력
+@@ 40
+압축과 scene completion
+@@ 41
+Inference 속도와 압축
+@@ 42
+MLP는 간결하고 매끄러우므로 압축을 잘하고 작은 구멍을 메웁니다. 속도, dynamic allocation, forgetting에서는 "제한적"으로 평가됩니다.
+@@ 43
+Q5. field를 3D grid에 저장하고 trilinear interpolation으로 읽습니다. 샘플 점 하나의 loss에 대한 gradient step은 저장된 값을 몇 개 바꿉니까?
+@@ 44
+전부
+@@ 45
+interpolation된 값은 샘플을 담은 cell의 꼭짓점 여덟 개에만 의존하므로, 그것들만 0이 아닌 미분을 갖습니다. 이 국소성 때문에 grid는 전역 함수보다 덜 잊습니다.
+@@ 46
+Q6. 광축 위의 Gaussian을 Σ는 그대로 두고 depth 2에서 depth 6으로 옮깁니다. footprint의 표준편차는 어떻게 됩니까?
+@@ 47
+3분의 1이 됩니다
+@@ 48
+9분의 1이 됩니다
+@@ 49
+변하지 않습니다
+@@ 50
+세 배가 됩니다
+@@ 51
+광축 위에서는 J = [1/z, 0]이므로 σ′ = σₓ/z. depth가 세 배면 폭은 3분의 1이 됩니다. 분산 σ′²는 9분의 1로 줄어듭니다.
+@@ 52
+Q7. 한 픽셀에서 Gaussian A와 B는 둘 다 α = 0.5이고 A가 앞에 있습니다. 그다음 두 α는 그대로 두고 B를 A 앞으로 옮깁니다. 이제 A의 weight는 얼마입니까?
+@@ 53
+B 뒤에서 A는 transmittance 1 − 0.5 = 0.5만 받으므로 weight는 0.5 × 0.5 = 0.25입니다. 앞에 있을 때는 0.5였습니다. depth 순서가 중요합니다.
+@@ 54
+Q8. NeRF나 3DGS 기반 SLAM을 real-time 로봇에 쓰는 데 가장 큰 걸림돌로 책이 꼽는 것은 무엇입니까?
+@@ 55
+splat map에서 이미지를 rendering하는 것이 너무 느립니다
+@@ 56
+최적화가 느립니다: 대부분의 방법은 최신 GPU에서도 초당 몇 프레임을 넘기기 어렵습니다
+@@ 57
+LiDAR 없이는 Gaussian을 초기화할 수 없습니다
+@@ 58
+map이 semantics를 저장할 수 없습니다
+@@ 59
+3DGS는 real-time으로 rendering합니다. 비용은 프레임마다 밟는 많은 gradient step에 있으며, 그래서 compact 표현, 고차 optimizer, feed-forward 예측이 제안됩니다.
+@@ 60
+ray를 같은 간격 \(\delta = 0.5\)로 네 점에서 샘플링합니다. density는 \(\sigma = (0,\ 1,\ 0,\ 4)\), 샘플 위치는 \(t = (0.5,\ 1.0,\ 1.5,\ 2.0)\)이고, 샘플 2와 4의 밝기는 \(1.0\)과 \(0.2\)입니다. 모든 \(\alpha_i\), \(T_i\), \(w_i\), 검은 배경 위의 픽셀 값, 네 샘플을 모두 통과하는 빛, 그리고 expected depth를 계산하십시오.
+@@ 61
+\(w_2 = 0.3935\), \(w_4 = 0.6065 \times 0.8647 = 0.5244\)이고, 나머지는 0입니다. 확인: \(0.3935 + 0.5244 + 0.0821 = 1\).
+@@ 62
+픽셀: \(0.3935 \times 1.0 + 0.5244 \times 0.2 = 0.498\). Expected depth: \(0.3935 \times 1.0 + 0.5244 \times 2.0 = 1.44\).
+@@ 63
+(a) \(w_i = T_i - T_{i+1}\)임을 보이십시오. (b) 이로부터 \(\sum_{i=1}^{N} w_i = 1 - T_{N+1}\)을 이끌어 내십시오. (c) 한 ray가 길이 5에 걸쳐 density \(\sigma = 0.4\)로 일정한 안개를 지나며, 이를 \(N\)개의 같은 구간으로 나눕니다. 전체 weight가 \(N\)에 의존하지 않음을 보이고, 그 값을 계산하십시오.
+@@ 64
+(a) 정의에 따라 \(T_{i+1} = T_i(1 - \alpha_i)\)이므로 \(T_i - T_{i+1} = T_i\alpha_i = w_i\)입니다.
+@@ 65
+(b) 합에서 중간 항이 서로 소거됩니다: \((T_1 - T_2) + (T_2 - T_3) + \dots + (T_N - T_{N+1}) = T_1 - T_{N+1} = 1 - T_{N+1}\).
+@@ 66
+(c) \(T_{N+1} = \exp(-\sum_j \sigma\delta_j) = \exp(-0.4 \times 5) = e^{-2} = 0.135\)이며, 길이의 합은 항상 5이므로 구간 개수와 상관없습니다. 전체 weight는 \(1 - 0.135 = 0.865\)입니다. 이것이 opacity를 \(\sigma\delta\)가 아니라 \(1 - e^{-\sigma\delta}\)로 정의하는 이유입니다: 균일한 영역을 얼마나 잘게 자르느냐에 결과가 의존해서는 안 됩니다.
+@@ 67
+카메라가 원점에서 \(z\) 방향을 보고 이미지 선이 \(z = 1\)에 있는 2D 세계. Gaussian A는 \((x, z) = (0.5, 2)\)에 있고 \(\boldsymbol{\Sigma}_A = \diag(0.09, 0.01)\), opacity 0.9, 밝기 1.0입니다. Gaussian B는 \((0, 4)\)에 있고 \(\boldsymbol{\Sigma}_B = \diag(0.64, 0.04)\), opacity 0.8, 밝기 0입니다. 배경의 밝기는 0.5입니다. 각 footprint의 중심과 표준편차를 구한 다음, \(u = 0.25\)에서 픽셀 값을 구하십시오.
+@@ 68
+A: \(\mu'_A = 0.5/2 = 0.25\). \(\mathbf{J} = [\,1/z \;\; -x/z^2\,] = [\,0.5 \;\; -0.125\,]\). \(\sigma'^2_A = 0.25 \times 0.09 + 0.0156 \times 0.01 = 0.0227\)이므로 \(\sigma'_A = 0.151\).
+@@ 69
+B: \(\mu'_B = 0\). \(\mathbf{J} = [\,0.25 \;\; 0\,]\). \(\sigma'^2_B = 0.0625 \times 0.64 = 0.04\)이므로 \(\sigma'_B = 0.2\).
+@@ 70
+\(u = 0.25\)에서: 픽셀이 A의 중심에 있으므로 \(\alpha_A = 0.9\)입니다. B는 \(G = \exp(-0.25^2 / (2 \times 0.04)) = e^{-0.781} = 0.458\)이므로 \(\alpha_B = 0.8 \times 0.458 = 0.366\)입니다.
+@@ 71
+A가 더 가까우므로 먼저 섞습니다. Weight: A \(0.9\); B \(0.1 \times 0.366 = 0.037\); 배경 \(0.1 \times 0.634 = 0.063\). 픽셀: \(0.9 \times 1.0 + 0.037 \times 0 + 0.063 \times 0.5 = 0.932\).
+@@ 72
+least squares로서의 tracking. 같은 2D 세계에서 카메라의 옆 방향 위치 \(c\)를 모릅니다. \((1, 2)\)에 있는 Gaussian의 중심은 \(u_1 = 0.35\)에서, \((-1, 4)\)에 있는 Gaussian의 중심은 \(u_2 = -0.33\)에서 관측됩니다. (a) 예측된 중심을 \(c\)의 함수로 쓰고, \(c = 0\)에서의 residual을 구하십시오. (b) \(c = 0\)에서 Gauss-Newton step을 한 번 밟으십시오 (<a href="#d10">2주차 · Day 4</a>). (c) 어느 Gaussian이 답에 더 큰 영향을 주며, 그 이유는 무엇입니까?
+@@ 73
+(a) \(\mu'_1(c) = (1 - c)/2\), \(\mu'_2(c) = (-1 - c)/4\). \(c = 0\)에서 이 값들은 \(0.5\)와 \(-0.25\)이므로, residual(예측 빼기 관측)은 \(r_1 = 0.15\), \(r_2 = 0.08\)입니다.
+@@ 74
+(b) Jacobian은 \(J_1 = -1/2\), \(J_2 = -1/4\)입니다. Gauss-Newton은 \((J_1^2 + J_2^2)\,\Delta = -(J_1 r_1 + J_2 r_2)\)를 풉니다: \(0.3125\,\Delta = 0.075 + 0.02 = 0.095\)이므로 \(\Delta = 0.304\), \(c = 0.304\)입니다. 예측이 \(c\)에 대해 선형이므로 이 한 step이 정확한 least-squares 해입니다. residual은 \(-0.002\)와 \(0.004\)로 줄어듭니다.
+@@ 75
+(c) Gaussian 1입니다. 혼자라면 \(c = 0.30\)을, Gaussian 2 혼자라면 \(c = 0.32\)를 줍니다. 답 \(0.304\)는 첫 번째에 가깝습니다. 거리가 절반이라 Jacobian이 두 배이므로, \(J_1^2 + J_2^2\)에서 네 배의 weight를 갖습니다. 카메라가 이동할 때 가까운 구조는 이미지에서 더 많이 움직이고, 따라서 이동을 더 강하게 제약합니다.
+@@ 76
+differentiable rendering 루프를 설명하고, 그 parameter에 어떤 양이 들어갈 수 있는지 말하기
+@@ 77
+짧은 샘플 목록에 대해 opacity, transmittance, weight, 픽셀 값, expected depth 계산하기
+@@ 78
+Table 14.1의 다섯 행과, 전역 함수가 잊어버리는 이유 설명하기
+@@ 79
+\(\mathbf{J}\mathbf{W}\boldsymbol{\Sigma}\mathbf{W}\T\mathbf{J}\T\)로 Gaussian의 covariance를 투영하고, 정렬된 Gaussian들을 한 픽셀에서 섞기
+@@ 80
+§14.4의 열린 문제 가운데 정적 세계 가정을 짚어 내기. 다음 주의 장은 움직이고 변형되는 scene을 다룹니다.
+@@ 81
+<em>SLAM Handbook</em>, 14장 "Map Representations with Differentiable Volume Rendering", pp. 397–416.
+@@ 82
+Mildenhall et al., <em>NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis</em>, 2020; Max, <em>Optical Models for Direct Volume Rendering</em>, 1995; Zwicker, Pfister, van Baar, Gross, <em>EWA Volume Splatting</em>, 2001 (Day 2와 Day 4에 추가한 유도).

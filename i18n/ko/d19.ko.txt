@@ -1,0 +1,186 @@
+@@ 1
+<span class="eyebrow">4주차 · Day 1</span>
+@@ 2
+회전과 pose, 그리고 이들이 벡터가 아닌 이유
+@@ 3
+오늘이 끝나면 책의 frame 표기를 읽고, transformation matrix를 만들고 그 역을 구하고, 회전이나 pose의 자유도를 세고, 이들을 벡터처럼 더할 수 없는 이유를 설명할 수 있습니다.
+@@ 4
+약 60분 · §2.1 도입부와 §2.1.1, pp. 53–55 읽기 (3쪽) · 2주차 Day 4 필요
+@@ 5
+먼저 읽기: 2장 도입부와 §2.1.1, pp. 53–55
+@@ 6
+p. 53에 나오는 manifold의 느슨한 정의, 그리고 Figure 2.1 (p. 54)이 말하는 tangent space의 쓰임새.
+@@ 7
+모든 rotation matrix가 만족하는 두 제약 조건, 그리고 "원소는 아홉 개지만 자유도는 세 개뿐"이라는 셈 (p. 54).
+@@ 8
+p. 55의 식 (2.3): landmark를 회전시키고 이동시키는 행렬 곱 하나.
+@@ 9
+rotation matrix와 transformation matrix가 왜 "벡터가 아닌지"를 말하는 p. 55의 문장.
+@@ 10
+회전이나 pose는 자유도보다 원소가 많은 행렬로 저장되고, 그 원소들은 제약 조건으로 서로 묶여 있습니다. 제약 조건을 만족하는 행렬들은 평평한 vector space가 아니라 휘어진 집합, 곧 <strong>manifold</strong>(다양체)를 이룹니다. 그래서 2주차의 Gauss-Newton update인 "추정값에 작은 벡터를 더한다"는 더 이상 통하지 않고, 이번 주의 나머지는 그 대안을 만듭니다.
+@@ 11
+1. Frame, 그리고 인덱스 읽는 법
+@@ 12
+<strong>reference frame</strong>(기준 좌표계) \(\mathcal{F}^a\)는 원점 하나와 서로 수직인 축들의 묶음입니다. 공간의 점은 frame을 고르기 전에는 좌표가 없으므로, 책은 frame을 늘 위첨자로 씁니다. \(\boldsymbol{\ell}^a\)는 landmark \(\boldsymbol{\ell}\)을 \(\mathcal{F}^a\)에서 표현한 것입니다. <span class="src">Notation · p. xv</span>
+@@ 13
+<strong>rotation matrix</strong>(회전 행렬) \(\mathbf{R}^b_a\)는 좌표를 \(\mathcal{F}^a\)에서, 원점은 같고 축만 돌아간 frame \(\mathcal{F}^b\)로 바꿉니다:
+@@ 14
+인덱스는 아래에서 위로 읽습니다: \(a\)<em>에서</em> \(b\)<em>로</em>. 회전을 이어 붙일 때는 아래첨자가 바로 옆 위첨자의 같은 글자와 만나야 하고, 그 쌍은 서로 지워집니다: \(\mathbf{R}^c_a = \mathbf{R}^c_b\,\mathbf{R}^b_a\). 평면에서 이 행렬의 매개변수는 각도 \(\theta\) 하나뿐입니다: <span class="src">§2.1.1 · p. 54, eq. (2.1)</span>
+@@ 15
+rotation matrix를 읽는 유용한 방법이 있습니다. \((1,0)\)과 \((0,1)\)을 넣어 보면 출력이 바로 행렬의 열입니다. 따라서 <em>\(\mathbf{R}^b_a\)의 열은 \(\mathcal{F}^a\)의 축을 \(\mathcal{F}^b\)에서 쓴 것입니다</em>. 예에서 \(\mathcal{F}^a\)의 x축은 \(\mathcal{F}^b\)에서 보면 \((0.866, 0.5)\) 방향을 가리킵니다: frame \(a\)는 반시계 방향으로 30° 돌아가 있습니다.
+@@ 16
+2. 제약 조건과 자유도
+@@ 17
+모든 rotation matrix는 2차원이든 3차원이든 두 제약 조건을 만족합니다: <span class="src">§2.1.1 · p. 54</span>
+@@ 18
+두 조건을 모두 만족하는 \(d \times d\) 행렬 전체의 집합을 <strong>special orthogonal group</strong> \(\SO(d)\)라고 합니다. <strong>자유도</strong>(degrees of freedom)는 이 집합에서 하나를 고르는 데 필요한 독립적인 수의 개수입니다. \(\SO(2)\)는 각도 하나, \(\SO(3)\)는 수 세 개(예를 들어 roll, pitch, yaw)이며, 행렬 자체는 원소가 아홉 개인데도 그렇습니다.
+@@ 19
+빈틈 채우기: 제약 조건의 의미와 세는 법
+@@ 20
+<strong>\(\mathbf{R}\T\mathbf{R}=\mathbf{I}\)는 "내적을 보존한다"는 뜻입니다.</strong> 임의의 두 벡터에 대해 \((\mathbf{R}\mathbf{u})\T(\mathbf{R}\mathbf{v}) = \mathbf{u}\T\mathbf{R}\T\mathbf{R}\,\mathbf{v} = \mathbf{u}\T\mathbf{v}\)입니다. 길이와 각도는 내적으로 만들어지므로 변하지 않습니다. 이것이 "rigid"(강체)의 뜻입니다. 같은 말로, \(\mathbf{R}\)의 열들은 서로 수직인 단위 벡터입니다.
+@@ 21
+<strong>\(\det(\mathbf{R})=1\)은 거울상을 배제합니다.</strong> \(\mathbf{R}\T\mathbf{R}=\mathbf{I}\)의 행렬식을 취하면 \(\det(\mathbf{R})^2 = 1\)이므로 \(\det(\mathbf{R}) = \pm 1\)입니다. \(\diag(1,-1)\)처럼 \(-1\)인 행렬은 길이는 보존하지만 좌우(handedness)를 뒤집습니다. 로봇의 물리적 움직임은 결코 그렇게 하지 않습니다.
+@@ 22
+<strong>세기.</strong> \(\mathbf{R}\T\mathbf{R}\)은 대칭이므로 \(\mathbf{R}\T\mathbf{R}=\mathbf{I}\)는 독립적인 방정식 \(d(d+1)/2\)개일 뿐입니다: 대각선과 한쪽 삼각형입니다. 남는 자유도는
+@@ 23
+행렬식 조건은 더 줄이는 것이 없습니다. 서로 떨어진 두 부분 가운데 하나(반사가 아닌 회전)를 고를 뿐입니다.
+@@ 24
+나타내는 대상
+@@ 25
+저장 형태
+@@ 26
+자유도
+@@ 27
+평면 회전
+@@ 28
+2 × 2 행렬, 원소 4개
+@@ 29
+3D 회전
+@@ 30
+3 × 3 행렬, 원소 9개
+@@ 31
+평면 pose
+@@ 32
+3 × 3 행렬
+@@ 33
+3 (이동 2 + 회전 1)
+@@ 34
+=
+@@ 35
+4 × 4 행렬
+@@ 36
+6 (이동 3 + 회전 3)
+@@ 37
+마지막 두 행은 pose의 자유도가 "\(3(d-1)\)"이라는 책의 공식에 \(d = 2\)와 \(d = 3\)을 넣은 것입니다. <span class="src">§2.1.1 · p. 54</span>
+@@ 38
+3. Pose와 transformation matrix
+@@ 39
+로봇의 <strong>pose</strong>는 회전 \(\mathbf{R}^b_a \in \SO(d)\)와 이동 \(\mathbf{t}^b_a \in \R^d\)의 묶음입니다. 여기서 \(\mathbf{t}^b_a\)는 \(\mathcal{F}^a\)의 원점 위치를 \(\mathcal{F}^b\)에서 표현한 것입니다. <span class="src">Notation · p. xv</span> 이제 landmark를 변환하려면 회전과 이동이 함께 필요합니다: \(\boldsymbol{\ell}^b = \mathbf{R}^b_a\boldsymbol{\ell}^a + \mathbf{t}^b_a\). 책은 둘을 하나의 \((d+1)\times(d+1)\) <strong>transformation matrix</strong>(변환 행렬)로 묶고, landmark 끝에 1을 붙입니다. 이것이 landmark의 <strong>homogeneous</strong>(동차) 형태 \(\tilde{\boldsymbol{\ell}}\)입니다: <span class="src">§2.1.1 · pp. 54–55, eqs. (2.2)–(2.3)</span>
+@@ 40
+블록끼리 곱해 보면 윗행은 정확히 \(\mathbf{R}^b_a\boldsymbol{\ell}^a + \mathbf{t}^b_a\)이고, 아랫행은 \(1 = 1\)입니다. 이런 행렬 전체의 집합이 <strong>special Euclidean group</strong> \(\SE(d)\)입니다.
+@@ 41 attr
+두 평면 frame. frame b는 왼쪽 아래에 수평축과 수직축으로 놓여 있습니다. frame a의 원점은 frame b에서 오른쪽으로 2, 위로 1만큼 떨어져 있고 30도 돌아가 있습니다. landmark에는 frame a의 원점에서 그은 선과 frame b의 원점에서 그은 선이 닿아 있습니다. 오른쪽 패널에 숫자가 적혀 있습니다: landmark는 frame a에서 (2, 1), frame b에서 (3.23, 2.87)입니다.
+@@ 42
+=
+@@ 43
+=
+@@ 44
+=
+@@ 45
+R: θ = 30° 회전
+@@ 46
+landmark 하나, 두 가지 표현. frame a에서는 (2, 1)에 있습니다. R로 회전하면 (1.23, 1.87)이 되고, frame b에서 본 frame a의 원점 t = (2, 1)을 더하면 (3.23, 2.87)이 됩니다.
+@@ 47
+그림의 숫자: \(\mathbf{R}^b_a\boldsymbol{\ell}^a = (0.866\cdot 2 - 0.5\cdot 1,\; 0.5\cdot 2 + 0.866\cdot 1) = (1.232, 1.866)\)이고, \(\mathbf{t}^b_a = (2,1)\)을 더하면 \(\boldsymbol{\ell}^b = (3.232, 2.866)\)입니다.
+@@ 48
+빈틈 채우기: transformation의 합성과 역
+@@ 49
+책은 이제부터 \(\mathbf{T}\)의 곱과 역을 따로 풀어 쓰지 않고 사용합니다. transformation matrix 두 개를 블록 단위로 곱하면:
+@@ 50
+회전은 곱해지지만 이동은 단순히 더해지지 않습니다: 안쪽 이동이 먼저 회전됩니다. 역은 \(\mathbf{R}^{-1} = \mathbf{R}\T\)를 써서 \(\boldsymbol{\ell}^b = \mathbf{R}\boldsymbol{\ell}^a + \mathbf{t}\)를 \(\boldsymbol{\ell}^a\)에 대해 풀면 됩니다:
+@@ 51
+예에서 \(\mathbf{R}\T\mathbf{t} = (0.866\cdot 2 + 0.5\cdot 1,\; -0.5\cdot 2 + 0.866\cdot 1) = (2.232, -0.134)\)이므로, 역의 이동은 \((-2.232, 0.134)\)입니다. landmark로 확인해 보면 \(\mathbf{R}\T(3.232, 2.866) = (4.232, 0.866)\)이고, \((4.232 - 2.232,\; 0.866 + 0.134) = (2, 1)\)입니다. \(\boldsymbol{\ell}^a\)로 돌아왔습니다.
+@@ 52
+4. 이들이 벡터가 아닌 이유
+@@ 53
+2주차에서는 모든 미지수가 벡터였고, <a href="#d10">Gauss-Newton</a>은 \(\mathbf{x} \leftarrow \mathbf{x} + \boldsymbol{\Delta}\)로 미지수를 개선했습니다. 이것이 통하는 이유는 벡터가 <strong>vector space</strong>(벡터 공간)를 이루기 때문입니다: 벡터의 합과 상수배는 다시 올바른 벡터입니다. rotation matrix는 이 시험에서 곧바로 탈락합니다. \(\mathbf{R} + \mathbf{R} = 2\mathbf{R}\)는 모든 것을 두 배로 늘리고, 영행렬은 회전이 아닙니다. 책은 이를 분명히 말합니다: rotation matrix 두 개를 더해서 rotation matrix를 얻을 수는 없습니다. <span class="src">§2.1.1 · p. 55</span>
+@@ 54
+직접 해 보기: 두 평면 회전을 고르고 원소별 평균을 살펴봅니다.
+@@ 55
+눈여겨볼 점: 기본 각도 20°와 110°에서 평균의 행렬식은 0.50입니다. 평균은 정사각형을 65° 돌리지만 변의 길이도 0.71로 줄입니다. 두 각도를 180° 차이 나게 두면 평균은 영행렬로 무너집니다. 원을 따라 잡은 초록색 중점은 언제나 올바른 회전입니다.
+@@ 56
+위젯 왼쪽 그림이 1차원에서 본 이야기 전부입니다. 평면 회전은 원 위의 한 점입니다. 원 위 두 점의 평균은 두 점을 잇는 현 위, 즉 원 안쪽에 놓입니다. 식으로 쓰면 \(\tfrac12\big(\mathbf{R}(\theta_1) + \mathbf{R}(\theta_2)\big) = \cos\!\big(\tfrac{\theta_1-\theta_2}{2}\big)\,\mathbf{R}\big(\tfrac{\theta_1+\theta_2}{2}\big)\): 1보다 작은 배율로 줄어든 회전입니다.
+@@ 57
+원과 구의 표면은 책이 드는 <strong>manifold</strong>의 두 예입니다: 전체로는 휘어 있지만 각 점 근처에서는 평평한 Euclidean 공간처럼 보이는 집합입니다. <span class="src">§2.1 · p. 53</span> \(\SO(d)\)와 \(\SE(d)\)도 manifold이며, 위 표에서처럼 차원은 1, 3, 3, 6입니다. manifold \(\mathcal{M}\)의 각 점 \(\boldsymbol{\chi}\)에는 <strong>tangent space</strong>(접공간) \(T_{\boldsymbol{\chi}}\mathcal{M}\)가 있습니다: 그 점에서 manifold에 닿는 평평한 공간으로, 공 위에 얹힌 종이 한 장과 같습니다(Figure 2.1). tangent space의 차원은 manifold의 자유도와 같고, tangent space는 <em>그 자체로</em> vector space입니다. <span class="src">§2.1 · pp. 53–54</span>
+@@ 58
+도시 지도는 지구에 접하는 tangent plane입니다. 도시 근처에서는 정확하고, 그 위에서는 이동량을 벡터처럼 더할 수 있으며, 땅이 휘어 있다고 걱정하는 사람도 없습니다. 도시에서 멀어지면 지도는 틀립니다. manifold 위의 최적화도 같은 방식입니다: 평평한 local 지도 위에서 계산하고, 작은 step을 내디딘 다음, 지도를 새 점으로 옮깁니다.
+@@ 59
+5. 회전을 저장하는 다른 방법
+@@ 60
+각도 세 개를 저장해서 이 문제를 피하면 어떨까요? 책은 roll, pitch, yaw를 지나가듯 언급만 하므로, 여기서 표준적인 비교를 정리합니다.
+@@ 61
+수의 개수
+@@ 62
+제약 조건
+@@ 63
+약점
+@@ 64
+=
+@@ 65
+특이점: pitch ±90°에서 roll과 yaw가 같은 축을 중심으로 돌아 자유도 하나를 잃음 (gimbal lock)
+@@ 66
+rotation vector (축 × 각도)
+@@ 67
+유일하지 않음: 같은 축에 대한 각도 \(\phi\)와 \(\phi + 2\pi\)는 같은 회전
+@@ 68
+=
+@@ 69
+1 (단위 길이)
+@@ 70
+회전 하나마다 quaternion이 둘, \(\mathbf{q}\)와 \(-\mathbf{q}\)
+@@ 71
+=
+@@ 72
+중복이 가장 많고, 제약 조건을 계속 지켜야 함
+@@ 73
+3D 회전을 수 세 개로 나타내는 방법은 모두 어딘가에 특이점이나 모호성이 있다는 것은 알려진 사실입니다. 그래서 추정 소프트웨어는 특이점이 없는 중복 표현, 즉 행렬이나 unit quaternion을 저장하고, 수 세 개짜리 표현은 현재 추정값 주변의 <em>작은 변화</em>에만 씁니다. 그 범위에서는 문제없이 동작합니다. rotation vector가 바로 그 수 세 개짜리 표현입니다. 내일은 여기에 제대로 된 이름이 붙습니다: Lie algebra의 원소입니다.
+@@ 74
+<strong>"\(\mathbf{R}^b_a\)는 frame \(b\)를 frame \(a\)로 바꾼다."</strong> 이 행렬은 <em>좌표</em>를 \(a\)에서 \(b\)로 바꿉니다. 그 열은 \(b\)에서 본 \(a\)의 축입니다.
+@@ 75
+<strong>"\(\mathbf{T}\)의 역은 이동이 \(-\mathbf{t}\)이다."</strong> 실제로는 \(-\mathbf{R}\T\mathbf{t}\)입니다. 이동량을 다른 frame에서 표현해야 하기 때문입니다.
+@@ 76
+<strong>"4 × 4 pose 행렬에는 미지수가 16개 있다."</strong> 맨 아래 행은 고정되어 있고 회전 블록에는 제약 조건이 6개 있습니다. 자유로운 수는 6개뿐입니다.
+@@ 77
+<strong>"두 회전을 평균하려면 행렬을 평균하면 된다."</strong> 그 결과는 회전이 아닙니다. 평균, 차이, update 모두 앞으로 나흘 동안 배울 도구가 필요합니다.
+@@ 78
+Q1. 평면 transformation \(\mathbf{T}^b_a\)의 \(\theta = 90^\circ\), \(\mathbf{t}^b_a = (2, 1)\)입니다. landmark는 \(\boldsymbol{\ell}^a = (1, 0)\)에 있습니다. \(\boldsymbol{\ell}^b\)는 무엇입니까?
+@@ 79
+(1, 0)을 90° 회전하면 (0, 1)입니다. 이동 (2, 1)을 더하면 (2, 2)입니다. 답 (3, 1)은 회전을 빠뜨렸고, (0, 1)은 이동을 빠뜨렸습니다.
+@@ 80
+Q2. 3D pose는 4 × 4 행렬로 저장됩니다. 그 pose의 작은 변화를 나타내는 데 독립적인 수가 몇 개 필요합니까?
+@@ 81
+이동에 세 개, 회전에 세 개입니다: \(d = 3\)이면 \(3(d-1) = 6\)입니다. 나머지 원소는 맨 아래 행과 \(\mathbf{R}\T\mathbf{R}=\mathbf{I}\)의 제약 조건 여섯 개로 고정됩니다.
+@@ 82
+Q3. 0° 회전과 120° 회전의 원소별 평균의 행렬식은 무엇입니까?
+@@ 83
+평균은 60° 회전에 \(\cos(60^\circ) = 0.5\)를 곱한 것입니다. 0.5배 된 2 × 2 행렬의 행렬식은 \(0.5^2 = 0.25\)입니다. 위젯에서 확인할 수 있습니다.
+@@ 84
+Q4. Q1의 transformation (\(\theta = 90^\circ\), \(\mathbf{t} = (2,1)\))에서 \(\mathbf{T}^{-1}\)의 이동 부분은 무엇입니까?
+@@ 85
+\(-\mathbf{R}\T\mathbf{t}\)입니다. 여기서 \(\mathbf{R}\T\)는 −90° 회전이므로 \(\mathbf{R}\T(2,1) = (1,-2)\)이고, 마이너스 부호를 붙이면 (−1, 2)입니다. 확인: 역은 \(\boldsymbol{\ell}^b = (2,2)\)를 (1, 0)으로 되돌려야 하며, \(\mathbf{R}\T(2,2) + (-1,2) = (2,-2) + (-1,2) = (1,0)\)입니다.
+@@ 86
+\(\mathbf{R}^b_a\)는 좌표를 frame \(a\)에서 frame \(b\)로 바꿉니다. \(\mathbf{T}^b_a\)는 원점이 서로 다른 frame에 대해 같은 일을 하며, homogeneous 점에 작용합니다.
+@@ 87
+rotation matrix는 \(\mathbf{R}\T\mathbf{R}=\mathbf{I}\)와 \(\det\mathbf{R}=1\)을 만족합니다. 그러면 평면에서 자유도 1, 공간에서 3이 남습니다. pose는 3과 6입니다.
+@@ 88
+\(\mathbf{T}^{-1}\)의 블록은 \(\mathbf{R}\T\)와 \(-\mathbf{R}\T\mathbf{t}\)입니다. transformation의 곱은 안쪽 이동을 회전시킨 뒤 더합니다.
+@@ 89
+\(\SO(d)\)와 \(\SE(d)\)는 vector space가 아니라 manifold입니다: 원소들의 합과 평균은 집합 밖으로 나갑니다.
+@@ 90
+manifold의 각 점에는 같은 차원의 평평한 tangent space가 있습니다. 계산은 그곳에서 이루어집니다.
+@@ 91
+<em>SLAM Handbook</em>, 2장 도입부, §2.1과 §2.1.1 "Rotations and Poses", pp. 53–55, 그리고 3D Geometry Notation 표, p. xv.
+@@ 92
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (회전 표현과 그 특이점, 제약 조건 세기, transformation matrix의 역).
+@@ 93
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (manifold와 tangent space의 그림).

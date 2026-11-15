@@ -1,0 +1,190 @@
+@@ 1
+<span class="eyebrow">Week 15 · Day 4</span>
+@@ 2
+The back-end, and contrast maximization as an optimization problem
+@@ 3
+After today you can write contrast maximization as an optimization problem, explain why variance measures alignment, and say what indirect and direct event-based back-ends optimize.
+@@ 4
+About 60 min · Read §10.5–10.6, pp. 293–295 (3 pages) · Needs Week 15 Day 3
+@@ 5
+Read first: §10.5–10.6, pp. 293–295
+@@ 6
+What most event-based systems do instead of a refinement step, and why (p. 293).
+@@ 7
+The authors' reasons why indirect back-ends "fall short" (p. 293).
+@@ 8
+The two objectives used by event-only direct back-ends, and the motions they have been developed for (pp. 293–294).
+@@ 9
+In Table 10.1 (p. 295), the columns "BA" and "Motion". Find the rows whose input is events only and that have a back-end.
+@@ 10
+Bundle adjustment for events is young. Indirect back-ends reuse the reprojection error of classical visual SLAM. Direct back-ends optimize either how well the events align (contrast maximization) or a brightness error for every event. Contrast maximization deserves a close look, because it turns the vague goal "the picture should be sharp" into a function of the motion that an optimizer can climb.
+@@ 11
+1. Why back-ends are rare here
+@@ 12
+A back-end improves the agreement between all the unknowns and all the data, and stops errors from passing back and forth between tracking and mapping. In frame-based visual SLAM that job is done by bundle adjustment (BA), which you studied in <a href="#d69">Week 12 · Day 3</a>. <span class="src">§10.5 · p. 293</span>
+@@ 13
+Most event-based systems have no such step. They run <strong>parallel tracking and mapping</strong>: a tracking module estimates the pose assuming the map is right, a mapping module updates the map assuming the poses are right, and each uses the other's latest output. The book's judgement is that these systems chose simplicity and low latency over accuracy and robustness. A joint refinement is hard for events for three reasons: the data is noisy and depends on the motion, the unknowns are many and correlated so the search space is large, and the optimization is costly and has local minima. <span class="src">§10.5 · p. 293</span>
+@@ 14
+2. Indirect and direct back-ends
+@@ 15
+The back-end must fit the front-end that feeds it, so the book sorts back-ends the same way. <span class="src">§10.5 · pp. 293–294</span>
+@@ 16
+Indirect back-end
+@@ 17
+Direct back-end
+@@ 18
+Corners, lines, and other primitives detected in the events, sometimes after converting events to images
+@@ 19
+The sensor data itself
+@@ 20
+Objective
+@@ 21
+Reprojection error: distance in the image plane between observed and predicted features
+@@ 22
+A photometric error. With grayscale frames, borrowed from frame-based direct systems. With events only: event alignment, or the brightness change conveyed by each event
+@@ 23
+Reuses mature, robust techniques
+@@ 24
+Uses all the information. Event-only versions avoid the motion blur and low dynamic range of frames
+@@ 25
+Discards most of what the events contain; event corners are less accurate and stable than image corners
+@@ 26
+Recent. Event-only versions exist so far for planar or rotational motion, and need many events, which costs computation, power, and latency
+@@ 27
+The book's evidence that events hold much more than corners is image reconstruction: whole intensity images can be recovered from events alone. <span class="src">§10.5 · p. 293</span>
+@@ 28
+3. Contrast maximization, step by step
+@@ 29
+The book describes contrast maximization in one paragraph (p. 292) and names it as one of the two event-only back-end objectives (p. 294). It gives no formula. Here is the method in full for the simplest case.
+@@ 30
+Filling the gap: warp, accumulate, score
+@@ 31
+<strong>The unknown.</strong> A vector of motion parameters \(\boldsymbol{\theta}\). In the simplest case the whole image slides with one constant velocity, and \(\boldsymbol{\theta}\) is that velocity in pixels per millisecond.
+@@ 32
+<strong>Step 1: warp.</strong> Pick a reference time \(t_\text{ref}\). Move each event \(e_k = (\mathbf{x}_k, t_k, p_k)\) to where its scene point would have been at \(t_\text{ref}\) if the motion were \(\boldsymbol{\theta}\):
+@@ 33
+<strong>Step 2: accumulate.</strong> Count how many warped events land on each pixel \(\mathbf{x}\). This is the image of warped events:
+@@ 34
+where \(b_k = 1\) (count events) or \(b_k = p_k\) (sum polarities), and \(\delta\) is 1 when its argument is zero and 0 otherwise. Since \(\mathbf{x}'_k\) is rarely a whole pixel, each event is in practice shared between its nearest pixels in proportion to closeness, which also makes \(H\) change smoothly with \(\boldsymbol{\theta}\).
+@@ 35
+<strong>Step 3: score.</strong> Measure the contrast of \(H\) by its variance over the \(N_p\) pixels:
+@@ 36
+<strong>The estimate</strong> is \(\boldsymbol{\theta}^\star = \argmax_{\boldsymbol{\theta}} f(\boldsymbol{\theta})\).
+@@ 37
+<strong>Why the true motion wins.</strong> A scene edge that moves at velocity \(\mathbf{v}\) fires its events along a line in space-time: at time \(t\) it is at \(\mathbf{x}_0 + (t - t_\text{ref})\mathbf{v}\). Warp with \(\boldsymbol{\theta} = \mathbf{v}\) and every one of those events lands on \(\mathbf{x}_0\). Warp with anything else and they are spread over a segment of length \(|\mathbf{v} - \boldsymbol{\theta}|\) times the duration.
+@@ 38
+<strong>Why variance rewards that.</strong> Expand the square: \(f = \frac{1}{N_p}\sum_i H_i^2 - \mu_H^2\). With \(b_k = 1\), and as long as no event is warped off the image, the total \(\sum_i H_i = N_e\) is the same for every \(\boldsymbol{\theta}\), so \(\mu_H\) is a constant. Maximizing the variance is then the same as maximizing \(\sum_i H_i^2\), and a sum of squares with a fixed total is largest when the total is concentrated in few places. Take 12 events on 4 pixels:
+@@ 39
+IWE
+@@ 40
+Sum of squares
+@@ 41
+Variance (mean is 3)
+@@ 42
+<strong>By hand.</strong> An edge fires at \((x, t) = (10, 0),\ (12, 1),\ (14, 2),\ (16, 3)\), with \(x\) in pixels and \(t\) in ms. Take \(t_\text{ref} = 0\) and an image of 8 pixels, so \(\mu_H = 4/8 = 0.5\).
+@@ 43
+\(\theta = 0\): the events stay at 10, 12, 14, 16. Four pixels hold 1 each. \(f = 4/8 - 0.25 = 0.25\).
+@@ 44
+\(\theta = 1\): they move to 10, 11, 12, 13. Still four pixels with 1 each. \(f = 0.25\).
+@@ 45
+\(\theta = 2\): they move to 10, 10, 10, 10. One pixel holds 4. \(f = 16/8 - 0.25 = 1.75\).
+@@ 46
+The velocity is 2 px/ms, found without ever deciding which event belongs to which edge.
+@@ 47
+Try it: 1110 events from two moving bars plus random noise. Drag the candidate speed, then press Reset and Climb.
+@@ 48
+Notice that at θ = 0 the image of warped events is only the raw event count per pixel: low and spread out (tallest column 32 events, variance 77). At θ = 0.60 the slanted streaks stand upright, the four edges of the two bars appear (tallest column 140), and the variance reaches 1023, thirteen times higher. Climb finds that peak from θ = 0 with 25 evaluations. Set the noise to 100% and the peak stays at 0.60: noise events do not line up for any θ, so they only raise the floor.
+@@ 49
+Take a long-exposure photo of traffic at night and you get streaks. If you knew exactly how each car moved, you could slide every bit of light back along its path and the streaks would shrink to sharp headlights. Contrast maximization runs this backwards: it tries motions until the streaks become points, and the motion that does it is the answer.
+@@ 50
+4. From one speed to SLAM
+@@ 51
+The recipe does not care what \(\boldsymbol{\theta}\) is, as long as it defines a warp. Three steps lead to a back-end.
+@@ 52
+<strong>Rotation.</strong> For a camera that only rotates, \(\boldsymbol{\theta}\) is the angular velocity (three numbers), and the warp rotates each event's viewing direction back to the reference time. Table 10.1 lists this as "CMax-ω", for rotational motion. <span class="src">Table 10.1 · p. 295</span>
+@@ 53
+<strong>A whole trajectory.</strong> In CMax-SLAM the unknowns are the camera's rotations over time. All events are warped onto one panorama, and the trajectory is refined until that panorama is as sharp as possible. This is bundle adjustment with contrast as the objective, and the sharp panorama is an edge map of the scene (Figure 10.3 shows one). <span class="src">§10.5 · p. 294; Table 10.1</span>
+@@ 54
+<strong>The other objective.</strong> EMBA and EPBA instead write one residual per event from equation (10.1): the brightness change that the current map and trajectory predict at that pixel, minus the \(p_k C\) the event reported. They refine the motion together with a gradient map (EMBA) or an intensity map (EPBA). A gradient map can be turned into an intensity image by Poisson integration (Figure 10.4). <span class="src">§10.5 · p. 294; Table 10.1; Figure 10.4 · p. 290</span>
+@@ 55
+All three are for rotational motion. The book states that efficient, direct, event-only BA for 6-DoF motion in natural scenes is still open. <span class="src">§10.5 · p. 294</span>
+@@ 56
+Going deeper (optional): when the sharpest image is wrong
+@@ 57
+The book warns that when events can be warped onto a few pixels or a line, these methods "can suffer from undesired global optima". <span class="src">§10.4.3 · p. 292</span> The reason is visible in the table above: variance is highest when all events sit on one pixel. Our 1-D warp only shifts events, so it cannot do that. A warp family that can shrink the image, for instance one with a zoom-like parameter, can send every event toward a single point and score a huge contrast that has nothing to do with the true motion. Practical systems restrict the warp or add a penalty to rule this out.
+@@ 58
+5. Reading Table 10.1
+@@ 59
+Table 10.1 lists event-based SLAM and odometry systems in chronological order, with the labels you now know: model-based (M) or deep learning (DL), direct (D) or indirect (I), the event representation, whether there is a back-end (BA), the motion and scene handled, and the input sensors (E events, F frames, D depth, I IMU, M a given map; "2E" is a stereo pair). <span class="src">Table 10.1 · p. 295</span> The book draws these trends: <span class="src">§10.6 · p. 294</span>
+@@ 60
+<strong>Model-based systems dominate.</strong> Only two rows, DEVO and DEIO, are marked DL. The authors expect that this may change.
+@@ 61
+<strong>Difficulty was raised gradually</strong> along three lines: the camera motion, the type of scene, and the extra sensors or information used to simplify the problem. A depth sensor removes the burden of estimating depth from events; an IMU supplies accurate angular velocity.
+@@ 62
+<strong>Good methods get extended along a standard route.</strong> Monocular becomes stereo or multi-camera, and event-only methods are made more robust by adding an IMU (ESVO led to ESVO2, DEVO to DEIO).
+@@ 63
+<strong>The field is still exploring.</strong> The rows use many different map representations, event representations, and loss functions; no single design has won.
+@@ 64
+Two things you can check in the table yourself: none of the first eleven systems has a back-end, and the direct, event-only systems that do have one (CMax-SLAM, EMBA, EPBA) are all rotational.
+@@ 65
+<strong>"Contrast maximization must first decide which events belong to the same edge."</strong> It never does. Events are associated implicitly by landing on the same pixel after the warp.
+@@ 66
+<strong>"The sharpest image of warped events is always the right motion."</strong> Only if the warp cannot collapse the events. See the optional note.
+@@ 67
+<strong>"Every SLAM system has a back-end."</strong> In Table 10.1 about half of the systems have none, and the early ones never do.
+@@ 68
+Q1. One edge fires four events at (x, t) = (20, 0), (23, 2), (26, 4), (29, 6), with x in pixels and t in ms. With the reference time at 0, which candidate speed warps all four onto one pixel?
+@@ 69
+1.5 px/ms
+@@ 70
+3 px/ms
+@@ 71
+0.67 px/ms
+@@ 72
+−1.5 px/ms
+@@ 73
+The edge advances 3 pixels every 2 ms, so 1.5 px/ms. Check: 23 − 2 × 1.5 = 20, 26 − 4 × 1.5 = 20, 29 − 6 × 1.5 = 20.
+@@ 74
+Q2. An image of warped events on 5 pixels is (0, 5, 0, 5, 0). What is its variance?
+@@ 75
+The mean is 10/5 = 2. The squared deviations are 4, 9, 4, 9, 4, which sum to 30, and 30/5 = 6. The flat image (2, 2, 2, 2, 2) with the same 10 events has variance 0.
+@@ 76
+Q3. Why does a higher variance of the image of warped events indicate better alignment?
+@@ 77
+Because the variance counts the events
+@@ 78
+Because noise events lower the mean
+@@ 79
+Because aligned events have the same polarity
+@@ 80
+Because the total count is fixed, and a fixed total has a larger sum of squares when it is concentrated on few pixels
+@@ 81
+With the mean fixed, variance grows with the sum of squared counts. Events of one edge piling onto one pixel raise that sum; spreading them lowers it.
+@@ 82
+Q4. Which statement about event-based back-ends agrees with the book?
+@@ 83
+Most event-based SLAM systems include bundle adjustment
+@@ 84
+Event-only direct back-ends have so far been developed for planar or rotational motion
+@@ 85
+Indirect back-ends use all the information in the events
+@@ 86
+Direct back-ends minimize the reprojection error of corners
+@@ 87
+§10.5 says event-only direct back-ends are recent and limited to constrained motions. Most systems lack a refinement step, indirect back-ends discard most of the event information, and reprojection error is the indirect objective.
+@@ 88
+Most event-based systems run tracking and mapping in parallel with no joint refinement. Event-based BA is recent.
+@@ 89
+Indirect back-ends minimize reprojection error of event features. Direct back-ends minimize a photometric error or maximize event alignment.
+@@ 90
+Contrast maximization: warp events by a candidate motion, \(\mathbf{x}'_k = \mathbf{x}_k - (t_k - t_\text{ref})\boldsymbol{\theta}\), accumulate them into the image of warped events \(H\), and maximize its variance over \(\boldsymbol{\theta}\).
+@@ 91
+Variance works because, for a fixed number of events, it grows with \(\sum_i H_i^2\), which is largest when events of the same edge land on the same pixel.
+@@ 92
+Event-only direct BA (CMax-SLAM, EMBA, EPBA) exists for rotational motion; the 6-DoF case is open.
+@@ 93
+<em>SLAM Handbook</em>, §10.5 "Back-end of an Event-based SLAM System" and §10.6 "State-of-the-Art Systems", pp. 293–295 with Table 10.1; §10.4.3, p. 292; Figure 10.4, p. 290.
+@@ 94
+The warp, the image of warped events, and the variance objective follow Gallego, Rebecq, Scaramuzza, <em>A Unifying Contrast Maximization Framework for Event Cameras, with Applications to Motion, Depth, and Optical Flow Estimation</em>, 2018.
+@@ 95
+The identity variance = mean of squares − square of the mean is elementary statistics. The 12-event table and the four-event example are our own arithmetic.

@@ -1,0 +1,248 @@
+@@ 1
+<span class="eyebrow">12주차 · Day 5</span>
+@@ 2
+전체 시스템: ORB-SLAM, DSO, dense map, depth 카메라, sensor fusion
+@@ 3
+오늘이 끝나면 주요 visual SLAM 시스템을 최소화하는 오차와 유지하는 map에 따라 분류하고, depth 이미지를 signed distance function으로 fusion하는 방법을 설명하고, IMU나 GPS가 카메라에 무엇을 더하는지 말할 수 있습니다.
+@@ 4
+약 60분 · §7.5–7.8, pp. 215–222 읽기, §7.9, pp. 222–223 훑어보기 (본문 약 6쪽) · 12주차 Day 1–4 필요
+@@ 5
+먼저 읽기: §7.5–7.9, pp. 215–223
+@@ 6
+이 쪽들의 상당 부분은 그림입니다. 읽으면서 찾아볼 것:
+@@ 7
+direct method가 잘 되는 조건과 keypoint가 더 나은 경우 (p. 216 둘째 문단).
+@@ 8
+p. 216의 식 (7.10)의 두 항, 그리고 두 번째 항이 하는 일 (p. 217).
+@@ 9
+p. 218의 식 (7.12)와, 이를 maximum-likelihood estimate라고 부르는 문장.
+@@ 10
+p. 219의 "loosely coupled" 대 "tightly coupled", 그리고 p. 221의 4 대 7이라는 개수.
+@@ 11
+이 장의 모든 시스템은 지난 두 주의 부품으로 조립됩니다. residual(reprojection 또는 photometric), map(sparse point, semi-dense depth, dense 표면), real-time에 맞게 범위를 줄인 optimizer(pose-only, window, pose graph), 그리고 loop를 닫는 방법입니다. depth 카메라와 IMU는 자기만의 residual을 더하고, 카메라 하나로는 풀 수 없는 모호성을 없앱니다.
+@@ 12
+1. 네 가지 기준 시스템
+@@ 13
+§7.5는 네 시스템을 설명합니다. Day 1과 2를 떠올리며 표를 읽어 보세요. <span class="src">§7.5 · pp. 215–216</span>
+@@ 14
+이미지에서 쓰는 것
+@@ 15
+=
+@@ 16
+구성 방식
+@@ 17
+=
+@@ 18
+밝기 (direct)
+@@ 19
+=
+@@ 20
+Dense tracking, semi-dense mapping, pose-graph optimization; monocular; texture가 적은 장면에 적합
+@@ 21
+=
+@@ 22
+ORB keypoint와 descriptor
+@@ 23
+Sparse point
+@@ 24
+Day 1의 thread에 loop closure와 relocalization을 더함; monocular, stereo, RGB-D. ORB-SLAM3는 fisheye 카메라, 여러 map, IMU를 추가
+@@ 25
+=
+@@ 26
+BRISK keypoint와 descriptor
+@@ 27
+visual-inertial SLAM 시스템(OKVIS는 visual-inertial odometry였음)으로, 카메라만으로도 동작 가능
+@@ 28
+=
+@@ 29
+=
+@@ 30
+카메라 motion과 point를 마지막 \(k\)개 keyframe의 sliding window에 대한 하나의 Gauss-Newton 최적화로 함께 추정
+@@ 31
+DSO에서 window 크기 \(k\)는 속도와 정확도를 맞바꿉니다. DSO는 완전한 <strong>photometric calibration</strong>(camera response function과 vignetting)도 쓰며, 이것이 brightness constancy를 <strong>irradiance constancy</strong>로 바꿉니다. 카메라가 서로 다른 픽셀 값으로 바꾸더라도, 세계의 한 점은 시간이 지나도 같은 irradiance를 내보낸다는 가정입니다. stereo 버전과 omnidirectional 버전이 있고, drift를 줄이려고 나중에 loop closure가 추가되었습니다. <span class="src">§7.5 · p. 216</span>
+@@ 32
+2. Direct인가, keypoint 기반인가?
+@@ 33
+책의 결론은 어느 쪽도 모든 곳에서 이기지는 않는다는 것입니다. <span class="src">§7.5 · p. 216</span>
+@@ 34
+상황
+@@ 35
+더 나은 선택
+@@ 36
+photometric calibration이 잘 된 global-shutter 카메라
+@@ 37
+real-time 방법 중 더 정확하고 robust하다고 입증됨
+@@ 38
+Rolling-shutter 카메라
+@@ 39
+Keypoint
+@@ 40
+direct method에서도 기하학적 왜곡을 모델링할 수 있지만, 그러면 real-time이 안 되는 경우가 많음
+@@ 41
+저해상도 또는 흐린 영상
+@@ 42
+blur와 down-sampling 뒤에는 믿을 만한 feature point를 찾기 어려움
+@@ 43
+Relocalization과 loop closing
+@@ 44
+descriptor로 효율적인 place recognition이 가능
+@@ 45
+그래서 실용적인 시스템은 흔히 <strong>hybrid</strong>입니다. tracking에는 direct alignment를, relocalization과 loop에는 feature point를 씁니다.
+@@ 46
+빈틈 채우기: direct 시스템이 inverse depth를 저장하는 이유
+@@ 47
+식 (7.6)에는 선택한 픽셀마다 depth \(d_z\)가 하나씩 있습니다. LSD-SLAM과 DSO 같은 구현은 그 대신 역수인 <strong>inverse depth</strong> \(\rho_z = 1/d_z\)를 저장합니다(robust kernel \(\rho(\cdot)\)와 혼동하지 마세요). Day 2의 warp에 \(d_z = 1/\rho_z\)를 넣어 봅시다. 3-D point는 \(\pi^{-1}(z)/\rho_z\)이고, 다른 frame에서는 \(\big(\mathbf{R}\,\pi^{-1}(z) + \rho_z \mathbf{t}\big)/\rho_z\)이며, projection은 공통 인수 \(1/\rho_z\)를 무시합니다.
+@@ 48
+이제 두 가지가 쉽게 보입니다.
+@@ 49
+<strong>먼 point도 문제가 없습니다.</strong> 무한히 먼 point는 \(\rho_z = 0\), 평범한 숫자입니다. 그 warp \(\pi(\mathbf{R}\,\pi^{-1}(z))\)는 회전에만 의존하는데, 아주 먼 풍경에서는 실제로 그렇습니다.
+@@ 50
+<strong>이미지는 \(\rho_z\)에 대해 거의 linear합니다.</strong> 옆으로의 움직임 \(\mathbf{R} = \mathbf{I}\), \(\mathbf{t} = (b, 0, 0)\)에서 픽셀은 정확히 \(u' - u = f\,b\,\rho_z\)만큼 움직입니다. \(f = 500\) px, \(b = 0.1\) m이면 2 m에 있는 point(\(\rho = 0.5\))는 25 px, 20 m에 있는 point(\(\rho = 0.05\))는 2.5 px 움직입니다. \(\pm 0.5\) px의 matching 오차는 거리와 상관없이 \(\rho\)에서 \(\pm 0.01\)입니다. depth로 보면 같은 오차가 가까운 point에서는 \(2 \pm 0.04\) m, 먼 point에서는 16.7 m에서 25 m까지입니다. 한쪽으로 치우쳐 있어 Gaussian으로 잘 설명되지 않습니다. Gauss-Newton과 Gaussian noise model은 측정이 linear에 가까운 변수에서 잘 동작하며, 그 변수가 바로 \(\rho_z\)입니다.
+@@ 51
+3. 카메라 하나로 하는 dense reconstruction
+@@ 52
+BA는 카메라 motion과 sparse한 point 집합을 줍니다. 증강현실과 로봇에는 흔히 표면이 필요합니다. real-time 방법의 한 계열은 기준 이미지의 <em>모든</em> 픽셀에 대해 depth \(h(\mathbf{z})\)를 추정하며, 다음을 최소화합니다. <span class="src">§7.6 · p. 216, eq. (7.10)–(7.11)</span>
+@@ 53
+첫 항은 모든 픽셀에 대한 Day 2의 photometric error입니다. 기준 이미지 \(I_0\)의 픽셀 \(\mathbf{z}\)를 depth \(h\)로 3-D 공간에 놓고, 이웃 이미지 \(I_i\)마다 project하여 밝기를 비교합니다. 여기서 카메라 pose는 알려져 있다고 봅니다. 두 번째 항은 \(\lambda\)로 가중한 <strong>total variation</strong> regularizer입니다. depth map을 공간적으로 매끄럽게 만들고, 쓸 만한 texture가 없는 영역을 비누막 같은 표면으로 채웁니다. <span class="src">§7.6 · p. 217</span> 이런 방법을 <strong>variational</strong>(변분) 방법이라고 합니다. 미지수가 함수 \(h\) 전체이며, 픽셀별 계산이 GPU에서 병렬화되므로 real-time으로 돕니다.
+@@ 54
+빈틈 채우기: 왜 \(|\nabla h|^2\)가 아니라 \(|\nabla h|\)인가
+@@ 55
+depth edge가 있는 이미지 한 행을 봅시다. 가까운 물체와 그 뒤의 벽 사이에서 \(h\)가 1 m 올라갑니다. 이 상승이 한 픽셀에서 일어나면 total variation은 \(|1| = 1\)을 매깁니다. 0.25씩 네 픽셀에 걸쳐 퍼지면 \(4 \times 0.25 = 1\)을 매기므로 같습니다. 제곱 penalty는 날카로운 edge에 \(1^2 = 1\), 퍼진 edge에 \(4 \times 0.25^2 = 0.25\)를 매기므로 항상 흐리게 만드는 쪽을 선호합니다. total variation은 전체 오르내림만 세고, edge가 어디 있는지는 데이터가 정하게 둡니다. 그래서 평평한 영역은 매끄럽게 하면서도 물체 경계는 선명하게 유지합니다.
+@@ 56
+4. Depth 카메라: fusion과 tracking
+@@ 57
+<strong>RGB-D camera</strong>는 모든 픽셀의 depth를 측정하며(structured light 또는 time of flight 방식), 보통 컬러 이미지도 함께 줍니다. 카메라와 LiDAR의 중간쯤에 있습니다. depth의 2-D 배열 전체를 한 번에 주지만, 주로 실내에서(햇빛이 적외선을 방해합니다) 약 5 m까지만 씁니다. <span class="src">§7.7 · p. 217</span>
+@@ 58
+<strong>Mapping.</strong> KinectFusion은 표면을 implicit하게 저장합니다. 공간을 voxel로 나눕니다. 각 depth 이미지 \(i\)는 <strong>signed distance function</strong>(부호 있는 거리 함수) \(d_i(\mathbf{x})\)로 바뀝니다. 각 voxel \(\mathbf{x}\)에 대해 시선 ray를 따라 측정된 표면까지 잰 거리로, 표면 앞에서는 양수이고 뒤에서는 음수입니다. fusion된 map은 가중 평균입니다. <span class="src">§7.7 · p. 218, eq. (7.12)</span>
+@@ 59
+그리고 표면은 \(D = 0\)인 점들의 집합입니다. weight \(\omega_i\)는 각 측정이 얼마나 확실한지를 나타내며, 보통 거리에 따라 줄어듭니다. 실제로는 거리를 <strong>truncate</strong>합니다(\(\pm\tau\)에서 자르고, 표면 훨씬 뒤에서는 갱신하지 않습니다). 그래서 각 측정은 자신이 본 표면 근처의 map에만 영향을 줍니다. 이것이 truncated signed distance function, 즉 TSDF입니다.
+@@ 60
+빈틈 채우기: 가중 평균이 maximum-likelihood estimate인 이유
+@@ 61
+실제 signed distance가 \(D\)인 voxel 하나를 고정합니다. depth 이미지 \(i\)는 독립적인 Gaussian noise \(n_i \sim \N(0, \sigma_i^2)\)가 섞인 \(d_i = D + n_i\)를 보고합니다. 측정값의 negative log-likelihood는 상수를 빼면 \(\sum_i (d_i - D)^2 / (2\sigma_i^2)\)입니다. \(D\)에 대한 미분을 0으로 둡니다.
+@@ 62
+이것은 weight를 분산의 역수로 둔 (7.12)입니다. 예를 들어 \(\sigma = 1\) cm인 측정값 4 cm, 6 cm와 \(\sigma = 2\) cm인 측정값 9 cm는 \(D = (4 + 6 + 0.25 \cdot 9)/2.25 = 5.4\) cm를 줍니다. 오래된 이미지를 저장하지 않고도 평균을 최신으로 유지할 수 있습니다. voxel마다 \(D\)와 weight 합 \(W\)를 두고, 새 측정값이 오면 \(D \leftarrow (W D + \omega d)/(W + \omega)\), \(W \leftarrow W + \omega\)로 갱신합니다.
+@@ 63
+직접 해 보기: 2 m에 있는 표면을 지나는 시선 ray 하나입니다. depth 이미지 수를 30으로 올려 보세요. 그다음 noise를 20 cm로, truncation을 5 cm로 설정해 보세요.
+@@ 64
+눈여겨볼 점: 각 depth 이미지는 자기만의 noise 섞인 depth에서 0을 지나는 잘린 경사를 줍니다. 그 평균은 측정값들의 평균에서 0을 지나므로, fusion된 표면은 전형적인 단일 측정보다 실제값에 가깝습니다(이미지 다섯 장이면 약 3 cm 대 5 cm, 서른 장이면 1 cm 미만). truncation이 noise보다 훨씬 작으면 경사들이 0을 지나는 곳에서 더 이상 겹치지 않고, voxel마다 서로 다른 측정값을 평균하게 되어 fusion된 표면이 평균에서 멀어집니다.
+@@ 65
+<strong>Tracking.</strong> 초기 RGB-D 시스템은 연속된 depth point cloud를 ICP(다음 주)로 정렬했습니다. 이후 시스템은 두 frame \((I_1, d_1)\)과 \((I_2, d_2)\) 사이의 밝기 residual과 depth residual을 직접 최소화합니다. <span class="src">§7.7 · pp. 218–219, eq. (7.13)</span>
+@@ 66
+여기서 \(g \in \SE(3)\)는 구하려는 motion이고, \(\tau_g\)는 센서가 준 depth를 쓰는 Day 2의 warp이며, \([\cdot]_z\)는 옮긴 point의 depth를 취합니다. 첫 residual은 "밝기가 같다"를, 두 번째는 "거기서 측정한 depth가 내가 예측한 depth다"를 뜻합니다. motion은 coarse-to-fine Gauss-Newton, 정확히 Day 2의 방법으로 찾습니다. 책에 따르면 이 방법은 기존 benchmark에서 ICP에 비해 tracking 오차를 거의 한 자릿수 줄이고, 더 빠르게 돕니다. <span class="src">§7.7 · p. 219</span>
+@@ 67
+균일한 voxel grid는 큰 장면에서 메모리를 너무 많이 씁니다. Voxel hashing과 octree는 표면 근처의 voxel만 저장합니다. Kintinuous는 fusion volume을 카메라와 함께 옮기고, ElasticFusion은 dense map 전체를 변형하여 loop를 닫습니다. <span class="src">§7.7 · p. 219</span>
+@@ 68
+5. IMU, GPS, WiFi 더하기
+@@ 69
+<strong>inertial measurement unit (IMU)</strong>는 각속도와 선가속도를 높은 주기로 측정합니다. 믿을 만한 단기 상대 움직임과 metric scale을 줍니다. vision과 결합하는 방법은 두 가지입니다. <span class="src">§7.8.1 · pp. 219–220</span>
+@@ 70 attr
+왼쪽, loosely coupled fusion: 카메라와 IMU가 각자 pose 추정값을 내고, Kalman filter가 두 pose를 결합합니다. 오른쪽, tightly coupled fusion: 카메라 측정과 IMU 측정이 모두 전체 residual에 대한 하나의 최적화에 들어갑니다.
+@@ 71
+=
+@@ 72
+=
+@@ 73
+=
+@@ 74
+=
+@@ 75
+=
+@@ 76
+=
+@@ 77
+하나의 최적화
+@@ 78
+visual + inertial residual
+@@ 79
+(filter 또는 factor graph)
+@@ 80
+loose coupling은 완성된 pose 추정값을 fusion합니다. tight coupling은 원시 측정을 fusion하므로, 각 센서가 다른 센서의 약한 곳을 도울 수 있습니다.
+@@ 81
+<strong>Loosely coupled:</strong> 각 센서가 자기 pose 추정값을 내고 Kalman filter가 pose를 fusion합니다. 단순하고 작은 quadrotor를 날리기에 충분하지만 덜 정밀합니다.
+@@ 82
+<strong>Tightly coupled:</strong> 측정 자체를 하나의 estimator에서 결합합니다. 최초의 이런 시스템은 prediction step에서 IMU를 적분하고 update에서 keypoint를 쓰는 extended Kalman filter(MSCKF)였습니다. 대안은 visual factor와 inertial factor를 나란히 둔 factor graph 위의 sliding-window 또는 batch optimizer로, ORB-SLAM3와 OKVIS2가 그렇습니다. 11장에서 자세히 다룹니다.
+@@ 83
+IMU는 gravity를 감지하므로 roll과 pitch가 observable해지고, 가속도가 metric이므로 scale도 observable해집니다. Day 4의 gauge freedom은 미지수 7개에서 4개로 줄어듭니다. global 위치와 yaw입니다. <span class="src">§7.8.1 · pp. 220–221</span> 책은 실용적인 지적을 덧붙입니다. 가장 정확한 visual-inertial 시스템 중 일부는 inertial 적분을 뼈대로 삼고, vision은 주로 빠르게 커지는 그 drift를 보정하는 데 씁니다.
+@@ 84
+결정되지 않고 남는 것은 global한 것입니다. 지구 위 어디에 있는지, 어느 쪽을 향하는지입니다. <strong>GPS</strong>는 실외에서 절대 위치를 주고 map을 global 좌표에 고정하며, 이는 차량에 중요합니다. 실내에서는 <strong>WiFi</strong> 신호가 대략적인 위치를 주어, map에 대한 visual localization을 보완합니다. <span class="src">§7.8.2 · pp. 221–222</span>
+@@ 85
+6. 이 분야가 향하는 곳
+@@ 86
+§7.9는 두 흐름을 짚습니다. 학습된 keypoint와 학습된 matcher가 수작업으로 설계한 것을 대체하고 있습니다. SuperGlue는 두 이미지 전체에 한꺼번에 attention을 적용해 keypoint를 match하며, keypoint를 match하지 않은 채 남길 수도 있습니다. MASt3R는 이미지 쌍에서 얻은 3-D reconstruction의 도움으로 match하고, MASt3R-SLAM은 그 위에 SLAM pipeline을 세웁니다. 남은 과제는 작은 플랫폼에서의 계산과 학습 데이터입니다. 다른 흐름은 범위의 확장입니다. dynamic하고 deformable한 장면, 그리고 pipeline의 점점 더 많은 단계를 학습된 것으로 대체하는 일입니다. 책의 Part III가 이 주제로 돌아옵니다. <span class="src">§7.9 · pp. 222–223</span>
+@@ 87
+<strong>"Direct method가 그냥 더 정확하다."</strong> 그 조건, 즉 photometric calibration과 global shutter가 갖춰졌을 때만입니다. rolling shutter에서는 keypoint 방법이 더 잘 버팁니다.
+@@ 88
+<strong>"TSDF fusion은 모든 depth 이미지를 저장한다."</strong> voxel마다 숫자 두 개, 누적 평균과 누적 weight만 저장합니다.
+@@ 89
+<strong>"IMU가 모든 모호성을 없앤다."</strong> IMU는 scale, roll, pitch를 고정합니다. global 위치와 yaw는 GPS나 알려진 map이 고정하기 전까지 자유롭습니다.
+@@ 90
+<strong>"Loosely coupled는 센서가 동기화되지 않았다는 뜻이다."</strong> 원시 측정 대신 pose 추정값 수준에서 fusion한다는 뜻입니다.
+@@ 91
+Q1. 한 ray를 따라 두 depth 이미지가 표면을 2.00 m(weight 3)와 2.08 m(weight 1)에 둡니다. 표면 근처에서는 truncation이 작동하지 않습니다. (7.12)의 fusion된 \(D(\mathbf{x})\)는 어디에서 0을 지납니까?
+@@ 92
+표면 근처에서 dᵢ(x) = zᵢ − x이므로, D(x)는 zᵢ의 가중 평균에서 x를 뺀 값입니다. (3 × 2.00 + 1 × 2.08)/4 = 2.02 m에서 0입니다.
+@@ 93
+Q2. \(f = 400\) px인 카메라가 회전 없이 옆으로 0.2 m 움직입니다. depth 8 m에 있는 point는 이미지에서 몇 픽셀 이동합니까?
+@@ 94
+=
+@@ 95
+=
+@@ 96
+=
+@@ 97
+이동량은 inverse depth ρ = 1/8을 써서 f·b·ρ입니다: 400 × 0.2 / 8 = 10 px.
+@@ 98
+Q3. rolling shutter가 있고 photometric calibration이 없는 폰 카메라용 visual SLAM을 만들어야 하며, tracking을 잃은 뒤 relocalization할 수 있어야 합니다. §7.5가 지지하는 선택은 무엇입니까?
+@@ 99
+모든 픽셀을 쓰므로 direct method
+@@ 100
+rolling shutter는 밝기에 영향을 주지 않으므로 direct method
+@@ 101
+어느 쪽이든 됨 (조건은 중요하지 않음)
+@@ 102
+keypoint 기반 방법
+@@ 103
+direct method에는 global shutter와 photometric calibration이 필요하고, relocalization과 loop closing을 효율적으로 만드는 것은 feature point입니다.
+@@ 104
+Q4. GPS가 없는 tightly coupled visual-inertial 시스템에서 결정되지 않고 남는 양은 무엇입니까?
+@@ 105
+scale, roll, pitch
+@@ 106
+global 위치와 yaw
+@@ 107
+global 위치, 방향, scale
+@@ 108
+없음
+@@ 109
+gravity는 roll과 pitch를, accelerometer는 scale을 observable하게 만듭니다. 미지수 네 개가 남습니다: x, y, z와 yaw.
+@@ 110
+Q5. 식 (7.10)에서 \(\lambda\)를 키우면 어떻게 됩니까?
+@@ 111
+카메라 pose가 더 정확하게 최적화됩니다
+@@ 112
+data 항에 더 많은 이미지가 쓰입니다
+@@ 113
+depth map이 더 매끄러워지고 밝기 데이터를 덜 따릅니다
+@@ 114
+모든 곳에서 depth edge가 더 날카로워집니다
+@@ 115
+λ는 photometric 항에 대한 total-variation 항의 가중치입니다. λ가 크면 depth map이 평평해지고, λ가 작으면 noise까지 포함한 밝기 데이터를 믿습니다.
+@@ 116
+LSD-SLAM과 DSO는 direct이고, ORB-SLAM과 OKVIS2는 keypoint를 씁니다. direct method는 photometric calibration과 global shutter를 원하고, keypoint는 rolling shutter와 relocalization을 감당합니다. 실용적인 시스템은 둘을 섞습니다.
+@@ 117
+inverse depth를 쓰면 warp는 \(\pi(\mathbf{R}\pi^{-1}(z) + \rho_z \mathbf{t})\)입니다. 먼 point도 잘 다뤄지고, 측정은 미지수에 대해 거의 linear합니다.
+@@ 118
+dense monocular reconstruction은 픽셀별 depth map에 대해 photometric 항과 total-variation regularizer의 합을 최소화합니다.
+@@ 119
+depth 이미지는 가중 평균 (7.12)로 truncated signed distance function에 fusion되며, 이는 Gaussian depth noise 아래에서의 maximum-likelihood estimate입니다. RGB-D tracking은 밝기 residual과 depth residual을 직접 최소화합니다.
+@@ 120
+IMU는 scale과 gravity를 더합니다(gauge 7 → 4). 하나의 estimator에서 하는 tight coupling이 pose를 fusion하는 것보다 정밀합니다. GPS와 WiFi는 global 위치를 줍니다.
+@@ 121
+<em>SLAM Handbook</em>, §7.5–7.9, pp. 215–223, 식 (7.10)–(7.13), Figures 7.12–7.16.
+@@ 122
+Civera, Davison, Montiel, <em>Inverse Depth Parametrization for Monocular SLAM</em>, 2008, inverse depth 참고.
+@@ 123
+Rudin, Osher, Fatemi, <em>Nonlinear total variation based noise removal algorithms</em>, 1992, total-variation regularizer 참고.
+@@ 124
+Curless and Levoy, <em>A volumetric method for building complex models from range images</em>, 1996, 가중 signed-distance 평균과 그 누적 갱신 참고.

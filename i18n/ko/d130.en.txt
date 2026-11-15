@@ -1,0 +1,146 @@
+@@ 1
+<span class="eyebrow">Week 22 · Day 4</span>
+@@ 2
+Dense semantic maps: fusing labels into surfels and voxels
+@@ 3
+After today you can explain how noisy per-frame labels are fused into surfel and voxel maps, derive the multi-class log-odds update, and run it by hand for one voxel.
+@@ 4
+About 60 min · Read §16.3.1–16.3.2, pp. 471–478 (8 pages, 3 of them mostly figures) · Needs Week 8 Day 1
+@@ 5
+Read first: §16.3.1 and §16.3.2, pp. 471–478
+@@ 6
+Why SuMa++ does not simply delete every point labelled "car" (p. 472).
+@@ 7
+The definition of a range-category observation (p. 473).
+@@ 8
+The log-odds vector, the softmax that undoes it, and the update (16.24), pp. 474–475.
+@@ 9
+The three cases of the model (16.26), p. 475, and the pruning rule, pp. 476–477.
+@@ 10
+A dense semantic map keeps, for every small piece of space, a probability for each class. One segmented image is noisy, so the map fuses many with Bayes' rule. Written in log-odds, that fusion is an addition: each observation adds a fixed vector to the cell it touches.
+@@ 11
+1. Labels on points and surfels
+@@ 12
+Segmentation networks can label every point of a LiDAR scan. The labels of one scan are noisy and disagree with the next scan's, so the mapping problem is to integrate them over time. SuMa++ stores a class and a confidence in each surfel. Conflicting labels lower the confidence, and surfels with low confidence are filtered out. <span class="src">§16.3.1 · p. 471</span>
+@@ 13
+The same mechanism handles moving objects. Deleting every point of a movable class throws away parked cars, which are good references for scan registration in a city. Deleting only the surfels whose stored label conflicts with the current scan worked better. <span class="src">§16.3.1 · p. 472</span>
+@@ 14
+Labels also feed back into SLAM: registration can match only points of compatible classes (compare ICP in <a href="#d74">Week 13 · Day 2</a>), and place descriptors such as Scan Context (<a href="#d76">Week 13 · Day 4</a>) can be extended with class information for loop closure. <span class="src">§16.3.1 · p. 472</span>
+@@ 15
+2. Voxels: what is observed and what is estimated
+@@ 16
+Split the environment into classes \(\mathcal{K} = \{0, \dots, K\}\), where 0 is free space and the others are object classes. A <strong>range-category observation</strong> is, for each sensor ray \(b\), a pair \(z = (r_{t,b}, y_{t,b})\): the range at which the ray stopped and the class of what it hit. An RGB-D camera produces one per pixel by pairing the depth image with a segmentation of the colour image. <span class="src">§16.3.2 · p. 473</span>
+@@ 17
+The map \(\mathbf{m}\) is a grid of cells \(i = 1, \dots, N\), each with an unknown class \(m_i \in \mathcal{K}\). With the robot poses known, Bayes' rule updates the map's probability mass function \(p_t(\mathbf{m})\) with each new observation set \(\mathcal{Z}_{t+1}\):
+@@ 18
+The second equation is an approximation chosen for cost: cells are treated as independent, so the map stores \(N\) small distributions and not one distribution over \((K+1)^N\) maps. <span class="src">§16.3.2 · pp. 473–474</span>
+@@ 19
+3. Multi-class log-odds
+@@ 20
+Each cell stores its distribution as a <strong>multi-class log-odds</strong> vector, the log of each class probability relative to "free": <span class="src">§16.3.2 · p. 474</span>
+@@ 21
+The first entry is always 0. The second formula, the <strong>softmax</strong>, recovers the probabilities. In these coordinates the Bayesian update is a sum:
+@@ 22
+Filling the gap: deriving (16.24) and the softmax
+@@ 23
+Bayes' rule for one cell and one observation, with \(\eta\) a normalizer that does not depend on \(k\):
+@@ 24
+Write the same line for \(k = 0\), divide, and take logarithms. \(\eta\) cancels:
+@@ 25
+If the observations are independent given the cell's class, their likelihoods multiply and their logs add, which gives the sum over \(z\). For the softmax, \(h_k = \log[p(k)/p(0)]\) means \(p(k) = p(0)\,e^{h_k}\). The probabilities sum to one, so \(p(0)\sum_j e^{h_j} = 1\), and substituting \(p(0)\) back gives the formula. With \(K = 1\) the vector is \([0,\ \log(p_{\text{occ}}/p_{\text{free}})]\): the occupancy log-odds of <a href="#d43">Week 8 · Day 1</a>.
+@@ 26
+4. The observation model, with numbers
+@@ 27
+A ray says three different things to three kinds of cell, and the book's model is piecewise constant along the ray: <span class="src">§16.3.2 · p. 475</span>
+@@ 28
+\(\mathbf{E}_k = \mathbf{e}_k\mathbf{e}_k\T\) keeps only entry \(k\) of a vector, and the first entries of \(\boldsymbol{\phi}^+, \boldsymbol{\psi}^+, \boldsymbol{\phi}^-\) are 0. So a hit raises every object class against "free" (\(\boldsymbol{\phi}^+\)) and raises the reported class \(y\) a little more (\(\boldsymbol{\psi}^+\)); a pass-through lowers every object class (\(\boldsymbol{\phi}^-\) has negative entries).
+@@ 29 attr
+A sensor on the left sends a ray through a row of six cells. The ray passes through the first four cells and ends in the fifth, where it reports the class chair. Below the cells: phi minus is added to each of the four passed cells, phi plus plus E psi plus to the fifth, and nothing to the sixth, which the ray never reached.
+@@ 30
+sensor
+@@ 31
+not
+@@ 32
+reached
+@@ 33
+ray passes: free
+@@ 34
+ray ends: "chair"
+@@ 35
+added to h:
+@@ 36
+One labelled range measurement updates every cell along its ray: four as free, one as occupied by the reported class.
+@@ 37
+Filling the gap: where the parameter vectors come from, and three updates by hand
+@@ 38
+The entries are log likelihood ratios, as (16.25) says. Take classes {free, chair, table} and this sensor: a ray passes through a free cell with probability 0.9 and reports a false hit of either class with probability 0.05 each; it passes through an occupied cell without stopping with probability 0.2, and when it stops the label is right with probability 0.75, so a chair cell gives "hit, chair" with probability 0.6 and "hit, table" with 0.2. Then
+@@ 39
+which is (16.26) with \(\boldsymbol{\phi}^+ = [0, 1.39, 1.39]\), \(\boldsymbol{\psi}^+ = [0, 1.10, 1.10]\), \(\boldsymbol{\phi}^- = [0, -1.50, -1.50]\). Start a cell at \(\mathbf{h} = [0, 0, 0]\) (all classes equally likely) and fuse three hits labelled chair, table, chair:
+@@ 40
+The softmax gives \(p = [1, 576, 192]/769 = [0.001,\ 0.749,\ 0.250]\). The cell is almost surely occupied, and chair leads table three to one: two votes against one, each worth a factor \(0.6/0.2 = 3\).
+@@ 41
+Try it: press "Sample 1" once. Reset and press "Sample 10". Then set the label accuracy to 50% and sample again.
+@@ 42
+Notice that one hit already gives chair 71%, table 24%, free 6%. Ten samples (eight labelled chair, one labelled table, one pass-through) put chair at 99.95%. At 50% accuracy the labels carry no information: chair and table stay tied, yet "free" is still ruled out, because that part of the evidence comes from the range.
+@@ 43
+5. Storing it: the multi-class octree
+@@ 44
+A regular grid wastes memory on large empty volumes. An <strong>octree</strong> (<a href="#d46">Week 8 · Day 4</a>) divides space recursively into eight octants; a node has either 8 children or none, and a node without children is a <strong>leaf</strong>. In a <strong>multi-class octree</strong> every node stores a log-odds vector. <span class="src">§16.3.2 · pp. 475–476</span>
+@@ 45
+<strong>Update.</strong> Cast the ray through the tree, expand each observed leaf down to the finest resolution, and apply (16.24).
+@@ 46
+<strong>Prune.</strong> If the 8 children of a node are leaves with equal log-odds, delete them and make the parent a leaf. A free block of \(16^3 = 4096\) finest cells collapses to one node. Occupied regions rarely prune, since only their surfaces are observed.
+@@ 47
+<strong>Clamp.</strong> Noise keeps equal cells from reaching exactly equal values. Limiting each entry of \(\mathbf{h}\) to a fixed interval lets cells settle at the same value and prune, at the price of losing information near certainty.
+@@ 48
+<strong>Keep few classes.</strong> Cost grows linearly with \(K\) and the chance of pruning falls quickly, so a cell may store only its \(\bar{K}\) most likely classes and lump the rest into "others".
+@@ 49
+A parent's vector can be the average of its children's, or, conservatively, that of the child most likely to be occupied. Several robots can build one such map by agreeing on their local octrees over one-hop communication (ROAM). <span class="src">§16.3.2 · pp. 476–478</span>
+@@ 50
+Q1. With classes {free, 1, 2}, a cell has h = [0, 1.1, −0.7]. What is the probability of class 1?
+@@ 51
+e^0 = 1, e^1.1 = 3.00, e^−0.7 = 0.50. Softmax: 3.00/(1 + 3.00 + 0.50) = 0.67.
+@@ 52
+Q2. A sensor reports "hit, class 1" with probability 0.6 if the cell is class 1, 0.1 if it is class 2, and 0.02 if it is free. What does this observation add to the class-2 entry of h?
+@@ 53
+Entry 2 of l(z) is ln[p(z | class 2)/p(z | free)] = ln(0.1/0.02) = ln 5 = 1.61. Even a hit with the other label is evidence that the cell is not free.
+@@ 54
+Q3. In a city, which rule for handling movable objects in a semantic surfel map worked better according to the chapter?
+@@ 55
+Remove every point of a movable class
+@@ 56
+Keep everything and trust ICP
+@@ 57
+Remove every point whose label changed class probability by any amount
+@@ 58
+Remove only surfels whose stored label conflicts with the current scan
+@@ 59
+Parked vehicles are common and useful for registration. Removing all of them discards good constraints, so only surfels with conflicting labels are filtered.
+@@ 60
+Q4. Why does free space compress much better than occupied space in a multi-class octree?
+@@ 61
+Free cells are not stored at all
+@@ 62
+Whole free volumes are observed by rays passing through and reach the same clamped value, while objects are seen only at their surface
+@@ 63
+Occupied cells use more bits per entry
+@@ 64
+Pruning is only defined for class 0
+@@ 65
+Pruning needs 8 equal children. Rays cross free volumes everywhere and clamping makes their values equal. The inside of an object is never observed, so its cells differ from the surface cells.
+@@ 66
+Surfel maps keep a class and a confidence per surfel; conflicting labels lower the confidence.
+@@ 67
+A range-category observation gives a range and a class per ray. The voxel map keeps an independent class distribution per cell.
+@@ 68
+In log-odds relative to "free", Bayes' rule is \(\mathbf{h} \leftarrow \mathbf{h} + \mathbf{l}(z)\), and the softmax returns probabilities.
+@@ 69
+The model (16.26) adds \(\boldsymbol{\phi}^+ + \mathbf{E}_{y+1}\boldsymbol{\psi}^+\) at the ray's end point and \(\boldsymbol{\phi}^-\) along the way. The entries are log likelihood ratios of the sensor.
+@@ 70
+A multi-class octree prunes equal children; clamping and keeping few classes make pruning likely.
+@@ 71
+<em>SLAM Handbook</em>, §16.3.1 "Point-based and Surfel-based Metric-Semantic SLAM" and §16.3.2 "Voxel-based Metric-Semantic SLAM", pp. 471–478.
+@@ 72
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (the log-odds form of the binary Bayes filter, generalized here to several classes); Hornung, Wurm, Bennewitz, Stachniss, Burgard, <em>OctoMap: An Efficient Probabilistic 3D Mapping Framework Based on Octrees</em>, 2013.
+@@ 73
+The sensor probabilities in the worked example are made up for illustration; they are the ones the widget uses.

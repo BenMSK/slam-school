@@ -1,0 +1,192 @@
+@@ 1
+<span class="eyebrow">Week 21 · Day 3</span>
+@@ 2
+Long-term change: staying localized, cleaning the map, detecting what changed
+@@ 3
+After today you can explain how a lifelong SLAM system keeps localizing while a place changes, clear a ghost trail from a map with free-space evidence, and decide from two volumetric maps what appeared and what disappeared.
+@@ 4
+About 60 min · Read §15.3 opening, §15.3.1, and §15.3.2 up to Figure 15.11, pp. 432–439 (7 pages) · Needs Week 8 Day 1 and Week 3 Day 3
+@@ 5
+Read first: §15.3 opening to §15.3.2.2, pp. 432–439
+@@ 6
+The three reasons long-term dynamics are harder than short-term ones (p. 432).
+@@ 7
+When an experience-based map adds new data (p. 433), and what marginalization "bakes in" (p. 435).
+@@ 8
+The chair in the corner (p. 435).
+@@ 9
+Why change detection prefers occupancy or TSDF maps (p. 437), and the half-removed table (p. 438).
+@@ 10
+Change that happens out of view cannot be tracked. The robot must keep localizing although the place looks different, remove from the map what should not be there, and work out what changed between visits. All three depend on telling "I did not look there" apart from "I looked and it was gone", and that is the information a volumetric map keeps as free space.
+@@ 11
+1. Why long-term change is harder
+@@ 12
+The book gives three reasons. <span class="src">§15.3 · p. 432</span> First, changes are abrupt and can be arbitrarily large, so data association can no longer be done by tracking and may need global re-identification; perceptual aliasing gets worse, because one landmark that has moved is seen in several positions. Second, effects that were negligible now matter: objects added, moved, or removed, structural change (a construction site), and appearance change from weather, time of day, and season. Third, more time and travel mean large viewpoint changes and degraded or replaced sensors.
+@@ 13
+2. Staying localized for a lifetime
+@@ 14
+Localizing in a changed place is close to place recognition, which also asks whether two views show the same place despite changes. The book describes three groups of ideas. <span class="src">§15.3.1 · p. 433</span>
+@@ 15
+<strong>Parallel and summary maps.</strong> Each visit is an <strong>experience</strong> (or <strong>session</strong>), short enough that the robot can track through it. When the current experience localizes well against the stored ones, nothing is added. When localization is weak or fails, the new data is added, so the map grows only where the place's appearance varies. Experiences can be chained: if \(E_A\) cannot localize against \(E_C\) but both can against \(E_B\), then \(E_C \to E_B \to E_A\) still ties them together. Maps are sometimes <strong>summarized</strong> offline: a full bundle adjustment over all experiences, keeping only the features most likely to help later. <span class="src">§15.3.1.1 · p. 433</span>
+@@ 16
+<strong>Appearance-invariant representations.</strong> Learned detectors, descriptors, and matchers let one feature match across appearances; they train on many conditions and use context up to the whole image. Semantics is a special case: a chair stays a chair, so the arrangement of objects can localize the robot even between aerial and ground views. Matches on moved objects must still be rejected. <span class="src">§15.3.1.2 · p. 434</span>
+@@ 17
+<strong>Memory, scaling, and marginalization.</strong> A robot that never stops collects data without bound. <span class="src">§15.3.1.3 · pp. 434–435</span>
+@@ 18
+Strategy
+@@ 19
+Forgetting
+@@ 20
+Each map point has a weight or persistence probability that decays with time; old points are pruned. Summarization ranks points, so the top N fit a memory budget.
+@@ 21
+Information is discarded
+@@ 22
+Memory management
+@@ 23
+Map data moves in and out of the part being processed; RTAB-Map uses short-term, working, and long-term memory
+@@ 24
+Extra computation; capacity may still run out
+@@ 25
+Marginalization
+@@ 26
+Old nodes are replaced by one node carrying their marginal distribution
+@@ 27
+The marginalized part can no longer be changed
+@@ 28
+Filling the gap: what "baking in" means, with two numbers
+@@ 29
+Take two scalar poses. The new pose \(x_n\) has information 1 of its own, the old pose \(x_o\) has 3, and a loop closure between them has 2. In the order \((x_n, x_o)\):
+@@ 30
+The second expression marginalizes \(x_o\) with the Schur complement of <a href="#d15">Week 3 · Day 3</a>. The graph now has one node with information 2.2: its own 1 plus 1.2 that arrived through the loop closure. If a later measurement shows the loop closure was a false match, the correct value is 1, but the factor no longer exists as a separate thing to switch off. Marginalization keeps information and loses the freedom to revise inlier and outlier decisions; when to do it is an open question. <span class="src">§15.3.1.3 · p. 435</span>
+@@ 31
+3. Absence of evidence, and cleaning the map
+@@ 32
+A detector that fires is evidence that something is there. The reverse does not hold. The robot saw a chair in a corner; on the next visit it does not see it. <span class="src">§15.3.2 · p. 435</span>
+@@ 33
+What happened
+@@ 34
+Name
+@@ 35
+Right conclusion
+@@ 36
+The robot did not look into the corner
+@@ 37
+<strong>Absence of evidence</strong>
+@@ 38
+None; the chair may still be there
+@@ 39
+The robot looked and saw the corner empty
+@@ 40
+<strong>Evidence of absence</strong> (a negative detection)
+@@ 41
+The chair is gone
+@@ 42
+The robot looked and the detector missed the chair
+@@ 43
+A detector error
+@@ 44
+"Gone" would be wrong
+@@ 45
+Maps built from positive detections therefore pile up outdated measurements. <strong>Map cleaning</strong> removes dynamic and spurious measurements so that only the static, persistent part of the scene remains, most often to filter the traces of moving objects out of one session. It is mostly done offline in two stages: first, globally consistent poses from robust bundle adjustment, with dynamic points ignored as outliers; second, with the poses fixed, every measurement is re-checked for consistency. Volumetric methods fuse everything by ray-casting into an occupancy or TSDF grid and test each cell, at a cost in memory and time. Visibility-based methods compare a subset of nearby measurements, often directly on the sensor data. <span class="src">§15.3.2.1 · p. 436</span>
+@@ 46
+Filling the gap: how ray-casting erases a trail
+@@ 47
+Recall the log-odds update of <a href="#d43">Week 8 · Day 1</a>: the cell where a beam ends gains \(l_{\text{hit}}\), and every cell the beam crossed loses \(l_{\text{miss}}\). The second half is the evidence of absence. A beam that reaches the far wall proves every cell on its path is empty <em>now</em>, whatever was recorded there before.
+@@ 48
+Use the widget's numbers: \(l_{\text{hit}} = 0.85\), \(l_{\text{miss}} = 0.40\), log-odds kept between \(-2\) and \(+3.5\), and a cell is solid when its log-odds is above 0.
+@@ 49
+A cell seen free for a long time sits at \(-2\). An object arrives: \(-2 \to -1.15 \to -0.30 \to +0.55\). It takes <strong>3 hits</strong> to turn solid.
+@@ 50
+The object leaves: \(+0.55 \to +0.15 \to -0.25\). Free again after <strong>2 misses</strong>.
+@@ 51
+Had the object stayed until the cell saturated at \(+3.5\), clearing would take \(\lceil 3.5 / 0.40 \rceil = 9\) misses.
+@@ 52
+So an object moving one cell per scan leaves a tail about one cell long, and a visitor that covers a cell for fewer than three scans never enters the map. A map that stores every hit point has neither mechanism: its trail is permanent.
+@@ 53
+Try it: press Play. Then set "Miss update" to 0, and after that slow the object down.
+@@ 54
+Notice: after 30 scans the point map holds 30 ghost cells along the object's path, and the occupancy grid holds 1, the cell the box left one scan ago. Both contain the same 86 wall and pillar cells, so clearing cost nothing. With the miss update at 0 the grid keeps all 30 ghosts: without free-space evidence it is the point map. At 0.2 cells per scan the box saturates its cells and drags a short pink tail, part of it in the box's own shadow where no beam can pass yet. The wedge behind the pillar stays "never observed": the grid does not claim it is free.
+@@ 55
+4. Change detection between sessions
+@@ 56
+<strong>Change detection</strong> establishes negative observations and other differences. A mapping robot can do it in 3D between submaps or sessions. Typically a robot scans a room in the morning and again in the evening, each session gives an internally consistent map, and the goal is what changed in between. The useful unit is the object, a piece of the scene that changes coherently: added, removed, or moved. <span class="src">§15.3.2.2 · p. 437</span>
+@@ 57
+Occupancy and TSDF maps have proven most useful, because unlike a bare surface model they distinguish <em>unobserved</em> space from space <em>observed to be free</em>. Comparing two of them is called <strong>scene differencing</strong>. <span class="src">§15.3.2.2 · pp. 437–438</span>
+@@ 58
+Morning
+@@ 59
+Evening
+@@ 60
+Verdict
+@@ 61
+Observed free
+@@ 62
+Surface
+@@ 63
+Something appeared
+@@ 64
+Something disappeared
+@@ 65
+Unchanged; fuse the two for accuracy
+@@ 66
+Surface or free
+@@ 67
+Not observed
+@@ 68
+No verdict (absence of evidence); keep the morning data
+@@ 69
+No verdict; the evening data completes the map
+@@ 70
+The sessions must first be registered into one frame. Each has its own drift, so one rigid alignment is often not enough; the best results come from jointly optimizing the alignment with inter-session constraints and bundle adjustment. <span class="src">§15.3.2.2 · p. 438</span>
+@@ 71
+<strong>Semantics</strong> is added for three reasons. A label does not change with appearance (the appearance problem is handed to the detection network). It carries what geometry lacks: a sheet of paper taken from a table changes no surface. And objects, the things that move as a unit, largely coincide with detector classes such as mugs and chairs. <span class="src">§15.3.2.2 · p. 438</span>
+@@ 72
+<strong>Semantic consistency</strong> is the problem that scenes change in coherent units but the robot sees parts. A table has been removed, and on the second visit half of its place is occluded. Differencing per cell removes the observed half and leaves half a table floating in the map. The options: rebuild the map from scratch each time, which is consistent but never accumulates a more complete model; detect change per object or semantic class, the usual choice; or wait for later observations to remove the leftovers. <span class="src">§15.3.2.2 · p. 438, Figure 15.11</span>
+@@ 73
+<strong>"I do not see it, so it is gone."</strong> Only if you looked. A cell or object outside the field of view, or occluded, has produced no evidence either way.
+@@ 74
+<strong>"A point cloud map can be cleaned by adding more scans."</strong> More scans add more points. Removal needs free-space reasoning: a ray passing through a stored point contradicts it.
+@@ 75
+Q1. An occupancy cell has log-odds +2.55. Each beam that passes through it subtracts 0.40. After how many passes is the cell no longer solid (log-odds at or below 0)?
+@@ 76
+2.55 / 0.40 = 6.4: six passes leave +0.15 and the seventh brings it to −0.25.
+@@ 77
+Q2. Region 1 is observed free in the morning and contains a surface in the evening. Region 2 has a surface in the morning and was not observed in the evening. What does scene differencing conclude?
+@@ 78
+Region 1: something appeared. Region 2: no change can be claimed; keep the surface.
+@@ 79
+Both regions changed
+@@ 80
+Region 1: sensor noise. Region 2: the surface disappeared.
+@@ 81
+Nothing can be concluded about either
+@@ 82
+Free then surface is a new surface. Surface then unobserved is absence of evidence, so the old surface is kept.
+@@ 83
+Q3. An experience-based map has five stored experiences of a corridor. Today the robot localizes well against them. What is added to the map?
+@@ 84
+A sixth experience, always
+@@ 85
+Only the features on moved objects
+@@ 86
+A summary of all six
+@@ 87
+Nothing: the map is already expressive enough
+@@ 88
+New data is added only when localization is weak or fails, so the map grows with the variation of the place, not with the number of visits.
+@@ 89
+Q4. A node with information 4 is linked to an old node (own information 6) by a factor of information 3. The old node is marginalized. What information does the remaining node have?
+@@ 90
+The matrix is [[4+3, −3], [−3, 6+3]], and the Schur complement is 7 − 9/9 = 6: the node's own 4 plus 2 that came through the factor.
+@@ 91
+Long-term change is abrupt and large, so it needs re-identification where short-term motion needs tracking.
+@@ 92
+Lifelong localization stores several experiences of a place or uses appearance-invariant features, and bounds its memory by forgetting, memory management, or marginalization, which freezes earlier decisions.
+@@ 93
+Not seeing something is evidence of absence only if the robot looked. Free-space ray-casting records exactly that, and it erases the trails of moving objects.
+@@ 94
+Change detection compares registered volumetric maps: free-then-surface appeared, surface-then-free disappeared. Reasoning per object keeps the result semantically consistent.
+@@ 95
+<em>SLAM Handbook</em>, §15.3 opening, §15.3.1 "Lifelong SLAM for Localization", §15.3.2.1–15.3.2.2, pp. 432–439, Figures 15.10–15.11.
+@@ 96
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (the log-odds occupancy update along a beam, used in the ray-casting note and the widget).

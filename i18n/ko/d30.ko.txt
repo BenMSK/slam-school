@@ -1,0 +1,166 @@
+@@ 1
+<span class="eyebrow">5주차 · 복습</span>
+@@ 2
+5주차 복습: continuous-time trajectory
+@@ 3
+오늘이 끝나면 spline trajectory나 Gaussian-process trajectory를 기본 원리부터 만들고, 각각의 작은 예를 손으로 풀고, state가 Lie group 위의 pose일 때 무엇이 바뀌는지 말할 수 있습니다.
+@@ 4
+continuous-time trajectory는 "측정마다 pose 하나"를 몇 개의 변수로 정의되는 시간의 함수로 바꿉니다. 그래서 측정 시각, 추정 변수, query 시각이 서로 다를 수 있습니다. parametric 버전은 spline입니다. local support를 가진 basis function의 합이므로 측정 하나는 몇 개의 계수만 건드립니다. 계수를 regularize하고 변수를 바꾸면 spline normal equations가 kernel matrix \(\mathbf{K}\)만 나타나는 형태로 바뀌고, \(\mathbf{K}\)를 직접 고르면 nonparametric 버전인 Gaussian process가 됩니다. kernel이 Markovian state를 가진, white noise가 구동하는 미분방정식에서 오면 \(\mathbf{K}^{-1}\)는 block-tridiagonal이고 prior는 binary factor의 사슬입니다. 측정으로 conditioning하면 어떤 시각에서든 평균과 분산이 나오며, 감싸는 두 state만으로 계산됩니다. Lie group 위에서는 두 방법 모두 이웃한 control pose의 차이를 다루며, 이를 Log로 Lie algebra에 옮기고 Exp로 되돌립니다.
+@@ 5
+spline trajectory
+@@ 6
+=
+@@ 7
+균일 cubic B-spline 가중치, \(u \in [0,1)\)
+@@ 8
+Day 1 (책에는 없음)
+@@ 9
+regularization을 넣은 spline normal equations
+@@ 10
+=
+@@ 11
+kernel 형태, \(\mathbf{K} = \boldsymbol{\Psi}\boldsymbol{\Psi}\T\) 또는 \([\mathcal{K}(t_i,t_j)]_{ij}\)
+@@ 12
+=
+@@ 13
+SDE prior와 transition function
+@@ 14
+=
+@@ 15
+constant-velocity prior, 한 축
+@@ 16
+=
+@@ 17
+kernel matrix와 그 역행렬
+@@ 18
+=
+@@ 19
+=
+@@ 20
+query 시각 τ에서의 GP regression
+@@ 21
+<a href="#d28">Day 4</a> (책은 아이디어만 제시, pp. 68–69)
+@@ 22
+spline의 cumulative form
+@@ 23
+=
+@@ 24
+pose interpolation과 random-walk prior factor
+@@ 25
+\(\mathbf{T}(t) = \Exp\big(\alpha_k\Log(\mathbf{T}_k\mathbf{T}_{k-1}^{-1})\big)\mathbf{T}_{k-1}\), \(\ \mathbf{e}_k = \Log(\mathbf{T}_k\mathbf{T}_{k-1}^{-1})\) (covariance \(T\boldsymbol{\mathcal{Q}}\))
+@@ 26
+=
+@@ 27
+Q1. trajectory가 quadratic (차수 2) B-spline입니다. 한 time stamp의 측정 하나는 계수 몇 개와 관련됩니까?
+@@ 28
+전부
+@@ 29
+차수 d인 B-spline은 어느 시각에서든 d + 1개의 basis function이 0이 아닙니다. quadratic이면 3개입니다.
+@@ 30
+Q2. cubic B-spline의 활성 계수 네 개가 모두 6입니다. u = 0.37에서 곡선 값은 얼마입니까?
+@@ 31
+knot 간격에 따라 다르다
+@@ 32
+가중치는 음수가 아니고 모든 u에서 합이 1이므로, 6 네 개의 가중평균은 6입니다.
+@@ 33
+Q3. 측정 시각 두 개, basis function 두 개이고, Ψ의 행이 (1, 0)과 (1, 1)입니다. K = ΨΨᵀ는 무엇입니까?
+@@ 34
+행 (1, 1)과 (1, 2)
+@@ 35
+행 (2, 1)과 (1, 1)
+@@ 36
+행 (1, 0)과 (0, 1)
+@@ 37
+행 (1, 1)과 (1, 1)
+@@ 38
+K₁₁ = 1·1 + 0·0 = 1, K₁₂ = 1·1 + 0·1 = 1, K₂₂ = 1·1 + 1·1 = 2. (반대 순서인 ΨᵀΨ라면 행 (2, 1)과 (1, 1)이 됩니다.)
+@@ 39
+Q4. kernel trick은 무엇을 무엇으로 대체합니까?
+@@ 40
+측정 Jacobian을 단위행렬로
+@@ 41
+regularizer를 hard constraint로
+@@ 42
+basis function의 내적을, 시각 쌍에서 계산한 kernel function 값으로
+@@ 43
+inverse kernel matrix를 그 전치로
+@@ 44
+식 (2.45)는 basis function을 K = ΨΨᵀ를 통해서만 필요로 하므로, K를 kernel function으로 직접 채울 수 있습니다.
+@@ 45
+Q5. 한 축의 constant-velocity prior에서 Q_c = 3이고 step이 1 s입니다. 이 step 동안 더해지는 위치 분산 (step covariance의 왼쪽 위 원소)은 얼마입니까?
+@@ 46
+Q_c Δt³/3 = 3 · 1/3 = 1. (속도 분산은 Q_c Δt = 3이고 교차 항은 1.5입니다.)
+@@ 47
+Q6. SDE prior에서 K는 꽉 차 있지만 K⁻¹의 (1, 4) 블록은 0입니다. 이 0은 무엇을 뜻합니까?
+@@ 48
+state 1과 4는 상관이 없다
+@@ 49
+state 1과 4 사이에 직접적인 factor가 없다. 둘은 그 사이의 state를 통해서만 연결된다
+@@ 50
+state 4는 측정되지 않았다
+@@ 51
+prior가 state 4를 무시한다
+@@ 52
+information matrix의 0은 직접적인 factor가 없다는 뜻입니다. state들은 여전히 상관되어 있으며, 그래서 K에는 0이 없습니다.
+@@ 53
+Q7. p(0) = 0, Q_c = 1인 random-walk prior (kernel min(t, t′))입니다. t = 1에서 noise 분산 1로 측정 z = 4를 하나 얻었습니다. query 시각 τ = 3에서 posterior 분산은 얼마입니까?
+@@ 54
+k = min(3, 1) = 1이고 K + σ² = 2이므로 분산은 3 − 1·(1/2)·1 = 2.5입니다. 달리 보면, t = 1에서의 0.5에 extrapolation 2 s 동안 초당 1씩 더한 값입니다.
+@@ 55
+Q8. linearize한 random-walk prior factor (2.75)에서, 이전 pose k − 1의 perturbation ξ에 대한 오차의 Jacobian은 무엇입니까?
+@@ 56
+단위행렬에 마이너스를 붙인 것
+@@ 57
+상대 pose의 adjoint에 마이너스를 붙인 것
+@@ 58
+e ≈ Log(T_rel) + ξ_k − Ad(T_rel) ξ_{k−1}. 이전 pose의 perturbation을 상대 pose를 거쳐 옮겨야 하므로 adjoint가 나타납니다.
+@@ 59
+균일 cubic B-spline의 knot이 \(T = 0.5\) s마다 있습니다. 한 knot 구간에서 활성 계수 네 개가 2, 4, 4, 0입니다 (오래된 것부터). \(u = 0.25\)에서 위치와 속도를 구하세요.
+@@ 60
+\(u = 0.25\)에서 가중치: \(w_0 = 0.75^3/6 = 0.0703\), \(w_1 = (3\cdot0.015625 - 6\cdot0.0625 + 4)/6 = 0.6120\), \(w_2 = (-0.046875 + 0.1875 + 0.75 + 1)/6 = 0.3151\), \(w_3 = 0.015625/6 = 0.0026\). 합은 1입니다.
+@@ 61
+위치: \(2\cdot0.0703 + 4\cdot0.6120 + 4\cdot0.3151 + 0 = 3.849\).
+@@ 62
+\(u\)에 대한 가중치의 도함수: \(-\tfrac12(0.75)^2 = -0.28125\), \(\tfrac12(3\cdot0.0625 - 1) = -0.40625\), \(\tfrac12(-0.1875 + 0.5 + 1) = 0.65625\), \(\tfrac12\cdot0.0625 = 0.03125\). 합은 0입니다. 따라서 \(dp/du = 2\cdot(-0.28125) + 4\cdot(-0.40625) + 4\cdot0.65625 = 0.4375\)이고, \(u = t/T\)이므로 속도는 \(0.4375/0.5 = 0.875\) 단위/초입니다.
+@@ 63
+초기 분산 1, \(Q_c = 1\)인 스칼라 random-walk prior를 \(t = 0\)과 \(t = 1\)에서 계산하므로 \(\mathbf{K} = \begin{bmatrix} 1 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\)입니다. 두 시각에서 noise 분산 1로 위치를 측정합니다: \(\mathbf{z} = (0, 3)\). 추정값을 (a) 수정된 normal equations (2.45)로, (b) GP regression 공식으로 구하고, 둘이 같은지 확인하세요.
+@@ 64
+(a) \(\mathbf{A} = \mathbf{I}\), \(\mathbf{b} = \mathbf{z}\)로 두면: \(\mathbf{K}^{-1} = \begin{bmatrix} 2 &amp; -1 \\ -1 &amp; 1 \end{bmatrix}\)이므로 \(\mathbf{I} + \mathbf{K}^{-1} = \begin{bmatrix} 3 &amp; -1 \\ -1 &amp; 2 \end{bmatrix}\)이고, 그 행렬식은 5, 역행렬은 \(\tfrac15\begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 3 \end{bmatrix}\)입니다. 그러면 \(\hat{\mathbf{p}} = \tfrac15(2\cdot0 + 1\cdot3,\ 1\cdot0 + 3\cdot3) = (0.6, 1.8)\)입니다.
+@@ 65
+(b) \(\mathbf{K} + \mathbf{I} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 3 \end{bmatrix}\), 역행렬은 \(\tfrac15\begin{bmatrix} 3 &amp; -1 \\ -1 &amp; 2 \end{bmatrix}\)이므로 \((\mathbf{K}+\mathbf{I})^{-1}\mathbf{z} = \tfrac15(-3, 6)\)이고 \(\hat{\mathbf{p}} = \mathbf{K}\cdot\tfrac15(-3,6) = \tfrac15(3, 9) = (0.6, 1.8)\)입니다. 같습니다.
+@@ 66
+prior가 정보를 나누는 방식을 보세요. \(t = 0\)의 추정값이 \(t = 1\)의 측정 때문에 0에서 0.6으로 끌어올려집니다.
+@@ 67
+한 축의 constant-velocity prior, state \((p, v)\), 1초 간격의 두 시각, \(Q_c = 1\), 초기 covariance \(\mathbf{I}\). prior를 factor 두 개로 쓰고 \(4\times4\) inverse kernel matrix \(\mathbf{K}^{-1}\)를 조립하세요. 세 번째 시각을 더하면 새 \(6\times6\) 행렬의 어느 블록이 0이 됩니까?
+@@ 68
+factor: \(\norm{\mathbf{x}_1}^2_{\mathbf{I}} + \norm{\mathbf{x}_2 - \boldsymbol{\Phi}\mathbf{x}_1}^2_{\mathbf{Q}_2}\), 여기서 \(\boldsymbol{\Phi} = \begin{bmatrix} 1 &amp; 1 \\ 0 &amp; 1 \end{bmatrix}\), \(\mathbf{Q}_2 = \begin{bmatrix} 1/3 &amp; 1/2 \\ 1/2 &amp; 1 \end{bmatrix}\). 그 행렬식은 \(1/12\)이므로 \(\mathbf{Q}_2^{-1} = \begin{bmatrix} 12 &amp; -6 \\ -6 &amp; 4 \end{bmatrix}\)입니다.
+@@ 69
+둘째 factor를 전개하면 \(\mathbf{K}^{-1}\)의 블록은 다음과 같습니다. 오른쪽 아래는 \(\mathbf{Q}_2^{-1}\), 오른쪽 위는 \(-\boldsymbol{\Phi}\T\mathbf{Q}_2^{-1} = \begin{bmatrix} -12 &amp; 6 \\ -6 &amp; 2 \end{bmatrix}\), 왼쪽 위는 \(\mathbf{I} + \boldsymbol{\Phi}\T\mathbf{Q}_2^{-1}\boldsymbol{\Phi} = \begin{bmatrix} 13 &amp; 6 \\ 6 &amp; 5 \end{bmatrix}\). 따라서
+@@ 70
+세 번째 시각을 더하면 새 factor는 state 2와 3만 연결하므로, state 1과 3 사이의 블록 (과 그 전치)은 0입니다. Day 3 위젯에서 "constant velocity"와 시각 세 개를 고르면 처음 두 행과 0 블록을 확인할 수 있습니다.
+@@ 71
+\(\SE(2)\)에서 \(\Exp\big((\rho_1,\rho_2,\theta)\big)\)는 회전 \(\theta\)와 이동 \(\mathbf{V}(\theta)\,(\rho_1,\rho_2)\)를 가지며, 여기서 \(\mathbf{V}(\theta) = \tfrac{1}{\theta}\begin{bmatrix} \sin\theta &amp; -(1-\cos\theta) \\ 1-\cos\theta &amp; \sin\theta \end{bmatrix}\)입니다. \(\mathbf{T}_{k-1} = \mathbf{I}\)로 두고, \(\mathbf{T}_k\)는 회전 90°, 이동 \((1, 1)\)이라 합시다. (a) \(\boldsymbol{\xi} = \Log(\mathbf{T}_k\mathbf{T}_{k-1}^{-1})\)를 구하세요. (b) \(\alpha = 0.5\)에서 interpolation한 pose와, 그 pose에서 직선 중점까지의 거리를 구하세요. (c) random-walk prior가 \(T\boldsymbol{\mathcal{Q}} = \diag(0.1, 0.1, 0.05)\)입니다. 이 factor가 cost에 더하는 값 \(\norm{\mathbf{e}_k}^2_{T\boldsymbol{\mathcal{Q}}}\)는 얼마입니까?
+@@ 72
+(a) \(\theta = \pi/2\)이므로 \(\mathbf{V} = \tfrac{2}{\pi}\begin{bmatrix} 1 &amp; -1 \\ 1 &amp; 1 \end{bmatrix}\), \(\mathbf{V}^{-1} = \tfrac{\pi}{4}\begin{bmatrix} 1 &amp; 1 \\ -1 &amp; 1 \end{bmatrix}\)입니다. 그러면 \((\rho_1,\rho_2) = \mathbf{V}^{-1}(1,1) = (\pi/2, 0)\)이고 \(\boldsymbol{\xi} = (\pi/2,\ 0,\ \pi/2) \approx (1.571, 0, 1.571)\)입니다. 이것은 "같은 비율로 돌면서 앞으로 달리기", 곧 반지름 1인 사분원입니다.
+@@ 73
+(b) \(\alpha\boldsymbol{\xi} = (\pi/4, 0, \pi/4)\). 회전은 45°입니다. 이동은 \(\mathbf{V}(\pi/4)\,(\pi/4, 0) = (\sin 45^\circ,\ 1 - \cos 45^\circ) = (0.707, 0.293)\)입니다. 이 점은 \((0,1)\)이 중심이고 반지름이 1인 원 위에 있으며, 그래야 맞습니다. 직선 중점은 \((0.5, 0.5)\)이고, 거리는 \(\sqrt{0.207^2 + 0.207^2} = 0.293\)입니다.
+@@ 74
+(c) \(\mathbf{e}_k = \boldsymbol{\xi}\)이므로 cost는 \((\pi/2)^2/0.1 + 0 + (\pi/2)^2/0.05 = 24.7 + 49.3 = 74.0\)입니다. 이렇게 엄격한 prior는 한 구간에서 4분의 1 바퀴를 도는 것에 강하게 저항합니다. 그만큼을 측정이 뒷받침해야 합니다.
+@@ 75
+측정 시각, 추정 변수, query 시각을 분리하면 무엇을 얻는지 센서 예 하나를 들어 설명하기.
+@@ 76
+네 계수로 cubic B-spline과 그 속도를 계산하고, 측정이 어느 계수를 건드리는지 말하기.
+@@ 77
+보지 않고 regularization을 넣은 spline normal equations (2.44)에서 kernel 형태 (2.45)로 가기.
+@@ 78
+constant-velocity SDE와 그 transition matrix를 쓰고, \(\mathbf{K}^{-1}\)가 block-tridiagonal인 이유를 설명하기.
+@@ 79
+측정 두 개에 대한 GP posterior 평균과 분산을 손으로 계산하고, 두 state 사이를 interpolation하기.
+@@ 80
+\(\SE(d)\) 위 두 pose 사이의 interpolation과, 그 사이의 random-walk prior factor를 쓰기.
+@@ 81
+<em>SLAM Handbook</em>, 2장, §2.2 "Continuous-Time Trajectories"와 §2.3, pp. 62–74.
+@@ 82
+Day 1–5에서 인용한 추가 자료: de Boor, <em>A Practical Guide to Splines</em>, 1978; Rasmussen과 Williams, <em>Gaussian Processes for Machine Learning</em>, 2006; Barfoot, <em>State Estimation for Robotics</em>, 2017.
+@@ 83
+문제 4의 \(\SE(2)\) exponential map은 Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018을 따릅니다.

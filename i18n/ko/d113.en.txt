@@ -1,0 +1,200 @@
+@@ 1
+<span class="eyebrow">Week 19 · Day 5</span>
+@@ 2
+Pointmaps: DUSt3R, MASt3R, and the systems built on them
+@@ 3
+After today you can define a pointmap, explain DUSt3R's scale-normalized and confidence-aware losses, and say how intrinsics, relative pose, and a global map are recovered from pairwise predictions.
+@@ 4
+About 60 min · Read §13.4–13.7, pp. 386–396 (11 pages) · Needs Week 19 Days 1 and 4
+@@ 5
+Read first: §13.4–13.7, pp. 386–396
+@@ 6
+This is the longest reading of the week. The math is on pp. 387–392; pp. 393–396 are a survey and read quickly. Look for:
+@@ 7
+The definition of a pointmap and equation (13.14) (p. 387).
+@@ 8
+The coordinate frame in which the network outputs both pointmaps (p. 388).
+@@ 9
+Equations (13.15)–(13.17) and what the factor \(z\) is for (p. 389).
+@@ 10
+The constraint attached to the global alignment (13.18) (p. 391).
+@@ 11
+DUSt3R drops the pipeline. One network looks at two images and outputs, for every pixel of both, a 3D point in the first camera's frame, plus a confidence. No calibration, no poses, no solver. Focal length, relative pose, depth, and matches can all be read off those points afterwards. The catch is that it handles two images at a time, so a scene with many images still needs an optimization that ties the pairs together, and that optimization looks like a factor graph again.
+@@ 12
+1. Pointmaps
+@@ 13
+The methods of Days 2 to 4 inserted networks into a pipeline that stayed hand-built: correspondences, then a factor graph, then a solver. DUSt3R asks one network to do all the steps at once, from images alone, including the intrinsics that SLAM normally assumes are given. Since it does not assume the images come in temporal order, it applies to structure from motion as well. The book is frank about the limit: reconstructing a large scene from thousands of frames in one pass is out of reach, so DUSt3R solves the problem for two images only. <span class="src">§13.4 · p. 386</span>
+@@ 14
+Its output is a <strong>pointmap</strong> \(\mathbf{X} \in \R^{W \times H \times 3}\): a 3D point for every pixel of a \(W \times H\) image, under the assumption that each camera ray hits one surface point. With intrinsics \(\mathbf{K}\) and a depth map \(\mathbf{D}\), the pointmap in the camera's own frame is <span class="src">§13.4 · p. 387</span>
+@@ 15
+Example: focal length 500 px and principal point \((320, 240)\) give \(\mathbf{K}^{-1}[420, 240, 1]\T = (0.2, 0, 1)\). With depth 4 m, \(\mathbf{X}_{420,240} = (0.8, 0, 4)\). This is the back-projection \(\pi^{-1}\) of Days 2 and 4, done for all pixels. The pointmap of camera \(n\) expressed in the frame of camera \(m\) is written \(\mathbf{X}^{n,m}\): <span class="src">eq. (13.14) · p. 387</span>
+@@ 16
+with world-to-camera poses \(\mathbf{P}_m, \mathbf{P}_n \in \SE(3)\) and \(h\) the map to homogeneous coordinates, \((x, y, z) \to (x, y, z, 1)\).
+@@ 17
+A pointmap is more than a depth map. The book lists what it holds at once: the scene geometry, the relation between pixels and scene points, and, when two pointmaps share a frame, the relation between the two viewpoints. <span class="src">p. 387</span>
+@@ 18 attr
+Top view of a curved surface and two cameras. Blue dots on the left and middle of the surface are the points seen by image 1. Pink dots on the middle and right are the points seen by image 2. Both sets are given in the coordinate frame of camera 1. Thin rays join each camera to some of its points.
+@@ 19
+camera 1 = origin of both pointmaps
+@@ 20
+camera 2, pose not given
+@@ 21
+What DUSt3R outputs for one pair. Both point sets live in camera 1's frame. The rays of the pink points meet at camera 2, so its pose is implied by the output even though nobody supplied it.
+@@ 22
+2. The network
+@@ 23
+The network \(f\) takes two RGB images and returns two pointmaps \(\mathbf{X}^{1,1}, \mathbf{X}^{2,1}\) with confidence maps \(\mathbf{C}^{1,1}, \mathbf{C}^{2,1}\). <span class="src">§13.4.1 · p. 388 · Fig. 13.14</span> In the vocabulary of <a href="#d109">Day 1</a>:
+@@ 24
+<strong>Encoder.</strong> One ViT encodes both images with the same weights (a <strong>Siamese</strong> arrangement), giving tokens \(F^1\) and \(F^2\).
+@@ 25
+<strong>Decoder.</strong> Two stacks of \(B\) transformer blocks, one per image. Each block does self-attention within its own view, cross-attention to the other view's tokens, then an MLP. The two stacks exchange information at every block, which the book calls crucial for outputting aligned pointmaps.
+@@ 26
+<strong>Heads.</strong> Each branch has a regression head that turns its tokens into a pointmap and a confidence map.
+@@ 27
+Nothing in this architecture enforces a camera model. The output need not correspond to any physically possible camera, although in practice it comes close. The geometry is learned from training data that contains only geometrically consistent pointmaps. The book presents the generic architecture as an advantage, because it can use strong pretraining. <span class="src">pp. 388–389</span>
+@@ 28
+3. Two losses: scale-normalized regression, and confidence
+@@ 29
+Training compares predicted with ground-truth pointmaps \(\hat{\mathbf{X}}^{1,1}, \hat{\mathbf{X}}^{2,1}\) (obtained from (13.14)) on the valid pixels \(\mathcal{D}^1, \mathcal{D}^2\). For pixel \(i\) of view \(v\): <span class="src">§13.4.2 · eq. (13.15)–(13.16) · p. 389</span>
+@@ 30
+with \(z = \operatorname{norm}(\mathbf{X}^{1,1}, \mathbf{X}^{2,1})\) and \(\bar{z} = \operatorname{norm}(\hat{\mathbf{X}}^{1,1}, \hat{\mathbf{X}}^{2,1})\): the mean distance of the points from the origin, for the prediction and for the truth.
+@@ 31
+Some pixels have no well-defined 3D point (sky, translucent objects) and some are simply harder. The network therefore also predicts a confidence \(\mathbf{C}^{v,1}_i\) per pixel, and the final objective is <span class="src">eq. (13.17) · p. 389</span>
+@@ 32
+with a hyper-parameter \(\alpha\), and \(\mathbf{C}^{v,1}_i = 1 + \exp c^{v,1}_i\) so that confidence stays positive. No confidence labels are needed.
+@@ 33
+Filling the gap: what the two losses do
+@@ 34
+<strong>The division by \(z\) removes scale.</strong> Suppose the prediction is right up to a factor, \(\mathbf{X}_i = s\, \hat{\mathbf{X}}_i\). Every distance is multiplied by \(s\), so \(z = s \bar{z}\), and \(\mathbf{X}_i / z = \hat{\mathbf{X}}_i / \bar{z}\). The loss is zero for every \(s\). Two images from uncalibrated cameras cannot reveal the scene's size (Day 2), so the network is not punished for it.
+@@ 35
+<strong>The confidence term makes \(C\) track \(1/\text{error}\).</strong> For one pixel with error \(\ell\), the loss as a function of \(C\) is \(g(C) = C\ell - \alpha \log C\). Then \(g'(C) = \ell - \alpha / C = 0\) gives
+@@ 36
+With \(\alpha = 0.2\): a pixel with \(\ell = 0.02\) wants \(C = 10\) and then costs \(0.2 - 0.2 \ln 10 = -0.26\). A pixel with \(\ell = 0.5\) wants the lowest confidence, \(C \to 1\), and costs \(0.5\). The first term alone would push every \(C\) to its minimum; the \(-\alpha \log C\) term rewards confidence, so the network is confident exactly where it expects to be accurate. As long as \(\alpha/\ell \gt 1\), the cost of a pixel at its best confidence grows like \(\log \ell\) instead of \(\ell\), so moderately hard pixels weigh less in training than their raw error would suggest.
+@@ 37
+Try it: move the scale slider, then the error on the hard points, then α.
+@@ 38
+Notice that changing the scale from × 0.5 to × 3 moves the raw error from 1.74 m to 7.57 m while the picture and the normalized mean error (0.056) do not change at all. With the starting settings, the loss prefers a confidence of about 6.5 on the seven easy points and 1.8 on the three hard ones, and the confidence-aware loss is −0.95 against 0.56 with all confidences at 1. Lower α to 0.02 and every confidence falls to its floor of 1.
+@@ 39
+4. Reading cameras and poses off the pointmaps
+@@ 40
+Everything a classical pipeline estimates can be recovered from the output. <span class="src">§13.4.3 · pp. 389–391</span>
+@@ 41
+Focal length of camera 1
+@@ 42
+Assume a centred principal point and square pixels. Find the \(f_1\) for which \(f_1 \cdot (X, Y)/Z\) best matches the centred pixel coordinates \((i', j')\) over all pixels, weighted by confidence. A Weiszfeld-type iterative solver finds it in a few iterations.
+@@ 43
+Focal length of camera 2
+@@ 44
+Run the network on the swapped pair \((I_2, I_1)\) and use \(\mathbf{X}^{2,2}\).
+@@ 45
+Relative pose
+@@ 46
+Either match pixels in 2D, recover intrinsics, and go through the epipolar geometry; or align \(\mathbf{X}^{1,1}\) with \(\mathbf{X}^{1,2}\) by Procrustes alignment, a closed-form fit of scale, rotation, and translation; or, more robust to noise and outliers, RANSAC with PnP.
+@@ 47
+Depth maps
+@@ 48
+The \(z\) coordinate of \(\mathbf{X}^{1,1}\) is the depth map of image 1.
+@@ 49
+Filling the gap: the focal length from one point
+@@ 50
+A centred pinhole camera maps \((X, Y, Z)\) to \(i' = f X / Z\). So each pixel of \(\mathbf{X}^{1,1}\) gives its own estimate \(f = i' Z / X\). The point \((0.8, 0, 4)\) at \(i' = 420 - 320 = 100\) gives \(f = 100 \cdot 4 / 0.8 = 500\) px. The book's formula fits one \(f_1\) to all pixels by minimizing a confidence-weighted sum of distances (not squared distances), which is less sensitive to bad pixels. Weiszfeld's algorithm minimizes such sums by iteratively re-weighted least squares, the idea of <a href="#d34">Week 6 · Day 4</a>. Procrustes alignment is the closed-form rigid alignment by SVD of <a href="#d74">Week 13 · Day 2</a>, with a scale factor added.
+@@ 51
+<strong>Global alignment.</strong> For \(N\) images, build a graph whose edges \(e = (n, m)\) are pairs that share content, found by image retrieval or by running the network on all pairs and keeping those with high average confidence. Run the network on each edge to get \(\mathbf{X}^{n,e}\) and \(\mathbf{X}^{m,e}\), both in the frame of that pair's first image. Then find world-frame pointmaps \(\boldsymbol{\chi}^n\), one per image, together with one rigid transform \(\mathbf{P}_e\) and one scale \(\sigma_e \gt 0\) per edge: <span class="src">§13.4.4 · eq. (13.18) · p. 391</span>
+@@ 52
+The same \(\mathbf{P}_e\) and \(\sigma_e\) must work for both pointmaps of a pair, because they share a frame. Without a further condition the minimizer is useless: set every \(\sigma_e = 0\) and every \(\boldsymbol{\chi} = \mathbf{0}\), and the cost is zero. The constraint \(\prod_e \sigma_e = 1\) rules that out. Replacing \(\boldsymbol{\chi}^n_{i,j}\) by \(\mathbf{P}_n^{-1} h(\mathbf{K}_n^{-1} \mathbf{D}^n_{i,j} [i, j, 1]\T)\) forces a pinhole model and makes the unknowns the poses, intrinsics, and depth maps of all cameras. <span class="src">pp. 391–392</span>
+@@ 53
+Look at the shape of (13.18): a sum over the edges of a graph, each term tying a few unknowns together, weighted by confidence. It is a factor graph in everything but name, which is the point the book made on p. 386.
+@@ 54
+5. MASt3R: adding a matching head
+@@ 55
+DUSt3R can also give pixel correspondences, by looking for reciprocal matches between the two views. They hold up under extreme viewpoint change but are imprecise, since regression is noisy and the network was never trained to match. MASt3R adds a second head that outputs a \(d\)-dimensional descriptor for every pixel, \(\mathbf{D}^1, \mathbf{D}^2 \in \R^{H \times W \times d}\), each normalized to unit length (a two-layer MLP with a GELU activation; equations (13.19)–(13.20)). <span class="src">§13.5 · p. 392</span>
+@@ 56
+It is trained with the <strong>InfoNCE</strong> loss over the ground-truth correspondences \(\hat{\mathcal{M}} = \{(i, j) \mid \hat{\mathbf{X}}^{1,1}_i = \hat{\mathbf{X}}^{2,1}_j\}\): <span class="src">eq. (13.21)–(13.22) · p. 392</span>
+@@ 57
+where \(\mathcal{P}^1, \mathcal{P}^2\) are the pixels of each image that take part in \(\hat{\mathcal{M}}\) and \(\tau\) is a temperature. The total loss is \(\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{conf}} + \beta \mathcal{L}_{\text{match}}\), equation (13.23). <span class="src">p. 393</span>
+@@ 58
+Filling the gap: InfoNCE is the softmax of Day 1 used as a classifier
+@@ 59
+Each fraction is a softmax over candidates: the first asks "of all pixels \(k\) in image 1, how much of the score for pixel \(j\) goes to the true partner \(i\)?", the second asks the same in the other direction. The loss is minus the log of that share. For the loss to fall as true partners become more similar, \(s_\tau\) has to grow with the similarity \(\mathbf{D}^{1\top}_i \mathbf{D}^2_j\); read the sign in the exponent of (13.22) together with the sign of \(\tau\) accordingly.
+@@ 60
+Example with three candidates. If the scores are \(s = (8, 1, 1)\) with the true partner first, its share is \(0.8\) and the term is \(-\ln 0.8 = 0.22\). If they are \((2, 1, 1)\), the share is \(0.5\) and the term is \(0.69\). There is no partial credit for landing one pixel away: the neighbour is just another wrong class. That is the contrast with regression that the book draws, and why it yields precise matches. <span class="src">pp. 392–393</span>
+@@ 61
+6. From pairs to full systems, and where the field is going
+@@ 62
+What the book says it adds
+@@ 63
+MASt3R-SfM
+@@ 64
+A full SfM pipeline for unconstrained image collections. Reuses the frozen encoder for fast image retrieval, giving quasi-linear complexity in the number of images. Needs no RANSAC. Optimizes by two gradient descents on frozen pairwise outputs: a 3D matching loss, then a 2D reprojection loss.
+@@ 65
+MUSt3R
+@@ 66
+A changed architecture, symmetric and with a working memory, that predicts all pointmaps in one coordinate frame at high frame rates. It is aimed at the quadratic number of pairs and the costly global alignment of the pairwise design, and serves offline SfM and online visual odometry or SLAM with the same network.
+@@ 67
+MASt3R-SLAM
+@@ 68
+A real-time dense monocular SLAM system that uses MASt3R's two-view predictions for tracking, mapping, and relocalization. It filters pointmaps locally in the front-end and runs large-scale global optimization in the back-end. It assumes only that all rays of an image pass through one camera centre, so it handles generic, time-varying camera models.
+@@ 69
+<span class="src">§13.6 · pp. 393–394</span> The closing section names three trends. <span class="src">§13.7 · pp. 395–396</span>
+@@ 70
+<strong>Bigger feed-forward networks.</strong> VGGT reconstructs hundreds of images in seconds and predicts poses, intrinsics, depths, pointmaps, and feature tracks without 3D optimization. It still gains from bundle adjustment on its tracks when high accuracy is needed, and VGGT-SLAM aligns VGGT submaps with a factor graph for long sequences.
+@@ 71
+<strong>Better hybrids.</strong> DROID-SLAM needs known calibration and fails in moderately dynamic scenes. MegaSAM and ViPE handle highly dynamic scenes and optimize the calibration during inference, using depth and segmentation models fused by a factor graph.
+@@ 72
+<strong>Pretrained vision transformers.</strong> Models trained by self-supervision give 3D reconstruction networks an excellent starting point.
+@@ 73
+<strong>"Both pointmaps are in their own camera's frame."</strong> \(\mathbf{X}^{2,1}\) is the content of image 2 expressed in camera 1's frame. That shared frame is what encodes the relative pose.
+@@ 74
+<strong>"DUSt3R makes optimization unnecessary."</strong> For two images, yes. For many, (13.18) or one of the systems of §13.6 is needed, and the book stresses that factor graphs remain essential when accuracy matters. <span class="src">pp. 386, 395</span>
+@@ 75
+<strong>"High confidence means the pixel is weighted more, so the network will claim it everywhere."</strong> Confidence multiplies the error. Claiming it on a badly predicted pixel raises the loss.
+@@ 76
+Q1. A camera has focal length 400 px and principal point (200, 150). The pixel (300, 150) has depth 2 m. What is its pointmap entry in the camera frame?
+@@ 77
+K⁻¹[300, 150, 1]ᵀ = ((300 − 200)/400, 0, 1) = (0.25, 0, 1). Multiply by the depth 2 to get (0.5, 0, 2).
+@@ 78
+Q2. In the confidence-aware loss with α = 0.3, which confidence minimizes the loss of a pixel whose regression error is ℓ = 0.05?
+@@ 79
+Setting the derivative ℓ − α/C to zero gives C = α/ℓ = 0.3/0.05 = 6.
+@@ 80
+Q3. A predicted pointmap is exactly twice the ground truth everywhere. What is the regression loss (13.15)?
+@@ 81
+The mean distance of the points
+@@ 82
+Twice the mean distance
+@@ 83
+It depends on α
+@@ 84
+The normalizer z is also doubled, so the normalized prediction equals the normalized truth. The loss ignores global scale by construction.
+@@ 85
+Q4. Why does the global alignment (13.18) need the constraint that the product of all σₑ equals 1?
+@@ 86
+To make the poses orthonormal
+@@ 87
+Otherwise shrinking every scale and every world point to zero gives zero cost
+@@ 88
+To fix the focal lengths
+@@ 89
+To keep the confidences positive
+@@ 90
+With all σₑ = 0 and all world points at the origin every term vanishes. Fixing the product of the scales excludes that trivial solution (p. 391).
+@@ 91
+Q5. In one InfoNCE term the true partner has score 6 and the two other candidates have score 2 each. What is the term's value?
+@@ 92
+The true partner's share is 6/(6 + 2 + 2) = 0.6, and −ln 0.6 = 0.51.
+@@ 93
+A pointmap stores a 3D point per pixel. DUSt3R predicts two of them, both in camera 1's frame, from an uncalibrated, unposed image pair.
+@@ 94
+The regression loss divides by the mean point distance, so global scale does not matter. The confidence-aware loss makes confidence track the inverse of the expected error.
+@@ 95
+Focal length, relative pose, and depth are recovered from the pointmaps afterwards. Many images are fused by the confidence-weighted global alignment (13.18).
+@@ 96
+MASt3R adds per-pixel descriptors trained with InfoNCE, a classification loss, for precise matching.
+@@ 97
+MASt3R-SfM, MUSt3R, and MASt3R-SLAM scale the idea up. In the book's summary, factor graphs keep an essential role wherever high accuracy is needed.
+@@ 98
+<em>SLAM Handbook</em>, §13.4 "DuSt3R", §13.5 "MASt3R", §13.6, §13.7, pp. 386–396, equations (13.14)–(13.23), Figures 13.14–13.17.
+@@ 99
+Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (intrinsics matrix and back-projection).
+@@ 100
+Goodfellow, Bengio, Courville, <em>Deep Learning</em>, 2016 (softmax and cross-entropy, used to read the InfoNCE loss).

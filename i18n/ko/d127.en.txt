@@ -1,0 +1,174 @@
+@@ 1
+<span class="eyebrow">Week 22 · Day 1</span>
+@@ 2
+Maps that know what things are: objects as landmarks
+@@ 3
+After today you can say what a metric-semantic map adds to a geometric one, define an object landmark, and write the residual that compares projected semantic landmarks with detected keypoints.
+@@ 4
+About 60 min · Read Ch. 16 intro, §16.1, §16.2 to §16.2.1.1, pp. 454–458 (5 pages) · Needs Week 11 Day 5
+@@ 5
+Read first: Chapter 16 opening, §16.1, and §16.2 up to equation (16.3), pp. 454–458
+@@ 6
+What a vision front-end can output beyond keypoints (pp. 454–455), and what "closed-set" means (p. 455).
+@@ 7
+The four parts of an object landmark in Definition 16.1 (p. 456).
+@@ 8
+In equation (16.2) on p. 457: what is learned offline and what is estimated online.
+@@ 9
+In equation (16.3) on p. 458: the transformations a semantic landmark goes through to become a pixel.
+@@ 10
+A <strong>metric-semantic map</strong> stores what things are together with where they are. In its sparse form, the landmarks stop being anonymous 3D points and become objects with a category, a pose, a scale, and a shape. The back-end stays the same least-squares machine; only the residual changes.
+@@ 11
+1. What geometry alone cannot do
+@@ 12
+A geometric map answers "is this space free?". That is enough for collision checking, but not for "go to the laptop in the office", and not for a planner that should prefer road over sidewalk over vegetation. Those need labels on the map. <span class="src">Ch. 16 intro · p. 454</span>
+@@ 13
+Semantics also help SLAM itself. An object is recognizable from many viewpoints and is more distinctive than a corner, which makes data association and loop closure less ambiguous. Labels also flag things that may move (<a href="#d122">Week 21 · Day 2</a>). <span class="src">Ch. 16 intro · p. 454</span>
+@@ 14
+The labels come from learned vision models in the front-end: <span class="src">Ch. 16 intro · pp. 454–455</span>
+@@ 15
+Front-end output
+@@ 16
+What it gives
+@@ 17
+Object detection
+@@ 18
+A class and a bounding box per object
+@@ 19
+Semantic keypoints or edges
+@@ 20
+Image locations of named parts (a wheel, a door)
+@@ 21
+Semantic segmentation
+@@ 22
+A class for every pixel
+@@ 23
+Instance segmentation
+@@ 24
+A mask per object, separating two objects of one class
+@@ 25
+Panoptic segmentation
+@@ 26
+Both: background classes and separate instances
+@@ 27
+This chapter assumes <strong>closed-set semantics</strong>: the labels come from a fixed dictionary of typically 100 to 1000 words such as "chair", "table", "office". Open-set semantics (language embeddings) is Chapter 17, next week. <span class="src">Ch. 16 intro · p. 455</span>
+@@ 28
+Section 16.1 names three places to put the labels: on sparse landmarks, which become objects (§16.2, Days 1–3); on every point, surfel, voxel, or mesh face of a dense map (§16.3, Day 4); and on regions of free space such as rooms (§16.4, Day 5). Each needs a model of what a detector should report for a given map, and a way to fuse many noisy reports. <span class="src">§16.1 · pp. 455–456</span>
+@@ 29
+2. The object landmark
+@@ 30
+Landmark-based SLAM minimizes a sum of squared residuals, one per measurement. The book writes the residual of factor \(i\) as
+@@ 31
+with measurement \(\mathbf{z}_i\), robot pose \(\mathbf{T}_i\), landmark \(\boldsymbol{\ell}_i\), measurement model \(h_i\), and the Mahalanobis norm \(\norm{\mathbf{e}}_{\boldsymbol{\Sigma}}^2 = \mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\) of <a href="#d8">Week 2 · Day 2</a>. In visual SLAM \(\boldsymbol{\ell}_i\) is a 3D point and \(\mathbf{z}_i\) a pixel. Sparse metric-semantic SLAM keeps (16.1) and changes what \(\boldsymbol{\ell}\), \(\mathbf{z}\), and \(h\) are. <span class="src">§16.2 · p. 456</span>
+@@ 32
+An <strong>object landmark</strong> is a tuple \(\boldsymbol{\ell} = (\sigma, \mathbf{q}, \lambda, \mathbf{s})\). <span class="src">Definition 16.1 · p. 456</span>
+@@ 33
+Lives in
+@@ 34
+Category \(\sigma\)
+@@ 35
+"car", "chair", "table": the only discrete part
+@@ 36
+Pose \(\mathbf{q}\)
+@@ 37
+The object's own frame, expressed in the world frame
+@@ 38
+Scale \(\lambda\)
+@@ 39
+Size relative to the category's canonical model
+@@ 40
+Shape \(\mathbf{s}\)
+@@ 41
+The surface in the object frame (today keypoints; tomorrow ellipsoid, mesh, latent code)
+@@ 42
+A point landmark has 3 unknowns. An object landmark has \(6 + 1 + d\) and a discrete label. The scale is kept apart so that a car and a toy car can share one shape and differ only in \(\lambda\). <span class="src">§16.2.1 · p. 457</span>
+@@ 43
+3. Shape as a set of semantic landmarks
+@@ 44
+The first shape model is a short list of 3D points \(\{\mathbf{s}_j\}_j\), called <strong>semantic landmarks</strong>, placed on named parts of the object: for a car, the wheels, mirrors, and plate. Their projections into an image are <strong>semantic keypoints</strong> \(\mathbf{z}_j \in \R^2\). A network detects them by producing, for each part, a heatmap with a bump at the part's pixel. <span class="src">§16.2.1.1 · p. 457</span>
+@@ 45
+If every \(\mathbf{s}_j\) were free, the optimizer could move the left wheel to the roof. The <strong>deformable shape model</strong> prevents that by building the points from a category template:
+@@ 46
+Here \(\mathbf{b}_{j,0}\) is the position of part \(j\) on the average car, each \(\mathbf{b}_{j,k}\) is one way cars differ from the average (a <strong>mode of variability</strong>), and the <strong>deformation coefficients</strong> \(c_k \in \R_{\ge 0}\) say how much of each mode this car has. The \(\mathbf{b}\)'s are fixed per category. The \(c_k\) are estimated per object. <span class="src">§16.2.1.1 · p. 457</span>
+@@ 47
+Try it: the pink rings are detected keypoints of one car. Press "Fit shape only", then press "Gauss-Newton step" four times.
+@@ 48
+Notice that shape alone cannot explain the detections: with the wrong scale and yaw, \(c_1\) runs into its upper limit and the error stays above 130 cm. Three Gauss-Newton steps on all four unknowns bring it to about 6 cm, close to the noise level, at \(c_1 \approx 0.80\), \(c_2 \approx 0.53\), \(\lambda \approx 1.29\), yaw 25°; the fourth changes nothing.
+@@ 49
+Filling the gap: where the modes \(\mathbf{b}_{j,k}\) come from
+@@ 50
+The book says the modes are obtained by PCA. The recipe: take \(N\) CAD models of the category, each annotated with the same \(J\) parts. Stack the \(J\) part positions of model \(n\) into one vector \(\mathbf{m}_n \in \R^{3J}\). Then
+@@ 51
+The mean \(\bar{\mathbf{m}}\), cut back into \(J\) triples, gives the \(\mathbf{b}_{j,0}\). The eigenvectors of \(\mathbf{C}\) with the largest eigenvalues are the directions in which the training cars differ most; cutting eigenvector \(k\) into triples gives the \(\mathbf{b}_{j,k}\).
+@@ 52
+Count the unknowns. With \(J = 12\) parts, free points cost \(36\) numbers per car. With \(K = 5\) modes the shape costs \(5\), and the estimate stays car-shaped even when half the keypoints are hidden.
+@@ 53
+4. The keypoint residual
+@@ 54
+With the shape fixed in the object frame, the residual between object \(\boldsymbol{\ell}_i\) and the keypoints \(\{\mathbf{z}_{i,j}\}_j\) detected from camera pose \(\mathbf{T}_i\) is a sum of reprojection errors, one per part:
+@@ 55
+\(\pi(\mathbf{T}, \mathbf{s})\) is the perspective projection of point \(\mathbf{s}\) into a camera with pose \(\mathbf{T}\). <span class="src">§16.2.1.1 · p. 458</span>
+@@ 56 attr
+Four boxes joined by arrows: object frame holding s j; scale by lambda then q; world frame; T inverse; camera frame; projection pi; pixel, compared with the detection z j.
+@@ 57
+object frame
+@@ 58
+world frame
+@@ 59
+camera frame
+@@ 60
+pixel
+@@ 61
+compare with zⱼ
+@@ 62
+scale λ, then q
+@@ 63
+What equation (16.3) does to one semantic landmark. The two middle arrows together are the inverse of \(\mathbf{q}^{-1}\mathbf{T}\).
+@@ 64
+Filling the gap: reading \(\pi(\mathbf{q}^{-1}\mathbf{T}, \lambda\mathbf{s})\), with numbers
+@@ 65
+Both \(\mathbf{T}\) (camera) and \(\mathbf{q}\) (object) map their own frame to the world frame. So \(\mathbf{q}^{-1}\mathbf{T}\) maps camera coordinates to object coordinates: it is the pose of the camera as seen from the object. To project a point given in object coordinates you need the opposite direction, \((\mathbf{q}^{-1}\mathbf{T})^{-1} = \mathbf{T}^{-1}\mathbf{q}\), followed by the pinhole model of <a href="#d63">Week 11 · Day 3</a>.
+@@ 66
+Take a camera at the world origin with \(\mathbf{T} = \mathbf{I}\), focal length 500 px, principal point \((320, 240)\). The object frame is not rotated and sits at \((1, 0, 8)\) m. Its scale is \(\lambda = 2\), and one semantic landmark is \(\mathbf{s} = (0.5, 0.25, 0)\).
+@@ 67
+If the detector reports \(\mathbf{z} = (448, 270)\), the error is \(\mathbf{e} = (3, -1.25)\) px. With \(\boldsymbol{\Sigma} = 2^2\mathbf{I}\) px² this part contributes \((3^2 + 1.25^2)/4 = 2.64\) to \(r_i^2\). The optimizer can lower it through \(\mathbf{T}\), \(\mathbf{q}\), \(\lambda\), or the shape coefficients.
+@@ 68
+<strong>"\(\mathbf{q}\) takes world coordinates to object coordinates."</strong> It is the pose of the object frame in the world, so it takes object coordinates to world coordinates. That is why (16.3) contains \(\mathbf{q}^{-1}\mathbf{T}\) and not \(\mathbf{q}\mathbf{T}\).
+@@ 69
+Q1. An image shows two chairs on a carpet. Which output gives a separate mask for each chair and also labels the carpet pixels?
+@@ 70
+Semantic keypoints
+@@ 71
+Semantic segmentation does not separate the two chairs. Panoptic segmentation separates instances and labels the background.
+@@ 72
+Q2. The camera is at the world origin with identity pose. An object frame is unrotated at (0, 0, 10) m with scale λ = 3. Where does the semantic landmark s = (1, 0, 0) land in normalized image coordinates (x/z, y/z)?
+@@ 73
+Scale first: λs = (3, 0, 0). Move to the world: (3, 0, 10). Divide by depth: (0.3, 0).
+@@ 74
+Q3. A category model has J = 10 semantic landmarks and K = 4 modes. How many continuous unknowns does one object add to the problem if its shape is optimized through the coefficients?
+@@ 75
+Pose 6, scale 1, coefficients 4: 11 in total. Ten free points would cost 6 + 1 + 30 = 37.
+@@ 76
+Q4. In equation (16.3), what is the transformation q⁻¹T?
+@@ 77
+The pose of the object in the camera frame
+@@ 78
+The pose of the object in the world frame
+@@ 79
+The pose of the camera in the object frame
+@@ 80
+The motion of the camera since the last image
+@@ 81
+T maps camera coordinates to the world and q⁻¹ maps the world to the object, so q⁻¹T is the camera's pose seen from the object.
+@@ 82
+A metric-semantic map holds labels as well as geometry, on sparse objects, on dense map elements, or on regions. Labels serve tasks and also help data association and loop closure.
+@@ 83
+An object landmark is \((\sigma, \mathbf{q}, \lambda, \mathbf{s})\): category, pose, scale, shape.
+@@ 84
+The deformable model (16.2) is a category mean plus a few learned modes, so a shape costs a handful of coefficients.
+@@ 85
+The residual (16.3) scales each semantic landmark, moves it object → world → camera, projects it, and compares it with the detected keypoint.
+@@ 86
+<em>SLAM Handbook</em>, Chapter 16 introduction, §16.1, §16.2 to §16.2.1.1, pp. 454–458.
+@@ 87
+Cootes, Taylor, Cooper, Graham, <em>Active Shape Models: Their Training and Application</em>, 1995 (the mean-plus-modes model and its PCA); Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (the pinhole projection).

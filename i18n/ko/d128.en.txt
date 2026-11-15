@@ -1,0 +1,118 @@
+@@ 1
+<span class="eyebrow">Week 22 · Day 2</span>
+@@ 2
+Ellipsoids, meshes, and learned shapes
+@@ 3
+After today you can turn an ellipsoid into a dual quadric, project it to an image conic and read off its bounding box, and write the residuals that fit a mesh to a segmentation mask and a signed distance function to depth points.
+@@ 4
+About 60 min · Read §16.2.1.2–16.2.1.4, pp. 458–466 (9 pages, 5 of them mostly figures) · Needs Week 22 Day 1
+@@ 5
+Read first: §16.2.1.2 to §16.2.1.4, pp. 458–466
+@@ 6
+The same ellipsoid written three ways in (16.4), (16.5), and (16.6), pp. 458–459.
+@@ 7
+The two conics that the residual (16.10) compares: (16.8) from the map, p. 460, and (16.9) from the detector, p. 461.
+@@ 8
+On p. 466: what is optimized when the SDF decoder is trained, and what when it is used.
+@@ 9
+Every shape model is paired with a detector output: an ellipsoid with a bounding box, a mesh with a segmentation mask, a signed distance function with depth points. The residual always has the same form: predict what the detector would report for the current object and camera, and compare.
+@@ 10
+1. An ellipsoid as a quadric
+@@ 11
+The coarsest useful shape is an ellipsoid with semi-axis lengths \(\mathbf{s} \in \R^3\), centred at the origin of the object frame:
+@@ 12
+Appending a 1 to \(\mathbf{x}\) (homogeneous coordinates) moves the "\(\le 1\)" into a matrix:
+@@ 13
+A surface that is the zero set of such a quadratic form, with a symmetric \(4\times 4\) matrix, is a <strong>quadric</strong>. Its attraction is that its outline in an image has a closed form. <span class="src">§16.2.1.2 · pp. 458–459</span>
+@@ 14
+2. The dual quadric: describe the surface by its tangent planes
+@@ 15
+The book switches to the <strong>dual</strong> description: the set of planes that touch the ellipsoid.
+@@ 16
+with \(\mathbf{Q}^*_{\mathbf{s}}\) the adjugate of \(\mathbf{Q}_{\mathbf{s}}\). A quadric does not change when its matrix is multiplied by a constant, so the adjugate \(\det(\mathbf{Q}_{\mathbf{s}})\mathbf{Q}_{\mathbf{s}}^{-1}\) can be replaced by \(\mathbf{Q}_{\mathbf{s}}^{-1} = \diag(s_1^2, s_2^2, s_3^2, -1)\). An image outline is made of rays that touch the object, so the tangent description is the one a camera sees. <span class="src">§16.2.1.2 · pp. 459–460</span>
+@@ 17
+Filling the gap: why \(\mathbf{Q}^* = \mathbf{Q}^{-1}\), and why duals are easy to project
+@@ 18
+<strong>Tangent planes.</strong> Write a plane as \(\{\mathbf{x} : \mathbf{y}\T\mathbf{x} + 1 = 0\}\), which is the homogeneous vector \([\mathbf{y}; 1]\). Every point of the ellipsoid is \(\mathbf{x} = \diag(\mathbf{s})\,\mathbf{u}\) with \(\norm{\mathbf{u}} \le 1\). Then \(\mathbf{y}\T\mathbf{x} = (\diag(\mathbf{s})\mathbf{y})\T\mathbf{u}\), and as \(\mathbf{u}\) runs over the unit ball this takes every value between \(-\norm{\diag(\mathbf{s})\mathbf{y}}\) and \(+\norm{\diag(\mathbf{s})\mathbf{y}}\). The plane needs the value \(-1\). It misses the ellipsoid if \(\norm{\diag(\mathbf{s})\mathbf{y}} \lt 1\), cuts through it if \(\gt 1\), and touches it at one point exactly when
+@@ 19
+The matrix in the middle is \(\mathbf{Q}_{\mathbf{s}}^{-1}\), and the tangent planes are the boundary of the set in (16.6).
+@@ 20
+<strong>Moving the object.</strong> If points move by a \(4\times4\) matrix \(\mathbf{H}\) (\(\mathbf{x}' = \mathbf{H}\mathbf{x}\)), a plane \(\boldsymbol{\pi}\) moves to \(\boldsymbol{\pi}' = \mathbf{H}^{-\top}\boldsymbol{\pi}\), since then \(\boldsymbol{\pi}'^{\top}\mathbf{x}' = \boldsymbol{\pi}\T\mathbf{H}^{-1}\mathbf{H}\mathbf{x} = 0\) still holds. Substituting \(\boldsymbol{\pi} = \mathbf{H}\T\boldsymbol{\pi}'\) into \(\boldsymbol{\pi}\T\mathbf{Q}^*\boldsymbol{\pi} = 0\) gives \(\boldsymbol{\pi}'^{\top}(\mathbf{H}\mathbf{Q}^*\mathbf{H}\T)\boldsymbol{\pi}' = 0\): the dual moves as \(\mathbf{H}\mathbf{Q}^*\mathbf{H}\T\), with no inverse.
+@@ 21
+<strong>Projecting.</strong> An image line \(\mathbf{l}\) and the camera centre span a plane, \(\boldsymbol{\pi} = \mathbf{M}\T\mathbf{l}\), where \(\mathbf{M}\) is the \(3\times4\) camera matrix. The line touches the object's outline exactly when that plane touches the object: \(\mathbf{l}\T(\mathbf{M}\mathbf{Q}^*\mathbf{M}\T)\mathbf{l} = 0\). So the outline is the conic whose dual is \(\mathbf{M}\mathbf{Q}^*\mathbf{M}\T\). The point form \(\mathbf{Q}\) would need the inverse of \(\mathbf{M}\), which a \(3\times4\) matrix does not have.
+@@ 22
+3. From the object to a bounding-box residual
+@@ 23
+Apply the two rules. Scaling by \(\lambda\) and placing the object with pose \(\mathbf{q}\) gives the dual quadric in the world frame (the book writes \(\mathbf{H}\) out as two matrices), and the camera at pose \(\mathbf{T}\) turns it into a dual conic, a symmetric \(3\times3\) matrix: <span class="src">§16.2.1.2 · p. 460</span>
+@@ 24
+The detector reports a box \(\mathbf{z} = [u\ v\ w\ h]\T\) in normalized image coordinates: a corner, a width, and a height. The book turns it into the dual conic of the axis-aligned ellipse that fits inside the box, with centre \((c_u, c_v) = (u + w/2,\ v + h/2)\). Multiplying out the three matrices of (16.9) gives
+@@ 25
+This also tells you how to read a box off any dual conic: scale it so the bottom-right entry is \(-1\); the centre is minus the last column, and the half-width is \(\sqrt{C^*_{11} + c_u^2}\). The residual compares the two conics, <span class="src">§16.2.1.2 · p. 461</span>
+@@ 26
+The second form flattens each symmetric matrix into the vector of its distinct entries (\(\operatorname{vech}\)): 6 in \(\mathbf{b}_j\) for the box conic, 10 in \(\mathbf{v}\) for \(\mathbf{T}_i^{-1}\mathbf{Q}^*_{\boldsymbol{\ell}_i}\mathbf{T}_i^{-\top}\). The constant \(6\times10\) matrix \(\mathbf{A}\) applies \(\mathbf{P}\) on both sides.
+@@ 27
+<strong>A sphere, by hand.</strong> Radius 1, centre \(\mathbf{t} = (0, 0, 5)\), camera at the origin with \(\mathbf{T} = \mathbf{I}\). Then \(\mathbf{Q}^*_{\mathbf{s}} = \diag(1,1,1,-1)\), and moving it by \(\mathbf{t}\) gives a matrix whose upper-left block is \(\mathbf{I}_3 - \mathbf{t}\mathbf{t}\T\). \(\mathbf{P}\) keeps exactly that block:
+@@ 28
+Here \(\beta = 24\). The centre is \((0, 0)\) and the half-width is \(1/\sqrt{24} = 0.204\). Check: a ray that grazes the sphere makes an angle \(\alpha\) with the axis where \(\sin\alpha = 1/5\), so \(\tan\alpha = 1/\sqrt{24}\). "Radius over depth", 0.2, is slightly too small, because grazing rays touch the sphere in front of its centre.
+@@ 29
+Try it: turn the yaw to 90°, then back to 30°. Then set the scale to 1.5 and the distance to 9 m.
+@@ 30
+Notice that the box depends on orientation: its width drops from 0.76 to 0.39 when the long axis points at the camera. And at \(\lambda = 1.5\), \(d = 9\) m the residual is exactly zero again: one box cannot separate a large far object from a small near one.
+@@ 31
+4. A mesh, compared with a segmentation mask
+@@ 32
+A triangle <strong>mesh</strong> with vertices \(\mathcal{V} = \{\mathbf{s}_j\}_j\) and faces \(\mathcal{F}\) can follow the real surface. It is compared with a <strong>segmentation mask</strong> \(\mathbf{z}_i \subset \R^2\), the set of pixels the detector assigns to the object. A <strong>rasterization function</strong> \(\rho(\mathcal{V}, \mathcal{F})\) fills in the pixels the mesh covers once its vertices are projected as in (16.3). Call that rendered set \(\hat{\mathbf{z}}_i = \rho(\{\pi(\mathbf{q}_i^{-1}\mathbf{T}_i, \lambda_i\mathbf{s}_{i,j})\}_j, \mathcal{F})\). The residual is the reciprocal of the intersection-over-union: <span class="src">§16.2.1.3 · pp. 461–462</span>
+@@ 33
+If the rendering covers 500 pixels, the mask 400, and they share 300, the union is \(500 + 400 - 300 = 600\) and \(r = 600/300 = 2\). A perfect match gives the minimum, \(r = 1\).
+@@ 34
+The catch is the gradient. A pixel is either covered or not, so \(\rho\) is piecewise constant in the vertex positions and its derivative is zero almost everywhere. <strong>Differentiable rendering</strong> replaces it with an approximate gradient, as in <a href="#d115">Week 20 · Day 1</a>. The vertices can be optimized directly or through the coefficients of (16.2). <span class="src">§16.2.1.3 · pp. 461–462</span>
+@@ 35
+5. Implicit shapes: a function instead of a surface
+@@ 36
+The models so far are explicit: they list the surface. An <strong>implicit</strong> model is a function of space whose level set is the surface: an <strong>occupancy function</strong>, \(-1\) inside the object \(\mathcal{S}\) and \(+1\) outside (16.13), or a <strong>signed distance function</strong>, <span class="src">§16.2.1.4 · pp. 464–465</span>
+@@ 37
+For a unit sphere, \(d_{\mathcal{S}}(\mathbf{x}) = \norm{\mathbf{x}} - 1\): \(-0.5\) at \((0.5, 0, 0)\) and \(2\) at \((3, 0, 0)\). You met SDFs as maps in <a href="#d44">Week 8 · Day 2</a>. Here one SDF describes one object, and a network \(d_\theta(\mathbf{x}, \mathbf{s})\) produces it: a decoder with weights \(\theta\) shared by a whole category, and a <strong>shape code</strong> \(\mathbf{s} \in \R^d\) that selects one shape within it.
+@@ 38
+A depth sensor at pose \(\mathbf{T}_i\) gives points \(\mathbf{y}_{i,j}\) near the object with measured distances \(z_{i,j}\) to its surface. The residual asks the decoder for the distance at each point: <span class="src">§16.2.1.4 · p. 465</span>
+@@ 39
+The argument of \(d_\theta\) takes the point from the robot frame to the world, then to the object frame, then divides by \(\lambda_i\), so the decoder is always queried in its canonical frame. Trust that description in words: with yesterday's conventions for \(\mathbf{T}\) and \(\mathbf{q}\) the same chain reads \(\lambda^{-1}\mathbf{q}^{-1}\mathbf{T}\mathbf{y}\).
+@@ 40
+<strong>Training</strong>, offline and once per category, holds the poses and scales fixed and optimizes \(\theta\) with one code per training object. <strong>Testing</strong>, online inside SLAM, freezes \(\theta\) and optimizes \(\mathbf{T}_i\), \(\mathbf{q}_i\), \(\lambda_i\), \(\mathbf{s}_i\) for an object never seen before. <span class="src">§16.2.1.4 · p. 466</span>
+@@ 41
+Q1. A sphere of radius 2 m is centred on the optical axis at depth 4 m. What is the half-width of its outline in normalized image coordinates?
+@@ 42
+With radius ρ the block is ρ²I − t tᵀ = diag(4, 4, −12) ∝ diag(1/3, 1/3, −1). The half-width is √(1/3) = 0.58.
+@@ 43
+Q2. A detection is z = (u, v, w, h) = (0.1, −0.2, 0.4, 0.2). With the bottom-right entry scaled to −1, what is the top-left entry of its dual conic (16.9)?
+@@ 44
+The centre is c_u = 0.1 + 0.2 = 0.3. The entry is (w/2)² − c_u² = 0.04 − 0.09 = −0.05.
+@@ 45
+Q3. A rendered mesh covers 300 pixels, the segmentation mask covers 300 pixels, and 200 pixels are in both. What is the residual (16.12)?
+@@ 46
+Union = 300 + 300 − 200 = 400, intersection = 200, so the residual is 2 (the IoU is 0.5).
+@@ 47
+Q4. A robot meets a chair it has never seen, with a chair SDF decoder already trained. What does minimizing (16.15) adjust?
+@@ 48
+The decoder weights θ only
+@@ 49
+The weights θ and the shape code
+@@ 50
+The shape code only
+@@ 51
+The robot pose, the object pose and scale, and the shape code
+@@ 52
+Online, θ is frozen. The state is x = (T, q, λ, s).
+@@ 53
+An ellipsoid is a quadric. Its dual \(\mathbf{Q}^* \propto \mathbf{Q}^{-1}\) describes it by tangent planes, moves as \(\mathbf{H}\mathbf{Q}^*\mathbf{H}\T\), and projects to the dual conic (16.8).
+@@ 54
+A bounding box becomes the dual conic (16.9), and the residual (16.10) is the difference of the two conics. One box leaves size and distance tied together.
+@@ 55
+A mesh is fitted to a segmentation mask through the reciprocal IoU (16.12), with a differentiable rasterizer.
+@@ 56
+An implicit shape is a decoder \(d_\theta(\mathbf{x}, \mathbf{s})\): weights trained offline; code, pose, and scale estimated online with (16.15).
+@@ 57
+<em>SLAM Handbook</em>, §16.2.1.2 "Object Shape Representation as Quadric Surface", §16.2.1.3 "…as Mesh", §16.2.1.4 "Implicit Object Shape Representations", pp. 458–466.
+@@ 58
+Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (dual quadrics, how planes transform, and the projection of a quadric to a conic).
+@@ 59
+Magnus and Neudecker, <em>Matrix Differential Calculus with Applications in Statistics and Econometrics</em>, 1988 (vec, vech, and the Kronecker-product identity).

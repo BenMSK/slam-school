@@ -1,0 +1,156 @@
+@@ 1
+<span class="eyebrow">Week 13 · Day 2</span>
+@@ 2
+Scan registration: ICP and the closed-form alignment
+@@ 3
+After today you can write the scan registration cost, solve it in closed form when the point pairs are known, run the ICP loop when they are not, and linearize the point-to-plane residual.
+@@ 4
+About 60 min · Read §8.2 intro and §8.2.1, pp. 227–231 (4 pages) · Needs Week 1 Day 5 and Week 4 Day 3
+@@ 5
+Read first: §8.2 (opening) and §8.2.1, pp. 227–231
+@@ 6
+Why Horn's closed-form method is not enough by itself, and what ICP adds (p. 227).
+@@ 7
+In equation (8.1), which of the two clouds the unknown \((\mathbf{R}, \mathbf{t})\) is applied to (p. 228).
+@@ 8
+The three distances of Figure 8.3 (p. 229), and how NDT avoids the nearest-neighbour search (p. 230).
+@@ 9
+Equation (8.3), and the two strategies for making the search fast (p. 230).
+@@ 10
+<strong>Scan registration</strong> finds the rotation and translation that lay one scan on top of another. If you knew which point matches which, the answer would be one SVD. You do not, so <strong>ICP</strong> guesses the pairs by nearest neighbour, solves for the motion, and repeats. Each round lowers the cost, but only down to the nearest local minimum, so the starting guess matters.
+@@ 11
+1. The registration cost
+@@ 12
+Take two point clouds, a <strong>source</strong> \(\mathsf{P} = \{\mathbf{p}_i\}\) and a <strong>target</strong> \(\mathsf{Q} = \{\mathbf{q}_i\}\). We want \(\mathbf{R} \in \SO(3)\) and \(\mathbf{t} \in \R^3\) that bring them into alignment. Given a set \(\mathsf{C}\) of <strong>correspondences</strong>, pairs \((\mathbf{p}, \mathbf{q})\) believed to be the same physical spot, equation (8.1) asks for
+@@ 13
+where \(d\) is some distance and \(k\) counts iterations. <span class="src">§8.2.1 · p. 228</span> Two choices define a method: what \(d\) is, and how \(\mathsf{C}\) is found. Today starts with the simplest \(d\), the squared Euclidean distance \(\norm{\mathbf{p}_i - (\mathbf{R}\mathbf{q}_i + \mathbf{t})}^2\), called <strong>point-to-point</strong> (Figure 8.3a).
+@@ 14
+Filling the gap: which cloud moves, and what (R, t) means
+@@ 15
+As printed, (8.1) applies \((\mathbf{R}, \mathbf{t})\) to \(\mathbf{q}\): it takes a point written in \(\mathsf{Q}\)'s coordinates and writes it in \(\mathsf{P}\)'s. Suppose \(\mathsf{P}\) was recorded with the sensor at pose A and \(\mathsf{Q}\) at pose B, each in its own sensor frame. Then \(\mathbf{t}\) is the position of sensor B seen from A and \(\mathbf{R}\) is its orientation: the relative motion that odometry is after. Software that moves the other cloud estimates the inverse, \((\mathbf{R}\T, -\mathbf{R}\T\mathbf{t})\). In this lesson \(\mathsf{P}\) stays fixed and \(\mathsf{Q}\) moves, as in (8.1).
+@@ 16
+2. If the pairs were known: a closed form
+@@ 17
+Horn's method solves (8.1) exactly when the pairs are given. <span class="src">§8.2 · p. 227</span> The book does not derive it. Here is the SVD version, which uses only tools from <a href="#d5">Week 1 · Day 5</a>.
+@@ 18
+Filling the gap: deriving the closed-form alignment
+@@ 19
+Minimize \(E(\mathbf{R},\mathbf{t}) = \sum_{i=1}^{N} \norm{\mathbf{p}_i - \mathbf{R}\mathbf{q}_i - \mathbf{t}}^2\).
+@@ 20
+<strong>Step 1: translation.</strong> For fixed \(\mathbf{R}\), set the gradient with respect to \(\mathbf{t}\) to zero: \(-2\sum_i (\mathbf{p}_i - \mathbf{R}\mathbf{q}_i - \mathbf{t}) = \mathbf{0}\). With the centroids \(\bar{\mathbf{p}} = \frac1N\sum_i \mathbf{p}_i\) and \(\bar{\mathbf{q}} = \frac1N\sum_i \mathbf{q}_i\) this gives
+@@ 21
+The best translation maps centroid onto centroid, whatever the rotation is.
+@@ 22
+<strong>Step 2: remove the translation.</strong> Substitute it back and write \(\mathbf{p}_i' = \mathbf{p}_i - \bar{\mathbf{p}}\), \(\mathbf{q}_i' = \mathbf{q}_i - \bar{\mathbf{q}}\):
+@@ 23
+The middle term used \(\norm{\mathbf{R}\mathbf{q}'} = \norm{\mathbf{q}'}\): rotations keep lengths. Only the last term depends on \(\mathbf{R}\), so minimizing \(E\) means maximizing \(\sum_i \mathbf{p}_i'{}\T\mathbf{R}\mathbf{q}_i'\).
+@@ 24
+<strong>Step 3: a trace.</strong> A scalar equals its own trace, and \(\tr(\mathbf{A}\mathbf{B}) = \tr(\mathbf{B}\mathbf{A})\), so
+@@ 25
+<strong>Step 4: SVD.</strong> Write \(\mathbf{H} = \mathbf{U}\mathbf{S}\mathbf{V}\T\) with \(\mathbf{S} = \diag(\sigma_1,\sigma_2,\sigma_3)\), \(\sigma_1 \ge \sigma_2 \ge \sigma_3 \ge 0\). Then \(\tr(\mathbf{R}\mathbf{U}\mathbf{S}\mathbf{V}\T) = \tr(\mathbf{S}\,\mathbf{Z})\) with \(\mathbf{Z} = \mathbf{V}\T\mathbf{R}\mathbf{U}\), which is orthogonal, so its diagonal entries satisfy \(z_{kk} \le 1\). Hence \(\tr(\mathbf{S}\mathbf{Z}) = \sum_k \sigma_k z_{kk} \le \sum_k \sigma_k\), with equality when \(\mathbf{Z} = \mathbf{I}\):
+@@ 26
+<strong>Step 5: no reflections.</strong> If \(\det(\mathbf{V}\mathbf{U}\T) = -1\) the result is a mirror image, not a rotation. The best proper rotation is then \(\mathbf{R} = \mathbf{V}\,\diag(1, 1, -1)\,\mathbf{U}\T\), which gives up the smallest singular value.
+@@ 27
+<strong>In 2D</strong> you can skip the SVD. With \(\mathbf{R}(\theta)\) a plane rotation, \(\sum_i \mathbf{p}_i'{}\T\mathbf{R}(\theta)\mathbf{q}_i' = A\cos\theta + B\sin\theta\) where
+@@ 28
+<strong>Worked example.</strong> Let \(\mathbf{q}_1 = (0,0)\), \(\mathbf{q}_2 = (2,0)\), \(\mathbf{q}_3 = (0,1)\) and \(\mathbf{p}_1 = (1,2)\), \(\mathbf{p}_2 = (1,4)\), \(\mathbf{p}_3 = (0,2)\). The centroids are \(\bar{\mathbf{q}} = (\tfrac23, \tfrac13)\) and \(\bar{\mathbf{p}} = (\tfrac23, \tfrac83)\). Centred, \(\mathbf{q}' = (-\tfrac23,-\tfrac13),\ (\tfrac43,-\tfrac13),\ (-\tfrac23,\tfrac23)\) and \(\mathbf{p}' = (\tfrac13,-\tfrac23),\ (\tfrac13,\tfrac43),\ (-\tfrac23,-\tfrac23)\). Then \(A = 0 + 0 + 0 = 0\) and \(B = \tfrac59 + \tfrac{17}{9} + \tfrac89 = \tfrac{10}{3}\), so \(\theta = \operatorname{atan2}(\tfrac{10}{3}, 0) = 90^\circ\). A 90° rotation sends \((x, y)\) to \((-y, x)\), so \(\mathbf{R}\bar{\mathbf{q}} = (-\tfrac13, \tfrac23)\) and \(\mathbf{t} = \bar{\mathbf{p}} - \mathbf{R}\bar{\mathbf{q}} = (1, 2)\). Check with the second point: \(\mathbf{R}\mathbf{q}_2 + \mathbf{t} = (0,2) + (1,2) = (1,4) = \mathbf{p}_2\).
+@@ 29
+3. Unknown pairs: the ICP loop
+@@ 30
+Real scans come without pairs. The <strong>iterative closest point (ICP)</strong> algorithm supplies them with a guess: for each \(\mathbf{p}\), take the point of the other cloud that is nearest under the current estimate,
+@@ 31
+then solve (8.1) for these pairs, and repeat with the improved estimate. <span class="src">§8.2.1.2 · p. 230</span>
+@@ 32
+Try it: press Step several times and watch the two half-steps alternate, then press Run. Afterwards set "Sensor turned by" to 160° and run again.
+@@ 33
+Notice, at the default 20° turn, that point-to-point ICP needs 21 alignment steps, and the rotation error ends at 0.0°. The RMS distance falls from 68 cm to 11.5 cm but not to zero, because the two scans hit different spots on the same walls. At 160° the loop also converges, to an answer that is wrong by about 179° with an RMS of 47 cm: a room turned half-way round nearly fits itself.
+@@ 34
+Filling the gap: why ICP converges, and why only locally
+@@ 35
+Call the cost \(E(\mathbf{R}, \mathbf{t}, \mathsf{C})\). The matching step keeps \((\mathbf{R},\mathbf{t})\) and picks, for every \(\mathbf{p}\), the pair with the smallest distance, so it cannot raise \(E\). The alignment step keeps \(\mathsf{C}\) and finds the exact minimizer over \((\mathbf{R},\mathbf{t})\), so it cannot raise \(E\) either. A sequence that never increases and is bounded below by zero converges. But nothing in this argument says where. The loop stops as soon as re-matching returns the same pairs, and that can happen at a wrong alignment in which every point has found some neighbour. The pairs are only as good as the estimate that produced them, which is why the book asks for a "sufficiently good initial guess". <span class="src">§8.4.1 · p. 242</span>
+@@ 36
+4. Point-to-plane: stop punishing sliding
+@@ 37
+Two scans of a wall do not contain the same points, only points on the same surface. Point-to-point distance still pulls each point toward its partner along the wall, which slows convergence. The <strong>point-to-plane</strong> distance (Figure 8.3c) fits a small plane to the fixed cloud around the matched point and measures only the offset perpendicular to it. <span class="src">§8.2.1.1 · p. 229</span> With \(\mathbf{n}_i\) the unit normal of that plane, the residual is the scalar
+@@ 38
+and the cost is \(\sum_i r_i^2\). In 2D the plane is a line through neighbouring points, which is the point-to-line distance of Figure 8.3b. There is no closed form any more, so each alignment step is one Gauss-Newton step (<a href="#d10">Week 2 · Day 4</a>).
+@@ 39
+Filling the gap: linearizing the point-to-plane residual
+@@ 40
+Perturb the current estimate on the right, \(\mathbf{T} = \mathbf{T}^0\Exp(\boldsymbol{\xi})\) with \(\boldsymbol{\xi} = (\boldsymbol{\rho}, \boldsymbol{\phi})\), translation part first, as in <a href="#d21">Week 4 · Day 3</a>. To first order \(\Exp(\boldsymbol{\xi})\) maps \(\mathbf{q}\) to \(\mathbf{q} + \boldsymbol{\phi}\times\mathbf{q} + \boldsymbol{\rho}\), so
+@@ 41
+Insert this into \(r_i\) and write \(\mathbf{m}_i = \mathbf{R}^{0\mathsf{T}}\mathbf{n}_i\) for the normal expressed in \(\mathsf{Q}\)'s frame:
+@@ 42
+using the triple-product identity \(\mathbf{a}\cdot(\mathbf{b}\times\mathbf{c}) = \mathbf{b}\cdot(\mathbf{c}\times\mathbf{a})\). Each pair therefore contributes one row
+@@ 43
+Solve this 6 × 6 system, update \(\mathbf{T}^0 \leftarrow \mathbf{T}^0\Exp(\boldsymbol{\xi})\), re-match, repeat. One pair gives one equation, so you need at least six, with normals that point in enough different directions. In a long corridor all normals are perpendicular to the corridor axis \(\mathbf{a}\). Then \(\mathbf{J}_i\) applied to a pure translation along \(\mathbf{a}\) is \(-\mathbf{m}_i\T\mathbf{a} = 0\) for every \(i\): the matrix is singular and the motion along the corridor cannot be estimated. That is the "structure-less corridor" failure of §8.5. <span class="src">§8.5 · p. 248</span>
+@@ 44
+Switch the widget to point-to-plane and press Run. At the default settings it converges in 6 steps instead of 21, to the same answer. At a 60° turn it fails while point-to-point still succeeds: the linearization is only good near the solution.
+@@ 45
+5. Matching distributions: GICP and NDT
+@@ 46
+The book mentions methods that compare local probability distributions instead of raw points. <span class="src">§8.2.1.1 · pp. 229–230</span> Two are worth knowing by formula.
+@@ 47
+<strong>Generalized ICP (GICP)</strong> treats every point as a sample from a small Gaussian that describes the surface around it: covariance \(\mathbf{C}_i^{P}\) for \(\mathbf{p}_i\) and \(\mathbf{C}_i^{Q}\) for \(\mathbf{q}_i\). If the pair is a true match, the difference \(\mathbf{d}_i = \mathbf{p}_i - (\mathbf{R}\mathbf{q}_i + \mathbf{t})\) has zero mean and covariance \(\mathbf{C}_i^{P} + \mathbf{R}\mathbf{C}_i^{Q}\mathbf{R}\T\), and maximum likelihood gives
+@@ 48
+With \(\mathbf{C}_i^{P} = \mathbf{I}\), \(\mathbf{C}_i^{Q} = \mathbf{0}\) this is point-to-point; with the weight matrix \(\mathbf{n}_i\mathbf{n}_i\T\) it is point-to-plane; with flat, disk-shaped covariances on both clouds it is "plane-to-plane".
+@@ 49
+The <strong>normal distributions transform (NDT)</strong> cuts the fixed cloud into voxels and stores, for each voxel \(v\), the mean \(\boldsymbol{\mu}_v\) and covariance \(\boldsymbol{\Sigma}_v\) of its points (the voxel Gaussians of <a href="#d45">Week 8</a>). In its original form the moving points \(\mathbf{x}_i = \mathbf{R}\mathbf{q}_i + \mathbf{t}\) are scored by the Gaussian of the voxel they fall in,
+@@ 50
+Finding \(v(i)\) takes a division and a rounding, not a nearest-neighbour search, and the cost surface is smoother than one made of hard point pairs. Summarizing the moving scan by voxels as well gives the distribution-to-distribution matching the book describes. <span class="src">§8.2.1.1 · p. 230</span>
+@@ 51
+<strong>"ICP finds the best alignment."</strong> It finds a local minimum near its starting guess. With a poor guess it converges, confidently, to the wrong answer.
+@@ 52
+<strong>"A small final error means success."</strong> The error never reaches zero even at the truth, because the scans sample different points, and it can be modest at a wrong alignment in a symmetric scene.
+@@ 53
+Q1. With known pairs, the centroids are p̄ = (4, 1) and q̄ = (1, 2), and the best rotation is 90° counter-clockwise. What is t?
+@@ 54
+A 90° rotation sends (x, y) to (−y, x), so R q̄ = (−2, 1), and t = p̄ − R q̄ = (4 + 2, 1 − 1) = (6, 0).
+@@ 55
+Q2. Why does ICP need a starting guess close to the true motion?
+@@ 56
+The SVD is undefined for large rotations
+@@ 57
+The cost increases during the first iterations otherwise
+@@ 58
+Nearest-neighbour search is too slow for distant clouds
+@@ 59
+Nearest-neighbour pairs made from a poor estimate are mostly wrong, and the loop settles in a local minimum
+@@ 60
+Each step lowers the cost for the current pairs, but the pairs come from the current estimate. Far from the truth they tie together unrelated points, and the loop can stop at a wrong alignment.
+@@ 61
+Q3. A pair has p − (Rq + t) = (0.30, 0.04, −0.10) m and the plane normal is n = (0, 1, 0). What is its point-to-plane residual?
+@@ 62
+r = nᵀ(p − (Rq + t)) picks out the component along the normal, 0.04 m. The 0.30 m and −0.10 m offsets lie in the plane and are not penalized. (The point-to-point distance would be 0.32 m.)
+@@ 63
+Q4. A robot runs point-to-plane ICP in a long, straight, featureless tunnel. Which part of its motion is not determined?
+@@ 64
+Rotation about the tunnel axis
+@@ 65
+Translation toward a wall
+@@ 66
+Translation along the tunnel axis
+@@ 67
+Nothing: six pairs are always enough
+@@ 68
+All normals are perpendicular to the axis, so sliding along the axis changes no residual and the 6 × 6 system is singular in that direction. (Rotation about the axis is determined as long as the cross-section is not a perfect circle.)
+@@ 69
+Registration minimizes a sum of distances between paired points over a rigid motion, equation (8.1). In the book's form (R, t) is applied to q.
+@@ 70
+With known pairs the point-to-point problem has a closed form: t = p̄ − R q̄, H = Σ q′p′ᵀ = USVᵀ, R = VUᵀ (with a sign fix against reflections).
+@@ 71
+ICP alternates nearest-neighbour matching, equation (8.3), with that alignment. The cost never increases, so it converges, but only to a local minimum.
+@@ 72
+Point-to-plane keeps only the error along the surface normal, r = nᵀ(p − Rq − t), and is solved by Gauss-Newton with one 1 × 6 Jacobian row per pair.
+@@ 73
+GICP weights each pair by local covariances; NDT replaces point pairs by per-voxel Gaussians.
+@@ 74
+<em>SLAM Handbook</em>, §8.2 (opening) and §8.2.1 "Foundations of Scan Registration", pp. 227–231; equations (8.1)–(8.3), Figure 8.3; §8.4.1, p. 242 and §8.5, p. 248 for the two cross-references.
+@@ 75
+Arun, Huang, Blostein, <em>Least-squares fitting of two 3-D point sets</em>, 1987, and Umeyama, <em>Least-squares estimation of transformation parameters between two point patterns</em>, 1991 (the SVD solution and the reflection fix).
+@@ 76
+Besl and McKay, <em>A method for registration of 3-D shapes</em>, 1992 (the convergence argument for ICP).
+@@ 77
+Chen and Medioni, <em>Object modelling by registration of multiple range images</em>, 1992 (point-to-plane); the linearization here uses the right perturbation of Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018.
+@@ 78
+Segal, Haehnel, Thrun, <em>Generalized-ICP</em>, 2009; Biber and Straßer, <em>The normal distributions transform: a new approach to laser scan matching</em>, 2003.

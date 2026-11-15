@@ -1,0 +1,186 @@
+@@ 1
+<span class="eyebrow">23주차 · Day 1</span>
+@@ 2
+Foundation model, contrastive learning, 그리고 open-world의 의미
+@@ 3
+오늘이 끝나면 foundation model이 무엇인지 말하고, CLIP 같은 모델을 학습시키는 contrastive loss를 쓰고, open-world map과 closed-set map을 구별할 수 있습니다.
+@@ 4
+약 60분 · 17장 도입부와 §17.1, pp. 490–495 읽기 (6쪽, 그중 1쪽은 그림) · 22주차 필요
+@@ 5
+먼저 읽기: 17장 도입부와 §17.1, pp. 490–495
+@@ 6
+16장의 semantic map에서 "closed-set"이 무엇을 뜻하는지 (p. 490), 그리고 foundation model에 필요한 두 가지 재료 (p. 491).
+@@ 7
+BERT가 사람 annotator 없이 label을 얻는 방법 (p. 492), 그리고 contrastive learning에서 "positive"와 "negative"가 무엇인지 (pp. 492–493, Figure 17.2).
+@@ 8
+"open-world"가 SLAM 시스템에 들어올 수 있는 두 가지 방식, 그리고 첫 번째 방식으로는 여전히 닫힌 map이 나오는 이유 (pp. 494–495).
+@@ 9
+지난주의 semantic map은 detector를 학습할 때 정해 둔 목록에 있는 것만 이름 붙일 수 있었습니다. 사람의 label 없이 인터넷 규모의 데이터로 학습한 모델은 어떤 목록에도 묶이지 않은 feature vector를 만듭니다. map이 이 vector를 저장하면, 무엇을 찾을지 정하는 시점이 map을 만드는 날에서 누군가 질문하는 순간으로 옮겨 갑니다.
+@@ 10
+1. 고정된 사전에서 열린 사전으로
+@@ 11
+지금까지의 map은 모두 geometry를, 때로는 외관도 저장했습니다. 16장은 semantics를 더했지만, 거기서 쓴 perception 모델은 <strong>closed-set</strong>으로 학습되었습니다. class 사전이 모델을 학습할 때 정해지므로 고정되어 있고 유한합니다. <span class="src">Ch. 17 · p. 490</span> 80개 class로 학습한 detector는 81번째 class를 절대 보고하지 않습니다.
+@@ 12
+<strong>foundation model</strong>(기반 모델)은 아주 방대한 dataset으로 학습해서, 다양한 동작 조건에 일반화되리라고 합리적으로 기대할 수 있는 머신러닝 모델입니다. 여기에는 두 가지가 필요합니다. 매우 많은 parameter를 효율적으로 갱신할 수 있는 architecture, 그리고 인터넷 규모 같은 매우 큰 dataset입니다. <span class="src">§17.1.1 · p. 491</span> 이런 모델은 <strong>open-world</strong> representation을 학습할 수 있습니다 (책은 open-set과 open-vocabulary를 같은 뜻으로 씁니다). 마주칠 수 있는 어떤 class, 물체 유형, 개념에도 일반화될 수 있는 representation입니다. <span class="src">Ch. 17 · p. 490</span>
+@@ 13
+2. label이 더는 병목이 아니게 된 과정
+@@ 14
+§17.1.1의 역사는 장애물을 하나씩 걷어 낸 과정입니다. 표로 읽어 보세요.
+@@ 15
+단계 (책의 예)
+@@ 16
+걷어 낸 것
+@@ 17
+사람 label?
+@@ 18
+AlexNet: ImageNet으로 학습한 convolutional network (책의 수치로 label이 붙은 이미지 3.2M 장)
+@@ 19
+큰 network와 label이 붙은 큰 dataset의 조합이 통한다는 것을 보여 줌
+@@ 20
+예, 모든 이미지
+@@ 21
+Residual network (ResNet)
+@@ 22
+깊은 network의 vanishing gradient. 이 encoder들은 YOLO, RCNN 같은 closed-vocabulary detector의 바탕이 됨
+@@ 23
+BERT: 단어를 가리고 맞히기 (영어 Wikipedia 약 2.5B 단어, BookCorpus 약 800M 단어)
+@@ 24
+annotator의 필요: 데이터가 스스로 label을 제공함
+@@ 25
+Transformer와 attention (BERT와 첫 GPT 모델이 씀)
+@@ 26
+입력의 long-range dependency를 포착하기 어려움
+@@ 27
+Contrastive learning (SimCLR)과 vision transformer (ViT)
+@@ 28
+이미지에는 "단어 가리기" 같은 task가 없다는 점
+@@ 29
+DINO (teacher–student distillation), CLIP (이미지–caption 쌍)
+@@ 30
+강력한 시각 feature. 이미지와 텍스트가 공유하는 하나의 feature space
+@@ 31
+<span class="src">§17.1.1 · pp. 491–494</span> 책은 사람의 annotation이 필요 없는 모든 방법을 <strong>unsupervised</strong>(비지도)라고 부르며, "self-supervised"를 따로 구분하지 않습니다 (p. 492 각주). vision transformer는 이미지를 고정 크기의 patch로 자르고, 각 patch를 vector로 바꾼 뒤, 그 sequence를 표준 Transformer에 넣습니다. 텍스트를 token의 sequence로 넣는 것과 같은 방식입니다. <span class="src">Figure 17.3 · p. 493</span>
+@@ 32
+빈틈 채우기: gradient가 사라지는 이유와 residual connection이 하는 일
+@@ 33
+학습은 각 parameter를 loss의 gradient를 따라 조정합니다. layer의 사슬 \(\mathbf{x}_{l+1} = F_l(\mathbf{x}_l)\)에서 chain rule은 첫 layer의 gradient를 layer마다 하나씩인 인수들의 곱으로 줍니다:
+@@ 34
+각 인수가 vector를 대략 절반으로 줄이면, 20개 layer는 \(0.5^{20} \approx 10^{-6}\)배로 줄입니다. 앞쪽 layer에는 신호가 거의 오지 않습니다. 이것이 책이 p. 492에서 말하는 vanishing gradient입니다. residual layer는 대신 \(\mathbf{x}_{l+1} = \mathbf{x}_l + F_l(\mathbf{x}_l)\)를 계산하므로, 각 인수는 \(\mathbf{I} + \partial F_l / \partial \mathbf{x}_l\)가 됩니다. identity 항이 "한 layer에서 다음 layer로 가는 직접 경로"입니다. \(F_l\)가 무엇을 하든 gradient는 이 경로를 통해 줄어들지 않고 앞쪽 layer에 도달합니다.
+@@ 35
+3. Contrastive learning: 짝은 끌어당기고 나머지는 밀어내기
+@@ 36
+텍스트에는 스스로 만들 수 있는 뻔한 task가 있습니다. 단어를 가리는 것입니다. 무작위 이미지 patch에는 그렇게 구체적인 의미가 없으므로, 이미지에는 다른 아이디어가 필요했습니다. <span class="src">§17.1.1 · p. 492</span> <strong>Contrastive learning</strong>(대조 학습)은 입력 하나와, 같은 의미여야 하는 그 입력의 다른 버전(<strong>positive</strong>)을 잡고, 둘의 representation은 가까워지게 하면서 batch 안의 다른 모든 입력(<strong>negative</strong>)은 멀어지게 하는 loss를 씁니다. SimCLR에서 positive는 좌우 뒤집기나 patch 지우기 같은 augmentation을 거친 같은 이미지입니다. <span class="src">§17.1.1 · pp. 492–493</span> CLIP에서 positive 쌍은 인터넷에서 모은 이미지와 그 caption이며, 이로써 두 modality가 하나의 feature space에 놓입니다. <span class="src">§17.1.1 · p. 494</span>
+@@ 37
+빈틈 채우기: loss 자체 (InfoNCE)
+@@ 38
+책은 이 loss를 말로만 설명합니다. 식으로 쓰면 다음과 같습니다. \(N\)개의 이미지–caption 쌍으로 된 batch를 잡습니다. 이미지 \(i\)를 단위 벡터 \(\mathbf{u}_i\)로, caption \(j\)를 단위 벡터 \(\mathbf{v}_j\)로 encode하고, \(s_{ij} = \langle \mathbf{u}_i, \mathbf{v}_j \rangle\)를 둘의 cosine similarity라고 합시다. 이미지 \(i\)에 대해 "\(N\)개의 caption 중 어느 것이 내 것인가?"를 분류 문제로 보고 그 cross-entropy를 취합니다:
+@@ 39
+\(\tau \gt 0\)는 <strong>temperature</strong>(온도)입니다. \(\tau\)가 작을수록 비교가 날카로워집니다. CLIP 방식의 학습은 이 값을 모든 이미지에 대해 평균하고, caption이 이미지들 중에서 고르는 대칭 항을 더합니다. SimCLR는 이미지와 caption 대신 augmentation한 두 view로 같은 형태를 씁니다.
+@@ 40
+<strong>숫자로 보기.</strong> \(N = 4\), \(\tau = 0.2\), 맞는 쌍은 \(s_{ii} = 0.8\), 틀린 caption 세 개는 \(0.2\)입니다. 그러면 \(\exp(0.8/0.2) = e^{4} = 54.60\)이고 \(\exp(0.2/0.2) = e = 2.718\)이므로
+@@ 41
+네 유사도가 모두 같다면 분수는 \(1/4\)이고 loss는 \(\log 4 = 1.386\)입니다. 아무것도 배우지 못한 모델의 값입니다.
+@@ 42
+<strong>어느 쪽으로 밀까?</strong> log 안의 분수에서 분자에 \(s_{ij}\)를 놓은 것을 \(p_{ij}\)라고 씁니다 (행 \(i\)에 대한 softmax). \(\ell_i = -s_{ii}/\tau + \log \sum_j \exp(s_{ij}/\tau)\)이므로
+@@ 43
+여기서 \(i = j\)이면 \(\delta_{ij} = 1\), 아니면 0입니다. 맞는 쌍의 도함수는 \((p_{ii} - 1)/\tau \le 0\)이므로 gradient descent는 \(s_{ii}\)를 올립니다. 틀린 쌍에서는 \(p_{ij}/\tau \ge 0\)이므로 descent는 \(s_{ij}\)를 내리며, 지금 가장 비슷해 보이는 틀린 caption일수록 가장 세게 내립니다.
+@@ 44
+직접 해 보기: 재생을 누르고 유사도 행렬을 지켜보세요. 그다음 새 시작점을 한 번 누르고 다시 재생하세요.
+@@ 45
+눈여겨볼 점: 120 step 동안 loss가 5.22에서 약 0.01로 떨어지고, 그사이 행렬의 대각은 1로 가며 네 쌍은 원 둘레로 퍼집니다. 새 시작점을 처음 누르면 두 쌍이 같은 자리에 겹친 채 0.35 근처에서 멈춥니다. 원에는 자리가 아주 적습니다. 실제 feature space가 수백 차원인 이유 중 하나입니다.
+@@ 46
+사진 네 장과 설명 글 네 개를 탁자 위에 섞어 놓아요. 학습 게임은 각 사진을 자기 설명 글 옆으로 밀고, 나머지 셋에서는 멀리 떼어 놓는 거예요. "개"가 무엇인지는 아무도 말해 주지 않아요. 수억 번을 하고 나면, 같은 것에 대한 사진과 설명 글이 같은 자리에 모여요.
+@@ 47
+4. mapping할 때가 아니라 query할 때 open-world
+@@ 48
+이것을 SLAM에 들이는 방법은 적어도 두 가지입니다. <span class="src">§17.1.2 · pp. 494–495</span>
+@@ 49
+Paradigm 1: front-end의 open-vocabulary detector
+@@ 50
+Paradigm 2: map 안의 open-world feature
+@@ 51
+mapping 중에 도는 것
+@@ 52
+단어 목록으로 prompt한 detector (책은 YOLO-World와 OV-DETR을 꼽음)
+@@ 53
+단어 목록 없는 feature encoder
+@@ 54
+map이 저장하는 것
+@@ 55
+그 목록의 label
+@@ 56
+map element마다 feature vector 하나
+@@ 57
+vocabulary가 고정되는 시점
+@@ 58
+map을 만들 때
+@@ 59
+query할 때
+@@ 60
+이 map은
+@@ 61
+=
+@@ 62
+=
+@@ 63
+paradigm 1의 detector는 어떤 텍스트든 받지만, 텍스트는 detector가 돌 때 주어져야 하고 SLAM에서는 그때가 map을 만드는 중입니다. 무엇을 저장할지는 그때 정해집니다. 이 장은 map을 쓸 때 질문하는 paradigm 2를 다룹니다. <span class="src">§17.1.2 · pp. 494–495</span>
+@@ 64
+범위에 두 가지 제한이 있습니다. 첫째, 이 장의 방법 대부분은 순수한 <em>mapping</em>입니다. 앞단의 SLAM 시스템이 pose가 주어진 카메라 frame을 준다고 가정하므로, 문제는 foundation model feature를 map에 어떻게 넣느냐가 됩니다. foundation feature는 place recognition에도 쓰이지만 (책은 DINO feature로 만든 AnyLoc을 인용합니다), 이 장의 주제는 아닙니다. <span class="src">§17.1.2 · p. 495</span> 둘째, 이 모델들의 힘은 인터넷 규모의 데이터에서 나오는데, 책의 2026년 4월 판 기준으로 LiDAR나 radar 같은 센서에는 그만한 규모의 데이터를 쉽게 구할 수 없습니다. <span class="src">§17.1.1 · p. 494</span>
+@@ 65
+<strong>"open-vocabulary detector를 쓰면 open-vocabulary map이 된다."</strong> 새 query마다 원래 이미지에서 detector를 다시 돌릴 수 있을 때만 그렇습니다. map 자체에는 mapping 중에 고른 단어만 남았습니다.
+@@ 66
+<strong>"Unsupervised는 모델이 아무것도 없이 배운다는 뜻이다."</strong> 여전히 target이 있습니다. 가려진 단어, 또는 짝이 맞는 caption이 어느 것인지입니다. 다만 annotator가 아니라 데이터로부터 만들어집니다.
+@@ 67
+Q1. batch에 이미지–caption 쌍이 두 개 있습니다. 이미지 1과 자기 caption의 유사도는 1.0, 다른 caption과는 0.0이고, τ = 0.5입니다. 이 이미지의 loss는 얼마입니까?
+@@ 68
+loss는 −log(e² / (e² + e⁰)) = log(1 + e⁻²) = log(1.135) = 0.127입니다. 0.693 = log 2가 되는 것은 두 유사도가 같을 때뿐입니다.
+@@ 69
+Q2. 한 팀이 mapping하는 동안 단어 50개로 prompt한 open-vocabulary detector로 map을 만듭니다. 나중에 사용자가 51번째 단어를 묻습니다. §17.1.2에 따르면 이 map은 무엇입니까?
+@@ 70
+closed-world. map을 만들 때 개념이 고정되었기 때문
+@@ 71
+open-world. detector가 어떤 텍스트든 받기 때문
+@@ 72
+open-world. 50단어는 큰 vocabulary이기 때문
+@@ 73
+어느 쪽도 아님. detector는 SLAM에 쓸 수 없기 때문
+@@ 74
+detector는 open-vocabulary이지만, 텍스트 conditioning은 map을 만들 때 일어났습니다. 저장된 map은 그 50개 단어에 대해서만 답할 수 있습니다.
+@@ 75
+Q3. contrastive loss의 gradient에서 이미지 i로부터 가장 세게 밀려나는 틀린 caption은 무엇입니까?
+@@ 76
+모든 틀린 caption이 똑같이
+@@ 77
+이미지 i와 유사도가 가장 낮은 것
+@@ 78
+무작위로 고른 것
+@@ 79
+이미지 i와 유사도가 가장 높은 것
+@@ 80
+틀린 쌍의 유사도에 대한 도함수는 p를 τ로 나눈 값이고, p (softmax weight)는 지금 점수가 가장 높은 틀린 caption에서 가장 큽니다.
+@@ 81
+Q4. 평범한 30-layer network가 layer마다 gradient를 0.5배로 줄입니다. 첫 layer에 도달하는 비율은 대략 얼마이며, residual connection을 쓰면 무엇이 달라집니까?
+@@ 82
+약 1/60. 아무것도 달라지지 않음
+@@ 83
+약 10⁻⁹. 각 인수가 identity에 항 하나를 더한 꼴이 되어, 줄어들지 않은 사본이 통과함
+@@ 84
+약 10⁻⁹. 인수가 정확히 0.5 + 0.5 = 1이 됨
+@@ 85
+정확히 0. residual connection이 그것을 무한대로 만듦
+@@ 86
+0.5³⁰ ≈ 9 × 10⁻¹⁰. residual layer의 인수는 identity에 그 layer 자체의 도함수를 더한 것이므로, 곱에는 언제나 순수한 identity만으로 된 경로가 들어 있습니다.
+@@ 87
+closed-set perception에는 학습 시점에 고정된 사전이 있습니다. 방대한 데이터로 학습한 foundation model은 open-world representation을 목표로 합니다.
+@@ 88
+스스로 만든 학습 task(가려진 단어 맞히기, 두 view 짝짓기, 이미지와 caption 짝짓기)가 사람 label의 필요를 없앴습니다.
+@@ 89
+contrastive loss는 "batch에서 어느 것이 내 짝인가"에 대한 cross-entropy입니다. 그 gradient는 맞는 쌍의 유사도를 올리고, 나머지는 헷갈리는 정도에 비례해 내립니다.
+@@ 90
+vocabulary를 query할 때 고를 때만 map은 open-world입니다. detection이 아니라 feature를 저장해야 이것이 가능합니다.
+@@ 91
+<em>SLAM Handbook</em>, 17장 "Towards Open-World Spatial AI", 도입부와 §17.1 "Background and Terminology", pp. 490–495.
+@@ 92
+"빈틈 채우기"의 loss는 van den Oord, Li, Vinyals, <em>Representation Learning with Contrastive Predictive Coding</em>, 2018 (InfoNCE); Chen, Kornblith, Norouzi, Hinton, <em>A Simple Framework for Contrastive Learning of Visual Representations</em>, 2020; Radford et al., <em>Learning Transferable Visual Models From Natural Language Supervision</em>, 2021을 따릅니다.
+@@ 93
+Vanishing gradient와 residual connection: Goodfellow, Bengio, Courville, <em>Deep Learning</em>, 2016; He, Zhang, Ren, Sun, <em>Deep Residual Learning for Image Recognition</em>, 2016.

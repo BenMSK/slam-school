@@ -1,0 +1,200 @@
+@@ 1
+<span class="eyebrow">Week 8 · Day 5</span>
+@@ 2
+Continuous maps, and choosing a representation
+@@ 3
+After today you can predict a map value and its uncertainty with Gaussian process regression, explain how a Hilbert map learns occupancy, and choose a representation for a given environment and task.
+@@ 4
+About 60 min · Read §5.4.5–5.5, pp. 141–148 (8 pages) · Needs Week 8 Day 1 and Week 5 Day 3
+@@ 5
+Read first: §5.4.5 to §5.5, pp. 141–148
+@@ 6
+Equations (5.10) and (5.11): which of the two contains the measured values \(\mathbf{y}\), and which does not (pp. 141–142).
+@@ 7
+The cost of a Gaussian process occupancy map, and why a GP implicit surface "falls back to the mean" far from the data (pp. 142–143).
+@@ 8
+The three design goals of Hilbert maps (p. 143).
+@@ 9
+Table 5.2 (p. 147). Pick one row and say in your own words why it holds.
+@@ 10
+Voxel maps fix the resolution in advance and treat neighbouring cells as unrelated. A continuous map is a function fitted to the measurements instead. It can be evaluated anywhere, it fills gaps by using the correlation between nearby places, and a Gaussian process also says how sure it is. The price is computation. No representation is best at everything, so the last section of the chapter is about matching the map to the environment and the task.
+@@ 11
+1. Mapping as regression: the Gaussian process
+@@ 12
+A <strong>Gaussian process (GP)</strong> is a probability distribution over functions. It is fixed by a mean function \(m(\mathbf{x})\) and a <strong>kernel</strong> \(\mathcal{K}(\mathbf{x}, \mathbf{x}')\), which gives the covariance between the function's values at two places: <span class="src">§5.4.5 · p. 141</span>
+@@ 13
+You met GPs over time in <a href="#d27">Week 5 · Day 3</a>. Here the input \(\mathbf{x}\) is a position in space and \(f\) is the quantity being mapped. A common kernel is the squared exponential, \(\mathcal{K}(\mathbf{x}, \mathbf{x}') = \sigma_f^2 \exp\!\big(-\norm{\mathbf{x} - \mathbf{x}'}^2 / (2\ell^2)\big)\): values at places much closer than the <strong>length-scale</strong> \(\ell\) are strongly correlated, values much farther apart are not.
+@@ 14
+The data are \(J\) noisy measurements \(y_j = f(\mathbf{x}_j) + \epsilon_j\), with \(\epsilon_j \sim \N(0, \sigma_j^2)\), at the training locations \(\mathsf{X}\). We want \(\mathbf{f}_*\), the values at the test locations \(\mathsf{X}^*\). The book's predictive equations are <span class="src">§5.4.5 · pp. 141–142</span>
+@@ 15
+where \(\mathbf{K}(\mathsf{A}, \mathsf{B})\) is the matrix of kernel values between every point of \(\mathsf{A}\) and every point of \(\mathsf{B}\).
+@@ 16
+Filling the gap: from the joint Gaussian (5.9) to (5.10) and (5.11)
+@@ 17
+Equation (5.9) says that \(\mathbf{y}\) and \(\mathbf{f}_*\) are jointly Gaussian. The two predictive equations are the rule for conditioning one part of a Gaussian on the other. For a zero-mean pair
+@@ 18
+Why: define \(\mathbf{e} = \mathbf{b} - \mathbf{C}\T\mathbf{A}^{-1}\mathbf{a}\). Its covariance with \(\mathbf{a}\) is \(\mathbf{C}\T - \mathbf{C}\T\mathbf{A}^{-1}\mathbf{A} = \mathbf{0}\), and jointly Gaussian variables that are uncorrelated are independent. So \(\mathbf{b} = \mathbf{C}\T\mathbf{A}^{-1}\mathbf{a} + \mathbf{e}\) is a part fixed by \(\mathbf{a}\) plus a part that \(\mathbf{a}\) says nothing about. The first is the conditional mean. The covariance of the second works out to \(\mathbf{B} - \mathbf{C}\T\mathbf{A}^{-1}\mathbf{C}\).
+@@ 19
+Now substitute \(\mathbf{a} = \mathbf{y}\), \(\mathbf{b} = \mathbf{f}_*\), \(\mathbf{A} = \mathbf{K}(\mathsf{X}, \mathsf{X}) + \sigma_j^2\mathbf{I}\) (kernel plus measurement noise), \(\mathbf{B} = \mathbf{K}(\mathsf{X}^*, \mathsf{X}^*)\), and \(\mathbf{C}\T = \mathbf{K}(\mathsf{X}^*, \mathsf{X})\). The formulas assume a prior mean of zero; otherwise subtract the mean from \(\mathbf{y}\) first and add it back at the end.
+@@ 20
+Worked example with one measurement: \(y_1 = 1\) at \(x_1 = 0\), with \(\sigma_f = 1\), \(\ell = 1\), and noise variance 0.1. The matrix to invert is the number \(1 + 0.1 = 1.1\).
+@@ 21
+Test point x*
+@@ 22
+Kernel value K(x*, x₁)
+@@ 23
+Mean (5.10)
+@@ 24
+Variance (5.11)
+@@ 25
+0 (at the measurement)
+@@ 26
+1 (one length-scale away)
+@@ 27
+5 (far away)
+@@ 28
+Near the data the prediction follows the data and is confident. Far away it returns to the prior: mean 0, variance \(\sigma_f^2\). Note that the variance column never used \(y_1\). Equation (5.11) depends only on where the measurements were taken, so a robot can compute how informative a measurement would be before making it. That is why GP maps are used to steer exploration. <span class="src">§5.4.5 · p. 142</span>
+@@ 29
+Try it: a wall profile sampled at a few noisy points, with nothing sampled between 4.2 m and 6.6 m. Move the length-scale to its two extremes.
+@@ 30
+Notice at the default length-scale of 1 m that the band is narrow at the samples and widens in the gap, to a standard deviation of 62 cm against a prior of 70 cm. At 0.2 m each sample informs only its immediate surroundings: between samples the mean drops back to zero and the band returns to the prior. At 3 m the band is narrow everywhere (18 cm at most), yet the mean misses the true curve by 32 cm RMS. The kernel claims more smoothness than the wall has, so the map is confidently wrong.
+@@ 31
+2. GP occupancy maps and GP implicit surfaces
+@@ 32
+A <strong>Gaussian process occupancy map (GPOM)</strong> uses beam observations labelled free or occupied as training data and the map cells as test locations. The regression output is then squashed into a probability between 0 and 1. Because the kernel couples nearby places, the map can infer the occupancy of a cell no beam touched, which the independent cells of Day 1 could not. <span class="src">§5.4.5 · p. 142</span>
+@@ 33
+The cost is \(O(J^3 + J^2 N)\) for \(J\) training points and \(N\) test points. The \(J^3\) comes from factorizing the \(J \times J\) matrix in the brackets (the Cholesky cost of <a href="#d5">Week 1 · Day 5</a>), and the \(J^2 N\) from one product with that matrix per test point in (5.11). With \(J = 10{,}000\), fewer points than one sweep of a typical 3D LiDAR, \(J^3 = 10^{12}\). Practical GP maps therefore work incrementally or on local subsets. <span class="src">§5.4.5 · p. 142</span>
+@@ 34
+A <strong>Gaussian process implicit surface (GPIS)</strong> applies the same machinery to distance. The training data are points on the surface, where the distance is zero, and the distance field \(d\) and its gradient \(\nabla d\) are modelled together as one zero-mean GP, equation (5.12). Differentiation is a linear operation, and a linear operation on a GP gives another GP, so the surface normal comes with its own uncertainty. <span class="src">§5.4.5.1 · p. 142</span>
+@@ 35
+The zero mean has a side effect that you saw in the widget. Far from any data a GP returns to its mean, and here the mean is zero, which reads as "on the surface". A plain GPIS is trustworthy near the measured surface and wrong far from it; estimating the full distance field takes an extra non-linear step. <span class="src">§5.4.5.1 · p. 143</span>
+@@ 36
+3. Hilbert maps: occupancy as a trained classifier
+@@ 37
+<strong>Hilbert maps</strong> keep the continuity of a GP occupancy map and avoid its cost. The goals were to process data online, to model the dependence between observations, and to include measurement uncertainty. The recipe is a logistic regression classifier, trained by stochastic gradient descent, on features computed from the position. <span class="src">§5.4.6 · p. 143</span>
+@@ 38
+Filling the gap: the classifier and its update
+@@ 39
+Place \(M\) kernel centres \(\mathbf{c}_1, \dots, \mathbf{c}_M\) on a regular grid over the area. The <strong>feature vector</strong> of a point lists how close it is to each centre, \(\boldsymbol{\phi}(\mathbf{x}) = [k(\mathbf{x}, \mathbf{c}_1), \dots, k(\mathbf{x}, \mathbf{c}_M)]\T\). With a sparse kernel, which is exactly zero beyond a fixed radius, only a few entries are non-zero. The map is one weight vector \(\mathbf{w}\), and
+@@ 40
+Compare with Day 1, where \(p = 1/(1 + e^{-l})\): the number \(\mathbf{w}\T\boldsymbol{\phi}(\mathbf{x})\) is a log-odds, now a continuous function of position. If each feature were 1 inside one grid cell and 0 elsewhere, \(\mathbf{w}\) would simply hold one log-odds per cell. Overlapping kernels are what let neighbouring places share evidence.
+@@ 41
+Training data come from the beams: points sampled along a beam get the label \(y = 0\) (free), the end point gets \(y = 1\) (occupied). For one labelled point the loss is the negative log-likelihood \(-[\,y\log p + (1-y)\log(1-p)\,]\). Its gradient with respect to \(\mathbf{w}\) is \((p - y)\,\boldsymbol{\phi}(\mathbf{x})\), so a gradient step with rate \(\eta\) is
+@@ 42
+Example: the map currently says \(p = 0.5\) at an end point (\(y = 1\)) and \(\eta = 0.5\). The step adds \(0.25\,\boldsymbol{\phi}(\mathbf{x})\) to \(\mathbf{w}\): the weights of the few kernels near \(\mathbf{x}\) rise and the rest stay as they were. Each sample costs a handful of operations, however large the map is.
+@@ 43
+The limit is expressiveness. Each kernel is a round bump, so fine detail needs many small kernels, which costs computation and interpolates less; few large kernels are the reverse. <span class="src">§5.4.6 · pp. 143–144</span>
+@@ 44
+<strong>Learned maps</strong> go one step further and let a neural network be the function. A network can be trained to return the signed distance at any query point, and a mesh of any resolution can then be extracted from it. Recent systems store small feature vectors in a voxel grid, octree, or point set and use only a small network to decode them into distances, which scales to large scenes. Neural radiance fields and Gaussian splatting, an explicit representation related to surfels, are treated later in the book. <span class="src">§5.4.7 · pp. 144–145</span>
+@@ 45
+4. Choosing: the environment
+@@ 46
+Start with where the robot works, because that settles several choices outright. <span class="src">§5.5.1 · pp. 145–146</span>
+@@ 47
+Question about the environment
+@@ 48
+What it implies
+@@ 49
+Is it tightly controlled, like an automated factory?
+@@ 50
+A custom map built around the known objects usually beats any general dense map.
+@@ 51
+Must the robot tell observed free space from space it has never seen?
+@@ 52
+Points, surfels, and meshes describe only surfaces and generally cannot. Occupancy maps can. Implicit surfaces can, but often drop the information far from surfaces to save memory.
+@@ 53
+Is it large?
+@@ 54
+Explicit surface maps use less memory. If free space must be stored, use a multi-resolution structure.
+@@ 55
+Do things move?
+@@ 56
+Three options: ignore it (free-space updates in implicit maps erase most leftovers), detect and discard measurements of moving objects (usual with explicit maps), or model the moving objects themselves.
+@@ 57
+5. Choosing: the task
+@@ 58
+Any operation can be done on any map, but not at the same cost. The dividing line is whether the operation runs along the surface or through space. <span class="src">§5.5.2 · pp. 146–147, Table 5.2</span>
+@@ 59
+Explicit surface is efficient for
+@@ 60
+Implicit representation is efficient for
+@@ 61
+Fusing measurements
+@@ 62
+Properties that live on the surface, such as colour and texture
+@@ 63
+Properties defined in space, such as occupancy; copes with noisy depth
+@@ 64
+Querying
+@@ 65
+Walking along the surface: rendering, coverage planning
+@@ 66
+Asking about a point in space: collision checking
+@@ 67
+Changing the map
+@@ 68
+Geometry: bending the surface when a loop closure corrects the trajectory
+@@ 69
+Topology: merging, cutting, and simplifying shapes
+@@ 70
+The two families can be combined. The standard example is a TSDF that filters noisy depth, followed by Marching Cubes to get a mesh for display (Days 2 and 3). The conversion has a cost, so do it locally and rarely. <span class="src">§5.5.2 · p. 147</span>
+@@ 71
+Within each family the book's summary is a ladder of assumptions. Points assume the least and say the least. Surfels add a local patch. Meshes add connectivity and need the most assumptions. Among volumetric maps, occupancy is filtered with the fewest assumptions and keeps thin obstacles; distance fields give fast distances and gradients for optimization-based planning; GPs and Hilbert maps give the best uncertainty and interpolation when depth data are sparse or noisy. <span class="src">§5.5.3 · pp. 147–148</span>
+@@ 72
+<strong>"A small GP variance means the map is right."</strong> The variance in (5.11) is computed from the sample locations and the kernel alone. If the kernel is a poor description of the world, for example a length-scale that is far too long, the map can be confidently wrong.
+@@ 73
+<strong>"A GPIS value of zero means there is a surface."</strong> Far from all measurements zero is just the prior mean.
+@@ 74
+<strong>"The most accurate map is the best map."</strong> A photorealistic mesh cannot say whether unseen space is free. Choose by what the downstream task has to ask the map.
+@@ 75
+Q1. A zero-mean GP with prior variance 1 has one measurement, y = 2, with noise variance 0.25. What is the predicted mean at the measured location itself?
+@@ 76
+The kernel value is 1, so (5.10) gives 1 × 2 / (1 + 0.25) = 1.6. The GP does not trust a noisy sample fully and pulls it towards the prior mean of 0. The variance there is 1 − 1/1.25 = 0.2.
+@@ 77
+Q2. A GP map is built from 2,000 training points. With 20,000 points, by what factor does the J³ part of the cost grow?
+@@ 78
+Ten times the points means 10³ = 1,000 times the work for the matrix factorization. This cubic growth is why the original GP occupancy map is a batch method.
+@@ 79
+Q3. At some position a Hilbert map has wᵀφ(x) = 1.1. What occupancy probability does it report?
+@@ 80
+p = 1 / (1 + exp(−1.1)) = 1 / 1.333 = 0.75. The classifier's raw output is a log-odds, converted exactly as in the occupancy grid.
+@@ 81
+Q4. A planner must refuse to drive through space that has never been observed. Which map cannot support that on its own?
+@@ 82
+An occupancy octree
+@@ 83
+An occupancy grid stored in hashed voxel blocks
+@@ 84
+A GP occupancy map
+@@ 85
+A surfel map
+@@ 86
+Surfels describe surfaces only. Where there is no surfel, the map does not say whether the space was seen and found empty or never seen. All occupancy-based maps keep that distinction.
+@@ 87
+Q5. After a loop closure the back-end shifts many past poses. Which map is cheapest to correct?
+@@ 88
+A TSDF in one dense array
+@@ 89
+An occupancy grid
+@@ 90
+Surfels that are each attached to a pose
+@@ 91
+A Hilbert map
+@@ 92
+Explicit surface elements can simply be moved with their poses. A voxel map has fused measurements from many poses into each cell, so its geometry cannot be bent as easily.
+@@ 93
+GP regression predicts a mean, (5.10), and a covariance, (5.11), at any location; both follow from conditioning a joint Gaussian. The covariance does not depend on the measured values.
+@@ 94
+GP occupancy maps and GP implicit surfaces model spatial correlation and uncertainty, at a cost of \(O(J^3 + J^2 N)\). Far from data they fall back to the prior mean.
+@@ 95
+A Hilbert map is logistic regression on kernel features: a continuous log-odds function trained online, one cheap gradient step per sample.
+@@ 96
+Explicit surface maps are efficient along the surface (texture, rendering, deformation). Implicit maps are efficient in space (occupancy, collision checks, merging shapes).
+@@ 97
+Choose by environment (free versus unobserved space, scale, dynamics) and by what the downstream task asks of the map; combine representations when one is not enough.
+@@ 98
+<em>SLAM Handbook</em>, §5.4.5 "Gaussian Processes", §5.4.6 "Hilbert Maps", §5.4.7 "Deep Learning in Mapping", and §5.5 "Usage Considerations", pp. 141–148.
+@@ 99
+Rasmussen and Williams, <em>Gaussian Processes for Machine Learning</em>, 2006 (the conditioning rule and the squared-exponential kernel).
+@@ 100
+Bishop, <em>Pattern Recognition and Machine Learning</em>, 2006 (logistic regression and its gradient).

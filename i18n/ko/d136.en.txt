@@ -1,0 +1,152 @@
+@@ 1
+<span class="eyebrow">Week 23 · Day 4</span>
+@@ 2
+Captions, scene graphs, feature fields, and maps shaped by the task
+@@ 3
+After today you can say when captions beat feature vectors, score a query down a hierarchical scene graph, compute a LERF relevancy score, and run one merge of task-driven clustering.
+@@ 4
+About 60 min · Read §17.3.2 from "Language Descriptions" through §17.3.4, pp. 506–514 (8 pages, three with large figures) · Needs Week 23 Day 3
+@@ 5
+Read first: §17.3.2 from "Language Descriptions", §17.3.3, §17.3.4, pp. 506–514
+@@ 6
+The query that feature retrieval gets wrong (p. 506), and the layers of equation (17.5) (p. 508).
+@@ 7
+The relevancy score (17.7), and why LangSplat can shrink a 512-number feature to 3 (pp. 510–511).
+@@ 8
+The piano example and the two terms of equation (17.8) (pp. 511–512).
+@@ 9
+A set of objects with one vector each is a start. Today adds four things: words in place of vectors when the question is complicated, edges and layers so that a query can be resolved step by step, features stored inside a radiance field, and a rule for what counts as one object. The rule is that the task decides.
+@@ 10
+1. When a vector is not enough: describe the object in words
+@@ 11
+Object features work best against short descriptive queries. They miss negation and affordances: "something to drink other than a soda can" still lands on the soda can. A feature also cannot be read by a person or an LLM. The alternative is a <strong>caption</strong>: keep the best image crops of each object, ask a VLM to describe the central object, and let an LLM merge the per-view captions. To answer a query, give an LLM the caption list and ask for the most relevant object. This handles complex queries that defeat feature retrieval, but is much slower than inner products. Some methods keep both. <span class="src">§17.3.2 · pp. 506–507</span>
+@@ 12
+2. Scene graphs: edges between objects, layers above them
+@@ 13
+An <strong>object scene graph</strong> \(\mathcal{G} = (\mathsf{V}_O, \mathsf{E}_O)\) adds edges for pairwise relations. In ConceptGraphs an LLM reads object captions and positions and infers relations such as "a on b". <span class="src">§17.3.2 · p. 507</span> A <strong>hierarchical scene graph</strong> (Week 22) groups nodes into ordered layers. Following HOV-SG, indoors: <span class="src">§17.3.2 · pp. 507–508</span>
+@@ 14
+one root node \(\mathsf{V}_E\), then floors, regions, and objects, with edges only between consecutive layers. Every node carries at least one CLIP feature, so every layer can be queried in words.
+@@ 15 attr
+A tree with four layers: a root, two floors, two regions under floor 2 (bedroom and bathroom), and two objects under the bedroom (bed and lamp). The path root, floor 2, bedroom, lamp is highlighted. It matches the query the lamp in the bedroom on floor 2, split into the concepts floor 2, bedroom, lamp.
+@@ 16
+environment
+@@ 17
+floor 1
+@@ 18
+floor 2
+@@ 19
+bedroom
+@@ 20
+bathroom
+@@ 21
+bed
+@@ 22
+lamp
+@@ 23
+root
+@@ 24
+floors
+@@ 25
+regions
+@@ 26
+objects
+@@ 27
+“the lamp in the bedroom on floor 2” → “floor 2” · “bedroom” · “lamp”
+@@ 28
+Our example. Each concept is scored only against the nodes under the previous winner (other branches not drawn).
+@@ 29
+HOV-SG finds floors as peaks in a histogram of point heights. For each region it takes the CLIP embeddings of the camera views inside it and reduces them to \(K\) representatives \(\mathbf{f}_{r_k}\) by k-means. Each representative votes for a category from a candidate list \(\mathsf{C}_R\), and the majority names the region: <span class="src">§17.3.2 · pp. 508–509</span>
+@@ 30
+<strong>Numbers.</strong> \(K = 5\), votes kitchen, kitchen, living room, kitchen, corridor: a kitchen, 3 of 5. For a query, a generative model splits the sentence into one concept per layer, and each is scored from the top layer down. With 2 floors, 5 regions per floor, and 30 objects per region (our numbers), a flat search compares the query with 300 objects; the layered search compares 2 + 5 + 30 = 37 features.
+@@ 31
+3. Features inside a radiance field
+@@ 32
+The radiance fields of <a href="#d116">Week 20</a> can carry language too. <strong>LERF</strong> gives a NeRF a second output, a semantic embedding at point \(\mathbf{x}\) and scale \(s\), rendered along a ray the way colour is and trained on CLIP embeddings of image crops at many scales. To query, it converts similarities into a <strong>relevancy score</strong> for each rendered embedding: <span class="src">§17.3.3 · p. 510</span>
+@@ 33
+where the canonical embeddings come from generic phrases such as "object", "things", "stuff", "texture".
+@@ 34
+Filling the gap: what (17.7) computes
+@@ 35
+Write \(a\) for the similarity with the text and \(b_i\) for the similarity with canonical phrase \(i\). Dividing top and bottom by \(e^{a}\) gives \(1/(1 + e^{\,b_i - a})\), which grows with \(a - b_i\). So the minimum is set by the largest \(b_i\): the score is \(1/(1 + e^{\,b_{\max} - a})\), and it exceeds 0.5 exactly when the query beats every generic phrase. A raw cosine cannot say that, because "object" is somewhat similar to everything.
+@@ 36
+<strong>Numbers.</strong> \(a = 0.30\) and \(b = 0.20, 0.25, 0.10, 0.28\): the score is \(1/(1 + e^{-0.02}) = 0.505\). With \(a = 0.22\) it is \(1/(1 + e^{0.06}) = 0.485\): the point looks more like a generic phrase than like the query.
+@@ 37
+<strong>LangSplat</strong> attaches language features to the Gaussians of a splat map, using CLIP vectors of SAM segments at three levels of granularity. A 512-number vector per Gaussian is too much memory, so it trains a scene-specific network that compresses each vector to 3 numbers, and a decoder that restores it. One scene varies far less than CLIP's training corpus, so 3 numbers suffice. <span class="src">§17.3.3 · pp. 510–511</span>
+@@ 38
+4. The task decides what an object is
+@@ 39
+With no class list, what is one object? The book's piano is one object if the task is to move it, more than 90 if the task is to play it (keys and pedals), hundreds if the task is to tune it. <span class="src">§17.3.4 · pp. 511–512</span> <strong>Clio</strong> poses the problem: given tasks in natural language, such as "clean backpacks" and "get condiment packets", build a map whose objects have the granularity the tasks need. It uses the <strong>Information Bottleneck</strong>. Let \(X\) be fine-grained primitives (over-segmented 3D pieces), \(\tilde{X}\) the clusters, \(Y\) the tasks. Find the assignment \(p(\tilde{x} \mid x)\) that solves <span class="src">§17.3.4 · p. 512</span>
+@@ 40
+Filling the gap: mutual information, and the cost of one merge
+@@ 41
+The <strong>mutual information</strong> measures how much knowing one variable tells you about another:
+@@ 42
+It is zero when the two are independent. In (17.8), a small \(I(X;\tilde{X})\) means strong compression (a single cluster gives 0); a large \(I(\tilde{X};Y)\) means the clusters still tell you which task a piece matters for; \(\beta\) sets the exchange rate.
+@@ 43
+Clio solves it greedily (Agglomerative Information Bottleneck): every primitive starts as its own cluster, neighbours are connected, and the pair with the smallest weight is merged, again and again: <span class="src">§17.3.4 · p. 513</span>
+@@ 44
+\(D_{\mathrm{JS}}\) is the Jensen–Shannon divergence. With \(\pi_i = p(\tilde{x}_i)/(p(\tilde{x}_i) + p(\tilde{x}_j))\), \(\pi_j = 1 - \pi_i\), and the mixture \(\bar{p} = \pi_i\, p(y \mid \tilde{x}_i) + \pi_j\, p(y \mid \tilde{x}_j)\),
+@@ 45
+The merged cluster has probability \(p(\tilde{x}_i) + p(\tilde{x}_j)\) and task distribution \(\bar{p}\), and \(d_{ij}\) is exactly the drop in \(I(\tilde{X};Y)\).
+@@ 46
+<strong>Numbers.</strong> Two clusters, each with \(p = 1/12\). Same \(p(y \mid x)\): \(D_{\mathrm{JS}} = 0\), merging is free. Distributions \((1, 0)\) and \((0, 1)\): \(\bar{p} = (\tfrac12, \tfrac12)\), each KL term is \(\log 2\), so \(d = \tfrac{2}{12} \times 0.693 = 0.116\) nats.
+@@ 47
+For \(p(y \mid x)\) Clio uses the cosine score between a primitive's averaged CLIP embedding and the task text as a proxy. <span class="src">§17.3.4 · pp. 512–513</span> Try it: press "Merge 5 times", then merge twice more. Then switch the task list to "clean backpacks only".
+@@ 48
+Notice that seven merges turn 12 primitives into 5 clusters (wall; backpack; chair and table; the two packets; napkin, wall and poster) and keep 97.0% of the task information. The eighth merge would cost 0.097 nats, eight times the seventh. With only the backpack task the cheap merges continue down to 3 clusters (99.6% kept): the packets are no longer objects. The toy adds a "neither task" outcome so each row sums to 1.
+@@ 49
+Clio clusters regions of free space the same way. As of the book's April 2026 edition, the book flags two weak points (the cosine proxy, and aggregating semantics across views), cites Bayesian Fields as a more grounded treatment, and notes that tasks must still be phrased specifically, mostly because of CLIP's limits. <span class="src">§17.3.4 · pp. 513–514</span>
+@@ 50
+Q1. A rendered embedding has similarity 0.4 with the query and 0.1, 0.4, 0.2 with three canonical phrases. What is its relevancy score (17.7)?
+@@ 51
+The largest canonical similarity, 0.4, ties the query: 1/(1 + e⁰) = 0.50. The value 0.57 is the score against the weakest phrase alone, but (17.7) takes the minimum.
+@@ 52
+Q2. Which query does the book use to show where object features fail and captions read by an LLM do better?
+@@ 53
+"sofa"
+@@ 54
+A click on a map point
+@@ 55
+"something to drink other than a soda can"
+@@ 56
+"something to drink"
+@@ 57
+The feature of the negated sentence is still close to the soda can's feature. An LLM reading captions can apply "other than".
+@@ 58
+Q3. Clusters A, B, C lie in a row with equal probability. Their task distributions are A = (0.9, 0.1), B = (0.9, 0.1), C = (0.1, 0.9). Which merge comes first?
+@@ 59
+B with C, because they differ the most
+@@ 60
+A with C
+@@ 61
+None: every merge loses information
+@@ 62
+A with B, at cost 0
+@@ 63
+A and B have identical task distributions, so the Jensen–Shannon divergence and the weight (17.9) are zero. Merging B with C would mix different distributions and lose task information.
+@@ 64
+Q4. A building has 3 floors, 4 regions per floor, and 20 objects per region. How many features does a layered query compare, against how many objects for a flat search?
+@@ 65
+240 against 240
+@@ 66
+27 against 240
+@@ 67
+27 against 60
+@@ 68
+3 against 240
+@@ 69
+Layered: 3 floors, then the 4 regions of the winning floor, then the 20 objects of the winning region: 27. Flat: 3 × 4 × 20 = 240 objects.
+@@ 70
+Captions from a VLM, searched by an LLM, handle negation and complex queries that features miss, at a much higher cost.
+@@ 71
+Scene graphs add relations and layers (17.5); regions are named by a vote (17.6); queries are resolved layer by layer.
+@@ 72
+LERF and LangSplat put language features in a radiance field; the relevancy score (17.7) asks whether the query beats generic phrases.
+@@ 73
+Task-driven mapping (17.8) merges primitives while the merge cost (17.9) is small, so the task list sets the granularity.
+@@ 74
+<em>SLAM Handbook</em>, §17.3.2 (from "Language Descriptions"), §17.3.3, §17.3.4, pp. 506–514, equations (17.5)–(17.9).
+@@ 75
+Mutual information and KL divergence: Cover and Thomas, <em>Elements of Information Theory</em>, 2006. The weighted Jensen–Shannon merge cost: Slonim and Tishby, <em>Agglomerative Information Bottleneck</em>, 1999.
+@@ 76
+The widget's relevance numbers are hand-set; the search counts are our arithmetic.

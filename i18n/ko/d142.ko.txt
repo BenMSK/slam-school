@@ -1,0 +1,144 @@
+@@ 1
+<span class="eyebrow">24주차 · Day 4</span>
+@@ 2
+Gaussian belief propagation: local message로 하는 추정, 그리고 같은 graph 안의 학습
+@@ 3
+오늘이 끝나면 information form에서 Gaussian belief propagation의 message 규칙을 유도하고, 작은 pose chain에서 손으로 돌려 보고, 이를 variable elimination과 관련짓고, GBP Learning이 무엇을 제안하는지 말할 수 있습니다.
+@@ 4
+약 60분 · §18.6–18.7, pp. 540–545 읽기 (5쪽) · 1주차 Day 3, 3주차 Day 2–3, 6주차 Day 4 필요
+@@ 5
+먼저 읽기: §18.6과 §18.7, pp. 540–545
+@@ 6
+이 장이 Spatial AI 문제의 "가장 순수한 representation"이라고 부르는 것, 그리고 belief propagation에서 각 node가 알아도 되는 것 (pp. 540–541).
+@@ 7
+학습에 바라는 네 가지 성질 (p. 543)과 GBP Learning의 핵심 아이디어 (p. 545, Figure 18.4).
+@@ 8
+책은 Gaussian belief propagation의 수식을 주지 않으므로, 오늘은 그것을 채웁니다. 규칙은 세 가지이고, 각각 node 하나와 그 이웃이 가진 것만 씁니다. variable은 받은 message를 모두 더하고, 각 factor에게는 그 factor가 알려 준 것을 뺀 나머지 전부를 알려 주며, factor는 자기의 다른 variable을 eliminate해서 답합니다. tree에서는 이것이 병렬로 수행한 variable elimination입니다. loop가 있는 graph에서는 이를 반복하며, 평균은 least-squares 해로 수렴합니다.
+@@ 9
+1. 이 장이 알고리즘에 요구하는 것
+@@ 10
+계산과 저장이 많은 작은 장치에 퍼져 있다면 (<a href="#d141">Day 3</a>), 추정도 그곳에서 이루어져야 합니다. 이 장의 요구 사항은 이렇습니다. <strong>factor graph 그 자체</strong>를 주 representation으로 삼고, "신의 시점" 없이 local message passing으로 그 자리에서 다루며, graph가 자라는 동안 message가 계속 "보글보글 끓어오르게" 하라는 것입니다. <span class="src">§18.6 · pp. 540–541</span>
+@@ 11
+<strong>Belief propagation (BP)</strong>는 이런 성격을 가지며, 임의의 asynchronous schedule도 견딥니다. <strong>Gaussian belief propagation (GBP)</strong>는 모든 factor와 variable이 Gaussian일 때의 BP로, least-squares 추정을 포괄합니다 (<a href="#d8">2주차 · Day 2</a>). 책은 GBP가 cycle이 있는 <strong>loopy</strong> graph에서도 잘 수렴한다고 덧붙입니다. <span class="src">§18.6 · p. 541</span>
+@@ 12
+2. information form에서 Gaussian에 대한 두 가지 연산
+@@ 13
+Gaussian을 상수 배를 무시하고 \(\exp(-\tfrac12\mathbf{x}\T\boldsymbol{\Lambda}\mathbf{x} + \boldsymbol{\eta}\T\mathbf{x})\)로 씁니다. information matrix는 \(\boldsymbol{\Lambda}\), information vector는 \(\boldsymbol{\eta} = \boldsymbol{\Lambda}\boldsymbol{\mu}\)입니다 (<a href="#d3">1주차 · Day 3</a>). <strong>곱하기는 더하기입니다:</strong> 같은 variable에 대한 Gaussian들의 곱은 \(\boldsymbol{\Lambda} = \boldsymbol{\Lambda}_1 + \boldsymbol{\Lambda}_2\), \(\boldsymbol{\eta} = \boldsymbol{\eta}_1 + \boldsymbol{\eta}_2\)를 가집니다. <strong>marginalization은 Schur complement입니다</strong> (<a href="#d15">3주차 · Day 3</a>). 부분 \(a\)를 남기고 부분 \(b\)를 없애려면,
+@@ 14
+factor도 같은 방식으로 씁니다. covariance가 \(\boldsymbol{\Sigma}\)인 선형 측정 \(\mathbf{z} = \mathbf{J}\mathbf{x} + \text{noise}\)는 \(\exp(-\tfrac12(\mathbf{z}-\mathbf{J}\mathbf{x})\T\boldsymbol{\Sigma}^{-1}(\mathbf{z}-\mathbf{J}\mathbf{x}))\)를 기여합니다. 제곱을 전개하고 \(\mathbf{x}\)가 없는 항을 버리면:
+@@ 15
+분산이 \(\sigma^2\)인 1차원 odometry factor \(x_j - x_i = z\)에서는 \((x_i, x_j)\)에 대해 \(\mathbf{J} = \begin{bmatrix} -1 & 1 \end{bmatrix}\)입니다. \(w = 1/\sigma^2\)로 두면:
+@@ 16
+3. 세 가지 규칙
+@@ 17
+factor graph의 모든 edge는 방향마다 하나씩, 두 개의 message를 나릅니다. message는 그 edge에 있는 variable에 대한 Gaussian이며, \((\boldsymbol{\eta}, \boldsymbol{\Lambda})\)로 저장됩니다. 모두 0에서 시작하는데, 이는 "정보 없음"을 뜻합니다.
+@@ 18
+<strong>규칙 1, belief.</strong> variable의 추정값은 들어오는 message들의 곱이며, information form에서는 합입니다.
+@@ 19
+<strong>규칙 2, variable에서 factor로.</strong> variable은 factor \(f\)에게 자기가 <em>다른</em> factor들에게서 들은 것을 알려 줍니다. 이는 자기 belief에서 \(f\)가 보낸 것을 뺀 것입니다.
+@@ 20
+이 뺄셈이 없으면 factor 자신의 정보가 메아리처럼 되돌아와 두 번 세어집니다.
+@@ 21
+<strong>규칙 3, factor에서 variable로.</strong> \(x_i\)에게 보내기 위해 factor는 자기 \((\boldsymbol{\eta}_f, \boldsymbol{\Lambda}_f)\)를 가져와, 다른 모든 variable \(x_j\)에서 들어온 message를 그 variable의 대각 block과 \(\boldsymbol{\eta}\)의 해당 부분에 더하고, Schur complement로 모든 \(x_j\)를 marginalize합니다. 그러면 \(x_i\)만의 Gaussian이 남습니다.
+@@ 22
+빈틈 채우기: odometry factor에 대해 규칙 3을 풀어 보기
+@@ 23
+\(x_i\)에서 도착한 message를 \((\eta_{\text{in}}, \Lambda_{\text{in}})\)라 하고, \(x_j\)로 보낸다고 합시다. 이를 factor의 \(x_i\) 항목에 더하면 다음을 얻습니다.
+@@ 24
+\(x_i\)(부분 \(b\))를 없애고 \(x_j\)(부분 \(a\))를 남기면:
+@@ 25
+covariance form으로 쓰면 분산은 \(1/\Lambda_{f\to x_j} = 1/\Lambda_{\text{in}} + 1/w = \sigma_{\text{in}}^2 + \sigma^2\)이고 평균은 \(\eta/\Lambda = \mu_{\text{in}} + z\)입니다. 이 message의 뜻은 이렇습니다. "\(x_j\)는 \(x_i\)가 있다고 여겨지는 곳에서 측정된 step만큼 간 곳에 있고, 불확실성은 더해진다." 반대 방향은 평균 \(\mu_{\text{in}} - z\)를 줍니다. 아무것도 도착하지 않았으면 \(\Lambda_{\text{in}} = 0\)이고 나가는 message도 0입니다.
+@@ 26
+4. 손으로 푸는 전체 예제
+@@ 27
+pose 두 개가 있습니다. prior는 \(x_0 = 2\), 분산 \(\tfrac14\)라고 말합니다. odometry는 \(x_1 - x_0 = 3\), 분산 \(\tfrac12\)라고 말하므로 \(w = 2\)입니다. position fix는 \(x_1 = 6\), 분산 \(\tfrac14\)라고 말합니다.
+@@ 28
+message 또는 belief
+@@ 29
+평균, 분산
+@@ 30
+=
+@@ 31
+=
+@@ 32
+odometry → \(x_1\), \(x_0\)의 message \((8, 4)\) 사용
+@@ 33
+odometry → \(x_0\), \(x_1\)의 message \((24, 4)\) 사용
+@@ 34
+\(x_0\)의 belief = step 1 + step 4
+@@ 35
+\(x_1\)의 belief = step 2 + step 3
+@@ 36
+step 4에서 \(x_1\)은 odometry factor에게 자기 belief에서 그 factor의 message를 뺀 것을 보내는데, 남는 것은 fix, 즉 \((24, 4)\)입니다. factor는 평균 \(6 - 3 = 3\), 분산 \(\tfrac14 + \tfrac12\)를 알려 줍니다. 직접 푼 해와 비교해 봅시다.
+@@ 37
+따라서 \(\boldsymbol{\mu} = (72/32,\ 184/32) = (2.25,\ 5.75)\)이고 두 분산은 모두 \(6/32 = 3/16\)입니다. message가 평균과 marginal 분산을 정확히 재현했습니다.
+@@ 38
+5. elimination과의 관계
+@@ 39
+규칙 3은 variable elimination (<a href="#d14">3주차 · Day 2</a>)의 한 step입니다. factor의 다른 variable에 대해 알려진 것을 흡수한 뒤, 그 variable들을 eliminate합니다. loop가 없는 graph에서는 leaf에서 안쪽으로 보내는 message가 어떤 순서의 elimination이고, 다시 바깥쪽으로 보내는 message가 모든 marginal까지 전달하는 back-substitution이므로, 결과가 정확합니다. elimination에는 global ordering이 필요하고 fill-in이 생깁니다. GBP는 둘 다 필요 없고 graph를 바꾸지도 않지만, loopy graph에서는 반복해야 합니다.
+@@ 40
+loop 안에서는 variable 자신의 message가 한 바퀴 돌아와 마치 독립적인 증거인 것처럼 들어옵니다. Gaussian 모델에서 이 double counting은 분산을 왜곡하지만 평균에서는 상쇄됩니다. Weiss와 Freeman은 GBP가 수렴하기만 하면 그 평균이 정확하다는 것을 증명했습니다.
+@@ 41
+직접 해 보기: 한 step을 누르고, 각 토글을 하나씩 켜 보세요.
+@@ 42
+눈여겨볼 점: iteration 3에서는 다섯 pose만 belief를 가집니다. 정보가 prior에서 loop의 양쪽 방향으로 두 hop씩 이동했기 때문입니다. iteration 5에서는 모든 pose가 belief를 가지지만, 가장 큰 평균 오차는 여전히 0.29 m입니다. iteration 20이 되면 0.0001 m 아래로 내려갑니다. 파란 막대는 약간 짧은 채로 남습니다. x4에서 GBP는 σ = 0.433을 보고하지만 정확한 값은 0.439입니다. loop closure를 꺼 보세요. graph가 chain이 되고, 9 iteration 뒤에는 평균과 σ 값이 모두 정확해집니다.
+@@ 43
+GBP는 실제 문제의 nonlinear factor와 robust factor도 받아들입니다. <span class="src">§18.6 · p. 541</span> 둘 다 factor 하나의 local한 변화입니다. nonlinear factor는 현재 belief 평균을 중심으로 다시 linearize되고 (<a href="#d10">2주차 · Day 4</a>), robust factor는 residual이 크면 자기 \(w\)를 줄입니다. 위젯은 <a href="#d34">6주차 · Day 4</a>의 Huber 가중치를 씁니다. 표준편차 단위의 residual을 \(m\)이라 하면, \(m \gt \beta = 1.5\)일 때 \(w\)에 \(\beta/m\)을 곱합니다. outlier를 켜 보세요. 실제로는 0인데 \(x_6 - x_2 = 2.5\)라고 주장하는 가짜 loop closure입니다. least squares는, 그리고 그와 함께 GBP도, \(x_6\)를 2.66까지 끌고 갑니다. robust factor를 쓰면 outlier의 가중치가 0.27로 떨어지고 \(x_6\)는 2.22에 자리 잡습니다.
+@@ 44
+두 시스템이 규모를 보여 줍니다. Graphcore IPU에서 GBP로 돌린 bundle adjustment는 작은 실제 문제에서 CPU보다 30배 빨랐고, Robot Web에서는 여러 로봇이 하나의 localization graph를 공유하면서 message가 asynchronous하게 오가거나 유실되어도 정확도를 유지했습니다. <span class="src">§18.6 · pp. 541–542</span>
+@@ 45
+6. factor graph 안에서의 학습
+@@ 46
+§18.7은 확률적 inference와 나란히 돌고, 주로 <strong>self-supervised</strong>이며, training과 test 시점의 구분이 없는 <strong>continual</strong> 학습이고, 모듈 수준에서 해석 가능한 학습을 원합니다. <span class="src">§18.7 · p. 543</span> 이 장의 답은 <strong>Bayesian machine learning</strong>입니다. 모델의 parameter를 다른 미지수와 똑같은 법칙으로 추정하는 것입니다. 이 장의 말을 빌리면, state estimation과 모델 학습은 구조와 규모만 다를 뿐입니다. <span class="src">§18.7 · p. 544</span>
+@@ 47
+그러면 weight는 그저 또 하나의 variable입니다. weight가 하나인 모델에서 관측된 입력-출력 쌍은 각각 그 weight에 대한 선형 측정이며, 센서 측정값이 그렇듯 그 weight의 information 쌍에 항 하나를 더합니다. training과 사용을 가르는 것은 아무것도 없습니다.
+@@ 48
+<strong>GBP Learning</strong>(Nabarro 외)은 neural network 모양의 factor graph로 이를 확장합니다. parameter는 모든 관측이 공유하는 variable이고, 입력, 출력, activation은 관측마다 복사되는 variable이며, 층 사이의 nonlinear factor는 뉴런처럼 부드럽게 스위칭합니다. 그러면 학습은 평범한 GBP로 하는 inference가 됩니다. 책은 image denoising과 classification을 학습한 버전을 소개합니다. <span class="src">§18.7 · pp. 544–545, Figure 18.4</span>
+@@ 49
+Q1. pose 하나가 odometry factor에게 평균 4, 분산 0.5인 message를 보냅니다. factor는 분산 0.25로 step 2를 측정했습니다. factor가 다음 pose에게 보내는 것은 무엇입니까?
+@@ 50
+평균 6, 분산 0.25
+@@ 51
+평균 2, 분산 0.75
+@@ 52
+평균 6, 분산 0.125
+@@ 53
+평균 6, 분산 0.75
+@@ 54
+평균은 들어온 평균에 step을 더한 4 + 2 = 6이고, 분산은 더해져 0.5 + 0.25 = 0.75입니다.
+@@ 55
+Q2. 어떤 variable의 belief가 (η, Λ) = (10, 5)입니다. factor f가 이 variable에 (4, 2)를 보냈습니다. variable이 f에게 돌려보내는 것은 무엇입니까?
+@@ 56
+규칙 2: belief에서 f 자신이 보낸 것을 뺍니다. (10 − 4, 5 − 2) = (6, 3).
+@@ 57
+Q3. pose 아홉 개로 된 chain에 첫 pose의 prior와 이웃 사이의 odometry가 있습니다. synchronous schedule에서 마지막 pose가 처음으로 정확한 marginal을 갖는 것은 몇 번째 iteration 뒤입니까?
+@@ 58
+끝내 정확해지지 않음
+@@ 59
+iteration 1이 prior를 첫 pose에 전달하고, 이후 각 iteration이 정보를 한 pose씩 더 멀리 옮깁니다. chain에는 loop가 없으므로 iteration 9의 결과는 정확합니다.
+@@ 60
+Q4. loop closure가 여러 개 있는 pose graph에서 GBP가 수렴했습니다. 옳은 설명은 무엇입니까?
+@@ 61
+평균과 분산 모두 정확함
+@@ 62
+평균은 least-squares 해와 같고, 분산은 근사임
+@@ 63
+분산은 정확하고, 평균은 근사임
+@@ 64
+loopy graph에서는 둘 다 믿을 수 없음
+@@ 65
+Gaussian 모델에서는 수렴하면 평균이 정확합니다 (Weiss와 Freeman). marginal 분산은 loop가 없는 graph에서만 정확합니다.
+@@ 66
+이 장은 factor graph를 주 representation으로 삼고, local message로 그 자리에서 갱신하기를 원합니다.
+@@ 67
+GBP의 규칙은 세 가지입니다. belief = 들어온 message의 합, variable에서 factor로 = belief에서 그 factor의 message를 뺀 것, factor에서 variable로 = 들어온 message를 더한 뒤 Schur complement로 다른 variable 없애기.
+@@ 68
+tree에서 GBP는 elimination에 back-substitution을 더한 것이고 정확합니다. loop가 있으면 반복합니다. 평균은 least-squares 해로 수렴하고 분산은 근사입니다.
+@@ 69
+GBP Learning은 network weight를 같은 graph 안의 variable로 다루므로, 학습이 continual inference가 됩니다.
+@@ 70
+<em>SLAM Handbook</em>, 18장, §18.6과 §18.7, pp. 540–545, Figures 18.2–18.4.
+@@ 71
+Davison, Ortiz, <em>FutureMapping 2: Gaussian Belief Propagation for Spatial AI</em>, 2019, 그리고 Ortiz, Evans, Davison, <em>A visual introduction to Gaussian Belief Propagation</em>, 2021 (message 규칙).
+@@ 72
+Weiss, Freeman, <em>Correctness of belief propagation in Gaussian graphical models of arbitrary topology</em>, 2001 (수렴 시 정확한 평균).

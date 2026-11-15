@@ -1,0 +1,220 @@
+@@ 1
+<span class="eyebrow">18주차 · Day 5</span>
+@@ 2
+Factor graph 속의 leg odometry, 그리고 무너지는 지점
+@@ 3
+오늘이 끝나면 encoder noise를 발까지 전파하고, forward kinematics factor, contact factor, velocity factor의 residual과 covariance를 쓰고, 무른 땅, 휘는 다리, 미끄러운 바닥에서 깨지는 가정을 말할 수 있습니다.
+@@ 4
+약 60분 · §12.4–12.6, pp. 348–357 읽기 (10쪽, pp. 353–357은 빠르게) · 18주차 Day 3과 16주차 Day 4 필요
+@@ 5
+먼저 읽기: §12.4–12.6, pp. 348–357
+@@ 6
+encoder noise의 non-Gaussian 효과를 어떻게 다시 Gaussian으로 만드는지, p. 349의 식 (12.27).
+@@ 7
+Figure 12.7 (p. 351)에서 어떤 factor가 연속한 두 state를 잇고, 어떤 factor가 state 하나에 붙는지.
+@@ 8
+contact covariance (12.34)에 왜 시간 간격을 곱하는지.
+@@ 9
+Figure 12.8과 12.9 (p. 354): leg odometry가 똑같이 잘못 읽는 서로 다른 두 원인.
+@@ 10
+측정은 residual과 covariance를 갖추면 factor가 됩니다. leg odometry의 covariance에는 두 가지 출처가 있습니다. Jacobian으로 kinematics를 거쳐 전파한 encoder noise, 그리고 접촉점 속도의 noise로 모델링한 slip입니다. 이 둘이 갖춰지면 leg odometry는 16주차의 IMU factor 옆에서 factor graph에 들어가고, 땅이 무르거나 미끄러울 때 무엇을 믿을지는 다리 혼자가 아니라 graph가 정합니다.
+@@ 11
+1. 발에서의 encoder noise
+@@ 12
+각 encoder 값을 실제 각도에 평균 0인 Gaussian noise를 더한 것으로 모델링합니다. <span class="src">§12.4.1 · p. 348</span>
+@@ 13
+Forward kinematics에는 sin과 cos이 가득하므로 \(\tilde{\mathbf{q}}\)로 계산한 발 위치는 정확히 Gaussian이 아닙니다. 이 책의 다른 모든 곳에서처럼 linearization을 합니다. <span class="src">§12.4.1 · p. 349</span>
+@@ 14
+여기서 \(\mathbf{J}_c\)는 <a href="#d104">Day 2</a>의 다리 Jacobian을 contact frame에서 표현한 것입니다.
+@@ 15
+빈틈 채우기: (12.27)에서 covariance로
+@@ 16
+발 위치 오차 \(\mathbf{e} = \mathbf{J}_c\boldsymbol{\eta}_q\)는 Gaussian의 선형 함수이므로, 평균이 0이고 covariance가 다음과 같은 Gaussian입니다.
+@@ 17
+평면 다리를 \(q = (30^\circ, -60^\circ)\)에 두고, 각 joint에 \(\sigma_q = 0.5^\circ = 0.00873\) rad의 독립 noise가 있어 \(\boldsymbol{\Sigma}_q = \sigma_q^2\mathbf{I}\)라고 하면 숫자는 다음과 같습니다.
+@@ 18
+표준편차는 \(\sigma_x = 0.00873\sqrt{0.60} = 6.8\) mm와 \(\sigma_z = 0.00873\sqrt{0.04} = 1.7\) mm입니다. joint에서의 0.5도는 발에서 7 mm이고 대부분 수평 방향입니다. 이 자세에서는 hip을 돌리면 발이 수평으로 쓸려 가기 때문입니다.
+@@ 19
+직접 해 보기: 예측값과 측정값을 비교해 보세요. 그다음 q₂를 0°로 옮겨 knee를 곧게 펴 보세요.
+@@ 20
+눈여겨볼 점: 정확히 계산한 발 위치들의 구름은 Jacobian이 예측한 2σ 타원과 모양도 크기도 같습니다(예측 6.8 mm와 1.7 mm, 300개 샘플에서 측정한 값 7.3 mm와 1.8 mm). encoder 수준의 noise라면 1차 식이 정확합니다. 다리를 곧게 펴면 타원은 다리를 가로지르는 선으로 줄어듭니다(짧은 축 0 mm). 1차 근사에서는 joint noise가 곧게 편 다리 방향으로 발을 움직일 수 없습니다.
+@@ 21
+속도 측정에는 각도와 각속도, 두 곳에 noise 입력이 있습니다. 곱을 전개하고 noise 두 개가 곱해진 항을 버리면 다음과 같습니다. <span class="src">§12.4.1 · p. 349</span>
+@@ 22
+두 추가 항 모두 Gaussian noise에 대해 선형이므로, 하나의 Gaussian 속도 noise \(\boldsymbol{\eta}_v\)로 묶을 수 있습니다.
+@@ 23
+2. Filter냐 factor graph냐
+@@ 24
+보행 제어기는 state를 높은 빈도로 받아야 하므로, legged robot은 주로 IMU와 kinematics를 융합하는 Kalman filter(EKF, UKF, invariant EKF)를 써 왔습니다. Kalman filter에는 process model이 필요하고, 그것이 없을 때는 constant-velocity 모델이나 IMU propagation이 대신합니다. factor graph는 process model과 measurement model을 똑같이 state와 측정 사이의 관계로 다루므로 더 일반적인 도구입니다. graph에 연속한 state 두 개만 있으면 filter처럼 동작합니다. window가 더 길면 과거 state도 고칠 수 있습니다. 긴 window에서 state 수를 작게 유지하려면 <a href="#d94">16주차 · Day 4</a>의 IMU와 똑같이 <strong>preintegration</strong>이 필요합니다. 지금까지 legged robot의 graph 기반 estimator는 주로 제어보다는 낮은 빈도의 mapping에 쓰였습니다. <span class="src">§12.4, §12.4.2 · pp. 348–350</span>
+@@ 25
+3. 이족 보행 로봇: forward kinematics factor와 contact factor
+@@ 26
+휴머노이드에서 각 state에는 base pose \(\mathbf{T}\)와 stance 발의 contact pose \(\mathbf{C}_i\)가 들어 있습니다(state (12.12)). 이 둘을 쓰는 factor가 두 개 있습니다. <span class="src">§12.4.2.1 · pp. 350–351</span>
+@@ 27 attr
+변수가 두 줄로 놓인 factor graph. 윗줄: base state T0, T1, T2가 IMU factor로 이어지고 T0에 prior가 붙어 있습니다. 아랫줄: contact frame C0, C1, C2가 contact factor로 이어져 있습니다. 각 base state는 바로 아래 contact frame과 forward kinematics factor로 이어져 있습니다.
+@@ 28
+=
+@@ 29
+=
+@@ 30
+=
+@@ 31
+=
+@@ 32
+윗줄: base pose, 속도, bias · 아랫줄: stance 발의 contact frame
+@@ 33
+각 state를 base 부분과 contact 부분으로 나누어 그린 Figure 12.7(a). 책은 state마다 원 하나를 그리지만, 이 그림은 각 factor가 어느 부분에 닿는지 보여 줍니다.
+@@ 34
+<strong>forward kinematics factor</strong>는 측정 (12.13)을 residual로 쓴 것입니다. \(\mathbf{fk}(\mathbf{q}) = \mathbf{T}^{-1}\mathbf{C}_i\)가 정확히 성립한다면 \(\mathbf{C}_i^{-1}\,\mathbf{T}\,\mathbf{fk}(\mathbf{q})\)는 단위 행렬이고 그 logarithm은 0입니다.
+@@ 35
+그 covariance는 1절의 결과입니다. <strong>contact preintegration factor</strong>는 시각 \(t_i\)와 \(t_j\) 사이에 contact frame이 slip을 빼면 움직이지 않았어야 한다고 말합니다. <span class="src">(12.31)–(12.34) · pp. 350–351</span>
+@@ 36
+위 블록은 \(i\)에서 \(j\)까지 contact frame의 회전이고, 아래 블록은 이동입니다. 둘 다 0이어야 합니다. \(\boldsymbol{\Sigma}_w\)와 \(\boldsymbol{\Sigma}_v\)는 contact의 각속도 noise와 선속도 noise를 나타냅니다.
+@@ 37
+빈틈 채우기: covariance에 \(\Delta t_{ij}\)를 곱하는 이유
+@@ 38
+책은 slip을 접촉점 <em>속도</em>에 걸린 평균 0의 Gaussian noise로 모델링합니다. 위치는 속도의 적분이고, white noise의 적분은 random walk입니다. 그 분산은 지난 시간에 비례해 커집니다(<a href="#d1">1주차 · Day 1</a>의 drift, 16주차의 적분된 IMU noise와 같은 법칙). 따라서 \(\boldsymbol{\Sigma}_v\)는 m²/s 단위의 비율이고, 길이 \(\Delta t_{ij}\)인 stance 뒤의 위치 분산은 \(\boldsymbol{\Sigma}_v\,\Delta t_{ij}\)입니다. 예: \(\boldsymbol{\Sigma}_v = (0.02)^2\mathbf{I}\) m²/s이고 stance가 0.25 s이면 표준편차는 \(0.02\sqrt{0.25} = 0.01\) m입니다. 이 factor는 접촉점이 1 cm 정도 슬금슬금 움직이는 것까지는 문제 삼지 않습니다. stance가 길수록 더 많이 움직여도 됩니다.
+@@ 39
+한계 하나: 이 factor는 같은 stance 다리, 한 stance phase 안에서만 유효합니다. 한 다리에서 다른 다리로 바뀌는 것을 다루는 데는 후속 연구가 필요했습니다. <span class="src">§12.4.2.1 · p. 351</span>
+@@ 40
+4. 사족 보행 로봇: velocity factor
+@@ 41
+점 모양 발은 두 state 사이의 6 자유도를 모두 구속할 수 없으므로 3절의 factor는 쓸 수 없습니다. 대신 사족 보행 로봇은 <a href="#d105">Day 3</a>의 속도 측정을 preintegration합니다. <span class="src">§12.4.2.2 · p. 352</span>
+@@ 42
+표기에 주의하세요. 굵은 \(\Delta\mathbf{t}_{ij}\)는 이동 증분이고, 굵지 않은 \(\Delta t\)는 샘플 시간입니다.
+@@ 43
+빈틈 채우기: 합은 어디서 오는가
+@@ 44
+\(\mathbf{v}_k\)는 base 좌표로 쓴 몸체 속도이므로 world frame 속도는 \(\mathbf{R}_k\mathbf{v}_k\)입니다. 이 값을 샘플 간격 하나 동안 유지한다고 보고 모두 더하면 다음과 같습니다.
+@@ 45
+우변은 optimizer가 계속 바꾸는 절대 방향 \(\mathbf{R}_k\)에 의존합니다. 양변에 \(\mathbf{R}_i\T\)를 곱합니다.
+@@ 46
+이제 우변에는 시각 \(i\) 이후의 회전 \(\Delta\mathbf{R}_{ik}\)만 필요하고, 이것은 16주차의 preintegration된 gyroscope 회전입니다. 측정값으로 한 번 계산해 두면 optimizer가 \(\mathbf{R}_i\)와 \(\mathbf{t}_i\)를 어떻게 움직이든 다시 쓸 수 있습니다. 이것이 preintegration의 요령 전부이고, 여기서는 그것을 다리 속도에 적용했습니다.
+@@ 47
+covariance에서는 합의 각 항이 \(\mathbf{A}\boldsymbol{\Sigma}_v\mathbf{A}\T\)를 더하고(\(\mathbf{A} = \Delta\tilde{\mathbf{R}}_{ik}\Delta t\)), 책은 이렇게 (12.38)의 \(\boldsymbol{\Sigma}_{\mathcal{V},ij}\)를 만듭니다. \(\boldsymbol{\Sigma}_v = \sigma_v^2\mathbf{I}\)이면 회전이 상쇄되어 \(n\)개 샘플에서 \(n\,\Delta t^2\sigma_v^2\,\mathbf{I}\)가 됩니다. 예: 샘플당 \(\sigma_v = 0.05\) m/s, \(\Delta t = 2.5\) ms, \(n = 100\)개 샘플(0.25 s)이면 \(\sqrt{100} \times 0.0025 \times 0.05 = 1.25\) mm입니다.
+@@ 48
+여러 다리가 동시에 stance에 있으면 선택지가 세 가지 있습니다. 가장 믿을 만하다고 판단한 다리만 쓰거나, 각 다리를 별개의 측정으로 다루거나(접촉점 위치가 state에 있으면 가장 쉽습니다), 계산을 아끼려고 다리들의 속도 측정을 하나로 평균합니다. <span class="src">§12.4.2.3 · p. 352</span>
+@@ 49
+5. 다른 센서와의 융합, 그리고 아직 깨지는 것
+@@ 50
+SLAM 시스템에서 leg odometry의 역할은 연속한 node 사이에 drift가 작은 edge를 공급해 loop closure가 고칠 것을 줄이는 것입니다. 카메라와 LiDAR는 측정(filter에서)이나 factor(graph에서)로 더해집니다. 어려운 점은 출처마다 빈도, noise, 실패하는 양상이 다르다는 것입니다. <strong>loosely coupled</strong> 시스템은 별개의 estimator(visual-inertial, legged-inertial, LiDAR-inertial)를 병렬로 돌리고 가장 좋은 출력을 고릅니다. <strong>tightly coupled</strong> 시스템은 모든 factor를 graph 하나에 넣습니다. 그러면 선별은 factor 단위로 일어납니다. 실패한 modality의 factor는 그냥 더하지 않고, 평균 0인 Gaussian이 아닌 noise는 robust cost 함수(<a href="#d34">6주차 · Day 4</a>)가 흡수합니다. <span class="src">§12.4.3 · p. 353</span>
+@@ 51
+무엇이 잘못되는가
+@@ 52
+깨지는 가정
+@@ 53
+leg odometry가 보고하는 것
+@@ 54
+책의 대책
+@@ 55
+다리 변형 (Figure 12.8)
+@@ 56
+로봇이 강체이므로 \(\mathbf{fk}\)가 실제 발 위치를 준다
+@@ 57
+bias가 있는 움직임. 예를 들어 하중을 받아 다리가 휠 때 위로 가는 움직임
+@@ 58
+충격 중의 측정은 버림. link에 IMU를 달아 실제 방향을 측정
+@@ 59
+무르거나 꺼지는 땅 (Figure 12.9)
+@@ 60
+접촉점의 속도가 0
+@@ 61
+위로 가는 움직임. 접촉이 선언된 뒤 발이 가라앉기 때문
+@@ 62
+카메라 같은 외부 센서로 contact의 속도를 observable하게 하고, 그 속도를 추가 state로 추적
+@@ 63
+=
+@@ 64
+접촉점의 속도가 0 (힘이 friction cone을 벗어남)
+@@ 65
+일어나지 않은 움직임. 발이 뒤로 미끄러지면 앞으로 너무 많이 간 것으로 나옴
+@@ 66
+무른 땅과 같음
+@@ 67
+빈틈 채우기: 가라앉는 것이 왜 올라가는 것처럼 보이는가
+@@ 68
+hip 높이가 0.65 m이고 똑바로 선 평면 로봇에서, 발이 처음 닿는 순간 접촉을 선언한다고 합시다. 접촉점은 높이 \(c_z = 0\)에 고정됩니다. 그 뒤 땅이 3 cm 꺼집니다. 다리는 계속 밀기 위해 펴지므로, base frame에서 발의 높이는 \(-0.65\)에서 \(-0.68\) m로 바뀝니다. Leg odometry는 몸체 높이를 \(t_z = c_z - f_{p,z} = 0 - (-0.68) = 0.68\) m로 계산합니다. 몸체는 움직이지 않았는데 3 cm 더 높다고 보고됩니다. 다음 착지에서 새 접촉점도 3 cm 너무 높게 놓이고, 오차가 반복됩니다. 이런 걸음이 10번이면 로봇은 평지에서 30 cm를 올라갔다고 믿습니다.
+@@ 69
+최근 흐름: 힘 임계값을 대신하는 학습된 접촉 검출기, 몸체 속도와 중력 방향(둘 다 관성 데이터로 observable)만 있으면 되는 강화학습 보행 제어기(다만 parkour처럼 목표 위치에 도달해야 하는 기술에는 여전히 odometry가 필요합니다), 그리고 손, 팔, 몸통도 간헐적으로 접촉하고 compliance 때문에 강체 접촉 가정이 깨지는 휴머노이드. <span class="src">§12.6 · pp. 355–356</span>
+@@ 70
+<strong>"encoder noise가 leg odometry의 주된 오차다."</strong> 모델링하기 가장 쉬운 오차일 뿐입니다. slip, 무른 땅, 휘는 다리는 bias이고, 대개 더 큽니다.
+@@ 71
+<strong>"contact factor는 발이 고정되어 있다고 말한다."</strong> 분산이 stance 시간에 따라 커지는 random walk만큼의 여유를 두고 발이 고정되어 있다고 말합니다.
+@@ 72
+<strong>"사족 보행 로봇도 contact preintegration factor를 쓸 수 있다."</strong> 점 모양 발에는 구속할 방향이 없습니다. 사족 보행 로봇은 preintegration된 velocity factor를 씁니다.
+@@ 73
+Q1. 어떤 자세에서 J_v = [0.5, 0; 0, 0.2] m/rad이고, 각 joint 값에 0.01 rad (1σ)의 독립 noise가 있습니다. x와 z 방향의 1σ 발 위치 오차는 얼마입니까?
+@@ 74
+10 mm와 10 mm
+@@ 75
+2.5 mm와 0.4 mm
+@@ 76
+5 mm와 2 mm
+@@ 77
+0.5 mm와 0.2 mm
+@@ 78
+Σ = σ² J Jᵀ = 0.01² × diag(0.25, 0.04) m²이므로 표준편차는 0.01 × 0.5 = 5 mm와 0.01 × 0.2 = 2 mm입니다.
+@@ 79
+Q2. contact 속도 noise가 Σ_v = (0.04)² I m²/s이고 stance가 0.25 s 지속됩니다. (12.34)에 따르면 접촉점은 축마다 1σ로 얼마나 움직였을 수 있습니까?
+@@ 80
+=
+@@ 81
+=
+@@ 82
+=
+@@ 83
+분산은 0.04² × 0.25 m²이므로 표준편차는 0.04 × √0.25 = 0.02 m입니다.
+@@ 84
+Q3. velocity residual (12.37)에 t_j − t_i가 아니라 R_iᵀ(t_j − t_i)가 들어가는 이유는 무엇입니까?
+@@ 85
+이동은 빼기 전에 항상 회전시켜야 하기 때문
+@@ 86
+속도 noise가 world frame에서 정의되기 때문
+@@ 87
+점 모양 발은 이동을 측정할 수 없기 때문
+@@ 88
+그러면 preintegration된 합에 시각 i에 대한 상대 회전만 필요하고, 이것은 optimizer가 state를 움직여도 바뀌지 않기 때문
+@@ 89
+변위를 시각 i의 base frame으로 표현하면 절대 회전 R_k가 gyroscope만으로 얻는 상대 회전 ΔR_ik로 바뀝니다. 그래서 합을 한 번만 계산하면 됩니다.
+@@ 90
+Q4. 로봇이 평평한 진흙 위를 10걸음 걷습니다. 걸음마다 접촉이 선언된 뒤 발이 2 cm 가라앉습니다. 다른 센싱은 완벽하다면, 마지막에 leg odometry는 몸체 높이를 어떻게 말합니까?
+@@ 91
+시작보다 20 cm 낮음
+@@ 92
+시작보다 20 cm 높음
+@@ 93
+시작보다 2 cm 높음
+@@ 94
+오차가 번갈아 나타나므로 그대로
+@@ 95
+가라앉을 때마다 고정된 접촉점 위로 몸체가 2 cm 올라간 것으로 읽히고, 다음 접촉점이 그 오차를 물려받습니다. 10걸음이면 +20 cm가 쌓입니다.
+@@ 96
+Q5. tightly coupled factor graph에서 다리와 IMU는 계속 동작하는데 카메라가 어둠 속에서 실패합니다. 책은 대응을 어떻게 설명합니까?
+@@ 97
+estimator 전체를 별도의 legged-inertial filter로 전환
+@@ 98
+encoder noise covariance를 키움
+@@ 99
+그 modality의 factor는 더하지 않고, 평균 0인 Gaussian이 아닌 noise에는 robust cost 함수를 씀
+@@ 100
+새 prior로 graph를 다시 시작
+@@ 101
+tightly coupled 설계에서는 선별이 factor 하나하나 단위로 일어납니다. 하위 시스템 전체를 갈아 끼우는 것은 loosely coupled 방식입니다.
+@@ 102
+Encoder noise는 Jacobian을 거쳐 발에 도달합니다. \(\boldsymbol{\Sigma} = \mathbf{J}_c\boldsymbol{\Sigma}_q\mathbf{J}_c\T\).
+@@ 103
+이족 보행 로봇: forward kinematics factor가 base pose와 contact pose를 묶고, contact factor는 contact frame이 제자리에 있다고 말하며 그 covariance는 \(\Delta t_{ij}\)에 비례해 커집니다.
+@@ 104
+사족 보행 로봇: stance 다리의 속도를 preintegration해 relative translation factor \(\mathbf{r}_{\mathcal{V}} = \mathbf{R}_i\T(\mathbf{t}_j - \mathbf{t}_i) - \Delta\mathbf{t}_{ij}\)로 만듭니다.
+@@ 105
+융합은 loosely coupled(병렬 estimator 중에서 고르기)이거나 tightly coupled(graph 하나, 센서가 실패하면 그 factor를 뺌)입니다.
+@@ 106
+휘는 다리, 무른 땅, slip은 모두 모델의 가정을 깨고, bias가 있는 움직임으로 나타납니다.
+@@ 107
+=
+@@ 108
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (Gaussian의 선형 함수의 covariance, 1차 불확실성 전파).
+@@ 109
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (filter와 그 process model, measurement model).
+@@ 110
+preintegration된 합의 유도와 무른 땅 예제는 §12.4.2의 표기로 우리가 직접 풀어 본 단계입니다.

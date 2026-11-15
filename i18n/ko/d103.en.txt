@@ -1,0 +1,214 @@
+@@ 1
+<span class="eyebrow">Week 18 · Day 1</span>
+@@ 2
+Leg odometry: the idea, the frames, and the state
+@@ 3
+After today you can explain how a legged robot measures its own motion from its joints, name the four kinds of reference frame involved, and read the state vector of equation (12.1).
+@@ 4
+About 60 min · Read Ch 12 opening and §12.1.1–12.1.3, pp. 333–336 (4 pages) · Needs Week 11 Day 1
+@@ 5
+Read first: Chapter 12 opening and §12.1.1–12.1.3, pp. 333–336
+@@ 6
+The two sub-problems that leg odometry splits into (the numbered list on p. 334).
+@@ 7
+Which frames exist all the time and which one is created each time a foot lands (§12.1.2, p. 335, and Figure 12.1).
+@@ 8
+In equation (12.1) on p. 336: which quantities are written in world coordinates and which in base coordinates.
+@@ 9
+A foot that stands on the ground without slipping is a fixed point, and the joint encoders tell the robot where that point is relative to its body. So while the foot stays put, every change in the shape of the leg is a motion of the body. <strong>Leg odometry</strong> is that observation turned into a measurement: decide which feet are planted, then read the body's motion off their joints.
+@@ 10
+1. From wheels to legs
+@@ 11
+Wheel odometry counts how far the wheels turn. A wheel of radius 0.1 m whose encoder reports 3 full turns has rolled \(2\pi \times 0.1 \times 3 = 1.885\) m, as long as it did not skid. The name "leg odometry" was chosen by analogy: the robot infers its motion from the motion of the parts that touch the ground. <span class="src">§12.1 · p. 334</span>
+@@ 12
+A leg, unlike a wheel, makes and breaks contact. Each stride has a <strong>swing phase</strong> (the book also calls it the aerial phase), in which the foot is lifted and carried forward, and a <strong>stance phase</strong>, in which the foot stays on the ground without slipping. Only stance legs push the robot, so only stance legs say anything about how the body moved. That gives the two sub-problems the rest of the chapter solves: <span class="src">§12.1 · p. 334</span>
+@@ 13
+<strong>Contact estimation</strong>: which legs are in stance right now? (<a href="#d106">Day 4</a>)
+@@ 14
+<strong>Motion estimation</strong>: how did the body move, given the joints of those legs? (<a href="#d105">Day 3</a>)
+@@ 15 attr
+Timeline of a trotting quadruped over two strides. Each of the four legs has a row with bars for its stance phases and gaps for its swing phases. Left front and right hind are in stance together; right front and left hind are in stance together, half a stride later. A vertical marker shows one instant at which only left front and right hind are in stance.
+@@ 16
+at this instant only two legs are in stance
+@@ 17
+left front
+@@ 18
+right front
+@@ 19
+left hind
+@@ 20
+right hind
+@@ 21
+stance
+@@ 22
+swing
+@@ 23
+two strides
+@@ 24
+Our illustration of a trot: diagonal leg pairs take turns. At any instant the set of legs that can be used for odometry is different, which is why contact estimation comes first.
+@@ 25
+Why bother, when the robot already carries cameras, LiDARs, and an IMU? A walking controller needs pose and velocity at a high rate and with low drift to keep the robot from falling, and the legs supply that information for free. The chapter treats leg odometry as one more measurement for the SLAM factor graph, on the same footing as wheel odometry or IMU preintegration (<a href="#d94">Week 16 · Day 4</a>). <span class="src">Ch 12 opening · p. 333</span>
+@@ 26
+Stand on one foot and bend your knee. Your foot did not move, so your body did. If you know your own joint angles, you know how far. A legged robot does this hundreds of times a second, switching to the other foot each time it takes a step.
+@@ 27
+2. Where the idea came from
+@@ 28
+Period
+@@ 29
+What happened
+@@ 30
+Why it matters for estimation
+@@ 31
+First walking machines, built to cross terrain that defeats wheels. General Electric's Walking Truck weighed 1400 kg and was driven by a human.
+@@ 32
+No autonomy yet, so no state estimator.
+@@ 33
+Late 1980s
+@@ 34
+Raibert's one-, two-, and four-legged machines show dynamic locomotion.
+@@ 35
+Real-world use becomes plausible; autonomy now needs odometry.
+@@ 36
+Early leg odometry
+@@ 37
+Roston and Krotkov use leg kinematics to estimate the motion of the Ambler hexapod (2.5 tonnes). Later work adds IMU and vision through particle and Kalman filters.
+@@ 38
+Kinematics alone, then fused with other sensors.
+@@ 39
+Bloesch et al.
+@@ 40
+A filtering-based kinematic-inertial estimator for quadrupeds on any terrain, later extended to bipeds.
+@@ 41
+The template most systems still follow (<a href="#d105">Day 3</a>).
+@@ 42
+2012–2015, DARPA Robotics Challenge
+@@ 43
+Whole-body estimation for humanoids, with LiDAR and stereo vision added. Mostly Kalman filters, a few optimization and factor-graph methods.
+@@ 44
+Leg odometry becomes one input among several.
+@@ 45
+2018–2021, DARPA SubT, and since
+@@ 46
+Legged robots in extreme environments; factor-graph estimators for quadrupeds and bipeds; invariant filters.
+@@ 47
+Principled fusion with other sensors (<a href="#d107">Day 5</a>).
+@@ 48
+3. Four kinds of frame
+@@ 49
+The chapter uses these reference frames (Figure 12.1): <span class="src">§12.1.2 · p. 335</span>
+@@ 50
+The <strong>inertial (world) frame</strong> \(\mathcal{F}^w\), fixed to the ground.
+@@ 51
+The <strong>base frame</strong> \(\mathcal{F}^b\), fixed to the robot's main body, which is called the <strong>floating base</strong> because nothing bolts it to the world. The IMU is assumed to sit exactly at \(\mathcal{F}^b\).
+@@ 52
+A <strong>foot frame</strong> \(\mathcal{F}^{f}\) at the end of each leg.
+@@ 53
+A <strong>contact frame</strong> \(\mathcal{F}^k\), created each time a foot lands. It is fixed to the ground, not to the robot. For a humanoid's flat foot it coincides with the foot frame at touchdown. For a quadruped's point foot only its position is defined by the foot.
+@@ 54 attr
+Three boxes joined by arrows into a triangle. An arrow from the world frame to the base frame is the body pose, which is wanted. An arrow from the base frame to the contact frame is the forward kinematics of the leg, known from the encoders. An arrow from the world frame to the contact frame is fixed to the ground during stance.
+@@ 55
+world frame
+@@ 56
+base frame
+@@ 57
+contact frame
+@@ 58
+= foot at touchdown
+@@ 59
+body pose (wanted)
+@@ 60
+fk(q), from encoders
+@@ 61
+fixed to the ground during stance
+@@ 62
+Leg odometry in one triangle. Two sides are known while a foot is planted, so the third, the body pose, follows.
+@@ 63
+Filling the gap: how to read \(\mathbf{T}^{a}_{b}\)
+@@ 64
+The chapter writes a pose as a \(4 \times 4\) matrix with two indices and never stops to explain them. \(\mathbf{T}^{w}_{b}\) is the pose of frame \(b\) expressed in frame \(w\). It holds a rotation \(\mathbf{R}^w_b\) and a translation \(\mathbf{t}^w_b\) (the origin of \(b\), in \(w\) coordinates), and it converts the coordinates of a point from \(b\) to \(w\):
+@@ 65
+Two rules do all the work this week.
+@@ 66
+<strong>Chain:</strong> \(\mathbf{T}^w_f = \mathbf{T}^w_b\,\mathbf{T}^b_f\). The lower index of the first factor must match the upper index of the second, and they cancel.
+@@ 67
+<strong>Invert:</strong> \((\mathbf{T}^w_b)^{-1} = \mathbf{T}^b_w = \begin{bmatrix} \mathbf{R}\T & -\mathbf{R}\T\mathbf{t} \\ \mathbf{0} & 1 \end{bmatrix}\), which swaps the indices.
+@@ 68
+A worked example in the vertical plane, with coordinates \((x, z)\): \(x\) forward, \(z\) up. The base is at \(\mathbf{t}^w_b = (2.0,\ 0.65)\) m and is pitched by \(10^\circ\), so \(\mathbf{R}^w_b = \begin{bmatrix} 0.985 & -0.174 \\ 0.174 & 0.985 \end{bmatrix}\). The encoders say the foot is at \(\mathbf{p}^b = (0.15,\ -0.65)\) m in the base frame. In the world,
+@@ 69
+The foot is 3.6 cm above flat ground at \(z = 0\): with this pitch, that leg is in the air. With no pitch (\(\mathbf{R} = \mathbf{I}\)) the same joint angles would put the foot at \((2.15,\ 0)\), on the ground. The orientation of the body matters as much as its position.
+@@ 70
+4. The state
+@@ 71
+A legged robot's full state is the pose and velocity of its base plus the positions and velocities of all its joints. The chapter assumes the joints are measured directly by their own sensors (<a href="#d104">Day 2</a>), so only the base remains to be estimated: <span class="src">§12.1.3 · pp. 335–336</span>
+@@ 72
+Symbol
+@@ 73
+Expressed in
+@@ 74
+Position of the base
+@@ 75
+World coordinates
+@@ 76
+Orientation of the base
+@@ 77
+Linear velocity of the base
+@@ 78
+Base coordinates
+@@ 79
+Angular velocity of the base
+@@ 80
+The pair \((\mathbf{v}, \boldsymbol{\omega})\) is called the base's <strong>twist</strong>. Because nothing here closes loops, the chapter uses "state estimation" and "odometry" as the same word, and reminds you that odometry is SLAM without loop closures. <span class="src">§12.1.3 · p. 335</span>
+@@ 81
+Filling the gap: a velocity in base coordinates
+@@ 82
+\(\mathbf{v}^b_b\) is the velocity of the base relative to the world, with its three numbers written along the base's own axes. To get the world-frame velocity, rotate it: \(\mathbf{v}^w = \mathbf{R}\,\mathbf{v}\). Example: a robot walks straight ahead at 0.5 m/s. Then \(\mathbf{v} = (0.5, 0, 0)\) whichever way it faces. If it faces along the world's \(y\) axis (a yaw of \(90^\circ\)), then
+@@ 83
+Base coordinates are the natural choice here: the IMU and the leg joints are both attached to the base, so what they measure comes out in base coordinates. You saw the same convention for the gyroscope in <a href="#d91">Week 16 · Day 1</a>.
+@@ 84
+<strong>"The contact frame is a frame on the robot."</strong> It is attached to the ground. It is created at touchdown, and it is abandoned when the foot lifts.
+@@ 85
+<strong>"The velocity in (12.1) is the world-frame velocity."</strong> Both \(\mathbf{v}\) and \(\boldsymbol{\omega}\) are in base coordinates. Only \(\mathbf{t}\) and \(\mathbf{R}\) refer to the world.
+@@ 86
+<strong>"A foot on the ground is a foot in stance."</strong> Stance means the contact point is not moving. A foot that touches and slides tells you nothing reliable (<a href="#d106">Day 4</a>).
+@@ 87
+Q1. A wheel of radius 0.15 m turns 2 full revolutions without skidding. How far did the vehicle roll?
+@@ 88
+Distance = circumference × turns = 2π × 0.15 × 2 = 1.88 m. Leg odometry replaces "the wheel did not skid" with "the stance foot did not slip".
+@@ 89
+Q2. Which frame is created anew every time a foot lands, and what is it attached to?
+@@ 90
+The contact frame, attached to the ground
+@@ 91
+The foot frame, attached to the ground
+@@ 92
+The contact frame, attached to the foot
+@@ 93
+The base frame, attached to the IMU
+@@ 94
+The contact frame is defined at touchdown and stays fixed to the earth. The foot frame travels with the foot, in swing as well as in stance.
+@@ 95
+Q3. In the plane (x forward, z up), the base is upright (R = I) at t = (1.0, 0.5) m. Forward kinematics puts a foot at (0.2, −0.5) m in the base frame. Where is the foot in the world?
+@@ 96
+With R = I, the world position is p + t = (0.2 + 1.0, −0.5 + 0.5) = (1.2, 0.0): the foot is on the ground.
+@@ 97
+Q4. A robot faces along the world's +y axis and walks straight ahead at 0.4 m/s. What is v in the state (12.1)?
+@@ 98
+It depends on where the world origin is
+@@ 99
+The state stores the velocity in base coordinates. "Straight ahead" is the base's own x axis, whatever the heading. (0, 0.4, 0) is the same velocity in world coordinates.
+@@ 100
+Leg odometry infers body motion from the joints of the legs that are planted on the ground.
+@@ 101
+It splits into contact estimation (which legs are in stance) and motion estimation (what those legs say).
+@@ 102
+Frames: world, base (with the IMU), one per foot, and a contact frame fixed to the ground for each touchdown.
+@@ 103
+\(\mathbf{T}^w_b\) maps base coordinates to world coordinates; chain by cancelling inner indices, invert by swapping them.
+@@ 104
+The estimated state (12.1) is base position and orientation in the world, and base linear and angular velocity in base coordinates.
+@@ 105
+<em>SLAM Handbook</em>, Chapter 12 "Leg Odometry for SLAM", opening and §12.1.1–12.1.3, pp. 333–336.
+@@ 106
+Lynch and Park, <em>Modern Robotics: Mechanics, Planning, and Control</em>, 2017 (homogeneous transformations, composing and inverting frames, twists).
+@@ 107
+The trot timeline and the wheel example are our own illustrations of the stance and swing phases defined on p. 334.

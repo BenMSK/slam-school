@@ -1,0 +1,224 @@
+@@ 1
+<span class="eyebrow">8주차 · Day 3</span>
+@@ 2
+점, surfel, mesh, voxel, 함수
+@@ 3
+오늘이 끝나면 dense map에 쓰이는 다섯 가지 공간 추상화를 설명하고, voxel 격자 안에서 값을 interpolation하고, marching squares로 signed distance 격자를 윤곽선으로 바꿀 수 있습니다.
+@@ 4
+약 60분 · §5.3.1–5.3.2, pp. 126–132 읽기 (6쪽) · 8주차 Day 2 필요
+@@ 5
+먼저 읽기: §5.3.1과 §5.3.2, pp. 126–132
+@@ 6
+§5.3.1의 네 범주 (pp. 126–127). 앞쪽 p. 123의 Figure 5.4와 나란히 놓고 보세요.
+@@ 7
+surfel이 저장하는 것 (p. 128), 그리고 normal distributions transform이 covariance 행렬에서 표면 normal을 읽어 내는 방법 (p. 129).
+@@ 8
+voxel을 "단지 그릇(merely a container)"이라고 부르는 p. 130의 문장, 그리고 voxel 값이 가질 수 있는 서로 다른 두 의미.
+@@ 9
+변환에 관한 §5.3.2.6과 Figure 5.8 (p. 131).
+@@ 10
+어제의 질문은 어떤 양을 추정할지였습니다. 오늘의 질문은 그 양을 어떤 기하적 구성 요소에 담을지입니다. 점, 작은 원판, 삼각형, cell, 연속 함수 중 하나입니다. 각각은 어떤 연산은 아주 쉽게, 어떤 연산은 번거롭게 만들므로, 실제 시스템은 이들 사이를 변환합니다. 꼭 외워 둘 변환은 Marching Cubes로, signed distance 격자를 mesh로 바꿉니다.
+@@ 11
+1. 표현을 분류하는 두 가지 방법
+@@ 12
+책은 표현을 두 축으로 분류합니다. <em>표면</em>을 기술하는지 <em>부피</em> 전체를 기술하는지, 그리고 기하 구조를 나열할 수 있는 원소로 <em>explicit</em>하게 저장하는지 계산하는 함수로 <em>implicit</em>하게 저장하는지입니다. <span class="src">§5.3.1 · pp. 126–127</span>
+@@ 13
+저장 방식
+@@ 14
+표면 (물체의 경계)
+@@ 15
+부피 (공간 전체)
+@@ 16
+explicit: 원소의 목록
+@@ 17
+point cloud, surfel, polygon mesh
+@@ 18
+LiDAR SLAM에서 쓰는 점; occupancy나 거리를 담는 voxel
+@@ 19
+implicit: 함수
+@@ 20
+signed distance function의 zero set
+@@ 21
+Gaussian process map, Hilbert map
+@@ 22
+Figure 5.4의 caption이 경고하듯, 칸들이 딱 나뉘어 있지는 않습니다. TSDF 격자가 표준적인 혼합형입니다. explicit한 부피 원소인 voxel이, zero set이 implicit surface인 함수의 샘플을 담습니다.
+@@ 23
+2. 점과 surfel
+@@ 24
+가장 단순한 dense map은 지금까지 측정한 모든 점입니다. 각 scan \(\mathsf{P}_t\)는 자기 센서 frame에 있으므로, 먼저 back-end가 추정한 pose \(\mathbf{T}^1_t\)로 map frame에 옮긴 다음 map cloud에 더합니다: <span class="src">§5.3.2.1 · p. 127</span>
+@@ 25
+이 map은 한없이 커집니다. 같은 장소를 다시 지날 때마다 같은 벽이 또 더해지기 때문입니다. 흔한 해결책은 작은 정육면체 공간마다 점을 몇 개만 남기거나, keyframe으로 고른 scan만 남기는 것입니다. 둘째 약점은 점 하나만으로는 그 점이 나온 표면에 대해 아무것도 알 수 없다는 것입니다. 시점을 잊고 나면 어느 쪽이 안쪽인지 알 수 없습니다. <span class="src">§5.3.2.1 · p. 127</span>
+@@ 26
+<strong>surfel</strong>(surface element, 표면 요소)이 이를 보완합니다. surfel은 작은 원판으로, 위치 \(\mathbf{p} \in \R^3\), normal \(\mathbf{n} \in \R^3\), 반지름 \(r\)로 이루어집니다. 가까운 여러 측정값을 원판 하나로 합치므로 세밀한 부분은 잃지만 메모리를 아낍니다. 책의 Figure 5.7에서 누적 point cloud는 2.95 GB를 차지하고, 같은 주행의 surfel map은 160 MB입니다. <span class="src">§5.3.2.2 · pp. 128–129</span>
+@@ 27
+<strong>normal distributions transform (NDT)</strong>는 가까운 친척입니다. 공간을 voxel로 나누고, 각 voxel은 그 안에 들어온 점들의 평균 \(\boldsymbol{\mu}\)와 covariance \(\boldsymbol{\Sigma}\)를 저장합니다. \(\boldsymbol{\Sigma}\)의 eigenvalue가 \(\lambda_1 \lt \lambda_2 \lt \lambda_3\)이고 \(\lambda_1 \ll \lambda_2\)이면, 점들은 eigenvector \(\mathbf{v}_1\)을 normal로 하는 평평한 조각을 이룹니다. <span class="src">§5.3.2.2 · p. 129</span>
+@@ 28
+빈틈 채우기: 가장 작은 eigenvector가 normal인 이유
+@@ 29
+단위 벡터 \(\mathbf{u}\)를 잡습니다. \(\mathbf{u}\) 방향으로 점들이 퍼진 정도는 점들을 투영한 값의 분산입니다.
+@@ 30
+평면 위의 점들은 평면의 normal 방향으로 거의 퍼져 있지 않으므로, normal은 \(\mathbf{u}\T\boldsymbol{\Sigma}\mathbf{u}\)를 최소화하는 \(\mathbf{u}\)입니다. \(\boldsymbol{\Sigma}\)의 정규직교 eigenvector로 \(\mathbf{u} = \sum_j c_j \mathbf{v}_j\)라고 쓰면 \(\sum_j c_j^2 = 1\)입니다. 그러면 \(\mathbf{u}\T\boldsymbol{\Sigma}\mathbf{u} = \sum_j \lambda_j c_j^2 \ge \lambda_1\)이고, 등호는 \(\mathbf{u} = \mathbf{v}_1\)일 때 성립합니다. 가장 작은 eigenvalue는 조각을 가로지르는 방향의 분산이고, 그 eigenvector가 normal입니다.
+@@ 31
+2D 예. 네 점 \((0, 0)\), \((1, 0.1)\), \((2, -0.1)\), \((3, 0)\)은 대략 x축 위에 있습니다. 평균은 \((1.5, 0)\)이고
+@@ 32
+\((\boldsymbol{\Sigma} - \lambda_1\mathbf{I})\mathbf{v}_1 = \mathbf{0}\)을 풀면 \(\mathbf{v}_1 \propto (0.02, 1)\)입니다. normal은 마땅히 그래야 하듯 y 방향을 가리키고, 조각의 두께는 \(\sqrt{0.0045} = 0.067\) m입니다.
+@@ 33
+3. mesh와 voxel
+@@ 34
+점과 surfel은 표면의 어느 조각이 어느 조각과 이어지는지 말해 주지 않습니다. <strong>mesh</strong>는 말해 줍니다. mesh는 <strong>vertex</strong>(정점)들을 polygon <strong>face</strong>(면)로 이은 집합이며, 어떤 polygon이든 삼각형으로 자를 수 있으므로 보통 삼각형을 씁니다. 연결 정보 덕분에 표면이 빈틈없이 닫히고(watertight), 표면을 따라 이동하거나 표면 위에서 interpolation할 수 있습니다. 원소의 개수는 모양의 크기가 아니라 복잡도를 따릅니다. 아무리 넓은 평평한 벽도 삼각형 두 개와 vertex 네 개입니다. <span class="src">§5.3.2.3 · p. 129</span>
+@@ 35
+occupancy와 signed distance는 표면뿐 아니라 공간의 모든 점에서 정의됩니다. 이를 저장하는 직접적인 방법은 cell의 규칙 격자이며, 3D에서는 이 cell을 <strong>voxel</strong>이라 부릅니다. voxel은 그릇일 뿐이고, 그 숫자가 무엇을 뜻하는지는 방법에 따라 다릅니다. <span class="src">§5.3.2.4 · p. 130</span>
+@@ 36
+격자
+@@ 37
+voxel 값의 의미
+@@ 38
+임의의 점에서의 값
+@@ 39
+occupancy grid
+@@ 40
+cell에 장애물이 있을 확률
+@@ 41
+그 점을 포함하는 voxel의 값
+@@ 42
+signed distance field
+@@ 43
+voxel 중심에서의 signed distance
+@@ 44
+이웃 voxel 중심들에서 interpolation
+@@ 45
+빈틈 채우기: voxel 중심 사이의 interpolation
+@@ 46
+2D에서 가장 가까운 네 중심이 \(f_{00}, f_{10}, f_{01}, f_{11}\)을 가지고(첫 인덱스는 x 방향, 둘째는 y 방향), query 점이 x 방향으로 비율 \(a\), y 방향으로 비율 \(b\)만큼 들어가 있다고 합시다. 둘 다 0과 1 사이입니다. 두 행에서 각각 x 방향으로 interpolation한 다음, 그 결과들 사이에서 y 방향으로 interpolation합니다:
+@@ 47
+이것이 <strong>bilinear interpolation</strong>(쌍선형 보간)입니다. 각 꼭짓점의 가중치는 두 인수의 곱이고, 네 가중치의 합은 1이며, 꼭짓점에서는 그 꼭짓점의 값을 돌려줍니다. 예: \(f_{00} = 0.10\), \(f_{10} = -0.06\), \(f_{01} = 0.14\), \(f_{11} = -0.02\), \((a, b) = (0.5, 0.25)\). 두 행에서 \(0.02\)와 \(0.06\)이 나오고, \(f = 0.75 \times 0.02 + 0.25 \times 0.06 = 0.03\)입니다. 3D에서 꼭짓점 여덟 개와 인수 세 개로 같은 일을 하는 것이 <strong>trilinear interpolation</strong>(삼선형 보간)입니다.
+@@ 48
+4. 연속 함수
+@@ 49
+마지막 추상화는 격자를 버립니다. mapping이 회귀 문제가 됩니다. 측정값에 함수를 맞추고, 원하는 곳 어디서나 그 함수를 계산합니다. 2D의 직선이나 3D의 평면처럼 parameter가 적은 함수는 간결하고 빠르지만, 세상이 그런 것들로 이루어져 있다고 가정합니다. B-spline 같은 control point 함수나 Gaussian process 같은 non-parametric 함수는 가정이 더 적습니다. 장점은 해상도를 미리 정하지 않아도 되고, 측정값 사이의 빈틈을 채우며, 적어도 한 번 미분 가능한 함수라면 gradient, 따라서 표면 normal을 준다는 것입니다. <span class="src">§5.3.2.5 · pp. 130–131</span> Day 5에서 하나를 만들어 봅니다.
+@@ 50
+5. 변환, 그리고 marching squares
+@@ 51
+시스템이 한 가지 표현에만 머무는 일은 드뭅니다. <span class="src">§5.3.2.6 · pp. 131–132</span>
+@@ 52
+변환 전
+@@ 53
+변환 후
+@@ 54
+점 또는 mesh
+@@ 55
+signed distance
+@@ 56
+필요한 곳에서 최근접 점 조회, 또는 격자 전체에 퍼지는 wavefront (fast marching)
+@@ 57
+signed distance 격자
+@@ 58
+mesh
+@@ 59
+=
+@@ 60
+mesh (CAD와 건물 모델 포함)
+@@ 61
+점 또는 surfel
+@@ 62
+face를 샘플링
+@@ 63
+모든 이산 데이터
+@@ 64
+연속 함수
+@@ 65
+최적화로 parameter를 맞춤
+@@ 66
+<strong>Marching Cubes</strong>는 이웃한 샘플 여덟 개로 이루어진 정육면체를 하나씩 따로 방문해 꼭짓점의 부호를 보고, 그 부호 패턴에 해당하는 삼각형을 표에서 꺼내 출력합니다. 2D 버전인 <strong>marching squares</strong>가 전체 아이디어를 보여 줍니다. 정사각형에는 꼭짓점이 네 개이므로 부호 패턴은 \(2^4 = 16\)가지이고, 이들은 네 종류로 나뉩니다:
+@@ 67 attr
+꼭짓점이 안쪽 또는 바깥쪽으로 표시된 정사각형 네 개. 꼭짓점이 모두 같으면 선이 없습니다. 한 꼭짓점만 다르면 짧은 선이 그 꼭짓점을 잘라 냅니다. 이웃한 두 꼭짓점이 안쪽이면 선이 정사각형을 한 변에서 맞은편 변으로 가로지릅니다. 마주 보는 두 꼭짓점이 안쪽이면 선 두 개를 긋는 올바른 방법이 두 가지 있습니다.
+@@ 68
+교차 없음
+@@ 69
+꼭짓점 하나
+@@ 70
+이웃한 둘
+@@ 71
+마주 보는 둘
+@@ 72
+case 0, 15
+@@ 73
+case 1, 2, 4, 8
+@@ 74
+및 7, 11, 13, 14
+@@ 75
+case 3, 6, 9, 12
+@@ 76
+case 5, 10
+@@ 77
+답이 두 가지
+@@ 78
+채운 꼭짓점: 음수(안쪽). case 번호는 안쪽 꼭짓점마다 1, 2, 4, 8을 더한 값이며, 첫 정사각형에 그 값을 표시했습니다. 안쪽과 바깥쪽을 서로 바꾸어도 같은 선이 나옵니다.
+@@ 79
+표는 선이 어느 변을 지나는지만 알려 줍니다. 각 변의 어디를 지나는지는 linear interpolation으로 정하며, 어제의 zero crossing과 같은 공식입니다. 양 끝이 부호가 반대인 \(f_a\)와 \(f_b\)를 가진 변에서 vertex는 끝 \(a\)로부터 비율 \(t = f_a / (f_a - f_b)\)인 곳에 놓입니다. \(f_a = 0.3\), \(f_b = -0.1\)이면 \(t = 0.75\)입니다. 3D에서 정육면체는 부호 패턴이 \(2^8 = 256\)가지이고, 대칭을 이용하면 Figure 5.8의 15가지 구성으로 줄어듭니다. <span class="src">§5.3.2.6 · p. 131</span>
+@@ 80
+직접 해 보기: 아래 원판은 1 m마다 샘플링되어 있습니다. interpolation을 껐다 켜 보세요. 그다음 방을 고르고 격자 간격을 0.5 m에서 0.125 m까지 한 단계씩 줄이며 가운데의 얇은 벽을 지켜보세요.
+@@ 81
+눈여겨볼 점: 간격이 1 m일 때 vertex 20개는 interpolation이 있으면 실제 원에서 평균 2.7 cm 떨어져 있고, 없으면 21 cm 떨어져 있습니다. 이때 윤곽선은 직선과 45° 조각으로 된 계단이 됩니다. 방에서 10 cm 두께의 벽은 간격 0.25 m까지는 나타나지 않습니다. 그 안에 떨어지는 샘플이 없기 때문입니다. 0.125 m에서 벽이 나타나고, 윤곽선 길이는 40.9 m에서 45.3 m로 뜁니다(실제 값 45.7 m).
+@@ 82
+<strong>"voxel은 작은 꽉 찬 정육면체다."</strong> voxel은 저장 칸입니다. occupancy grid에서는 그 값이 정말 cell 전체를 대표하지만, distance field에서는 한 점의 샘플이며 interpolation해서 쓰는 값입니다.
+@@ 83
+<strong>"point cloud는 표면이다."</strong> point cloud는 표면의 샘플일 뿐이며, normal도, 연결 정보도, 안팎 구분도 없습니다. mesh나 distance field로 바꾸려면 시점 같은 추가 정보나 가정이 필요합니다.
+@@ 84
+<strong>"Marching Cubes는 격자가 놓친 세부를 되살릴 수 있다."</strong> Marching Cubes는 샘플의 부호와 값만 읽습니다. 물체 안에 떨어지는 샘플이 하나도 없으면 부호 변화가 없고, 그 물체는 mesh에 나타나지 않습니다.
+@@ 85
+Q1. NDT voxel의 covariance eigenvalue가 0.0004, 0.09, 0.12 m²입니다. 그 안의 점들은 어떤 모양입니까?
+@@ 86
+첫째 eigenvector 방향의 가는 막대
+@@ 87
+선호 방향이 없는 둥근 덩어리
+@@ 88
+첫째 eigenvector를 normal로 하는 평평한 조각
+@@ 89
+셋째 eigenvector를 normal로 하는 평평한 조각
+@@ 90
+두 방향으로는 크게 퍼져 있고 한 방향으로는 아주 작게(표준편차 2 cm) 퍼져 있으므로 점들은 평면 위에 있습니다. 가장 적게 퍼진 방향이 normal입니다. 막대라면 eigenvalue 하나가 크고 둘이 작을 것입니다.
+@@ 91
+Q2. 이웃한 네 voxel 중심이 f₀₀ = 0.2, f₁₀ = 0.0, f₀₁ = 0.4, f₁₁ = 0.2를 가집니다. a = 0.25, b = 0.5에서 bilinear 값은 얼마입니까?
+@@ 92
+x 방향: 아래 행은 0.75 × 0.2 + 0.25 × 0.0 = 0.15, 위 행은 0.75 × 0.4 + 0.25 × 0.2 = 0.35입니다. y 방향: 0.5 × 0.15 + 0.5 × 0.35 = 0.25.
+@@ 93
+Q3. 격자의 한 변은 길이가 10 cm이고, 양 끝 값은 +0.3과 −0.1입니다. marching squares는 vertex를 어디에 놓습니까?
+@@ 94
+양수 끝에서 2.5 cm
+@@ 95
+양수 끝에서 5 cm
+@@ 96
+양수 끝에서 3 cm
+@@ 97
+양수 끝에서 7.5 cm
+@@ 98
+t = 0.3 / (0.3 + 0.1) = 0.75, 곧 양수 끝에서 전체의 0.75만큼 간 곳이며, 7.5 cm입니다. 0은 값이 0에 더 가까운 끝 쪽에 더 가깝습니다.
+@@ 99
+Q4. 두께 4 cm의 벽이 10 cm 간격인 signed distance 격자의 두 열 사이에 서 있고, 어떤 샘플에도 닿지 않습니다. marching squares는 이 벽에 대해 무엇을 출력합니까?
+@@ 100
+4 cm 떨어진 평행선 두 개
+@@ 101
+아무것도 없음: 모든 샘플이 양수라 부호가 바뀌는 변이 없음
+@@ 102
+벽 가운데를 지나는 선 하나
+@@ 103
+10 cm 떨어진 선 두 개
+@@ 104
+알고리즘은 꼭짓점의 샘플만 봅니다. 음수 샘플이 없으면 부호 변화가 없고 선도 없습니다. 이것이 §5.2.3에서 본, 샘플링된 implicit surface의 얇은 장애물 약점입니다.
+@@ 105
+표현은 무엇을 기술하는지(표면 또는 부피)와 어떻게 기술하는지(explicit 원소 또는 implicit 함수)로 나뉘며, 실제 시스템은 이들을 섞어 씁니다.
+@@ 106
+점은 날것의 샘플입니다. surfel은 normal과 반지름을 더합니다. NDT voxel은 평균과 covariance를 저장하며, 그 가장 작은 eigenvector가 표면 normal입니다.
+@@ 107
+mesh는 연결 정보를 더합니다. voxel은 그릇입니다. occupancy 값은 cell 전체를 덮고, 거리 값은 interpolation할 샘플입니다(2D에서는 bilinear, 3D에서는 trilinear).
+@@ 108
+연속 함수는 고정된 해상도가 없고 gradient를 줄 수 있습니다.
+@@ 109
+Marching Cubes는 거리 격자를 mesh로 바꿉니다. 꼭짓점의 부호가 패턴을 고르고, linear interpolation \(t = f_a/(f_a - f_b)\)가 vertex를 놓습니다.
+@@ 110
+<em>SLAM Handbook</em>, §5.3.1 "Explicitness of Target Spatial Structures"와 §5.3.2 "Types of Spatial Abstractions", pp. 126–132; Figure 5.4, p. 123.
+@@ 111
+Lorensen, Cline, <em>Marching Cubes: A High Resolution 3D Surface Construction Algorithm</em>, 1987 (알고리즘; marching squares는 그 2D 형태).
+@@ 112
+eigenvector 논증과 bilinear interpolation은 표준적인 선형대수와 수치해석 내용입니다. \(\mathbf{u}\T\boldsymbol{\Sigma}\mathbf{u}\)에 대한 eigenvalue 한계는 Strang, <em>Introduction to Linear Algebra</em>, 2016을 보세요.

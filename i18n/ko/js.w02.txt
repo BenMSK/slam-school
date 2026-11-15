@@ -1,0 +1,400 @@
+@@ w02
+"Factor graph of the chosen SLAM problem. Large circles are pose and landmark variables, small dark dots are factors, and each factor is joined to the variables it depends on."
+==
+"선택한 SLAM 문제의 factor graph. 큰 원은 pose 변수와 landmark 변수, 작은 검은 점은 factor이며, 각 factor는 자신이 의존하는 변수에 연결됩니다."
+@@ w02
+cnt.push("1 prior")
+==
+cnt.push("prior 1개")
+@@ w02
+cnt.push((N-1)+" odometry")
+==
+cnt.push("odometry "+(N-1)+"개")
+@@ w02
+cnt.push(obs.length+(on.range?" bearing-range":" bearing"))
+==
+cnt.push((on.range?"bearing-range ":"bearing ")+obs.length+"개")
+@@ w02
+cnt.push(seen.length+" landmark priors")
+==
+cnt.push("landmark prior "+seen.length+"개")
+@@ w02
+stat("Variables",String(N+seen.length),N+" poses, "+seen.length+" landmarks")
+==
+stat("변수",String(N+seen.length),"pose "+N+"개, landmark "+seen.length+"개")
+@@ w02
+stat("Factors",
+==
+stat("factor",
+@@ w02
+stat("Unknown numbers",String(n),"3 per pose, 2 per landmark")
+==
+stat("미지수 개수",String(n),"pose당 3개, landmark당 2개")
+@@ w02
+stat("Measured numbers",String(m),"one equation each")
+==
+stat("측정된 숫자",String(m),"각각 방정식 하나")
+@@ w02
+stat("Undetermined directions",String(n-rank),n-rank?"the factors cannot fix these":"every unknown is pinned down")
+==
+stat("결정되지 않은 방향",String(n-rank),n-rank?"factor로 고정할 수 없음":"모든 미지수가 결정됨")
+@@ w02
+"Factor graph builder"
+==
+"factor graph 만들기"
+@@ w02
+"A robot drives along a line and sees every landmark within its sensing range. Bearings are measured relative to the robot's heading. A dashed landmark is seen by no pose and is not part of the problem."
+==
+"로봇이 직선을 따라 달리며 감지 범위 안의 모든 landmark를 봅니다. bearing은 로봇의 heading을 기준으로 측정합니다. 점선 landmark는 어느 pose에서도 보이지 않으므로 문제에 포함되지 않습니다."
+@@ w02
+range("Poses",
+==
+range("pose 수",
+@@ w02
+range("Landmarks",
+==
+range("landmark 수",
+@@ w02
+range("Sensing range",
+==
+range("감지 범위",
+@@ w02
+tg("Prior on p₁",
+==
+tg("p₁의 prior",
+@@ w02
+tg("Landmark priors",
+==
+tg("landmark prior",
+@@ w02
+tg("Measure range too",
+==
+tg("range도 측정",
+@@ w02
+"pose variable"
+==
+"pose 변수"
+@@ w02
+"landmark variable"
+==
+"landmark 변수"
+@@ w02
+"factor (dot)"
+==
+"factor (점)"
+@@ w02
+"Top view. Two robot poses each measure the bearing to one landmark. The shading shows how likely each landmark position is under the factors that are switched on."
+==
+"위에서 본 그림. 로봇 pose 두 개가 각각 landmark 하나의 bearing을 측정합니다. 음영은 켜진 factor들 아래에서 각 landmark 위치가 얼마나 그럴듯한지 보여 줍니다."
+@@ w02
+"true ℓ"
+==
+"실제 ℓ"
+@@ w02
+"prior mean"
+==
+"prior 평균"
+@@ w02
+stat("Factors multiplied",String(on.filter(v=>v).length),"switch them on and off")
+==
+stat("곱한 factor",String(on.filter(v=>v).length),"버튼으로 켜고 끄기")
+@@ w02
+stat("MAP estimate of ℓ",
+==
+stat("ℓ의 MAP 추정값",
+@@ w02
+"not unique"
+==
+"유일하지 않음"
+@@ w02
+"pink ring; cost J = "
+==
+"분홍 고리; cost J = "
+@@ w02
+"a whole ray fits equally well"
+==
+"반직선 전체가 똑같이 잘 맞음"
+@@ w02
+"no information"
+==
+"정보 없음"
+@@ w02
+stat("Distance to the true ℓ",
+==
+stat("실제 ℓ까지 거리",
+@@ w02
+"true ℓ = (2.00, 1.60)"
+==
+"실제 ℓ = (2.00, 1.60)"
+@@ w02
+"Multiplying factors on one landmark"
+==
+"landmark 하나에 걸린 factor 곱하기"
+@@ w02
+"Two poses are known. Each measured the bearing to the same landmark. Darker means a larger product of the factors that are on, evaluated on a grid of landmark positions."
+==
+"두 pose는 알려져 있고, 각각 같은 landmark의 bearing을 측정했습니다. landmark 위치 격자에서 켜진 factor들의 곱을 계산했으며, 진할수록 곱이 큽니다."
+@@ w02
+tg("Bearing from p₁",
+==
+tg("p₁의 bearing",
+@@ w02
+tg("Bearing from p₂",
+==
+tg("p₂의 bearing",
+@@ w02
+tg("Gaussian prior on ℓ",
+==
+tg("ℓ의 Gaussian prior",
+@@ w02
+"Number line with the three robot positions: from odometry alone, and from the least-squares solution that also uses the measurement of x3 minus x1."
+==
+"로봇의 세 위치를 표시한 수직선: odometry만으로 얻은 위치와, x3 - x1 측정까지 쓴 least-squares 해."
+@@ w02
+"measured x₃ − x₁ = "
+==
+"측정된 x₃ − x₁ = "
+@@ w02
+"whitened Jacobian and right-hand side, one row per factor"
+==
+"whitened Jacobian과 우변, factor마다 한 행"
+@@ w02
+"Cholesky factor (1.26), forward substitution (1.27), back substitution (1.28)"
+==
+"Cholesky factor (1.26), 전진 대입 (1.27), 후진 대입 (1.28)"
+@@ w02
+"Householder QR (1.29): the same R up to row signs, no AᵀA formed"
+==
+"Householder QR (1.29): 행 부호만 다른 같은 R, AᵀA를 만들지 않음"
+@@ w02
+stat("Least-squares positions",
+==
+stat("least-squares 위치",
+@@ w02
+stat("Odometry alone","0, 1, 2","hollow circles")
+==
+stat("odometry만","0, 1, 2","빈 원")
+@@ w02
+stat("Leftover cost",
+==
+stat("남은 cost",
+@@ w02
+"Four factors, three unknowns, one linear solve"
+==
+"factor 넷, 미지수 셋, 선형 풀이 한 번"
+@@ w02
+"A robot on a line: a prior x₁ = 0 (σ = 0.1), two odometry steps of 1.0, and one measurement of x₃ − x₁. Everything is linear, so with the linearization point at zero the update δ* is the answer itself."
+==
+"직선 위의 로봇: prior x₁ = 0 (σ = 0.1), 길이 1.0인 odometry step 두 개, x₃ − x₁ 측정 하나. 모두 선형이므로 linearization point를 0에 두면 update δ*가 곧 답입니다."
+@@ w02
+range("σ of the x₃ − x₁ measurement",
+==
+range("x₃ − x₁ 측정의 σ",
+@@ w02
+range("Measured x₃ − x₁",
+==
+range("측정된 x₃ − x₁",
+@@ w02
+"odometry alone"
+==
+"odometry만"
+@@ w02
+"least-squares solution"
+==
+"least-squares 해"
+@@ w02
+"the x₃ − x₁ measurement"
+==
+"x₃ − x₁ 측정"
+@@ w02
+"The estimate has left the chart: y = "
+==
+"추정값이 차트를 벗어났습니다: y = "
+@@ w02
+"landmark height y"
+==
+"landmark 높이 y"
+@@ w02
+"The cost J as a function of the landmark height y, the current estimate, and the local quadratic model that the next step minimizes."
+==
+"landmark 높이 y의 함수로 그린 cost J, 현재 추정값, 그리고 다음 step이 최소화하는 국소 2차 모델."
+@@ w02
+stat("Estimate y",
+==
+stat("추정값 y",
+@@ w02
+"minimum is at y = 0"
+==
+"최솟값은 y = 0"
+@@ w02
+"whitened with σ = 0.1 rad"
+==
+"σ = 0.1 rad로 whitening"
+@@ w02
+"next step "
+==
+"다음 step "
+@@ w02
+" (GN alone: "
+==
+" (GN만: "
+@@ w02
+stat("Next GN step",
+==
+stat("다음 GN step",
+@@ w02
+msg="start"
+==
+msg="시작"
+@@ w02
+"diverged"
+==
+"발산"
+@@ w02
+"converged"
+==
+"수렴"
+@@ w02
+"step taken"
+==
+"step 진행"
+@@ w02
+"accepted, λ ÷ 10"
+==
+"수락, λ ÷ 10"
+@@ w02
+"rejected, λ × 10"
+==
+"거절, λ × 10"
+@@ w02
+"Levenberg-Marquardt on one unknown"
+==
+"미지수 하나로 보는 Levenberg-Marquardt"
+@@ w02
+"Gauss-Newton on one unknown"
+==
+"미지수 하나로 보는 Gauss-Newton"
+@@ w02
+"A landmark is on the wall x = 1 at unknown height y. The robot at the origin measured bearing 0, so J(y) = (atan y / 0.1)². The filled dot is the estimate, the hollow dot is where the next step lands."
+==
+"landmark는 벽 x = 1 위, 알 수 없는 높이 y에 있습니다. 원점의 로봇이 bearing 0을 측정했으므로 J(y) = (atan y / 0.1)²입니다. 채운 점은 현재 추정값, 빈 점은 다음 step이 도착할 곳입니다."
+@@ w02
+range("Starting estimate",
+==
+range("시작 추정값",
+@@ w02
+range("Starting λ",
+==
+range("시작 λ",
+@@ w02
+button("Step",
+==
+button("한 step",
+@@ w02
+button("Reset",
+==
+button("초기화",
+@@ w02
+"true cost J(y)"
+==
+"실제 cost J(y)"
+@@ w02
+"Gauss-Newton model"
+==
+"Gauss-Newton 모델"
+@@ w02
+"damped model, + λδ²"
+==
+"damping된 모델, + λδ²"
+@@ w02
+"local quadratic model"
+==
+"국소 2차 모델"
+@@ w02
+"singular system"
+==
+"특이 행렬"
+@@ w02
+"cost went up"
+==
+"cost 증가"
+@@ w02
+"cost went down"
+==
+"cost 감소"
+@@ w02
+note:"start"
+==
+note:"시작"
+@@ w02
+"Top view of the pose graph: the true loop, the current estimate of the selected method with a heading tick at each pose, and the loop-closure constraint between the last pose and the first."
+==
+"위에서 본 pose graph: 실제 loop, 선택한 방법의 현재 추정값(pose마다 heading 표시), 그리고 마지막 pose와 첫 pose 사이의 loop closure 제약."
+@@ w02
++22,"start",
+==
++22,"시작",
+@@ w02
+"Cost J after each iteration, on a logarithmic scale, one curve per method"
+==
+"iteration마다의 cost J, 로그 스케일, 방법마다 곡선 하나"
+@@ w02
+"cost J (log scale)"
+==
+"cost J (로그 스케일)"
+@@ w02
+"true loop"
+==
+"실제 loop"
+@@ w02
+"estimate: "
+==
+"추정값: "
+@@ w02
+"loop-closure constraint"
+==
+"loop closure 제약"
+@@ w02
+"start cost "
+==
+"시작 cost "
+@@ w02
+select("Show the estimate of",
+==
+select("표시할 추정값",
+@@ w02
+select("Initial estimate",
+==
+select("초기 추정값",
+@@ w02
+"Chained odometry"
+==
+"odometry 이어 붙이기"
+@@ w02
+"Scrambled poses"
+==
+"흩어진 pose"
+@@ w02
+"All poses at the start"
+==
+"모든 pose를 시작점에"
+@@ w02
+"Pose-graph optimizer"
+==
+"pose graph 최적화"
+@@ w02
+"Thirteen poses, 39 unknowns. Factors: a prior on the first pose, 12 odometry steps (1 unit forward, 30° left, position σ = 0.1), and one loop closure saying the last pose is back at the first. All methods start from the same estimate."
+==
+"pose 13개, 미지수 39개. factor: 첫 pose의 prior, odometry step 12개(앞으로 1, 왼쪽으로 30°, 위치 σ = 0.1), 마지막 pose가 첫 pose로 돌아왔다는 loop closure 하나. 모든 방법이 같은 추정값에서 시작합니다."
+@@ w02
+range("Heading noise σ per step",
+==
+range("step당 heading noise σ",
+@@ w02
+button("Run 20",
+==
+button("20번 실행",
+@@ w02
+button("New noise",
+==
+button("새 noise",

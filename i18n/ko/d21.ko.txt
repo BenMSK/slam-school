@@ -1,0 +1,152 @@
+@@ 1
+<span class="eyebrow">4주차 · Day 3</span>
+@@ 2
+Lie group 위의 Gauss-Newton: perturbation, linearization, retraction
+@@ 3
+오늘이 끝나면 pose에 의존하는 측정을 Lie algebra의 작은 perturbation에 대해 선형화하고, 추정값이 올바른 pose로 남도록 update T ← T Exp(ξ)로 Gauss-Newton을 돌릴 수 있습니다.
+@@ 4
+약 60분 · §2.1.3, pp. 57–59 읽기 (3쪽) · 2주차 Day 4와 4주차 Day 2 필요
+@@ 5
+먼저 읽기: §2.1.3, pp. 57–59
+@@ 6
+p. 57의 식 (2.8)–(2.9): 카메라 예제, 그리고 transform \(\mathbf{T}^c_w\)가 어느 쪽에서 어느 쪽으로 변환하는지.
+@@ 7
+식 (2.10)–(2.12): perturbation을 오른쪽에 곱한 다음 1차까지 근사합니다. 각주 1도 읽으십시오.
+@@ 8
+p. 58의 식 (2.14)–(2.16): Jacobian \(\mathbf{H}_i\)가 두 조각의 곱으로 나타납니다.
+@@ 9
+p. 59의 식 (2.19), 그리고 절의 마지막 문단에 나오는 "tangent"와 "retracting"이라는 단어.
+@@ 10
+pose는 행렬로 두되, Gauss-Newton 각 iteration의 미지수는 Lie algebra의 작은 벡터 \(\boldsymbol{\xi}\)로 둡니다. \(\boldsymbol{\xi}=\mathbf{0}\) 주변에서 \(\boldsymbol{\xi}\)에 대해 선형화하고, 제약 없는 평범한 least-squares 문제를 푼 다음, \(\mathbf{T} \leftarrow \mathbf{T}\,\Exp(\boldsymbol{\xi})\)로 답을 group 위로 되돌립니다. 추정값은 결코 \(\SE(3)\)를 벗어나지 않습니다.
+@@ 11
+1. 계속 쓸 예제: 카메라는 어디에 있는가?
+@@ 12
+카메라가 world 위치 \(\boldsymbol{\ell}^w_i\)를 아는 landmark들을 봅니다. 카메라 모델 \(\mathbf{h}_i\)는 <em>카메라</em> frame의 homogeneous 점을 받아 픽셀 좌표 \(\mathbf{z}_i\in\R^2\)를 돌려줍니다. 점을 먼저 카메라 frame으로 가져와야 하므로 measurement model은 다음과 같습니다 <span class="src">§2.1.3 · p. 57, eq. (2.8)</span>
+@@ 13
+인덱스는 Day 1처럼 읽습니다: \(\mathbf{T}^c_w\)는 world 좌표를 카메라 좌표로 바꿉니다. 모든 픽셀 측정값을 가장 잘 설명하는 pose를 찾는 것이 <strong>perspective-n-point (PnP)</strong> 문제입니다: <span class="src">§2.1.3 · p. 57, eq. (2.9)</span>
+@@ 14
+이것은 <a href="#d8">2주차 · Day 2</a>의 nonlinear least-squares 문제와 한 가지만 다릅니다: 미지수가 벡터가 아니라 \(\SE(3)\)의 원소입니다. <a href="#d10">2주차 · Day 4</a>의 Gauss-Newton 레시피 "선형화하고, 풀고, step을 더한다"로는 \(\mathbf{T}\)에 step을 더할 수 없습니다. 식을 짧게 쓰기 위해 현재 추정값을 \(\mathbf{T}^0\)으로 쓰고 (책은 \(\mathbf{T}^{c^0}_w\)로 씁니다), \(\tilde{\boldsymbol{\ell}}^w_i\)를 \(\tilde{\boldsymbol{\ell}}_i\)로 씁니다.
+@@ 15
+2. Lie algebra로 pose에 perturbation 주기
+@@ 16
+추정값 근처의 모든 pose를 추정값에 작은 움직임을 곱한 것으로 나타냅니다: <span class="src">§2.1.3 · p. 57, eqs. (2.10)–(2.11)</span>
+@@ 17
+기호 \(\oplus\)는 "오른쪽에 ~의 Exp를 곱한다"의 줄임입니다. 이것이 \(\mathbf{x}^0 + \boldsymbol{\Delta}\)의 올바른 대체물인 이유는 두 가지입니다. 첫째, closure: \(\mathbf{T}^0\)과 \(\Exp(\boldsymbol{\xi})\)가 모두 \(\SE(3)\)에 있으므로, <em>어떤</em> \(\boldsymbol{\xi}\)에 대해서도 그 곱 역시 그렇습니다. 둘째, \(\boldsymbol{\xi}\)는 자유도마다 하나씩 정확히 여섯 원소를 가지므로 제약할 것이 없습니다.
+@@ 18
+작은 \(\boldsymbol{\xi}\)에 대해서는 급수 \(\Exp(\boldsymbol{\xi}) = \mathbf{I} + \boldsymbol{\xi}^\wedge + \tfrac12(\boldsymbol{\xi}^\wedge)^2 + \dots\)의 처음 두 항만 남깁니다: <span class="src">§2.1.3 · p. 57, eq. (2.12)</span>
+@@ 19
+얼마나 좋은 근사일까요? 평면에서 \(\theta = 0.1\) rad이면 \(\Exp(\theta)\)의 원소는 \(\cos 0.1 = 0.995\)와 \(\sin 0.1 = 0.0998\)이고, \(\mathbf{I} + \theta^\wedge\)의 원소는 \(1\)과 \(0.1\)입니다. 오차는 약 \(\theta^2/2 = 0.005\)로 2차이며, linearization이 버려도 되는 바로 그 크기입니다.
+@@ 20 attr
+곡선은 올바른 pose들의 manifold를 나타냅니다. 곡선 위의 점 T0에서 곧은 tangent 직선이 곡선에 닿습니다. step xi는 tangent 직선을 따라 나아가 곡선을 벗어납니다. retract라고 적힌 화살표가 step의 끝을 곡선 위의 점 T0 Exp(xi)로 되돌려 놓습니다.
+@@ 21
+manifold: 올바른 pose 전체
+@@ 22
+T⁰의 tangent space
+@@ 23
+tangent space 안의 step ξ
+@@ 24
+=
+@@ 25
+manifold 위의 T⁰ Exp(ξ)
+@@ 26
+iteration 한 번. least-squares step은 현재 추정값의 평평한 tangent space에서 계산됩니다. 그대로 따르면 manifold를 벗어나므로, Exp가 step을 manifold 위로 휘어 되돌립니다. 그런 다음 tangent space를 새 점으로 옮기고 과정을 반복합니다.
+@@ 27
+3. ξ에 대해 측정을 선형화하기
+@@ 28
+1차 근사한 pose를 모델에 넣습니다: \(\mathbf{z}_i \approx \mathbf{h}_i\big(\mathbf{T}^0(\mathbf{I}+\boldsymbol{\xi}^\wedge)\tilde{\boldsymbol{\ell}}_i\big) + \boldsymbol{\eta}_i\), 식 (2.13). 책은 이를 다시 써서 \(\boldsymbol{\xi}\)가 행렬 오른쪽에 홀로 서게 만듭니다: <span class="src">§2.1.3 · p. 58, eqs. (2.14)–(2.15)</span>
+@@ 29
+빈틈 채우기: (2.13)에서 (2.14)로
+@@ 30
+이 단계는 항등식 하나, \(\boldsymbol{\xi}^\wedge\tilde{\boldsymbol{\ell}} = \tilde{\boldsymbol{\ell}}^{\odot}\boldsymbol{\xi}\)에 기댑니다. 어제의 \(\boldsymbol{\xi}^\wedge\) 정의로 왼쪽을 곱해 풀어 봅니다:
+@@ 31
+세 번째 단계는 외적의 순서를 바꿉니다: \(\boldsymbol{\theta}^\wedge\boldsymbol{\ell} = \boldsymbol{\theta}\times\boldsymbol{\ell} = -\boldsymbol{\ell}\times\boldsymbol{\theta} = -\boldsymbol{\ell}^\wedge\boldsymbol{\theta}\). 결과는 4 × 6 행렬과 \(\boldsymbol{\xi}\)의 곱입니다. 말로 하면, 작은 움직임 \(\boldsymbol{\xi}\)는 점을 \(\boldsymbol{\rho}\)(이동)에 \(\boldsymbol{\theta}\times\boldsymbol{\ell}\)(회전이 점을 원점 중심으로 휘두름)을 더한 만큼 옮깁니다.
+@@ 32
+이제 pose는 \(\boldsymbol{\xi}\)에 대해 선형이지만, 카메라 함수는 여전히 비선형입니다. 점 \(\mathbf{T}^0\tilde{\boldsymbol{\ell}}_i\) 주변에서 \(\mathbf{h}_i\)를 1차 Taylor 전개하면 마무리됩니다: <span class="src">§2.1.3 · p. 58, eq. (2.16)</span>
+@@ 33
+\(\mathbf{H}_i\)는 연쇄 법칙입니다: (카메라 frame에서 점이 움직일 때 픽셀이 움직이는 정도) × (pose에 perturbation을 줄 때 카메라 frame에서 점이 움직이는 정도). 크기는 2 × 4, 그다음 4 × 4 곱하기 4 × 6이므로 2 × 6 Jacobian이 됩니다: 픽셀 좌표 두 개 대 자유도 여섯 개입니다. 식 (2.17)은 같은 Jacobian을 더 작은 네 인수로 나누며, 각 인수는 재사용할 수 있는 구성 요소입니다. 라이브러리와 automatic differentiation은 이렇게 Jacobian을 조립합니다.
+@@ 34
+빈틈 채우기: 평면에서의 완전한 예
+@@ 35
+2D에서는 모든 것이 한 줄에 들어갑니다. \(\boldsymbol{\xi} = (\rho_1,\rho_2,\theta)\)와 Day 2의 \(\mathbf{S}\)로 \(\boldsymbol{\xi}^\wedge\tilde{\boldsymbol{\ell}} = (\boldsymbol{\rho} + \theta\,\mathbf{S}\boldsymbol{\ell},\ 0)\)이므로, \(\tilde{\boldsymbol{\ell}}^{\odot}\)의 윗행들은 \(\begin{bmatrix}\mathbf{I} & \mathbf{S}\boldsymbol{\ell}\end{bmatrix}\)이고 \(\mathbf{S}\boldsymbol{\ell} = (-\ell_2, \ell_1)\)입니다. 자기 x축 방향을 바라보고, 자기 frame의 점 \(\mathbf{p}\)에 대해 \(u = h(\mathbf{p}) = p_2/p_1\)을 보고하는 1차원 카메라를 생각합니다. 그러면
+@@ 36
+숫자: \(\mathbf{T}^0 = \mathbf{I}\), \(\boldsymbol{\ell} = (4,1)\). 그러면 \(\mathbf{p} = (4,1)\), \(u = 0.25\)이고
+@@ 37
+마지막 원소를 다른 방법으로 확인해 봅니다. \(u\)는 방위각 \(\alpha\)의 탄젠트이고, \(\theta\)만큼 돌면 \(\alpha\)에 \(\theta\)가 더해집니다. 따라서 \(\partial u/\partial\theta = 1 + \tan^2\alpha = 1 + 0.25^2 = 1.0625\)입니다. 일치합니다.
+@@ 38
+4. ξ를 풀고 retract하기
+@@ 39
+linearization을 적용하면 cost에서 측정 \(i\)의 항은 다음과 같습니다 <span class="src">§2.1.3 · p. 58, eq. (2.18)</span>
+@@ 40
+이것은 <a href="#d9">2주차 · Day 3</a>의 linear least-squares 문제와 같은 "residual 빼기 Jacobian 곱하기 미지수" 꼴입니다. 미지수는 평범한 벡터 \(\boldsymbol{\xi}\) 하나뿐입니다. 측정들에 대해 더하고 normal equations를 풉니다. 그런 다음 \(\boldsymbol{\xi}\)를 정의했던 perturbation으로 돌아갑니다: <span class="src">§2.1.3 · p. 59, eq. (2.19)</span>
+@@ 41
+update는 1차 근사가 아니라 완전한 exponential을 쓰므로, 새 \(\mathbf{T}^0\)은 정확히 \(\SE(3)\)에 있습니다. 그다음 \(\boldsymbol{\xi}\)를 0으로 되돌리고 loop를 반복합니다:
+@@ 42
+직접 해 보기: 위 예제의 1차원 카메라와 알려진 landmark 다섯 개를 쓰는 평면판 PnP입니다. "Gauss-Newton step"을 몇 번 누릅니다.
+@@ 43
+눈여겨볼 점: 기본 시작점(heading이 25°, 위치가 1.0만큼 틀림)에서 cost는 네 step 만에 약 175,700에서 0.5로 떨어지고, 이미지의 예측 표시가 측정 표시와 나란히 맞춰집니다. 남는 작은 오차(위치 0.05, heading 0.7°)는 방법이 아니라 측정 noise에서 옵니다.
+@@ 44
+5. 이름과 변형
+@@ 45
+책은 한 걸음 물러서서 방금 일어난 일에 이름을 붙입니다. <span class="src">§2.1.3 · p. 59</span> Lie algebra에서 작업하면 각 step이 manifold에 <strong>tangent</strong>한 방향으로 제한됩니다. step을 (2.19)로 되돌려 보내는 것이 <strong>retraction</strong>입니다. 이 방식 전체는 <strong>Riemannian optimization</strong>의 한 사례이며, Riemannian optimization은 Lie group이 아닌 manifold에서도, exponential이 아닌 다른 retraction으로도 동작합니다.
+@@ 46
+변형
+@@ 47
+달라지는 점
+@@ 48
+왼쪽 perturbation, \(\mathbf{T} = \Exp(\boldsymbol{\xi})\,\mathbf{T}^0\)
+@@ 49
+이것도 올바른 선택입니다 (각주 1, p. 57). Jacobian이 달라지고, update도 왼쪽에서 해야 합니다.
+@@ 50
+측정 자체가 pose \(\mathbf{Z}_i\)인 경우
+@@ 51
+Lie algebra에서 오차 \(\Log(\mathbf{T}\mathbf{Z}_i^{-1})\)(6-벡터)를 만들고, 그것을 선형화합니다. 식 (2.20), p. 59.
+@@ 52
+해석적 Jacobian이 없는 경우
+@@ 53
+\(\mathbf{H}_i\)를 수치적으로, 또는 automatic differentiation으로 계산합니다 (p. 59). 수치적으로는 작은 \(\epsilon\)에 대해 \(j\)번째 열이 \(\big[\mathbf{h}(\mathbf{T}^0\Exp(\epsilon\,\mathbf{e}_j)\tilde{\boldsymbol{\ell}}) - \mathbf{h}(\mathbf{T}^0\tilde{\boldsymbol{\ell}})\big]/\epsilon\)이며, \(\mathbf{e}_j\)는 \(j\)번째 단위 벡터입니다.
+@@ 54
+landmark도 미지수인 경우 (SLAM)
+@@ 55
+landmark는 평범한 벡터이므로 덧셈 update를 그대로 씁니다. 변수 종류마다 자기 update 규칙을 가집니다.
+@@ 56
+<strong>"ξ가 pose다."</strong> \(\boldsymbol{\xi}\)는 현재 iteration의 보정일 뿐입니다. 매번 0에서 시작하고, 추정값은 \(\mathbf{T}^0\)이 들고 있습니다.
+@@ 57
+<strong>"ξ가 작으니 update에 \(\mathbf{T}^0(\mathbf{I}+\boldsymbol{\xi}^\wedge)\)를 써도 된다."</strong> 그 행렬은 group에 속하지 않습니다. 1차 형태는 \(\mathbf{H}_i\)를 유도하기 위한 것입니다. update에는 Exp를 씁니다.
+@@ 58
+<strong>"H는 T의 원소들에 대한 미분이다."</strong> \(\boldsymbol{\xi}=\mathbf{0}\)에서 계산한, \(\boldsymbol{\xi}\)의 여섯 원소에 대한 미분입니다.
+@@ 59
+<strong>"왼쪽이든 오른쪽이든 상관없다."</strong> 둘 다 되지만, 한쪽으로 유도한 Jacobian에 다른 쪽 update를 쓰면 step이 틀립니다.
+@@ 60
+Q1. 3D 카메라 예제에서 픽셀 측정 하나의 Jacobian \(\mathbf{H}_i\)의 크기는 무엇입니까?
+@@ 61
+픽셀 좌표 두 개, \(\boldsymbol{\xi}\)의 원소 여섯 개입니다. 곱은 (2 × 4)(4 × 4)(4 × 6) = 2 × 6입니다.
+@@ 62
+Q2. 점이 \(\boldsymbol{\ell} = (1,0,0)\)에 있습니다. perturbation은 순수 회전, \(\boldsymbol{\rho} = \mathbf{0}\), \(\boldsymbol{\theta} = (0,0,0.1)\)입니다. 점의 1차 변위인 \(\tilde{\boldsymbol{\ell}}^{\odot}\boldsymbol{\xi}\)의 위쪽 세 원소는 무엇입니까?
+@@ 63
+\(\boldsymbol{\rho} - \boldsymbol{\ell}^\wedge\boldsymbol{\theta} = \boldsymbol{\theta}\times\boldsymbol{\ell} = (0,0,0.1)\times(1,0,0) = (0,0.1,0)\). z축에 대한 작은 회전은 x축 위의 점을 y 방향으로 움직입니다.
+@@ 64
+Q3. Gauss-Newton이 \(\boldsymbol{\xi}^*\)를 구했습니다. 책이 처방하는 update는 무엇입니까?
+@@ 65
+식 (2.19)입니다. (2.10)에서 \(\boldsymbol{\xi}\)를 정의한 것과 같은 오른쪽 perturbation을 완전한 exponential로 쓰므로, 결과가 \(\SE(3)\)에 남습니다. 나머지 셋은 group 밖의 행렬을 만듭니다.
+@@ 66
+Q4. 평면 예제, 카메라 \(u = p_2/p_1\), 현재 추정값 \(\mathbf{T}^0 = \mathbf{I}\), landmark \(\boldsymbol{\ell} = (2,0)\). \(\mathbf{H}\)는 무엇입니까?
+@@ 67
+\(\partial h/\partial\mathbf{p} = [-p_2/p_1^2,\ 1/p_1] = [0,\ 0.5]\)이고 \(\mathbf{S}\boldsymbol{\ell} = (0, 2)\)이므로 \(\mathbf{H} = [0,\ 0.5]\begin{bmatrix}1 & 0 & 0\\ 0 & 1 & 2\end{bmatrix} = [0,\ 0.5,\ 1]\)입니다. 점을 앞으로 옮기면 \(u\)가 변하지 않고, 옆으로 옮기면 \(u\)가 그 절반만큼 변하며, 회전하면 \(u\)가 1 대 1로 변합니다.
+@@ 68
+추정값 \(\mathbf{T}^0\) 근처의 모든 pose를 제약 없는 \(\boldsymbol{\xi}\in\R^6\)로 \(\mathbf{T}^0\oplus\boldsymbol{\xi} = \mathbf{T}^0\Exp(\boldsymbol{\xi})\)라고 씁니다.
+@@ 69
+1차까지 \(\mathbf{T}\approx\mathbf{T}^0(\mathbf{I}+\boldsymbol{\xi}^\wedge)\)이고, \(\boldsymbol{\xi}^\wedge\tilde{\boldsymbol{\ell}} = \tilde{\boldsymbol{\ell}}^{\odot}\boldsymbol{\xi}\)는 \(\boldsymbol{\xi}\)를 Jacobian이 필요로 하는 자리에 놓습니다.
+@@ 70
+\(\mathbf{H}_i = \dfrac{\partial\mathbf{h}_i}{\partial\boldsymbol{\ell}}\,\mathbf{T}^0\tilde{\boldsymbol{\ell}}_i^{\odot}\): 연쇄 법칙이며, 3D 카메라에서는 2 × 6입니다.
+@@ 71
+평소의 normal equations를 \(\boldsymbol{\xi}^*\)에 대해 풀고, \(\mathbf{T}^0\leftarrow\mathbf{T}^0\Exp(\boldsymbol{\xi}^*)\)로 update하고, \(\boldsymbol{\xi}\)를 0으로 되돌리고, 반복합니다.
+@@ 72
+manifold의 언어로: tangent space에서 step을 밟고, manifold 위로 retract합니다.
+@@ 73
+<em>SLAM Handbook</em>, §2.1.3 "Lie Group Optimization", pp. 57–59, 식 (2.8)–(2.20).
+@@ 74
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (homogeneous 점에 대한 ⊙ 연산자, pose perturbation, SE(3) 위의 Gauss-Newton).
+@@ 75
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (⊕ 연산자, 왼쪽과 오른쪽 perturbation).
+@@ 76
+평면 카메라 예제와 그 숫자는 위의 정의로부터 이 코스에서 직접 계산한 것입니다.

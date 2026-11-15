@@ -1,0 +1,252 @@
+@@ 1
+<span class="eyebrow">Week 1 · Day 5</span>
+@@ 2
+Cholesky, QR, SVD: the factorizations behind every solver
+@@ 3
+After today you can test a matrix for positive definiteness, solve normal equations by Cholesky factorization and by QR, read a condition number from singular values, and explain why solvers never form a matrix inverse.
+@@ 4
+About 60 min · Re-read two paragraphs on pp. 13 and 15 · Needs Week 1 Day 4
+@@ 5
+Read first: two paragraphs you have already read, pp. 13 and 15
+@@ 6
+There are no new pages today. Re-read, with yesterday's least squares in mind:
+@@ 7
+The geodesy paragraph on p. 13. Cholesky was a surveyor. His factorization came out of map-making, and Section 2 below is that method.
+@@ 8
+The paragraph on p. 15 that begins "Between 2005 and 2015". Optimization was once "too slow", and sparsity made it practical. Today shows what solving means, and Section 5 shows why sparsity survives it.
+@@ 9
+Optional preview: §1.3.3 on pp. 31–32 states today's material in half a page. You will read it properly in Week 2.
+@@ 10
+A solver never computes \(\boldsymbol{\Lambda}^{-1}\). It factors a matrix into triangular or orthogonal pieces and then substitutes. <strong>Cholesky</strong> factors the information matrix \(\boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A}\). <strong>QR</strong> factors \(\mathbf{A}\) itself and is more accurate. The <strong>SVD</strong> tells you, through the condition number, how much accuracy there is to lose.
+@@ 11
+1. Positive definite matrices
+@@ 12
+A symmetric matrix \(\boldsymbol{\Lambda}\) is <strong>positive definite</strong> if \(\mathbf{v}\T\boldsymbol{\Lambda}\mathbf{v} \gt 0\) for every \(\mathbf{v}\neq\mathbf{0}\), and <strong>positive semidefinite</strong> if \(\mathbf{v}\T\boldsymbol{\Lambda}\mathbf{v}\ge 0\). You proved yesterday that \(\mathbf{A}\T\mathbf{A}\) is always positive semidefinite, since \(\mathbf{v}\T\mathbf{A}\T\mathbf{A}\mathbf{v} = \norm{\mathbf{A}\mathbf{v}}_2^2\), and positive definite exactly when \(\mathbf{A}\) has full column rank. Covariance and information matrices are of this kind. For a symmetric matrix these statements are equivalent:
+@@ 13
+Test
+@@ 14
+On [4 6; 6 14]
+@@ 15
+On [1 3; 3 1]
+@@ 16
+All eigenvalues are positive
+@@ 17
+16.81 and 1.19: yes
+@@ 18
+4 and −2: no
+@@ 19
+For a 2 × 2: top-left entry and determinant are positive
+@@ 20
+4 and 20: yes
+@@ 21
+1 and −8: no
+@@ 22
+Cholesky factorization runs to the end (Section 2)
+@@ 23
+Fails at √(1 − 9)
+@@ 24
+For the second matrix, \(\mathbf{v} = (1,-1)\) gives \(\mathbf{v}\T\boldsymbol{\Lambda}\mathbf{v} = 1 - 6 + 1 = -4\). Positive definiteness is what makes a least-squares cost a bowl with one lowest point.
+@@ 25
+2. Cholesky: a triangular square root
+@@ 26
+Every symmetric positive definite matrix can be written as
+@@ 27
+\(\mathbf{R}\) is the <strong>Cholesky factor</strong>. This is the book's equation (1.26); many other texts use the lower-triangular \(\mathbf{L} = \mathbf{R}\T\) instead. <span class="src">§1.3.3 · p. 31</span> Triangular systems are solved by substitution, one unknown at a time, so the normal equations \(\mathbf{R}\T\mathbf{R}\,\mathbf{x} = \mathbf{A}\T\mathbf{b}\) split into two easy solves, equations (1.27) and (1.28):
+@@ 28
+Filling the gap: computing R by matching entries
+@@ 29
+Multiply out a general 2 × 2 factor and compare with \(\boldsymbol{\Lambda}\), entry by entry:
+@@ 30
+Top-left: \(r_{11} = \sqrt4 = 2\). Top-right: \(r_{12} = 6/2 = 3\). Bottom-right: \(r_{22} = \sqrt{14-3^2} = \sqrt5 \approx 2.236\). Each entry of \(\boldsymbol{\Lambda}\) gave one new entry of \(\mathbf{R}\), in an order where everything else was already known. The general algorithm does the same, row by row:
+@@ 31
+Now solve yesterday's normal equations with it. Forward: \(2y_1 = 12\) gives \(y_1 = 6\); then \(3y_1 + \sqrt5\,y_2 = 23\) gives \(y_2 = 5/\sqrt5 = \sqrt5\). Back: \(\sqrt5\,x_2 = \sqrt5\) gives \(x_2 = 1\); then \(2x_1 + 3x_2 = 6\) gives \(x_1 = 1.5\). The same answer as yesterday, with no inverse in sight.
+@@ 32
+For a dense \(n\times n\) matrix the factorization costs about \(n^3/3\) operations <span class="src">§1.3.3 · p. 31</span> and each substitution about \(n^2\). The factorization is the expensive part, and Section 5 explains why sparsity makes it cheap in SLAM.
+@@ 33
+3. QR: factor A, not AᵀA
+@@ 34
+The <strong>QR factorization</strong> writes the tall matrix itself as \(\mathbf{A} = \mathbf{Q}\mathbf{R}\), where the columns of \(\mathbf{Q}\) are orthonormal (\(\mathbf{Q}\T\mathbf{Q} = \mathbf{I}\)) and \(\mathbf{R}\) is \(n\times n\) upper triangular. Two consequences follow in one line each:
+@@ 35
+The first says that the \(\mathbf{R}\) of QR is the Cholesky factor of \(\mathbf{A}\T\mathbf{A}\) (up to the signs of its rows), which is the book's equation (1.33). The second says that the least-squares solution needs one back substitution, and \(\mathbf{A}\T\mathbf{A}\) is never formed. <span class="src">§1.3.3 · p. 32</span>
+@@ 36
+The easiest way to compute a QR by hand is <strong>Gram–Schmidt</strong>: make the columns of \(\mathbf{A}\) orthonormal one at a time. For yesterday's \(\mathbf{A}\), with columns \(\mathbf{a}_1 = (1,1,1,1)\) and \(\mathbf{a}_2 = (0,1,2,3)\):
+@@ 37
+Computation
+@@ 38
+Result
+@@ 39
+Normalize the first column
+@@ 40
+Measure how much of the second column lies along it
+@@ 41
+Remove that part
+@@ 42
+Normalize what is left
+@@ 43
+Rotate the right-hand side
+@@ 44
+\(\mathbf{R} = \begin{bmatrix} 2 & 3 \\ 0 & \sqrt5 \end{bmatrix}\) is the Cholesky factor from Section 2, and \(\mathbf{Q}\T\mathbf{b} = (6, \sqrt5)\) is the vector \(\mathbf{y}\) found there by forward substitution. Back substitution again gives \(\mathbf{x} = (1.5,\ 1)\).
+@@ 45
+The book uses a full \(m\times m\) matrix \(\mathbf{Q}\) and splits \(\mathbf{Q}\T\mathbf{b}\) into a top part \(\mathbf{d}\) (our \((6,\sqrt5)\)) and a bottom part \(\mathbf{e}\), with \(\norm{\mathbf{e}}_2^2\) equal to the least-squares cost; this is equations (1.29)–(1.32). <span class="src">§1.3.3 · p. 32</span> You can check that without finding \(\mathbf{e}\): an orthogonal \(\mathbf{Q}\) preserves length, so \(\norm{\mathbf{e}}^2 = \norm{\mathbf{b}}^2 - \norm{\mathbf{d}}^2 = 42 - (36+5) = 1\), which is yesterday's cost. Real libraries build \(\mathbf{Q}\) from Householder reflections, which are more stable than Gram–Schmidt, and never store it. The book states that QR is more accurate and more stable than Cholesky on the normal equations, and about twice as slow when there are many more rows than columns. <span class="src">§1.3.3 · pp. 31–32</span> Section 4 shows where the accuracy comes from.
+@@ 46
+4. The SVD and the condition number
+@@ 47
+The <strong>singular value decomposition (SVD)</strong> writes any \(m\times n\) matrix as \(\mathbf{A} = \mathbf{U}\mathbf{S}\mathbf{V}\T\), where \(\mathbf{U}\) and \(\mathbf{V}\) have orthonormal columns and \(\mathbf{S} = \diag(s_1,\dots,s_n)\) holds the <strong>singular values</strong> \(s_1\ge s_2\ge\dots\ge s_n\ge 0\). (Most texts call the middle matrix \(\boldsymbol{\Sigma}\); here that letter is taken by covariances.) In words: \(\mathbf{A}\) rotates, stretches each axis by \(s_i\), and rotates again. The number of non-zero singular values is the <strong>rank</strong>. The ratio of the largest stretch to the smallest is the <strong>condition number</strong>:
+@@ 48 attr
+Two panels. Left: two solid lines cross at a wide angle; shifting one of them slightly, shown dashed, moves the crossing point only a little. Right: two solid lines are nearly parallel; the same small shift of one line moves the crossing point a long way.
+@@ 49
+Small κ: wide crossing angle
+@@ 50
+the solution moves a little
+@@ 51
+Large κ: nearly parallel
+@@ 52
+the same shift moves it a long way
+@@ 53
+Two equations in two unknowns are two lines, and the solution is where they cross (dark dot). Dashed: one equation with its right-hand side changed slightly. Pink dot: the new solution.
+@@ 54
+Filling the gap: why κ is the error amplifier
+@@ 55
+Take a square system \(\mathbf{A}\mathbf{x} = \mathbf{b}\) and disturb the right-hand side by \(\delta\mathbf{b}\). The solution moves by \(\delta\mathbf{x} = \mathbf{A}^{-1}\delta\mathbf{b}\). The inverse stretches by at most \(1/s_{\min}\), so \(\norm{\delta\mathbf{x}} \le \norm{\delta\mathbf{b}}/s_{\min}\). And \(\mathbf{A}\) stretches by at most \(s_{\max}\), so \(\norm{\mathbf{b}} = \norm{\mathbf{A}\mathbf{x}} \le s_{\max}\norm{\mathbf{x}}\), that is \(1/\norm{\mathbf{x}} \le s_{\max}/\norm{\mathbf{b}}\). Multiply the two inequalities:
+@@ 56
+A relative error in the data can grow by a factor of up to \(\kappa\) in the answer. Computer arithmetic makes relative errors of about \(10^{-16}\) in double precision and \(10^{-7}\) in single precision at every step, so as a rule of thumb you lose about \(\log_{10}\kappa\) of your digits.
+@@ 57
+Now the key fact. Substituting the SVD, \(\mathbf{A}\T\mathbf{A} = \mathbf{V}\mathbf{S}\mathbf{U}\T\mathbf{U}\mathbf{S}\mathbf{V}\T = \mathbf{V}\mathbf{S}^2\mathbf{V}\T\). The eigenvalues of \(\mathbf{A}\T\mathbf{A}\) are the squares \(s_i^2\), so
+@@ 58
+Forming the normal equations squares the condition number and doubles the digits you lose. QR works on \(\mathbf{A}\) and avoids the squaring. For yesterday's \(\mathbf{A}\): the eigenvalues of \(\mathbf{A}\T\mathbf{A}\) are \(9\pm\sqrt{61}\), that is 16.81 and 1.19, so \(s = 4.10\) and \(1.09\), \(\kappa(\mathbf{A}) = 3.76\), and \(\kappa(\mathbf{A}\T\mathbf{A}) = 14.1\). That problem is harmless. The next one is not.
+@@ 59
+Try it: two poses \(x_1, x_2\) with a precise odometry measurement \(x_2 - x_1 = 1\) and an imprecise GPS fix on each. After whitening, the GPS rows are multiplied by the small number ε = (odometry σ)/(GPS σ):
+@@ 60
+Notice: at the default ratio of 100, κ(A) is 141 and κ(AᵀA) is about 20,000. Single precision carries about 7 digits. The normal equations are already wrong in the fourth digit (relative error near 2 × 10⁻⁴), and QR is right to 7 digits. Move the slider to the right: the pink curve rises like κ², and beyond a ratio of about 4,000 Cholesky fails, because 1 + ε² rounds to exactly 1 and AᵀA becomes singular. QR is unaffected all the way.
+@@ 61
+The exact answer tends to \((0.25,\ 1.25)\) as the GPS gets worse: the difference is the odometry's 1 and the midpoint is the GPS's 0.75. The information about the midpoint is the \(\varepsilon^2\) in \(\mathbf{A}\T\mathbf{A}\), and once rounding erases it the normal equations have lost the GPS completely. In double precision the same thing happens near a ratio of \(10^8\), and at a ratio of \(10^4\) the normal equations already give up 8 of 16 digits.
+@@ 62
+5. Never invert
+@@ 63
+The formula \(\mathbf{x} = \boldsymbol{\Lambda}^{-1}\mathbf{A}\T\mathbf{b}\) is for paper. In code, three things are wrong with it.
+@@ 64
+Problem with the inverse
+@@ 65
+What factor-and-substitute does instead
+@@ 66
+Cost: computing \(\boldsymbol{\Lambda}^{-1}\) means solving \(n\) systems, one per column
+@@ 67
+Solves one system
+@@ 68
+Accuracy: multiplying by a computed inverse adds rounding error
+@@ 69
+Substitution is backward stable
+@@ 70
+Sparsity: the inverse of a sparse matrix is usually dense
+@@ 71
+The triangular factor of a sparse matrix can stay sparse
+@@ 72
+The third is the one that matters in SLAM, and you have already seen it. On <a href="#d3">Day 3</a> the chain of three poses had a tridiagonal \(\boldsymbol{\Lambda}\) and a completely full \(\boldsymbol{\Lambda}^{-1}\). Its Cholesky factor is
+@@ 73
+The zero survived. For a chain of \(n\) poses \(\mathbf{R}\) has \(2n-1\) non-zeros, against \(n^2\) for the inverse, and both the factorization and the substitutions take time proportional to \(n\). This is the "close-to-linear complexity" of the history on p. 15. <span class="src">§I.4.1 · p. 15</span>
+@@ 74
+Factorization
+@@ 75
+Form
+@@ 76
+Use it for
+@@ 77
+Cholesky
+@@ 78
+Symmetric positive definite matrices
+@@ 79
+The fastest solve of the normal equations
+@@ 80
+QR
+@@ 81
+Any \(\mathbf{A}\) with full column rank
+@@ 82
+Least squares without squaring κ
+@@ 83
+SVD
+@@ 84
+Any matrix
+@@ 85
+Rank, condition number, diagnosing a badly posed problem; the most expensive of the three
+@@ 86
+<strong>"A tiny determinant means the matrix is ill-conditioned."</strong> The matrix \(0.001\,\mathbf{I}\) has a tiny determinant and κ = 1. Conditioning is about the ratio of singular values, not their size.
+@@ 87
+<strong>"QR and Cholesky give different answers."</strong> In exact arithmetic they give the same \(\mathbf{R}\) and the same \(\mathbf{x}\). They differ only in how rounding error enters.
+@@ 88
+<strong>"Ill-conditioning is a bug in the solver."</strong> It is a property of the problem: some direction of \(\mathbf{x}\) is barely measured. A better solver loses fewer digits, but only better measurements fix it.
+@@ 89
+Q1. What is the Cholesky factor R (upper triangular, RᵀR = Λ) of the matrix with rows (9, 6) and (6, 5)?
+@@ 90
+Rows (3, 6) and (0, 5)
+@@ 91
+Rows (3, 2) and (0, 1)
+@@ 92
+Rows (9, 6) and (0, 1)
+@@ 93
+Rows (3, 2) and (0, 3)
+@@ 94
+r₁₁ = √9 = 3, r₁₂ = 6/3 = 2, r₂₂ = √(5 − 2²) = 1. Check: RᵀR has rows (9, 6) and (6, 4 + 1).
+@@ 95
+Q2. Which of these symmetric matrices is NOT positive definite?
+@@ 96
+Rows (2, 1) and (1, 2)
+@@ 97
+Rows (5, 0) and (0, 0.1)
+@@ 98
+Rows (1, 2) and (2, 3)
+@@ 99
+Rows (4, 6) and (6, 14)
+@@ 100
+Its determinant is 3 − 4 = −1, so one eigenvalue is negative. Cholesky would fail at r₂₂ = √(3 − 2²). The others have a positive top-left entry and a positive determinant.
+@@ 101
+Q3. A has singular values 20 and 0.02. Roughly how many decimal digits do the normal equations lose, compared with QR?
+@@ 102
+About 6 instead of about 3
+@@ 103
+About 3 instead of about 6
+@@ 104
+The same number
+@@ 105
+About 1,000 instead of about 30
+@@ 106
+κ(A) = 20/0.02 = 1,000, costing about 3 digits. The normal equations work with κ(AᵀA) = κ(A)² = 10⁶, costing about 6.
+@@ 107
+Q4. A 3 × 3 matrix has singular values 10, 2, and 0. Which statement is right?
+@@ 108
+Its rank is 3 and κ = 5
+@@ 109
+Its rank is 3 and κ = 10
+@@ 110
+Its rank is 2 and κ = 5
+@@ 111
+Its rank is 2 and the system has no unique solution
+@@ 112
+Two non-zero singular values means rank 2. One direction is mapped to zero, κ is infinite, and Ax = b cannot have a unique solution.
+@@ 113
+Q5. Why does a SLAM solver factor Λ instead of inverting it?
+@@ 114
+The inverse of a positive definite matrix may not exist
+@@ 115
+Factoring gives a different, better solution
+@@ 116
+Λ is sparse and its triangular factor can stay sparse, while its inverse is dense
+@@ 117
+Inverses can only be computed for small matrices
+@@ 118
+The inverse exists and gives the same x in exact arithmetic. The point is cost: the inverse of the sparse information matrix is the dense covariance, with n² entries.
+@@ 119
+\(\mathbf{A}\T\mathbf{A}\) is positive definite when \(\mathbf{A}\) has full column rank; then it has a Cholesky factor, \(\boldsymbol{\Lambda} = \mathbf{R}\T\mathbf{R}\).
+@@ 120
+Cholesky solves the normal equations with one factorization and two triangular substitutions.
+@@ 121
+QR factors \(\mathbf{A} = \mathbf{Q}\mathbf{R}\) and solves \(\mathbf{R}\mathbf{x} = \mathbf{Q}\T\mathbf{b}\). Its \(\mathbf{R}\) is the Cholesky factor of \(\mathbf{A}\T\mathbf{A}\).
+@@ 122
+The condition number \(\kappa = s_{\max}/s_{\min}\) bounds how much relative error grows. The normal equations square it.
+@@ 123
+Never form an inverse: factor and substitute. The factor of a sparse matrix can stay sparse; the inverse cannot.
+@@ 124
+<em>SLAM Handbook</em>, §I.4.1, pp. 13 and 15; §1.3.3 "Matrix Factorization for Least Squares", equations (1.25)–(1.33), pp. 31–32, quoted ahead of Week 2.
+@@ 125
+Trefethen and Bau, <em>Numerical Linear Algebra</em>, 1997 (QR by Gram–Schmidt and Householder, conditioning of least squares, stability of the normal equations).
+@@ 126
+Golub and Van Loan, <em>Matrix Computations</em>, 2013 (Cholesky factorization, the SVD, condition numbers).

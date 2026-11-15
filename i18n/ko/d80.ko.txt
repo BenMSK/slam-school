@@ -1,0 +1,214 @@
+@@ 1
+<span class="eyebrow">14주차 · Day 2</span>
+@@ 2
+삼각파 chirp, angle of arrival, 그리고 CFAR로 noise 속 target 골라내기
+@@ 3
+오늘이 끝나면 up chirp와 down chirp로 range와 Doppler를 분리하고, 두 안테나 사이의 위상 차이로 angle of arrival을 계산하고, 원하는 false alarm 확률에 맞춰 CA-CFAR 임계값을 정할 수 있습니다.
+@@ 4
+약 60분 · §9.1.2.4–9.1.4, pp. 256–261 읽기 (5쪽) · 14주차 Day 1 필요
+@@ 5
+먼저 읽기: §9.1.2.4–9.1.4, pp. 256–261
+@@ 6
+p. 256의 식 (9.6)–(9.8): 두 주파수 shift 중 down chirp에서 부호가 바뀌는 쪽은 어느 것인지.
+@@ 7
+p. 257의 Figure 9.5와 식 (9.10): 두 번째 수신 안테나까지의 추가 경로 \(\ell\sin\theta\).
+@@ 8
+p. 258의 Figure 9.6: speckle과, 반복되는 multipath return이 이루는 줄을 찾으세요.
+@@ 9
+p. 260의 CFAR 문단과 p. 261의 Figure 9.7: cell under test, training cell, guard cell, 그리고 k-strongest filter가 어떻게 다른지.
+@@ 10
+radar는 거의 같은 두 측정값을 비교해서 모든 양을 얻습니다. 두 chirp slope는 range와 Doppler를 분리하고, 두 안테나는 각도를 줍니다. 결과는 point cloud가 아니라 noise가 많은 전력 map이므로, 어느 cell에 target이 있는지 filter가 판단해야 합니다. CFAR는 각 cell을 이웃과 비교해 판단하며, 그래서 noise 수준이 바뀌어도 false alarm 비율이 일정하게 유지됩니다.
+@@ 11
+1. Triangular modulation: range와 Doppler 분리
+@@ 12
+Day 1에서는 beat frequency를 순수한 range로 다뤘습니다. 정확하지는 않습니다. target이 움직이면 echo에 Doppler shift도 생기고, up chirp의 beat frequency는 time-of-flight 성분 \(f_{0,t}\)와 Doppler 성분 \(f_{0,d}\)의 합이 됩니다. <strong>Triangular modulation</strong>(삼각파 변조)은 각 up chirp 뒤에 slope가 같은 down chirp를 붙입니다. down chirp에서는 time-of-flight 성분의 부호가 바뀌고 Doppler 성분은 바뀌지 않습니다: <span class="src">§9.1.2.4 · p. 256</span>
+@@ 13
+식 두 개, 미지수 두 개입니다. 빼고 더하면:
+@@ 14
+그러면 range는 time-of-flight 성분만으로 \(d = c f_{0,t}/(2S)\)이며, 이것이 식 (9.9)의 앞부분입니다. <span class="src">§9.1.2.4 · p. 257</span>
+@@ 15
+빈틈 채우기: Doppler 성분은 얼마나 크고, 부호는 왜 이렇게 되는가
+@@ 16
+식 (9.4)에 따르면 beat 위상은 시간 \(T\) 동안 \(4\pi vT/\lambda\)만큼 나아갑니다. 일정한 비율로 나아가는 위상은 주파수입니다. \(2\pi T\)로 나누면 다음을 얻습니다
+@@ 17
+이것이 표준적인 왕복 Doppler shift입니다. 인수 2는 target까지 갔다 오는 경로가 \(2\,\Delta d\)만큼 바뀌기 때문에 붙습니다.
+@@ 18
+부호를 보려면 Day 1의 기하를 주파수 \(f_M - St\)인 down chirp에 대해 다시 해 봅니다. 시각 \(t\)에 도착하는 echo는 \(t - t_0\)에 출발했고, 그때 주파수는 <em>더 높은</em> \(f_M - S(t - t_0)\)였습니다. 송신 빼기 수신은 이제 \(-S t_0\)입니다. time-of-flight 성분이 뒤집혔습니다. Doppler shift는 target의 움직임에서 오므로 chirp가 어느 쪽으로 기울었는지와 상관없습니다.
+@@ 19
+식 (9.9)의 뒷부분에 대한 주의. 책에는 \(v = c f_{0,d}/(2ST)\)로 인쇄되어 있습니다. 곱 \(ST\)는 bandwidth \(B\)입니다. 책의 식 (9.4)만 쓴 위의 유도는 그 자리에 반송파 주파수 \(f\)가 들어간 \(v = \lambda f_{0,d}/2 = c f_{0,d}/(2f)\)를 줍니다. 아래에서는 \(v = \lambda f_{0,d}/2\)를 씁니다.
+@@ 20
+<strong>계산 예제.</strong> Day 1의 radar를 씁니다: \(S = 7.5\times10^{12}\) Hz/s, \(\lambda = 3.896\) mm. 12 m에 있는 target이 5 m/s로 멀어집니다. 그러면 \(f_{0,t} = 600\) kHz, \(f_{0,d} = 2\times5/0.003896 = 2.57\) kHz입니다.
+@@ 21
+값
+@@ 22
+결론
+@@ 23
+up chirp beat, (9.6)
+@@ 24
+=
+@@ 25
+(9.2)에 의한 sawtooth range: 3 × 10⁸ × 602 570/(1.5 × 10¹³) = 12.05 m, 5 cm 더 멀게 나옴
+@@ 26
+down chirp beat, (9.7)
+@@ 27
+=
+@@ 28
+단독으로는 같은 문제가 있음
+@@ 29
+차의 절반, (9.8)
+@@ 30
+=
+@@ 31
+range 12.00 m, Doppler의 영향 없음
+@@ 32
+합의 절반, (9.8)
+@@ 33
+=
+@@ 34
+v = λ f₀,d/2 = 5.0 m/s, 위상 측정 없이
+@@ 35
+첫 행의 5 cm가 어제 위젯에서 본 offset입니다. 책은 trade-off를 이렇게 정리합니다. (9.2)의 sawtooth range는 Doppler가 보정되지 않고 triangular 방식은 보정됩니다. triangular 방식에는 위상이 필요 없으며, 그 대가는 latency입니다. 답 하나에 chirp 두 개가 필요하고 첫 chirp는 조금 오래된 것이기 때문입니다. <span class="src">§9.1.2.4 · p. 257</span>
+@@ 36
+=
+@@ 37
+spinning radar는 return의 각도를 압니다. 안테나가 가리키는 방향이기 때문입니다. SoC radar는 이를 계산해야 합니다. 거리 \(\ell\)만큼 떨어진 수신 안테나(RX) 두 개와, array의 정면 방향에서 각도 \(\theta\)에 있는 먼 target을 생각합시다. 반사파는 두 안테나에 평행한 경로로 도달하고, 두 번째 안테나까지의 경로가 \(\Delta d = \ell\sin\theta\)만큼 깁니다 (Figure 9.5). 경로 차이는 곧 위상 차이입니다: <span class="src">§9.1.2.5 · p. 257</span>
+@@ 38
+여기서 인수는 \(2\pi/\lambda\)이고 식 (9.3)에서는 \(4\pi/\lambda\)입니다. (9.3)에서는 range 변화를 나갈 때와 돌아올 때 두 번 지납니다. 여기서는 추가 경로를 들어올 때 한 번만 지납니다.
+@@ 39
+<strong>계산 예제.</strong> 반 파장 간격 \(\ell = \lambda/2\)의 안테나가 \(\Delta\phi = \pi/2\)를 측정합니다. 그러면 \(\sin\theta = (\lambda\cdot\pi/2)/(2\pi\cdot\lambda/2) = 1/2\)이므로 \(\theta = 30°\)입니다.
+@@ 40
+빈틈 채우기: 안테나 간격과 각도 해상도
+@@ 41
+속도와 마찬가지로 위상은 \(|\Delta\phi| \lt \pi\)인 동안에만 모호성이 없습니다. (9.10)에서 이는 \(|\sin\theta| \lt \lambda/(2\ell)\)을 뜻합니다. \(\ell = \lambda/2\)이면 −90°에서 90°까지 모든 각도가 덮이며, 그래서 array는 반 파장 간격을 씁니다. \(\ell = \lambda\)이면 ±30° 안의 각도만 모호성이 없습니다.
+@@ 42
+안테나 \(N\)개를 한 줄로 놓으면 위상은 한 안테나에서 다음 안테나로 같은 \(\Delta\phi\)씩 나아가고, 안테나에 걸친 FFT가 이를 찾습니다. Day 1의 chirp에 걸친 FFT와 똑같습니다. <span class="src">§9.1.2.5 · p. 257</span> 같은 해상도 논리로 sample \(N\)개는 \(\Delta\phi\)를 \(2\pi/N\)까지 분해하므로, 두 target은 다음 조건일 때 구분됩니다
+@@ 43
+안테나 8개면 정면에서 0.25 rad, 약 14°입니다. 이것이 radar의 각도가 LiDAR에 비해 거친 이유이며, 먼 점이 옆 방향으로 불확실한 이유입니다. 50 m에서 0.25 rad는 12.5 m입니다. Day 3을 위해 기억해 두세요. 거기서 registration 방법들은 먼 점에 더 큰 covariance를 줍니다.
+@@ 44
+수신기 두 개짜리 예는 single-input, multiple-output (SIMO) array입니다. SLAM에 쓰는 radar는 대부분 <strong>MIMO</strong>입니다. TX와 RX 안테나가 각각 여러 개입니다. 송신기를 하나 더하면 수신기를 두 배로 늘린 것과 같은 각도 해상도를 얻습니다. 단, 수신기가 송신기들을 구분할 수 있어야 합니다. 송신기들이 서로 다른 주파수 대역, 다른 코드, 또는 다른 time slot(TDMA)을 쓰면 구분할 수 있습니다. 2차원 array는 elevation도 측정하므로 3+1D 데이터를 줍니다. <span class="src">§9.1.2.5 · p. 258</span>
+@@ 45
+3. 무엇이 문제인가: speckle, multipath, motion distortion
+@@ 46
+radar 데이터는 LiDAR 데이터보다 쓰기 어렵고, 그 이유는 물리적입니다. <span class="src">§9.1.3 · pp. 258–259</span>
+@@ 47
+<strong>Speckle noise.</strong> pulse 하나는 넓은 beam 안의 모든 것에서 에너지를 모읍니다. 산란된 파동들이 더해지면서 때로는 보강되고 때로는 상쇄됩니다. 여기에 열 noise와 변하는 RCS가 겹치면, 물체가 없는 곳에 피크가 생기고 물체가 있는 곳의 피크가 사라집니다. 이 둘을 구분할 방법이 없으면 출력은 가짜 점들이 흩어진 모습이 됩니다.
+@@ 48
+<strong>Multipath.</strong> 에너지의 일부는 지면이나 벽을 거쳐 target에 닿고 돌아옵니다. radar는 경로 길이와 도착 방향만 알기 때문에, 반사면 너머에 두 번째 target을 놓습니다. 이것이 <strong>ghost object</strong>(허상)입니다.
+@@ 49 attr
+multipath를 위에서 본 그림. radar와 실제 target이 벽 앞쪽에 있습니다. 한 echo는 둘 사이를 곧장 오갑니다. 다른 echo는 벽에서 튕깁니다. radar는 튕긴 경로를 직선으로 연장해, 벽 뒤쪽 실제 target의 거울상 위치에 ghost target을 놓습니다.
+@@ 50
+벽
+@@ 51
+=
+@@ 52
+실제 target
+@@ 53
+=
+@@ 54
+같은 경로 길이, 벽 너머로 보임
+@@ 55
+튕긴 echo
+@@ 56
+직접 echo
+@@ 57
+튕긴 경로는 target의 거울상까지 가는 직선 경로와 길이가 같습니다. ghost는 무작위가 아닙니다. 이 지점에서 찍은 모든 scan에서 같은 위치에 나타나며, 그래서 책은 ghost를 static outlier라고 부릅니다.
+@@ 58
+<strong>Motion distortion.</strong> spinning radar는 한 바퀴 회전하는 동안 이미지 하나를 만듭니다. 책의 예시 센서는 4 Hz로 회전하므로 scan 하나에 0.25 s가 걸립니다. 20 m/s로 달리는 차는 그동안 5 m를 움직이고, 회전의 처음과 끝에서 본 물체는 5 m 떨어진 곳에 기록됩니다. 더 빠른 센서도 있지만(10 Hz, 최대 50 Hz) 빠른 차량에서는 그 효과가 여전히 큽니다. <span class="src">§9.1.3.3 · p. 259</span> 이를 되돌리는 방법은 Day 3에서 봅니다. 책은 넓은 beam 때문에 생기는 편향되고 sparse한 range 측정값과 수신기 포화도 문제로 꼽습니다. <span class="src">§9.1.3 · p. 258</span>
+@@ 59
+4. CFAR로 filtering하기
+@@ 60
+가장 단순한 filter, 즉 고정된 전력 이상인 cell을 모두 남기는 방법은 noise 수준이 고정되어 있지 않아서 실패합니다. noise 수준은 range, 방향, 주변 환경에 따라 바뀌므로, 임계값 하나는 어떤 곳에서는 너무 엄격하고 다른 곳에서는 false alarm을 통과시킵니다. <span class="src">§9.1.4 · p. 259</span>
+@@ 61
+<strong>constant false alarm rate (CFAR)</strong> filter는 azimuth 하나를 따라 range cell 위로 window를 밀며 작동합니다. 판정 대상인 cell이 <strong>cell under test (CUT)</strong>입니다. 양쪽의 <strong>training cells</strong>가 국소 noise 수준을 추정합니다. 선택적으로 CUT 바로 옆의 <strong>guard cells</strong>를 빼서, 이웃 cell로 번진 target이 자기 noise 추정값을 높이지 않게 합니다. <strong>cell-averaging CFAR (CA-CFAR)</strong>에서 임계값은 training cell의 평균 전력에, 원하는 false alarm 확률로 정한 배수를 곱한 값입니다. <span class="src">§9.1.4 · p. 260</span>
+@@ 62 attr
+range cell 17개가 한 줄로 놓여 있습니다. 가운데 cell이 cell under test입니다. 그 양쪽의 두 cell은 guard cell입니다. 그 바깥 양쪽의 네 cell은 training cell입니다. 임계값은 training cell 평균 전력의 alpha배입니다.
+@@ 63
+=
+@@ 64
+=
+@@ 65
+=
+@@ 66
+=
+@@ 67
+임계값 = α × training cell의 평균 전력
+@@ 68
+한쪽에 training cell 4개, guard cell 2개를 둔 CA-CFAR window. 한 번에 cell 하나씩 밀리며, cell under test의 전력이 임계값보다 크면 남깁니다.
+@@ 69
+빈틈 채우기: 배수는 어디서 오는가
+@@ 70
+책은 배수를 "원하는 false alarm 확률로부터 선택한다"고만 하고 멈춥니다. 여기서는 표준 noise 모델로 계산해 봅니다. noise만 있는 cell의 전력 \(x\)는 평균이 \(\mu\)인 지수분포를 따릅니다: \(p(x) = \frac{1}{\mu}e^{-x/\mu}\). 수신기가 복소 Gaussian noise의 두 성분을 제곱하면 이런 분포가 나옵니다.
+@@ 71
+<em>\(\mu\)를 안다면</em>, noise가 임계값 \(\tau\)를 넘을 확률은 \(P(x \gt \tau) = e^{-\tau/\mu}\)입니다. 이를 \(P_{fa}\)와 같게 놓으면 \(\tau = -\mu\ln P_{fa}\)입니다. \(P_{fa} = 10^{-3}\)이면 임계값은 \(6.91\,\mu\)입니다.
+@@ 72
+<em>하지만 \(\mu\)는 모릅니다</em>. 그래서 CA-CFAR는 training cell \(N\)개로 \(\hat\mu = \frac1N\sum_i x_i\)를 추정하고 \(\tau = \alpha\hat\mu\)를 씁니다. 이제 임계값이 확률 변수이므로 false alarm 확률을 임계값에 대해 평균합니다. training cell들은 서로 독립이고, 지수분포 변수에 대해 \(\E[e^{-s x}] = 1/(1 + s\mu)\)입니다:
+@@ 73
+모르는 \(\mu\)가 소거되었습니다. noise 수준이 얼마든 false alarm 확률은 같습니다. 이것이 CFAR의 "constant"입니다. 배수에 대해 풀면:
+@@ 74
+\(N = 20\), \(P_{fa} = 10^{-3}\)이면 \(\alpha = 20\,(10^{0.15} - 1) = 20 \times 0.4125 = 8.25\)입니다. 6.91보다 크며, noise를 추정해야 하는 대가입니다. cell이 \(N = 4\)개뿐이면 \(\alpha = 4\,(10^{0.75} - 1) = 18.5\)입니다. \(N\)이 커지면 \(\alpha\)는 \(-\ln P_{fa}\)로 내려갑니다.
+@@ 75
+직접 해 보기: 회색 곡선은 azimuth 하나를 따른 전력이며, target 다섯 개와 더 강한 clutter 구간이 있습니다. 적응형 임계값을 점선인 고정 임계값과 비교한 다음, training cell을 한쪽에 3개로 설정해 보세요.
+@@ 76
+눈여겨볼 점: 처음에 CA-CFAR는 target 5개 중 4개를 false alarm 없이 찾고, 고정 임계값은 5개를 모두 찾지만 clutter 안에서 false alarm 24개를 더합니다. CFAR가 놓치는 target은 31 m에 있는 것입니다. 3 m 뒤의 더 강한 target이 training window 안에 들어와 임계값을 올리기 때문입니다. 한쪽 training cell이 3개면 window가 충분히 짧아 5개를 모두 찾고, 배수는 8.25에서 12.97로 올라갑니다. "100분의 1"에서는 false alarm 두 개가 나타나는데, 정확히 clutter의 두 가장자리입니다. 그곳에서는 window의 절반이 조용한 noise를 봅니다.
+@@ 77
+방금 본 놓침과 가장자리 효과는 평균내기의 알려진 약점입니다. <strong>Ordered-statistic CFAR (OS-CFAR)</strong>는 평균 대신 중앙값 같은 robust한 통계량을 써서, 강한 이웃 하나가 값을 움직이지 못하게 합니다. radar odometry를 위해 설계된 <strong>BFAR</strong>(bounded false alarm rate)는 CFAR 출력 \(Z\)에 학습 가능한 \(b\)를 가진 affine 변환 \(T = aZ + b\)를 적용해, 적응형 임계값과 고정 수준을 섞습니다. <span class="src">§9.1.4 · p. 260</span>
+@@ 78
+많은 odometry와 SLAM pipeline은 CFAR보다 단순한 방법을 씁니다. CFAR는 검출을 위해 만들어졌고, 검출에서는 약한 target을 놓치는 것이 큰 손해입니다. odometry가 원하는 것은 다음 scan에서, 그리고 다른 시점에서 다시 찾을 수 있는 점뿐입니다. 흔한 선택 두 가지는 azimuth마다 고정 임계값 위의 <strong>k strongest returns</strong>를 남기는 것과, 평균보다 표준편차 하나 이상 큰 return을 모두 남기는 것입니다. Figure 9.7에서 CFAR는 false alarm을 여러 개 내지만, k = 12인 k-strongest는 주요 target 주변의 점만 남깁니다. <span class="src">§9.1.4 · pp. 260–261</span> 세 번째 길은 학습된 filtering입니다. LiDAR를 ground truth로 학습해, LiDAR도 볼 수 있는 return만 남기는 network입니다. <span class="src">§9.1.4 · pp. 260–261</span>
+@@ 79
+<strong>"CFAR는 false alarm을 없앤다."</strong> CFAR는 그 비율을 고정합니다. \(P_{fa} = 10^{-3}\)이면 cell이 백만 개인 radargram에서 scan마다 여전히 약 천 개가 나옵니다.
+@@ 80
+<strong>"training cell은 많을수록 좋다."</strong> 배수는 낮아지지만, window 전체에서 noise가 같다고 가정합니다. 다른 target이나 clutter 경계까지 닿는 window는 noise를 잘못 추정합니다.
+@@ 81
+<strong>"ghost는 noise처럼 평균하면 사라진다."</strong> multipath ghost는 같은 장소에서 반복해서 나타납니다. 평균할 것이 아니라 outlier로 제거해야 합니다.
+@@ 82
+Q1. triangular radar가 up chirp에서 410 kHz, down chirp에서 −390 kHz의 beat를 측정합니다. time-of-flight 성분과 Doppler 성분은 각각 얼마입니까?
+@@ 83
+410 kHz와 390 kHz
+@@ 84
+10 kHz와 400 kHz
+@@ 85
+400 kHz와 10 kHz
+@@ 86
+800 kHz와 20 kHz
+@@ 87
+(9.8)에 따라 차의 절반은 (410 − (−390))/2 = 400 kHz, 합의 절반은 (410 + (−390))/2 = 10 kHz입니다.
+@@ 88
+Q2. 수신 안테나 두 개가 반 파장 간격으로 놓여 있고 위상 차이 π/3을 측정합니다. angle of arrival은 얼마입니까?
+@@ 89
+약 19.5°
+@@ 90
+약 9.6°
+@@ 91
+sin θ = λΔφ/(2πℓ) = (π/3)/π = 1/3이므로 θ = arcsin(1/3) ≈ 19.5°입니다.
+@@ 92
+Q3. CA-CFAR filter가 training cell N = 10개와 false alarm 확률 0.01을 씁니다. 필요한 배수는 얼마입니까?
+@@ 93
+α = N(P_fa^(−1/N) − 1) = 10 × (100^0.1 − 1) = 10 × 0.585 = 5.85. 4.61 = −ln 0.01이라는 값은 noise 수준을 정확히 알 때만 맞습니다.
+@@ 94
+Q4. radar odometry pipeline이 CFAR를 돌리는 대신 azimuth마다 가장 강한 k개의 return을 남기는 경우가 많은 이유는 무엇입니까?
+@@ 95
+CFAR는 real-time으로 돌릴 수 없습니다
+@@ 96
+k-strongest는 구조상 false alarm 확률이 더 낮습니다
+@@ 97
+CFAR에는 Doppler 측정이 필요합니다
+@@ 98
+odometry에는 모든 약한 target보다 반복해서 잡히는 소수의 점이 더 필요합니다
+@@ 99
+CFAR는 약한 target을 놓치는 것이 큰 손해인 검출을 위해 설계되었고, 애매한 피크도 통과시킵니다. odometry는 이후 scan과 다른 시점에서 다시 검출되는 점을 원합니다 (p. 260).
+@@ 100
+up chirp는 \(f_{0,t} + f_{0,d}\)를, down chirp는 \(-f_{0,t} + f_{0,d}\)를 측정합니다. 차의 절반은 range를, 합의 절반은 Doppler shift \(2v/\lambda\)를 줍니다.
+@@ 101
+\(\ell\) 떨어진 두 안테나는 위상 차이 \((2\pi/\lambda)\ell\sin\theta\)를 보므로 \(\theta = \arcsin(\lambda\Delta\phi/(2\pi\ell))\)입니다. 실제든 가상이든(MIMO) 안테나가 많을수록 각도가 정밀해집니다.
+@@ 102
+radar는 speckle, multipath ghost, 넓은 beam, 그리고 spinning 센서라면 motion distortion에 시달립니다.
+@@ 103
+CA-CFAR는 각 cell을 training cell 평균의 \(\alpha\)배와 비교하며, \(\alpha = N(P_{fa}^{-1/N} - 1)\)입니다. 그러면 false alarm 비율이 noise 수준에 의존하지 않습니다.
+@@ 104
+SLAM pipeline은 반복해서 잡히는 점이 필요하므로 k-strongest 같은 보수적인 filter를 선호하는 경우가 많습니다.
+@@ 105
+<em>SLAM Handbook</em>, 9장, §9.1.2.4–9.1.2.5, §9.1.3 "Challenges to Radar Applications", §9.1.4 "Radar Filtering", pp. 256–261, 식 (9.6)–(9.10), Figures 9.5–9.7.
+@@ 106
+Richards, <em>Fundamentals of Radar Signal Processing</em>, 2nd ed., 2014 (왕복 Doppler shift, array 간격과 각도 해상도, 지수분포 noise 전력과 CA-CFAR 배수).
+@@ 107
+=

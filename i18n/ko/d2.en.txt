@@ -1,0 +1,204 @@
+@@ 1
+<span class="eyebrow">Week 1 · Day 2</span>
+@@ 2
+Where SLAM sits in a robot, and the probability you need
+@@ 3
+After today you can explain why a SLAM system runs a fast loop and a slow loop, judge when a robot needs SLAM at all, and combine a Gaussian prior with a Gaussian measurement using Bayes' rule.
+@@ 4
+About 60 min · Read §I.3, pp. 9–12 (4 pages) · Needs Week 1 Day 1
+@@ 5
+Read first: Prelude §I.3 and §I.3.1, pp. 9–12
+@@ 6
+The two feedback loops in Figure I.4 (p. 9): a small one through the motion controller and a large one through motion planning. Note which part of SLAM feeds each.
+@@ 7
+What separates SLAM from structure from motion (p. 10).
+@@ 8
+The three questions Q1–Q3 (pp. 10–12) and the short answer to each.
+@@ 9
+The Office 1 / Office 3 story of Figure I.5 (pp. 11–12), and the term "perceptual aliasing".
+@@ 10
+SLAM is a service for the rest of the robot, and its two customers have different deadlines: the controller needs odometry within milliseconds, the planner can wait seconds for a globally corrected map. The language the back-end uses to do its job is probability. A belief is a density, usually a Gaussian, and <strong>Bayes' rule</strong> says how a measurement turns a prior belief into a sharper one.
+@@ 11
+1. One system, two loops, two deadlines
+@@ 12
+SLAM exists to serve downstream tasks. The pose estimate lets a controller hold the robot on a planned trajectory. The map, together with the current pose, lets a planner find a path. <span class="src">§I.3 · p. 9</span> Figure I.4 shows that these are two separate feedback loops, both passing through SLAM, and they run at very different speeds.
+@@ 13
+Loop
+@@ 14
+Customer
+@@ 15
+What SLAM supplies
+@@ 16
+Delay it can tolerate
+@@ 17
+Inner (control)
+@@ 18
+Motion controller
+@@ 19
+Odometry from the front-end
+@@ 20
+Milliseconds for a fast drone
+@@ 21
+Outer (planning)
+@@ 22
+Motion planner
+@@ 23
+Globally corrected trajectory and map from the back-end
+@@ 24
+Seconds
+@@ 25 attr
+Two timelines. On the top one the front-end sends odometry to the controller at closely spaced ticks, every few milliseconds. On the bottom one the back-end sends corrected poses and a map to the planner at widely spaced ticks, every few seconds, and optimizes in the background between them.
+@@ 26
+Front-end → controller
+@@ 27
+odometry, every few ms
+@@ 28
+Back-end → planner
+@@ 29
+poses + map, every few s
+@@ 30
+optimizing in the background between updates
+@@ 31
+time →
+@@ 32
+The same SLAM system answers at two rates. The slow process must never block the fast one.
+@@ 33
+This is why a real SLAM system is several processes running in parallel and not one function from sensor data to a map. <span class="src">§I.3 · p. 9</span> The processes also talk in both directions. The back-end periodically corrects the odometric trajectory that the controller uses, and it can tell the loop-closure detector which candidate matches are plausible. <span class="src">§I.3 · p. 10</span>
+@@ 34
+"Slow" does not mean "offline". The back-end must stay <strong>online</strong>: its runtime may not grow without bound as data keeps arriving, and it has to fit on the robot's own computer. That requirement is what historically separated SLAM from <strong>structure from motion (SfM)</strong>, the computer-vision problem of reconstructing a 3D scene from images. SfM typically takes an unordered pile of photos and may spend hours on a cluster. SLAM receives its data in order, as the robot moves, and must answer in seconds. The book adds that the border has blurred, and many people now use "visual SLAM" and "SfM" interchangeably. <span class="src">§I.3 · p. 10</span>
+@@ 35
+2. Do we really need SLAM?
+@@ 36
+The book asks this in three steps. <span class="src">§I.3.1 · pp. 10–12</span>
+@@ 37
+Short answer
+@@ 38
+The argument
+@@ 39
+Q1. Is SLAM needed for every task?
+@@ 40
+Keeping a target in view, moving a short distance, or working where localization infrastructure exists can all be done without it. Long-term operation without infrastructure needs memory, and the map is that memory.
+@@ 41
+Q2. Does the map have to be metrically accurate?
+@@ 42
+For long-term use, yes
+@@ 43
+Odometry alone drifts, so two rooms that share a wall can end up far apart in the estimate, and the robot misses the short path between them.
+@@ 44
+Q3. Do we need a map at all?
+@@ 45
+Open, but maps help
+@@ 46
+A network can map sensor data straight to actions, but its internal representation cannot be queried or inspected. Maps transfer across tasks, and in some applications the map is the product.
+@@ 47
+Q2 has a tempting middle road. A <strong>topological map</strong> is a graph whose nodes are places and whose edges mean "you can get from here to there". It stores no distances or angles, so it needs no optimization: add an edge when the robot drives between two places or when place recognition says two views show the same place. The weakness is <strong>perceptual aliasing</strong>: two different places that look alike. If Office 1 and Office 3 look the same, a purely topological map merges them into one room (Figure I.5d). A metric map has geometry to check the claim against. <span class="src">§I.3.1 · p. 12</span> Section 4 below puts a number on how misleading a look-alike can be.
+@@ 48
+3. Random variables and Gaussians
+@@ 49
+The rest of today is background that Chapter 1 assumes. A <strong>random variable</strong> is a quantity whose value we are unsure of. Its <strong>probability density</strong> \(p(x)\) says how plausible each value is and integrates to 1. The book writes \(p(\mathbf{a})\) for a density and \(p(\mathbf{a}\mid\mathbf{b})\) for the density of \(\mathbf{a}\) once \(\mathbf{b}\) is known. <span class="src">Notation · p. xiv</span> Two numbers summarize a density: the <strong>mean</strong> \(\mu = \E[x]\) and the <strong>variance</strong> \(\sigma^2 = \E[(x-\mu)^2]\). The square root \(\sigma\) is the <strong>standard deviation</strong>, in the same units as \(x\).
+@@ 50
+The <strong>Gaussian</strong> (normal) density with mean \(\mu\) and variance \(\sigma^2\) is
+@@ 51
+About 68% of its probability lies within \(1\sigma\) of the mean, 95% within \(2\sigma\), and 99.7% within \(3\sigma\). A range sensor with \(\sigma = 0.05\) m reads within 0.10 m of the true range about 95% of the time.
+@@ 52
+For a vector \(\boldsymbol{\theta}\in\R^n\) the mean becomes a vector \(\boldsymbol{\mu}\) and the variance becomes the <strong>covariance matrix</strong> \(\boldsymbol{\Sigma} = \E[(\boldsymbol{\theta}-\boldsymbol{\mu})(\boldsymbol{\theta}-\boldsymbol{\mu})\T]\), an \(n\times n\) symmetric matrix with the variances on its diagonal. You will meet the multivariate Gaussian in the book as equation (1.9):
+@@ 53
+<span class="src">§1.2.2 · p. 27</span> It has the same shape as the scalar formula: \((x-\mu)^2/\sigma^2\) has become \(\mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\), a squared distance measured in units of standard deviation.
+@@ 54
+A worked reading of a covariance matrix. Suppose a landmark's position \((x, y)\) has
+@@ 55
+Then \(\sigma_x = \sqrt{4} = 2\) m and \(\sigma_y = \sqrt{1} = 1\) m. The off-diagonal entry is the covariance of \(x\) with \(y\). Dividing it by both standard deviations gives the <strong>correlation</strong> \(\rho = 1.2/(2\times 1) = 0.6\): when \(x\) is above its mean, \(y\) tends to be above its mean too. The curves of constant density are ellipses, tilted when \(\rho\neq 0\). You will draw them tomorrow.
+@@ 56
+4. Bayes' rule
+@@ 57
+Write the joint density of a state \(x\) and a measurement \(z\) in the two possible orders, \(p(x,z) = p(x\mid z)\,p(z) = p(z\mid x)\,p(x)\), and divide by \(p(z)\):
+@@ 58
+The <strong>prior</strong> is what you believed before the measurement. The <strong>likelihood</strong> is the measurement model read backwards: for the \(z\) you actually observed, how well does each candidate \(x\) explain it? The <strong>posterior</strong> is what you believe afterwards. The denominator \(p(z)\) does not depend on \(x\); it only rescales the result so that it integrates to 1. The book marks prior quantities with a check, \(\check{x}\), and posterior ones with a hat, \(\hat{x}\). <span class="src">Notation · p. xiv</span>
+@@ 59
+A worked example with perceptual aliasing. From odometry, the robot gives a 10% chance to being back at a place it has seen before. Its place-recognition module reports a match. The module fires 90% of the time when the place really is the same, and 20% of the time when it is a different place that looks similar. How likely is a true revisit?
+@@ 60
+The match is wrong two times out of three, although the detector "works 90% of the time". Revisits are rare and look-alikes are common, and the prior carries that fact. This is why a back-end cannot accept every loop closure at face value; the book returns to it in Chapter 3. <span class="src">§I.3.1 · p. 12</span>
+@@ 61
+5. Two estimators: MLE and MAP
+@@ 62
+A density is a belief; a robot needs one number to act on. Two standard choices:
+@@ 63
+The <strong>maximum likelihood estimate (MLE)</strong> picks the state that best explains the measurements and ignores the prior. The <strong>maximum a posteriori (MAP) estimate</strong> picks the peak of the posterior. They coincide when the prior is flat. Tomorrow's pages name these two as the estimation framework behind modern SLAM, <span class="src">§I.4.1 · p. 15</span> and Chapter 1 writes SLAM as a MAP problem in equation (1.8). <span class="src">§1.2.1 · p. 27</span>
+@@ 64
+Try it: a robot in a corridor believes from odometry that it is at 2.0 m, give or take 1.0 m. A range sensor then says 4.0 m, give or take 0.5 m. Move the four sliders.
+@@ 65
+Notice: at the default settings the MLE is the measurement itself, 4.00 m, and the MAP is 3.60 m. The prior pulls the estimate back, but only a fifth of the way, because the measurement is the more precise of the two. The posterior is narrower than both inputs. Raise the prior σ to 3.0 and the MAP moves to 3.95 m, almost onto the MLE.
+@@ 66
+Filling the gap: why Gaussian times Gaussian is Gaussian, and where 3.60 comes from
+@@ 67
+Prior: \(x\sim\N(\check{x},\check{\sigma}^2)\). Measurement: \(z = x + \eta\) with \(\eta\sim\N(0,\sigma_z^2)\), so the likelihood is \(p(z\mid x) = \N(z;\,x,\,\sigma_z^2)\). Take the negative logarithm of likelihood times prior. The exponents add and the constants in front become an additive constant:
+@@ 68
+The logarithm is increasing, so the maximum of the posterior is the minimum of \(J\). Set the derivative to zero:
+@@ 69
+\(J\) is a quadratic in \(x\), and a density whose negative log is a quadratic is a Gaussian. Its variance is one over the curvature \(J''\):
+@@ 70
+With the widget's numbers: \(\hat{x} = (2/1 + 4/0.25)/(1/1 + 1/0.25) = 18/5 = 3.6\) m and \(\hat{\sigma}^2 = 1/5\), so \(\hat{\sigma} = 0.447\) m. Rearranging the mean gives the form on the widget's last tile:
+@@ 71
+Look at what happened in the first line: maximizing a posterior turned into minimizing a sum of squared errors, each divided by its variance. Chapter 1 does the same thing with thousands of terms.
+@@ 72
+<strong>"p(z | x) and p(x | z) are the same number."</strong> In the look-alike example the first is 0.9 and the second is 1/3. Bayes' rule is the conversion between them, and it needs the prior.
+@@ 73
+<strong>"The likelihood is a density over x."</strong> It is a density over \(z\). Read as a function of \(x\) it need not integrate to 1.
+@@ 74
+<strong>"MAP is always better than MLE."</strong> MAP is only as good as its prior. Set the prior σ to 0.2 in the widget: a confident, wrong prior drags the estimate far from a good measurement.
+@@ 75
+Q1. A drone's motion controller needs pose updates within a few milliseconds. Which SLAM output can acceptably arrive seconds later?
+@@ 76
+The odometry from the front-end
+@@ 77
+None: every part of SLAM has the millisecond deadline
+@@ 78
+The globally optimized trajectory and map from the back-end
+@@ 79
+The raw sensor data
+@@ 80
+The control loop runs on odometry and needs low latency. Global planning runs at a lower rate, so the back-end's corrected trajectory and map can lag by seconds, as long as the back-end stays online.
+@@ 81
+Q2. The prior chance of a revisit is 0.2. A place recognizer fires with probability 0.9 on a true revisit and 0.1 otherwise. It fires. What is the probability of a true revisit?
+@@ 82
+About 0.69
+@@ 83
+Bayes' rule: 0.9 × 0.2 / (0.9 × 0.2 + 0.1 × 0.8) = 0.18 / 0.26 ≈ 0.69.
+@@ 84
+Q3. Prior: position 10 m with σ = 2 m. Measurement: 13 m with σ = 1 m. What is the MAP estimate?
+@@ 85
+Weights are 1/σ²: 1/4 for the prior and 1 for the measurement. (10 × 0.25 + 13 × 1) / 1.25 = 15.5 / 1.25 = 12.4 m. Equivalently K = 4/(4+1) = 0.8 and 10 + 0.8 × 3 = 12.4.
+@@ 86
+Q4. A 2-D position has covariance with rows (9, −3) and (−3, 4). What is the correlation between its two coordinates?
+@@ 87
+About −0.08
+@@ 88
+The standard deviations are √9 = 3 and √4 = 2. Correlation = covariance / (σ₁σ₂) = −3 / 6 = −0.5.
+@@ 89
+Q5. With a Gaussian prior and a Gaussian measurement of the same scalar, when does the MAP estimate equal the MLE?
+@@ 90
+When prior and measurement have the same σ
+@@ 91
+In the limit of a very wide (flat) prior
+@@ 92
+When the measurement σ is very large
+@@ 93
+Always
+@@ 94
+The weight on the measurement is K = σ̌² / (σ̌² + σ_z²). It tends to 1 as the prior σ grows, and then the MAP estimate equals z, which is the MLE. With equal σ the MAP is the midpoint.
+@@ 95
+SLAM feeds a fast control loop (odometry, milliseconds) and a slow planning loop (corrected trajectory and map, seconds), so it runs as parallel processes, and even the slow one must stay online.
+@@ 96
+Not every task needs SLAM, but long-term operation without infrastructure needs a consistent map. Odometry drifts, and topological maps are fooled by perceptual aliasing.
+@@ 97
+A Gaussian is fixed by a mean and a covariance. The exponent \(\mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\) is a squared distance in units of σ.
+@@ 98
+Bayes' rule: posterior ∝ likelihood × prior. MLE maximizes the likelihood, MAP maximizes the posterior.
+@@ 99
+For Gaussians, MAP is a least-squares problem: inverse variances add, and the mean is the inverse-variance-weighted average.
+@@ 100
+<em>SLAM Handbook</em>, Prelude to Part I, §I.3 "The Role of SLAM in the Autonomy Architecture" and §I.3.1, pp. 9–12; Notation, p. xiv; equations (1.9)–(1.10), p. 27, quoted ahead of Week 2.
+@@ 101
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005, Chapter 2 (Bayes' rule, priors and posteriors).
+@@ 102
+Barfoot, <em>State Estimation for Robotics</em>, 2017, Chapter 2 (Gaussian densities, combining Gaussian estimates).

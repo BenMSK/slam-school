@@ -1,0 +1,142 @@
+@@ 1
+<span class="eyebrow">Week 23 · Review</span>
+@@ 2
+Week 23 review: open-world maps and foundation models
+@@ 3
+After today you can compute the contrastive loss, fuse and query feature maps, match masks to objects, and compute a LERF relevancy and a task-driven merge cost by hand.
+@@ 4
+Models trained on internet-scale data without human labels produce features tied to no class list. CLIP's contrastive training puts images and text in one space where similarity is an inner product. An open-vocabulary map stores such features on points, objects, graph nodes, or in a radiance field, fuses them over views by a weighted average, and is questioned afterwards by encoding text and comparing. Captions and LLMs handle complex questions; a task list can decide what an object is. Whether large models will replace explicit maps is open as of the book's April 2026 edition.
+@@ 5
+Contrastive (InfoNCE) loss
+@@ 6
+\(\ell_i = -\log \dfrac{\exp(s_{ii}/\tau)}{\sum_{j} \exp(s_{ij}/\tau)}\); gradient \((p_{ij} - \delta_{ij})/\tau\)
+@@ 7
+Added to pp. 492–494 · Day 1
+@@ 8
+Cosine similarity; unit vectors
+@@ 9
+p. 496 · Day 2
+@@ 10
+Feature fusion
+@@ 11
+p. 502 · Day 3
+@@ 12
+Zero-shot classifier (17.1), map labels (17.4), query score
+@@ 13
+pp. 497, 503 · Days 2–3
+@@ 14
+Object maps
+@@ 15
+pp. 505–506 · Day 3
+@@ 16
+LERF relevancy
+@@ 17
+p. 510 · Day 4
+@@ 18
+Task-driven clustering
+@@ 19
+pp. 512–513 · Day 4
+@@ 20
+Q1. In a batch of 8 pairs, every image is equally similar to all 8 captions. What is the contrastive loss per image?
+@@ 21
+log 8 = 2.08
+@@ 22
+Every softmax weight is 1/8, so the loss is log 8.
+@@ 23
+Q2. Why does §17.1.1 say foundation models are harder to build for LiDAR or radar?
+@@ 24
+Transformers cannot read point clouds
+@@ 25
+Contrastive learning needs captions
+@@ 26
+The sensors are too noisy
+@@ 27
+No readily available internet-scale data
+@@ 28
+Internet-scale data is a key ingredient, and these modalities lack it.
+@@ 29
+Q3. An image has unit feature (0.6, 0.8, 0). Prompts encode to A = (1, 0, 0), B = (0, 0.8, 0.6), C = (0, 0, 1). What does (17.1) return?
+@@ 30
+B, with 0.64
+@@ 31
+A, with 0.60
+@@ 32
+C, with 0.80
+@@ 33
+A and B tie
+@@ 34
+Q4. A language model gives the three tokens of a sentence conditional probabilities 0.5, 0.2, 0.1. What is the probability of the sentence?
+@@ 35
+The chain rule multiplies them: 0.5 × 0.2 × 0.1 = 0.01.
+@@ 36
+Q5. A map point has c = 1, f = (1, 0). A view adds (0, 1) with α = 1. After normalizing, what is its similarity to the query (0, 1)?
+@@ 37
+The fused feature (0.5, 0.5) normalizes to (0.707, 0.707).
+@@ 38
+Q6. A dense map has 2 million points, each with a 512-number feature of 4-byte numbers. How much memory is that?
+@@ 39
+About 4 GB
+@@ 40
+About 4 MB
+@@ 41
+About 1 GB
+@@ 42
+About 40 GB
+@@ 43
+2 × 10⁶ × 512 × 4 bytes = 4.1 × 10⁹ bytes.
+@@ 44
+Q7. In task-driven clustering, a task is added that cares about the individual keys of a piano. What changes?
+@@ 45
+Nothing: geometry defines objects
+@@ 46
+The piano merges with the floor
+@@ 47
+Everything merges into one cluster
+@@ 48
+Merging keys now costs task information, so they stay apart
+@@ 49
+The cost (17.9) grows with how differently two clusters relate to the tasks.
+@@ 50
+Q8. Which statement matches the book's position, as of its April 2026 edition?
+@@ 51
+Long-context VLMs have made maps obsolete
+@@ 52
+Generalist policies cannot work without a metric map
+@@ 53
+It depends on the task's spatial and temporal horizons
+@@ 54
+Maps are needed only outdoors
+@@ 55
+§17.4.2 says so; §17.4.4 calls maps and generalist policies complementary.
+@@ 56
+\(N = 3\), \(\tau = 0.5\). Image 1 has similarities \(0.9\) (own caption), \(0.1\), \(0.5\). Compute its loss and the derivative with respect to each similarity.
+@@ 57
+\(e^{1.8} = 6.050\), \(e^{0.2} = 1.221\), \(e^{1.0} = 2.718\), sum \(9.989\). Softmax \(p = (0.606, 0.122, 0.272)\), loss \(-\log 0.606 = 0.502\). Derivatives \((p_{1j} - \delta_{1j})/\tau\): \(-0.789\), \(0.244\), \(0.544\).
+@@ 58
+A map point starts with \(c_k = 0\). View 1 gives \((1, 0, 0)\) at \(\gamma = 0\); view 2 gives \((0.6, 0.8, 0)\) at \(\gamma = \sigma\). Fuse them with (17.2)–(17.3). Does a query with \(\mathbf{f}_T = (0.8, 0.6, 0)\) and threshold 0.9 retrieve the point?
+@@ 59
+\(\alpha_1 = 1\), \(\alpha_2 = e^{-1/2} = 0.607\). Fused: \(((1,0,0) + 0.607\,(0.6, 0.8, 0))/1.607 = (0.849, 0.302, 0)\), \(c_k = 1.607\). Length \(0.901\), unit feature \((0.942, 0.335, 0)\). Similarity \(0.942 \times 0.8 + 0.335 \times 0.6 = 0.955\): retrieved. Unnormalized it would be \(0.860\) and wrongly rejected.
+@@ 60
+In one dimension, a mask's points are at \(0.0, 0.1, 0.2, 0.3, 1.0\) m. An object has points at \(0.05, 0.15, 0.25\) m, feature \((0.6, 0.8)\), count 3. The mask's feature is \((1, 0)\) and \(\delta_{nn} = 0.08\) m. Compute \(\phi_{geo}\) and \(\phi_{sim}\); if both exceed 0.5, update the object.
+@@ 61
+Four mask points are 0.05 m from an object point; the one at 1.0 is 0.75 m away. \(\phi_{geo} = 4/5 = 0.8\). Inner product \(0.6\), so \(\phi_{sim} = 0.8\). Match. \(\mathbf{f}_o \leftarrow (3\,(0.6, 0.8) + (1, 0))/4 = (0.7, 0.6)\), count 4, and the mask points join the cloud.
+@@ 62
+Primitives A, B, C in a row, each with probability \(1/3\), have \(p(y \mid A) = p(y \mid B) = (0.9, 0.1)\) and \(p(y \mid C) = (0.1, 0.9)\). (a) Compute \(d_{AB}\) and \(d_{BC}\). (b) Merge the cheaper pair and cost the last merge. (c) Check that the costs add up to \(I(X;Y)\).
+@@ 63
+(a) \(d_{AB} = 0\). For B, C: \(\bar{p} = (0.5, 0.5)\), \(D_{\mathrm{KL}} = 0.9 \log 1.8 + 0.1 \log 0.2 = 0.368\) for each, so \(D_{\mathrm{JS}} = 0.368\), \(d_{BC} = \tfrac23 \times 0.368 = 0.245\) nats.
+@@ 64
+(b) AB has probability \(\tfrac23\) and distribution \((0.9, 0.1)\). With C: \(\bar{p} = (0.633, 0.367)\), and the same formula gives \(D_{\mathrm{KL}} = 0.186\) for AB and \(0.624\) for C. \(D_{\mathrm{JS}} = \tfrac23(0.186) + \tfrac13(0.624) = 0.332\), so \(d = 0.332\) nats.
+@@ 65
+(c) \(p(y) = (0.633, 0.367) = \bar{p}\), so \(I(X;Y) = \tfrac13(0.186 + 0.186 + 0.624) = 0.332 = 0 + 0.332\).
+@@ 66
+Write the contrastive loss and say which way its gradient moves each similarity.
+@@ 67
+Apply (17.2)–(17.3) by hand, and normalize before thresholding.
+@@ 68
+Compute a relevancy score (17.7) and a merge cost (17.9).
+@@ 69
+Say why storing features, not detections, makes a map open-vocabulary.
+@@ 70
+<em>SLAM Handbook</em>, Chapter 17, pp. 490–520.
+@@ 71
+Extra math as cited on Days 1–5.

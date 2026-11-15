@@ -1,0 +1,144 @@
+@@ 1
+<span class="eyebrow">Week 24 · Day 4</span>
+@@ 2
+Gaussian belief propagation: estimation by local messages, and learning in the same graph
+@@ 3
+After today you can derive the message rules of Gaussian belief propagation in information form, run them by hand on a small pose chain, relate them to variable elimination, and say what GBP Learning proposes.
+@@ 4
+About 60 min · Read §18.6–18.7, pp. 540–545 (5 pages) · Needs Week 1 Day 3, Week 3 Days 2–3, Week 6 Day 4
+@@ 5
+Read first: §18.6 and §18.7, pp. 540–545
+@@ 6
+What the chapter calls the "purest representation" of a Spatial AI problem, and what each node in belief propagation is allowed to know (pp. 540–541).
+@@ 7
+The four properties wanted of learning (p. 543) and the key idea of GBP Learning (p. 545, Figure 18.4).
+@@ 8
+The book gives no equations for Gaussian belief propagation, so today supplies them. There are three rules, each using only what one node and its neighbours hold: a variable adds up the messages it receives, tells each factor everything it knows except what that factor told it, and a factor answers by eliminating its other variables. On a tree this is variable elimination done in parallel. On a graph with loops you repeat it, and the means converge to the least-squares solution.
+@@ 9
+1. What the chapter asks of an algorithm
+@@ 10
+If computing and storage are spread over many small units (<a href="#d141">Day 3</a>), estimation must live there too. The chapter's brief: keep the <strong>factor graph itself</strong> as the master representation, and work on it in place by local message passing with no "god's eye view", letting messages keep "bubbling" as the graph grows. <span class="src">§18.6 · pp. 540–541</span>
+@@ 11
+<strong>Belief propagation (BP)</strong> has this character and tolerates arbitrary, asynchronous schedules. <strong>Gaussian belief propagation (GBP)</strong> is BP when every factor and variable is Gaussian, which covers least-squares estimation (<a href="#d8">Week 2 · Day 2</a>). The book adds that it converges well on <strong>loopy</strong> graphs, those with cycles. <span class="src">§18.6 · p. 541</span>
+@@ 12
+2. Two operations on Gaussians in information form
+@@ 13
+Write a Gaussian as \(\exp(-\tfrac12\mathbf{x}\T\boldsymbol{\Lambda}\mathbf{x} + \boldsymbol{\eta}\T\mathbf{x})\) up to a constant, with information matrix \(\boldsymbol{\Lambda}\) and information vector \(\boldsymbol{\eta} = \boldsymbol{\Lambda}\boldsymbol{\mu}\) (<a href="#d3">Week 1 · Day 3</a>). <strong>Multiplying is adding:</strong> a product of Gaussians over the same variable has \(\boldsymbol{\Lambda} = \boldsymbol{\Lambda}_1 + \boldsymbol{\Lambda}_2\) and \(\boldsymbol{\eta} = \boldsymbol{\eta}_1 + \boldsymbol{\eta}_2\). <strong>Marginalizing is a Schur complement</strong> (<a href="#d15">Week 3 · Day 3</a>): to keep part \(a\) and remove part \(b\),
+@@ 14
+A factor is written the same way. A linear measurement \(\mathbf{z} = \mathbf{J}\mathbf{x} + \text{noise}\) with covariance \(\boldsymbol{\Sigma}\) contributes \(\exp(-\tfrac12(\mathbf{z}-\mathbf{J}\mathbf{x})\T\boldsymbol{\Sigma}^{-1}(\mathbf{z}-\mathbf{J}\mathbf{x}))\). Expand the square and drop the term without \(\mathbf{x}\):
+@@ 15
+For a one-dimensional odometry factor \(x_j - x_i = z\) with variance \(\sigma^2\), \(\mathbf{J} = \begin{bmatrix} -1 & 1 \end{bmatrix}\) on \((x_i, x_j)\). With \(w = 1/\sigma^2\):
+@@ 16
+3. The three rules
+@@ 17
+Every edge of the factor graph carries two messages, one each way. A message is a Gaussian over the variable on that edge, stored as \((\boldsymbol{\eta}, \boldsymbol{\Lambda})\). All start at zero, meaning "no information".
+@@ 18
+<strong>Rule 1, belief.</strong> A variable's estimate is the product of its incoming messages, a sum in information form:
+@@ 19
+<strong>Rule 2, variable to factor.</strong> A variable tells factor \(f\) what it has heard from its <em>other</em> factors, which is its belief minus what \(f\) sent:
+@@ 20
+Without the subtraction, a factor's own information would be echoed back to it and counted twice.
+@@ 21
+<strong>Rule 3, factor to variable.</strong> To send to \(x_i\), the factor takes its own \((\boldsymbol{\eta}_f, \boldsymbol{\Lambda}_f)\), adds the incoming message from every other variable \(x_j\) to that variable's diagonal block and to its part of \(\boldsymbol{\eta}\), and marginalizes all the \(x_j\) out by the Schur complement. A Gaussian over \(x_i\) alone is left.
+@@ 22
+Filling the gap: rule 3 worked out for an odometry factor
+@@ 23
+Let the message arriving from \(x_i\) be \((\eta_{\text{in}}, \Lambda_{\text{in}})\), and send to \(x_j\). Adding it to the \(x_i\) entries of the factor gives
+@@ 24
+Remove \(x_i\) (part \(b\)) and keep \(x_j\) (part \(a\)):
+@@ 25
+In covariance form the variance is \(1/\Lambda_{f\to x_j} = 1/\Lambda_{\text{in}} + 1/w = \sigma_{\text{in}}^2 + \sigma^2\) and the mean is \(\eta/\Lambda = \mu_{\text{in}} + z\). The message says: "\(x_j\) is where \(x_i\) thinks it is, plus the measured step, and the uncertainties add." The other direction gives mean \(\mu_{\text{in}} - z\). If nothing has arrived, \(\Lambda_{\text{in}} = 0\) and the outgoing message is zero too.
+@@ 26
+4. A full example by hand
+@@ 27
+Two poses. A prior says \(x_0 = 2\) with variance \(\tfrac14\). Odometry says \(x_1 - x_0 = 3\) with variance \(\tfrac12\), so \(w = 2\). A position fix says \(x_1 = 6\) with variance \(\tfrac14\).
+@@ 28
+Message or belief
+@@ 29
+Mean, variance
+@@ 30
+prior → \(x_0\)
+@@ 31
+fix → \(x_1\)
+@@ 32
+odometry → \(x_1\), using \(x_0\)'s message \((8, 4)\)
+@@ 33
+odometry → \(x_0\), using \(x_1\)'s message \((24, 4)\)
+@@ 34
+belief of \(x_0\) = step 1 + step 4
+@@ 35
+belief of \(x_1\) = step 2 + step 3
+@@ 36
+In step 4, \(x_1\) sends the odometry factor its belief minus that factor's message, which leaves the fix, \((24, 4)\). The factor reports mean \(6 - 3 = 3\) and variance \(\tfrac14 + \tfrac12\). Check against the direct solution:
+@@ 37
+so \(\boldsymbol{\mu} = (72/32,\ 184/32) = (2.25,\ 5.75)\) and both variances are \(6/32 = 3/16\). The messages reproduced the means and the marginal variances exactly.
+@@ 38
+5. How this relates to elimination
+@@ 39
+Rule 3 is one step of variable elimination (<a href="#d14">Week 3 · Day 2</a>): absorb what is known about a factor's other variables, then eliminate them. On a graph without loops, messages sent from the leaves inward are elimination in some order, and messages sent back outward are back-substitution that also delivers every marginal, so the result is exact. Elimination needs a global ordering and creates fill-in. GBP needs neither and never changes the graph, but on a loopy graph it must iterate.
+@@ 40
+In a loop, a variable's own message comes back round as if it were independent evidence. For Gaussian models this double counting distorts the variances but cancels in the means: Weiss and Freeman proved that whenever GBP converges, its means are exact.
+@@ 41
+Try it: press Step, then try each toggle.
+@@ 42
+Notice that at iteration 3 only five poses have a belief: information has travelled two hops from the prior, both ways round the loop. At iteration 5 every pose has one, but the largest mean error is still 0.29 m. By iteration 20 it is under 0.0001 m. The blue bars stay slightly short: at x4 GBP reports σ = 0.433 where the exact value is 0.439. Switch off the loop closure: the graph is a chain, and after 9 iterations the means and the σ values are both exact.
+@@ 43
+GBP also takes the nonlinear and robust factors of real problems. <span class="src">§18.6 · p. 541</span> Both are local changes to a factor: a nonlinear factor is re-linearized about the current belief means (<a href="#d10">Week 2 · Day 4</a>), and a robust factor shrinks its own \(w\) when its residual is large. The widget uses the Huber weight of <a href="#d34">Week 6 · Day 4</a>: with the residual in standard deviations \(m\), multiply \(w\) by \(\beta/m\) when \(m \gt \beta = 1.5\). Turn on the outlier, a false loop closure claiming \(x_6 - x_2 = 2.5\) when the truth is 0. Least squares, and GBP with it, drags \(x_6\) to 2.66. With robust factors the outlier's weight falls to 0.27 and \(x_6\) settles at 2.22.
+@@ 44
+Two systems show the scale: bundle adjustment as GBP on a Graphcore IPU, 30 times faster than a CPU on small real problems, and Robot Web, where many robots shared one localization graph and stayed accurate despite asynchronous and dropped messages. <span class="src">§18.6 · pp. 541–542</span>
+@@ 45
+6. Learning inside the factor graph
+@@ 46
+Section 18.7 wants learning that runs alongside probabilistic inference, is mainly <strong>self-supervised</strong>, is <strong>continual</strong> with no divide between training and test time, and is interpretable at the level of modules. <span class="src">§18.7 · p. 543</span> The chapter's answer is <strong>Bayesian machine learning</strong>: estimate a model's parameters by the same laws as any other unknown. In its words, state estimation and model learning differ only in structure and scale. <span class="src">§18.7 · p. 544</span>
+@@ 47
+A weight is then just another variable. For a model with one weight, each observed input-output pair is a linear measurement of that weight and adds one term to its information pair, exactly as a sensor reading would. Nothing separates training from use.
+@@ 48
+<strong>GBP Learning</strong> (Nabarro and colleagues) scales this up with a factor graph shaped like a neural network. The parameters are variables shared across all observations; inputs, outputs, and activations are variables copied per observation; nonlinear factors between layers switch softly, as neurons do. Learning is then inference by ordinary GBP; the book reports a version that learned image denoising and classification. <span class="src">§18.7 · pp. 544–545, Figure 18.4</span>
+@@ 49
+Q1. A pose sends an odometry factor a message with mean 4 and variance 0.5. The factor measured a step of 2 with variance 0.25. What does the factor send to the next pose?
+@@ 50
+Mean 6, variance 0.25
+@@ 51
+Mean 2, variance 0.75
+@@ 52
+Mean 6, variance 0.125
+@@ 53
+Mean 6, variance 0.75
+@@ 54
+The mean is the incoming mean plus the step, 4 + 2 = 6, and the variances add, 0.5 + 0.25 = 0.75.
+@@ 55
+Q2. A variable's belief is (η, Λ) = (10, 5). Factor f sent it (4, 2). What does the variable send back to f?
+@@ 56
+Rule 2: the belief minus what f itself sent, (10 − 4, 5 − 2) = (6, 3).
+@@ 57
+Q3. A chain of nine poses has a prior on the first pose and odometry between neighbours. With a synchronous schedule, after which iteration does the last pose first hold its exact marginal?
+@@ 58
+It never becomes exact
+@@ 59
+Iteration 1 delivers the prior to the first pose, and each later iteration carries information one pose further. A chain has no loops, so the result at iteration 9 is exact.
+@@ 60
+Q4. GBP has converged on a pose graph with several loop closures. Which statement is correct?
+@@ 61
+Means and variances are both exact
+@@ 62
+The means equal the least-squares solution; the variances are approximate
+@@ 63
+The variances are exact; the means are approximate
+@@ 64
+Neither is reliable on a loopy graph
+@@ 65
+For Gaussian models, convergence implies exact means (Weiss and Freeman). Marginal variances are exact only on graphs without loops.
+@@ 66
+The chapter wants the factor graph as master representation, updated in place by local messages.
+@@ 67
+GBP has three rules: belief = sum of incoming messages; variable to factor = belief minus that factor's message; factor to variable = add incoming messages, then Schur-complement away the other variables.
+@@ 68
+On a tree GBP is elimination plus back-substitution and is exact. With loops it iterates: the means converge to the least-squares solution and the variances are approximate.
+@@ 69
+GBP Learning treats network weights as variables in the same graph, so learning becomes continual inference.
+@@ 70
+<em>SLAM Handbook</em>, Chapter 18, §18.6 and §18.7, pp. 540–545, Figures 18.2–18.4.
+@@ 71
+Davison and Ortiz, <em>FutureMapping 2: Gaussian Belief Propagation for Spatial AI</em>, 2019, and Ortiz, Evans, Davison, <em>A visual introduction to Gaussian Belief Propagation</em>, 2021 (the message rules).
+@@ 72
+Weiss and Freeman, <em>Correctness of belief propagation in Gaussian graphical models of arbitrary topology</em>, 2001 (exact means at convergence).

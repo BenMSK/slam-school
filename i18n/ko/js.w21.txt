@@ -1,0 +1,356 @@
+@@ w21
+"aria-label":"Top view of a room with eight identical moving objects, drawn at two consecutive observations, with a link from each old position to the nearest new one"
+==
+"aria-label":"똑같이 생긴 움직이는 물체 8개가 있는 방을 위에서 본 모습. 연속한 두 관측에서의 위치를 그리고, 각 이전 위치에서 가장 가까운 새 위치로 선을 이었습니다"
+@@ w21
+stat("Motion between observations",
+==
+stat("관측 사이 이동",
+@@ w21
+stat("Compared with the spacing",
+==
+stat("간격 대비",
+@@ w21
+"nearest other object is "+R.gap.toFixed(2)+" m away on average"
+==
+"가장 가까운 다른 물체까지 평균 "+R.gap.toFixed(2)+" m"
+@@ w21
+stat("Correct matches",
+==
+stat("맞는 매칭",
+@@ w21
+"nearest neighbour, over 60 pairs of observations"
+==
+"nearest neighbour, 관측 60쌍 기준"
+@@ w21
+h("div",{class:"vt"},"Same motion, different observer")
+==
+h("div",{class:"vt"},"같은 움직임, 다른 관측자")
+@@ w21
+"Eight identical objects move in straight lines and bounce off the walls. The robot matches each object to the nearest detection in its next observation."
+==
+"똑같이 생긴 물체 8개가 직선으로 움직이다 벽에 튕깁니다. 로봇은 각 물체를 다음 관측에서 가장 가까운 detection과 매칭합니다."
+@@ w21
+range("Object speed v",
+==
+range("물체 속도 v",
+@@ w21
+range("Observation rate f",
+==
+range("관측 빈도 f",
+@@ w21
+"observation k (rings)"
+==
+"관측 k (고리)"
+@@ w21
+"observation k+1 (dots)"
+==
+"관측 k+1 (점)"
+@@ w21
+"match is right"
+==
+"맞는 매칭"
+@@ w21
+"match is wrong"
+==
+"틀린 매칭"
+@@ w21
+"aria-label":"Top view of one moving object: its true path, noisy position measurements with a stretch where it is hidden, and the path estimated with constant-velocity factors"
+==
+"aria-label":"움직이는 물체 하나를 위에서 본 모습: 실제 경로, 물체가 가려진 구간이 있는 noise 섞인 위치 측정값, 그리고 constant-velocity factor로 추정한 경로"
+@@ w21
+G>2?"hidden":""
+==
+G>2?"가려짐":""
+@@ w21
+stat("RMS error of the measurements",
+==
+stat("측정값의 RMS 오차",
+@@ w21
+"where the object was seen"
+==
+"물체가 보인 시각"
+@@ w21
+stat("RMS error of the estimate",
+==
+stat("추정값의 RMS 오차",
+@@ w21
+"at the same instants"
+==
+"같은 시각에서"
+@@ w21
+"motion factors are off"
+==
+"motion factor 꺼짐"
+@@ w21
+stat("Largest error while hidden",
+==
+stat("가려진 동안 최대 오차",
+@@ w21
+G+" steps with no measurement"
+==
+G+" step 동안 측정값 없음"
+@@ w21
+"nothing is hidden"
+==
+"가려진 구간 없음"
+@@ w21
+"no estimate there at all"
+==
+"그 구간에는 추정값이 없음"
+@@ w21
+button("Motion factors: on",
+==
+button("Motion factor: 켜짐",
+@@ w21
+"Motion factors: "+(on?"on":"off")
+==
+"Motion factor: "+(on?"켜짐":"꺼짐")
+@@ w21
+h("div",{class:"vt"},"Tracking with constant-velocity factors")
+==
+h("div",{class:"vt"},"constant-velocity factor로 하는 tracking")
+@@ w21
+"30 object positions and 30 velocities, 0.2 s apart, solved as one linear least-squares problem: position measurements, velocity factors, and factors that tie each position step to the velocity."
+==
+"0.2 s 간격의 물체 위치 30개와 속도 30개를 하나의 linear least-squares 문제로 풉니다: 위치 측정값, velocity factor, 그리고 각 위치 step을 속도에 묶는 factor."
+@@ w21
+range("Measurement noise",
+==
+range("측정 noise",
+@@ w21
+range("Velocity change allowed per step",
+==
+range("step당 허용 속도 변화",
+@@ w21
+range("Steps hidden",
+==
+range("가려진 step 수",
+@@ w21
+button("New noise",
+==
+button("새 noise",
+@@ w21
+"true path"
+==
+"실제 경로"
+@@ w21
+"position measurements"
+==
+"위치 측정값"
+@@ w21
+"estimate with motion factors"
+==
+"motion factor를 쓴 추정"
+@@ w21
+"aria-label":"Two maps of the same room built from the same lidar scans while an object crosses it. Left: every point is kept. Right: an occupancy grid that also uses the free space along each beam"
+==
+"aria-label":"물체가 방을 가로지르는 동안 같은 lidar scan으로 만든 같은 방의 두 map. 왼쪽: 모든 점을 보관합니다. 오른쪽: 각 beam을 따른 free space도 쓰는 occupancy grid"
+@@ w21
+[["Keep every point",
+==
+[["모든 점 보관",
+@@ w21
+["Occupancy grid: hits and misses",
+==
+["Occupancy grid: hit과 miss",
+@@ w21
+out.textContent="Scan "+S.t+" of "+TMAX+" · walls and pillar: "+n.sn+" cells in the point map, "+n.so+" in the grid";
+==
+out.textContent="Scan "+S.t+" / "+TMAX+" · 벽과 기둥: point map에 "+n.sn+" cell, grid에 "+n.so+" cell";
+@@ w21
+stat("Ghost cells, keep every point",n.gn+"","marked solid, but empty now")
+==
+stat("Ghost cell, 모든 점 보관",n.gn+"","점유로 표시됐지만 지금은 빔")
+@@ w21
+stat("Ghost cells, occupancy grid",n.go+"","log-odds above 0, but empty now")
+==
+stat("Ghost cell, occupancy grid",n.go+"","log-odds가 0보다 크지만 지금은 빔")
+@@ w21
+stat("Hits to accept · misses to clear",nh+" · "+(nm||"never"),"a long-free cell turns solid · a saturated solid cell is cleared")
+==
+stat("점유까지 hit · 지우기까지 miss",nh+" · "+(nm||"불가"),"오래 빈 cell이 점유됨 · 포화된 점유 cell이 지워짐")
+@@ w21
+on?"Pause":"Play"
+==
+on?"일시정지":"재생"
+@@ w21
+button("Play",
+==
+button("재생",
+@@ w21
+h("div",{class:"vt"},"Ghost trail, and how free space erases it")
+==
+h("div",{class:"vt"},"Ghost trail, 그리고 free space가 그것을 지우는 방식")
+@@ w21
+"A fixed lidar (blue dot) fires 180 beams per scan while a box crosses the room. Both maps get the same scans. A cell is updated at most once per scan, and its log-odds stay between −2 and +3.5."
+==
+"상자가 방을 가로지르는 동안 고정된 lidar(파란 점)가 scan마다 beam 180개를 쏩니다. 두 map은 같은 scan을 받습니다. cell은 scan당 최대 한 번 갱신되고, log-odds는 −2와 +3.5 사이에 머뭅니다."
+@@ w21
+range("Object speed",
+==
+range("물체 속도",
+@@ w21
+range("Hit update",
+==
+range("Hit 갱신",
+@@ w21
+range("Miss update",
+==
+range("Miss 갱신",
+@@ w21
+button("Step",
+==
+button("한 step",
+@@ w21
+button("Restart",
+==
+button("다시 시작",
+@@ w21
+"solid, and really there"
+==
+"점유, 실제로 있음"
+@@ w21
+"ghost: solid in the map, empty in the world"
+==
+"ghost: map에서는 점유, 실제로는 빔"
+@@ w21
+"where the object is now"
+==
+"물체의 현재 위치"
+@@ w21
+"never observed"
+==
+"관측된 적 없음"
+@@ w21
+"observed free"
+==
+"비어 있다고 관측됨"
+@@ w21
+D:"detected",M:"looked, not detected",N:"not in view"
+==
+D:"검출됨",M:"봤지만 검출 안 됨",N:"시야 밖"
+@@ w21
+aria:"Probability that the object is still there after each visit"
+==
+aria:"각 방문 후 물체가 아직 거기 있을 확률"
+@@ w21
+label:"visit"}
+==
+label:"방문"}
+@@ w21
+label:"P(still there)"
+==
+label:"P(아직 있음)"
+@@ w21
+"visit "+i+", "
+==
+"방문 "+i+", "
+@@ w21
+"before any visit"
+==
+"첫 방문 전"
+@@ w21
+out.textContent="Visits: "+(ev.map(e=>SYM[e]).join(" ")||"none yet")+"     (● detected   ○ looked, not detected   – not in view)";
+==
+out.textContent="방문: "+(ev.map(e=>SYM[e]).join(" ")||"아직 없음")+"     (● 검출됨   ○ 봤지만 검출 안 됨   – 시야 밖)";
+@@ w21
+stat("P(still there)",last.toFixed(3),"after "+ev.length+" visits")
+==
+stat("P(아직 있음)",last.toFixed(3),"방문 "+ev.length+"번 후")
+@@ w21
+stat("Map decision",last>=0.5?"keep":"remove","threshold 0.5")
+==
+stat("Map 판정",last>=0.5?"유지":"제거","threshold 0.5")
+@@ w21
+stat("One miss multiplies the odds by",
+==
+stat("miss 한 번이 odds에 곱하는 값",
+@@ w21
+"one detection by "
+==
+"detection 한 번은 "
+@@ w21
+h("div",{class:"vt"},"Is the object still there?")
+==
+h("div",{class:"vt"},"물체는 아직 거기 있을까?")
+@@ w21
+"A two-state Bayes filter. Before each visit the object stays with the survival probability. The detector fires on a present object with the recall below, and on an empty spot 5% of the time."
+==
+"two-state Bayes filter입니다. 각 방문 전에 물체는 생존 확률에 따라 그 자리에 남습니다. detector는 있는 물체에는 아래의 recall로, 빈 자리에는 5%의 확률로 반응합니다."
+@@ w21
+range("Survival between visits",
+==
+range("방문 사이 생존 확률",
+@@ w21
+button("Detected",
+==
+button("검출됨",
+@@ w21
+button("Looked, not detected",
+==
+button("봤지만 검출 안 됨",
+@@ w21
+button("Not in view",
+==
+button("시야 밖",
+@@ w21
+button("Clear",
+==
+button("지우기",
+@@ w21
+button("Example",
+==
+button("예시",
+@@ w21
+"aria-label":"A ladder-shaped strip of 18 graph nodes, pinned at its left end, deformed by moving one handle node at its right end. The rest shape is shown dashed"
+==
+"aria-label":"graph node 18개로 된 사다리 모양의 띠. 왼쪽 끝은 고정되어 있고, 오른쪽 끝의 handle node 하나를 움직여 변형합니다. 정지 모양은 점선으로 표시됩니다"
+@@ w21
+["none","No regularizer"]
+==
+["none","Regularizer 없음"]
+@@ w21
+["smooth","Neighbours move alike"]
+==
+["smooth","이웃이 똑같이 움직임"]
+@@ w21
+"departure from rigid · edge lengths change "+(100*q.len[0]).toFixed(1)+"% on average"
+==
+"rigid에서 벗어난 정도 · edge 길이 변화 평균 "+(100*q.len[0]).toFixed(1)+"%"
+@@ w21
+select("Regularizer drawn",
+==
+select("표시할 regularizer",
+@@ w21
+["smooth","neighbours move alike"]
+==
+["smooth","이웃이 똑같이 움직임"]
+@@ w21
+["none","none"]
+==
+["none","없음"]
+@@ w21
+h("div",{class:"vt"},"A deformation graph you can pull")
+==
+h("div",{class:"vt"},"직접 당겨 보는 deformation graph")
+@@ w21
+"18 nodes, 25 edges of rest length 1. The two squares are pinned. Drag the round handle: the other 15 nodes are placed by the chosen regularizer. The big number is the root-mean-square mismatch between an edge and the best local rotation of its rest edge."
+==
+"node 18개, 정지 길이 1인 edge 25개. 두 사각형은 고정되어 있습니다. 둥근 handle을 끌면 나머지 node 15개는 선택한 regularizer가 배치합니다. 큰 숫자는 각 edge와, 그 정지 edge에 가장 잘 맞는 local 회전 사이의 불일치를 root-mean-square로 나타낸 값입니다."
+@@ w21
+button("Reset",
+==
+button("초기화",
+@@ w21
+"edge moves rigidly with its neighbours (mismatch under 10%)"
+==
+"이웃과 함께 rigid하게 움직이는 edge (불일치 10% 미만)"
+@@ w21
+"edge does not"
+==
+"그렇지 않은 edge"
+@@ w21
+"rest shape"
+==
+"정지 모양"

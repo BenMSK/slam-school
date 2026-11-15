@@ -1,0 +1,164 @@
+@@ 1
+<span class="eyebrow">6주차 · 복습</span>
+@@ 2
+6주차 복습: outlier와 robust estimation
+@@ 3
+오늘이 끝나면 주어진 문제에 RANSAC, pairwise consistency, robust loss, graduated non-convexity 중 무엇을 쓸지 고르고, 각 방법의 한 단계를 손으로 수행할 수 있습니다.
+@@ 4
+least squares는 Gaussian 오차를 가정하며, 크게 틀린 측정값 하나(대개 잘못된 data association)가 답을 얼마든지 멀리 옮길 수 있습니다. 3장은 두 겹으로 방어합니다. front-end에서 RANSAC은 minimal set을 샘플링해 측정값 대부분이 동의하는 model을 남기고, pairwise consistency maximization은 서로 동의하는 가장 큰 측정값 무리를 maximum clique로 찾아 남깁니다. back-end에서 M-estimation은 제곱을 robust loss로 바꾸고, IRLS는 이를 weighted least squares의 반복으로 풀며, Black-Rangarajan duality는 그 가중치를 설명하고, graduated non-convexity는 IRLS가 시작점에 훨씬 덜 의존하게 만듭니다. 이 중 어느 것도 보장이 없으며, 가장 강력한 결과는 두 겹을 결합할 때 나옵니다.
+@@ 5
+\(N\)개의 평균에 대한 outlier 하나의 영향
+@@ 6
+Day 1 (추가 내용; §3.1.2, p. 77 참고)
+@@ 7
+=
+@@ 8
+=
+@@ 9
+RANSAC iteration 수
+@@ 10
+기댓값 \(1/\omega^n\); 신뢰도 \(p\)에서: \(k\ge\dfrac{\log(1-p)}{\log(1-\omega^n)}\)
+@@ 11
+p. 81, Day 2
+@@ 12
+두 3D-3D match의 consistency
+@@ 13
+=
+@@ 14
+두 loop closure의 consistency
+@@ 15
+=
+@@ 16
+=
+@@ 17
+=
+@@ 18
+M-estimation과 influence
+@@ 19
+=
+@@ 20
+IRLS 가중치
+@@ 21
+=
+@@ 22
+=
+@@ 23
+=
+@@ 24
+=
+@@ 25
+GNC 가중치
+@@ 26
+truncated quadratic: \(w=\beta\sqrt{\mu(\mu+1)}/|r|-\mu\), \([0,1]\)로 clip, \(\mu\)는 증가; Geman-McClure: \(w=\big(\mu\beta^2/(r^2+\mu\beta^2)\big)^2\), \(\mu\)는 1까지 감소
+@@ 27
+=
+@@ 28
+Q1. 거리 측정값 네 개는 10 m, 다섯 번째는 60 m입니다. least squares는 무엇을 돌려줍니까?
+@@ 29
+평균: (4 × 10 + 60)/5 = 20 m. 달리 말하면 50 m 오차가 N = 5로 나뉘어 10 m 이동합니다.
+@@ 30
+Q2. minimal solver에 correspondence n = 3개가 필요하고, correspondence의 절반이 inlier입니다. 모두 inlier인 샘플을 얻기까지 필요한 RANSAC iteration 수의 기댓값은 얼마입니까?
+@@ 31
+Q3. match의 30%는 올바르고, 45%는 틀렸지만 모두 같은 반복 구조 때문이라 서로 맞아떨어집니다. RANSAC은 무엇을 돌려줄 가능성이 가장 큽니까?
+@@ 32
+45%가 지지하는 model. consensus set이 가장 크기 때문
+@@ 33
+올바른 model. inlier가 항상 이기기 때문
+@@ 34
+model 없음. outlier 비율이 50%를 넘기 때문
+@@ 35
+두 model의 평균
+@@ 36
+RANSAC은 consensus를 최대화합니다. 자기들끼리 consistent한 커다란 잘못된 match 무리와 참을 구별할 수 없습니다. 이것이 front-end 수준의 perceptual aliasing입니다.
+@@ 37
+Q4. match된 3D 점 두 개가 frame k − 1에서는 2.00 m, frame k에서는 2.05 m 떨어져 있습니다. γ = 0.10 m일 때 consistency 검사 (3.5)의 결론은 무엇입니까?
+@@ 38
+거리가 다르므로 inconsistent
+@@ 39
+카메라 운동을 추정하기 전까지는 아무것도 알 수 없음
+@@ 40
+consistent: 거리 차이 0.05 m가 γ 이내
+@@ 41
+두 match 모두 확실히 inlier
+@@ 42
+|2.00 − 2.05| = 0.05 ≤ 0.10이므로 이 쌍은 consistency graph에서 edge를 얻습니다. 검사에는 운동 추정이 필요 없습니다. 통과는 둘 다 inlier이기 위한 필요조건이지 충분조건이 아닙니다.
+@@ 43
+Q5. consistency graph의 edge가 1–2, 1–3, 2–3, 3–4, 4–5입니다. PCM은 어떤 측정값을 남깁니까?
+@@ 44
+3만
+@@ 45
+{1, 2, 3}이 maximum clique입니다: 세 쌍 모두 edge입니다. {3, 4, 5}는 3–5가 없으므로 clique가 아닙니다. node 3이 edge가 가장 많지만, degree만으로는 결정되지 않습니다.
+@@ 46
+Q6. β = 1인 Geman-McClure loss에서 residual r = 3은 IRLS 가중치를 얼마 받습니까?
+@@ 47
+w = (β²/(β² + r²))² = (1/10)² = 0.01. 작지만, truncated quadratic처럼 정확히 0은 아닙니다.
+@@ 48
+Q7. 다음 중 state의 initial guess가 필요한 방법은 무엇입니까?
+@@ 49
+=
+@@ 50
+=
+@@ 51
+front-end 방법도 back-end 방법도 필요 없음
+@@ 52
+IRLS와 GNC. SLAM 문제를 반복적으로 풀기 때문
+@@ 53
+RANSAC은 minimal 샘플로 자체 추정값을 만들고, PCM은 state를 전혀 건드리지 않습니다. IRLS와 GNC는 전체 문제에 Gauss-Newton 계열의 step을 돌리며, 특히 GNC는 initial guess가 망가지면 실패합니다(Figure 3.10).
+@@ 54
+Q8. truncated quadratic surrogate (3.24)를 쓰는 GNC에서 μ가 커지면, 가중치가 0과 1 사이에 엄격히 놓이는 residual 구간은 어떻게 됩니까?
+@@ 55
+넓어져서 모든 residual을 덮음
+@@ 56
+그대로이고 높이만 바뀜
+@@ 57
+r² = β²로 줄어들어 가중치 0과 1만 남음
+@@ 58
+r = 0 쪽으로 이동
+@@ 59
+구간은 r² ∈ [μ/(μ+1) β², (μ+1)/μ β²]입니다. μ → ∞이면 양 끝이 β²로 가므로 surrogate는 min{r², β²}가 되고 가중치는 0 또는 1이 됩니다.
+@@ 60
+3D-3D registration front-end가 3-point minimal solver를 씁니다. (a) outlier가 60%일 때 모두 inlier인 샘플을 뽑기까지 필요한 RANSAC iteration 수의 기댓값과, 99% 신뢰도에 필요한 횟수를 구하세요. (b) outlier 90%에 대해 반복하세요.
+@@ 61
+(a) \(\omega = 0.4\), \(\omega^3 = 0.064\). 기댓값: \(1/0.064 = 15.6\). 99%: \(k \ge \log(0.01)/\log(1-0.064) = (-4.605)/(-0.0661) = 69.6\)이므로 70번.
+@@ 62
+(b) \(\omega = 0.1\), \(\omega^3 = 0.001\). 기댓값: 1000. 99%: \((-4.605)/\log(0.999) = (-4.605)/(-0.0010005) = 4603\)번. outlier가 60%에서 90%로 늘면 약 65배가 드는데, 이 장이 아주 높은 outlier 비율에서 PCM으로 넘어가는 이유가 이것입니다.
+@@ 63
+로봇이 복도를 따라 갔다가 돌아옵니다(1차원으로 취급). 후보 loop closure 다섯 개가 각각 이른 pose \(a_i\)와 늦은 pose \(b_i\)를 잇습니다. 각각에 대해 \(e_i\) = (loop closure 변위) − (\(a_i\)에서 \(b_i\)까지 odometry를 이어 붙여 예측한 변위)를 계산하니 \(e = \{0.42,\ 0.38,\ 2.90,\ 0.45,\ -1.70\}\) m입니다. (a) loop closure \(i\)와 \(j\)에 대한 cycle 검사 (3.6)이 \(|e_i - e_j|\le\gamma\)로 줄어듦을 보이세요. (b) \(\gamma = 0.15\) m로 consistency graph를 만들고 maximum clique를 찾으세요. (c) 남은 loop closure는 odometry에 대해 무엇을 말해 줍니까?
+@@ 64
+(a) 1차원에서 pose는 덧셈으로 합성되고 identity는 0입니다. cycle \(a_i \to b_i \to b_j \to a_j \to a_i\)를 따라 돕니다: loop closure \(i\) 정방향(\(T_i\)), \(b_i\)에서 \(b_j\)까지 odometry, loop closure \(j\) 역방향(\(-T_j\)), \(a_j\)에서 \(a_i\)까지 odometry. odometry를 이어 붙여 얻은 위치를 \(q\)로 쓰면 합은 \(T_i + (q_{b_j}-q_{b_i}) - T_j + (q_{a_i}-q_{a_j}) = [T_i-(q_{b_i}-q_{a_i})] - [T_j-(q_{b_j}-q_{a_j})] = e_i - e_j\)입니다.
+@@ 65
+(b) 쌍은 \(5\times4/2 = 10\)개입니다. \(|e_1-e_2| = 0.04\), \(|e_1-e_4| = 0.03\), \(|e_2-e_4| = 0.07\): edge 세 개. loop closure 3이나 5가 들어간 쌍은 모두 2 m 넘게 차이 나므로 edge가 없습니다. graph는 삼각형 {1, 2, 4}와 고립된 node 두 개이므로 maximum clique는 {1, 2, 4}입니다.
+@@ 66
+(c) 남은 loop closure들은 두 번의 통과 사이에 odometry가 약 0.4 m drift했다는 데 동의합니다. loop closure 3과 5는 각자 다른 drift를 암시하는데, 이를 뒷받침하는 것은 아무것도 없습니다.
+@@ 67
+\(z = \{0, 1, 2, 3, 19\}\)에서 residual \(r_i = z_i - x\)로 스칼라 \(x\)를 추정합니다. (a) least-squares 추정값을 구하세요. (b) least-squares 추정값에서 시작해 truncated quadratic loss, \(\beta = 3.5\)로 IRLS를 값이 더 변하지 않을 때까지 돌리세요. (c) 조건 \(\sum_i\psi(r_i) = 0\)에서 \(\beta = 3.5\)의 Huber 추정값을 구하세요.
+@@ 68
+(a) 평균: \(25/5 = 5\).
+@@ 69
+(b) Iteration 1: residual \(-5, -4, -3, -2, 14\). \(|r|\lt3.5\)인 곳의 가중치는 1: \(0, 0, 1, 1, 0\). 새 \(x = (2+3)/2 = 2.5\). Iteration 2: residual \(-2.5, -1.5, -0.5, 0.5, 16.5\), 가중치 \(1, 1, 1, 1, 0\), 새 \(x = 6/4 = 1.5\). Iteration 3: residual \(-1.5, -0.5, 0.5, 1.5, 17.5\), 같은 가중치, \(x = 1.5\). 좋은 값 네 개의 평균에서 수렴했습니다. 여기서는 나쁜 시작이 문제가 되지 않았습니다. 나쁜 시작이 문제가 되었던 Day 4 위젯과 비교해 보세요.
+@@ 70
+(c) 처음 네 residual은 \(\beta\) 안에, 마지막은 그 너머에 있다고 추측합니다. 그러면 처음 넷은 \(\psi = 2r\), 마지막은 \(\psi = 2\beta\)이므로 \(2[(0-x)+(1-x)+(2-x)+(3-x)] + 2(3.5) = 0\), 즉 \(12 - 8x + 7 = 0\)이고 \(x = 2.375\)입니다. 추측을 확인하면 residual은 \(-2.375, -1.375, -0.375, 0.625\)(모두 3.5 이내)와 \(16.625\)(바깥)입니다. Huber 추정값 2.375는 truncated quadratic의 답 1.5와 least squares의 답 5 사이에 있는데, outlier가 \(2\beta\)의 일정한 힘으로 계속 당기기 때문입니다.
+@@ 71
+(심화.) truncated quadratic GNC에서 outlier process는 \(\Phi_{\rho_\mu}(w) = \dfrac{\mu(1-w)}{\mu+w}\beta^2\)이고, 구간 안의 가중치는 \(w^\star = \beta\sqrt{\mu(\mu+1)}/|r| - \mu\)입니다. (a) \(w^\star\)를 \(w\,r^2 + \Phi_{\rho_\mu}(w)\)에 대입해 (3.24)의 가운데 경우가 나옴을 보이세요. (b) \(\beta = 2,\ \mu = 0.25,\ r = 3\)에서 \(w^\star\)와 \(\rho_\mu\)를 계산하세요.
+@@ 72
+(a) \(s = \beta\sqrt{\mu(\mu+1)}\)로 두면 \(w^\star = s/|r| - \mu\), \(\mu + w^\star = s/|r|\), \(s^2 = \mu(\mu+1)\beta^2\)입니다. 첫 번째 항: \(w^\star r^2 = s|r| - \mu r^2\). 두 번째 항: \(\mu\beta^2\,\dfrac{1+\mu-s/|r|}{s/|r|} = \dfrac{\mu(\mu+1)\beta^2\,|r|}{s} - \mu\beta^2 = s|r| - \mu\beta^2\). 합은 \(2s|r| - \mu(\beta^2+r^2) = 2\beta|r|\sqrt{\mu(\mu+1)} - \mu(\beta^2+r^2)\)로, (3.24)의 가운데 경우입니다.
+@@ 73
+(b) 구간은 \(r^2\in[\tfrac{0.25}{1.25}\cdot4,\ \tfrac{1.25}{0.25}\cdot4] = [0.8, 20]\)이고 \(r^2 = 9\)는 그 안에 있습니다. \(\sqrt{\mu(\mu+1)} = \sqrt{0.3125} = 0.559\). \(w^\star = 2(0.559)/3 - 0.25 = 0.1227\). \(\rho_\mu = 2(2)(3)(0.559) - 0.25(4+9) = 6.708 - 3.25 = 3.458\). 가중치를 통한 검산: \(0.1227\times9 + 0.25\times4\times\tfrac{0.8773}{0.3727} = 1.104 + 2.354 = 3.458\). 일반 truncated quadratic이라면 가중치 0, loss 4가 됩니다.
+@@ 74
+\(E/N\) 논증으로 least squares가 나쁜 측정값 하나를 전혀 막지 못하는 이유 설명하기.
+@@ 75
+\(\omega\), \(n\), 신뢰 수준으로 RANSAC iteration 수 계산하기.
+@@ 76
+측정값 쌍에 대한 consistency function을 쓰고, 작은 graph에서 maximum clique 찾기.
+@@ 77
+Huber, Geman-McClure, truncated quadratic loss의 \(\rho\), \(\psi\), IRLS 가중치 계산하기.
+@@ 78
+IRLS를 weighted least-squares 풀이와 closed-form weight update의 교대로 설명하고, GNC가 더하는 것 말하기.
+@@ 79
+각 방법이 실패하는 상황을 하나씩 들기.
+@@ 80
+<em>SLAM Handbook</em>, 3장 "Robustness to Incorrect Data Association and Outliers", pp. 75–100.
+@@ 81
+Fischler and Bolles, <em>Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and Automated Cartography</em>, 1981 (주어진 신뢰도에 필요한 iteration 수).
+@@ 82
+Huber, <em>Robust Statistics</em>, 1981 (M-estimator와 influence function).

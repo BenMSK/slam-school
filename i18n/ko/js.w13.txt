@@ -1,0 +1,332 @@
+@@ w13
+"Top view of a room. A LiDAR at the lower left sends beams in all directions; each dot is one measured point, drawn where the sensor believes it is."
+==
+"방을 위에서 본 모습. 왼쪽 아래의 LiDAR가 모든 방향으로 beam을 보냅니다. 점 하나하나가 측정된 점이며, 센서가 자기 위치라고 믿는 곳을 기준으로 그려집니다."
+@@ w13
+stat("Sensor motion in one sweep",
+==
+stat("한 sweep 동안의 센서 움직임",
+@@ w13
+"0.1 s at "+v+" m/s and "+w+"°/s"
+==
+"0.1 s 동안 "+v+" m/s, "+w+"°/s"
+@@ w13
+"Points off the walls, raw"
+==
+"벽까지 거리, 보정 전"
+@@ w13
+"RMS distance to the nearest wall"
+==
+"가장 가까운 벽까지의 RMS 거리"
+@@ w13
+"Points off the walls, compensated"
+==
+"벽까지 거리, 보정 후"
+@@ w13
+"with the velocity estimate "+(err>0?"+":"")+err+"% off"
+==
+"속도 추정 오차 "+(err>0?"+":"")+err+"%"
+@@ w13
+"press Motion compensation"
+==
+"Motion compensation을 켜십시오"
+@@ w13
+"true walls"
+==
+"실제 벽"
+@@ w13
+"sensor path during the sweep"
+==
+"sweep 동안의 센서 경로"
+@@ w13
+"raw scan (all points placed from the start pose)"
+==
+"보정 전 scan (모든 점을 시작 pose에서 배치)"
+@@ w13
+"motion-compensated scan"
+==
+"보정된 scan"
+@@ w13
+stat("Points per sweep",
+==
+stat("sweep당 점 수",
+@@ w13
+"one every "+dth.toFixed(2)+"°"
+==
+dth.toFixed(2)+"°마다 하나"
+@@ w13
+"Gap to the next point, nearest return"
+==
+"점 간격 (가장 가까운 반사)"
+@@ w13
+"r·Δθ at range "+lo.toFixed(2)+" m"
+==
+"range "+lo.toFixed(2)+" m에서 r·Δθ"
+@@ w13
+"Gap to the next point, farthest return"
+==
+"점 간격 (가장 먼 반사)"
+@@ w13
+"r·Δθ at range "+hi.toFixed(2)+" m"
+==
+"range "+hi.toFixed(2)+" m에서 r·Δθ"
+@@ w13
+"Sensor moved during the sweep"
+==
+"sweep 동안 센서 이동"
+@@ w13
+"0.1 s at "+v+" m/s"
+==
+"0.1 s 동안 "+v+" m/s"
+@@ w13
+"measured points"
+==
+"측정된 점"
+@@ w13
+"Measured range against beam angle for this sweep"
+==
+"이번 sweep에서 beam 각도별 측정 range"
+@@ w13
+label:"beam angle"
+==
+label:"beam 각도"
+@@ w13
+button("Motion compensation: off"
+==
+button("Motion compensation: 끔"
+@@ w13
+"Motion compensation: "+(on?"on":"off")
+==
+"Motion compensation: "+(on?"켬":"끔")
+@@ w13
+"Motion distortion and its correction"
+==
+"Motion distortion과 그 보정"
+@@ w13
+"One sweep of a 2-D LiDAR"
+==
+"2-D LiDAR의 한 sweep"
+@@ w13
+"The sensor drives and turns while its beam sweeps 360° in 0.1 s. Compensation moves each point by the pose the constant-velocity model predicts for its own time stamp."
+==
+"beam이 0.1 s 동안 360°를 도는 사이에 센서가 달리면서 회전합니다. 보정은 각 점을, 그 점의 time stamp에 대해 constant-velocity model이 예측한 pose로 옮깁니다."
+@@ w13
+"A beam rotates once in 0.1 s inside an 8 m by 5 m room. Each range is the distance to the first wall the beam meets, plus Gaussian noise."
+==
+"8 m × 5 m 방 안에서 beam이 0.1 s에 한 바퀴 돕니다. 각 range는 beam이 처음 만나는 벽까지의 거리에 Gaussian noise를 더한 값입니다."
+@@ w13
+range("Speed",
+==
+range("속도",
+@@ w13
+range("Yaw rate",
+==
+range("yaw 각속도",
+@@ w13
+range("Error of the velocity estimate",
+==
+range("속도 추정 오차",
+@@ w13
+range("Beams per sweep",
+==
+range("sweep당 beam 수",
+@@ w13
+range("Sensor speed",
+==
+range("센서 속도",
+@@ w13
+"Two LiDAR scans of the same room drawn in the frame of the first sensor: the fixed scan P and the moving scan Q under the current estimate, with a line for each correspondence"
+==
+"같은 방을 찍은 LiDAR scan 두 개를 첫 번째 센서의 frame에 그린 그림: 고정 scan P와 현재 추정값으로 옮긴 움직이는 scan Q, 그리고 correspondence마다 선 하나"
+@@ w13
+"RMS distance between matched points after each ICP iteration"
+==
+"ICP iteration마다 짝지은 점 사이의 RMS 거리"
+@@ w13
+label:"RMS distance (m)"
+==
+label:"RMS 거리 (m)"
+@@ w13
+"RMS distance of the pairs"
+==
+"쌍의 RMS 거리"
+@@ w13
+"Stopped after 60 iterations."
+==
+"60 iteration 후 멈췄습니다."
+@@ w13
+"Converged: the pairs no longer change the estimate."
+==
+"수렴: 쌍이 더는 추정값을 바꾸지 않습니다."
+@@ w13
+"Pairs found (8.3). Next step: solve for (R, t) from these pairs."
+==
+"쌍을 찾았습니다 (8.3). 다음 단계: 이 쌍으로 (R, t)를 풉니다."
+@@ w13
+"Estimate updated. Next step: find the pairs again."
+==
+"추정값을 갱신했습니다. 다음 단계: 쌍을 다시 찾습니다."
+@@ w13
+o.done?"converged":"alignment steps so far"
+==
+o.done?"수렴":"지금까지의 정렬 단계"
+@@ w13
+"point-to-point, latest matching"
+==
+"point-to-point, 최근 matching"
+@@ w13
+stat("Rotation error",
+==
+stat("회전 오차",
+@@ w13
+"estimate against the true turn of "+turn+"°"
+==
+"실제 회전 "+turn+"°와 비교한 추정값"
+@@ w13
+stat("Translation error",
+==
+stat("이동 오차",
+@@ w13
+"estimate against the true move"
+==
+"실제 이동과 비교한 추정값"
+@@ w13
+runB.textContent="Run"
+==
+runB.textContent="실행"
+@@ w13
+runB.textContent="Pause"
+==
+runB.textContent="일시정지"
+@@ w13
+button("Run",
+==
+button("실행",
+@@ w13
+button("Step",
+==
+button("한 step",
+@@ w13
+button("Reset",
+==
+button("초기화",
+@@ w13
+"ICP, one half-step at a time"
+==
+"ICP를 반 단계씩"
+@@ w13
+"Two 72-beam scans of the same room, taken before and after the sensor moved. The first guess is that it did not move. Each Step either pairs the points or solves for the motion."
+==
+"센서가 움직이기 전과 후에 같은 방을 찍은 72-beam scan 두 개. 첫 추측은 센서가 움직이지 않았다는 것입니다. '한 step'을 누를 때마다 점을 짝짓거나 움직임을 풉니다."
+@@ w13
+select("Distance",
+==
+select("거리",
+@@ w13
+"point-to-plane (a line in 2-D)"
+==
+"point-to-plane (2-D에서는 직선)"
+@@ w13
+range("Sensor turned by",
+==
+range("센서 회전각",
+@@ w13
+range("Sensor moved by",
+==
+range("센서 이동 거리",
+@@ w13
+"fixed scan P and sensor A"
+==
+"고정 scan P와 센서 A"
+@@ w13
+"moving scan Rq + t and estimated sensor B"
+==
+"움직이는 scan Rq + t와 추정한 센서 B"
+@@ w13
+["var(--muted)","pairs"]
+==
+["var(--muted)","쌍"]
+@@ w13
+"true position of sensor B (ring)"
+==
+"센서 B의 실제 위치 (원)"
+@@ w13
+"Two scans of the same room in polar bins, the stored one and the query taken with a different heading, and below them the two descriptors as grids of rings by sectors, plus the query grid shifted to the best-matching column offset"
+==
+"같은 방을 찍은 두 scan을 polar bin으로 나타낸 그림. 저장된 scan과 heading을 달리해 찍은 query가 있고, 그 아래에 두 descriptor가 ring × sector 격자로, 그리고 가장 잘 맞는 column offset만큼 밀린 query 격자가 있습니다"
+@@ w13
+"stored scan (sensor frame)"
+==
+"저장된 scan (sensor frame)"
+@@ w13
+"stored descriptor"
+==
+"저장된 descriptor"
+@@ w13
+"query, shifted "+m.b+" col."
+==
+"query, "+m.b+"열 shift"
+@@ w13
+"Descriptor distance between the stored scan and the query for each of the 24 column shifts"
+==
+"24개 column shift 각각에서 저장된 scan과 query 사이의 descriptor 거리"
+@@ w13
+label:"distance"
+==
+label:"거리"
+@@ w13
+name:"distance"
+==
+name:"거리"
+@@ w13
+stat("Best column shift",
+==
+stat("가장 좋은 column shift",
+@@ w13
+m.b+" of "+NS
+==
+m.b+" / "+NS
+@@ w13
+"each column is "+360/NS+"°"
+==
+"열 하나 = "+360/NS+"°"
+@@ w13
+stat("Heading change, estimated",
+==
+stat("heading 변화 추정값",
+@@ w13
+"true: "+yaw+"°"
+==
+"실제: "+yaw+"°"
+@@ w13
+stat("Distance to the same place",
+==
+stat("같은 장소와의 거리",
+@@ w13
+"at the best shift"
+==
+"가장 좋은 shift에서"
+@@ w13
+stat("Distance to another place",
+==
+stat("다른 장소와의 거리",
+@@ w13
+"a scan taken 4 m away, at its best shift"
+==
+"4 m 떨어져 찍은 scan, 가장 좋은 shift에서"
+@@ w13
+"A polar descriptor and its column shift"
+==
+"polar descriptor와 column shift"
+@@ w13
+"Each scan is binned into "+NR+" rings by "+NS+" sectors around the sensor; a cell stores how many points fell in it. Turning the sensor shifts the columns, so the two grids are compared at every shift."
+==
+"각 scan을 센서 둘레의 ring "+NR+"개 × sector "+NS+"개 bin으로 나누고, cell마다 그 안에 들어간 점 개수를 저장합니다. 센서를 돌리면 열이 밀리므로 두 격자를 모든 shift에서 비교합니다."
+@@ w13
+range("Heading of the query",
+==
+range("query의 heading",
+@@ w13
+range("Position offset of the query",
+==
+range("query의 위치 offset",

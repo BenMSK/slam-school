@@ -1,0 +1,324 @@
+@@ w18
+"A two-link leg hanging from the robot base, with arrows for the foot velocity each joint produces, the total foot velocity, and the body velocity that results when the foot is in stance"
+==
+"로봇 base에 매달린 two-link 다리. 각 joint가 만드는 발 속도, 전체 발 속도, 발이 stance일 때 생기는 몸체 속도를 화살표로 표시"
+@@ w18
+stat("Foot position in the base frame",
+==
+stat("base frame에서 본 발 위치",
+@@ w18
+"fₚ(q) as (x, z), in m"
+==
+"fₚ(q)의 (x, z), 단위 m"
+@@ w18
+stat("Foot velocity seen from the base",
+==
+stat("base에서 본 발 속도",
+@@ w18
+"Jᵥ times the joint rates, in m/s"
+==
+"Jᵥ × joint 속도, 단위 m/s"
+@@ w18
+stat("Body velocity if this foot is in stance",
+==
+stat("이 발이 stance일 때 몸체 속도",
+@@ w18
+"minus the foot velocity, in m/s; body not rotating"
+==
+"발 속도의 부호를 바꾼 값, m/s, 몸체 회전 없음"
+@@ w18
+stat("Singular?",
+==
+stat("Singular 여부",
+@@ w18
+?"yes":"no",
+==
+?"예":"아니오",
+@@ w18
+"straight leg: the two columns are parallel"
+==
+"곧게 편 다리: 두 열이 평행"
+@@ w18
+h("div",{class:"vt"},"A two-link leg: forward kinematics and Jacobian")
+==
+h("div",{class:"vt"},"two-link 다리: forward kinematics와 Jacobian")
+@@ w18
+"Thigh and shank are 0.4 m each. The widget evaluates fₚ(q) and Jᵥ(q) for the angles you set, then multiplies by the joint rates."
+==
+"허벅지와 정강이는 각각 0.4 m입니다. 위젯은 설정한 각도에서 fₚ(q)와 Jᵥ(q)를 계산한 뒤 joint 속도를 곱합니다."
+@@ w18
+range("Hip angle q₁",
+==
+range("hip 각도 q₁",
+@@ w18
+range("Knee angle q₂",
+==
+range("knee 각도 q₂",
+@@ w18
+range("Hip rate",
+==
+range("hip 속도",
+@@ w18
+range("Knee rate",
+==
+range("knee 속도",
+@@ w18
+"column 1 of Jᵥ: hip alone at 1 rad/s"
+==
+"Jᵥ의 1열: hip만 1 rad/s"
+@@ w18
+"column 2: knee alone at 1 rad/s"
+==
+"2열: knee만 1 rad/s"
+@@ w18
+"foot velocity"
+==
+"발 속도"
+@@ w18
+"body velocity in stance"
+==
+"stance 시 몸체 속도"
+@@ w18
+"Side view of a two-legged robot walking to the right, with its true body position and the body position computed by leg odometry"
+==
+"오른쪽으로 걷는 이족 보행 로봇의 옆모습. 실제 몸체 위치와 leg odometry로 계산한 몸체 위치를 함께 표시"
+@@ w18
+aria:"Error of the leg-odometry body position and of the assumed contact point, in centimeters, against the number of footsteps"
+==
+aria:"걸음 수에 따른 leg odometry 몸체 위치 오차와 가정한 접촉점 오차, 단위 cm"
+@@ w18
+label:"footsteps taken"
+==
+label:"걸은 걸음 수"
+@@ w18
+label:"error in x (cm)"
+==
+label:"x 오차 (cm)"
+@@ w18
+"assumed contact point minus true stance foot"
+==
+"가정한 접촉점 − 실제 stance 발"
+@@ w18
+"estimated minus true body position"
+==
+"추정 − 실제 몸체 위치"
+@@ w18
+stat("True distance walked",
+==
+stat("실제로 걸은 거리",
+@@ w18
+slip?"each step is "+f1(100*LS*(1-slip))+" cm":"each step is 30 cm"
+==
+slip?"한 걸음 "+f1(100*LS*(1-slip))+" cm":"한 걸음 30 cm"
+@@ w18
+stat("Leg odometry says",
+==
+stat("Leg odometry 값",
+@@ w18
+"from the joint angles alone"
+==
+"joint 각도만으로"
+@@ w18
+stat("Error in x",
+==
+stat("x 오차",
+@@ w18
+dist>0.05?f1(100*Math.abs(e)/(100*dist))+"% of the distance":"—"
+==
+dist>0.05?"거리의 "+f1(100*Math.abs(e)/(100*dist))+"%":"—"
+@@ w18
+stat("Error in z",
+==
+stat("z 오차",
+@@ w18
+"body height"
+==
+"몸체 높이"
+@@ w18
+range("Time",
+==
+range("시간",
+@@ w18
+v=>"footstep "+f1(v/SPS)
+==
+v=>"걸음 "+f1(v/SPS)
+@@ w18
+"Play"
+==
+"재생"
+@@ w18
+"Pause"
+==
+"일시정지"
+@@ w18
+h("div",{class:"vt"},"Walking on leg odometry")
+==
+h("div",{class:"vt"},"Leg odometry로 걷기")
+@@ w18
+"A planar biped takes 12 steps of 30 cm with its body upright. The estimator sees only the four encoder readings and assumes the stance foot does not move."
+==
+"평면 이족 보행 로봇이 몸체를 똑바로 세운 채 30 cm씩 12걸음을 걷습니다. estimator는 encoder 값 네 개만 보고, stance 발이 움직이지 않는다고 가정합니다."
+@@ w18
+range("Encoder noise (1σ per reading)",
+==
+range("Encoder noise (값마다 1σ)",
+@@ w18
+range("Slip: stance foot slides back",
+==
+range("Slip: stance 발이 뒤로 밀림",
+@@ w18
+v=>v+"% of a step"
+==
+v=>"한 걸음의 "+v+"%"
+@@ w18
+button("New noise",
+==
+button("새 noise",
+@@ w18
+"stance leg"
+==
+"stance 다리"
+@@ w18
+"swing leg"
+==
+"swing 다리"
+@@ w18
+"true body path"
+==
+"실제 몸체 경로"
+@@ w18
+"leg-odometry body (ring) and assumed contact point (triangle)"
+==
+"leg odometry 몸체(원)와 가정한 접촉점(삼각형)"
+@@ w18
+"Measured normal force of one foot over three strides, the normal force needed to prevent slipping, the detection threshold, and strips showing when the foot is truly not slipping and when the detector reports contact"
+==
+"세 stride 동안 한 발에서 측정한 수직항력, 미끄러지지 않는 데 필요한 수직항력, 검출 임계값, 그리고 발이 실제로 미끄러지지 않는 구간과 검출기가 접촉이라고 보고하는 구간을 나타낸 띠"
+@@ w18
+"time: three strides (stance, then swing)"
+==
+"시간: 세 stride (stance, 그다음 swing)"
+@@ w18
+stat("Contact claimed while slipping or in the air",
+==
+stat("미끄러지거나 공중일 때 주장한 접촉",
+@@ w18
+bad+" of "+nd+" samples"
+==
+nd+"개 샘플 중 "+bad+"개"
+@@ w18
+nd?Math.round(100*bad/nd)+"% of what leg odometry would use":"nothing detected"
+==
+nd?"leg odometry가 쓸 샘플의 "+Math.round(100*bad/nd)+"%":"검출된 것 없음"
+@@ w18
+stat("Good stance thrown away",
+==
+stat("버려진 좋은 stance",
+@@ w18
+lost+" of "+nv+" samples"
+==
+nv+"개 샘플 중 "+lost+"개"
+@@ w18
+nv?Math.round(100*lost/nv)+"% of the usable stance":"the foot always slips"
+==
+nv?"쓸 수 있는 stance의 "+Math.round(100*lost/nv)+"%":"발이 항상 미끄러짐"
+@@ w18
+stat("Contact switches",
+==
+stat("접촉 전환 횟수",
+@@ w18
+"6 would be one touchdown and one lift-off per stride"
+==
+"stride마다 착지 한 번, 들림 한 번이면 6"
+@@ w18
+h("div",{class:"vt"},"Contact detection by thresholding the normal force")
+==
+h("div",{class:"vt"},"수직항력 임계값으로 하는 접촉 검출")
+@@ w18
+"One foot of a trotting quadruped: the normal force ramps up to 200 N in stance and is zero in swing. The foot holds only while the friction cone |fₓ| ≤ μ f_z is satisfied."
+==
+"trot하는 사족 보행 로봇의 한 발: 수직항력은 stance에서 200 N까지 올라갔다 내려오고 swing에서는 0입니다. 발은 friction cone |fₓ| ≤ μ f_z가 만족되는 동안만 버팁니다."
+@@ w18
+range("Threshold on f_z",
+==
+range("f_z 임계값",
+@@ w18
+range("Friction coefficient μ",
+==
+range("마찰 계수 μ",
+@@ w18
+range("Force sensor noise (1σ)",
+==
+range("힘 센서 noise (1σ)",
+@@ w18
+"measured f_z (line) and detected contact (strip)"
+==
+"측정한 f_z(선)와 검출된 접촉(띠)"
+@@ w18
+"f_z needed to hold, |fₓ|/μ"
+==
+"버티는 데 필요한 f_z, |fₓ|/μ"
+@@ w18
+"threshold (line) and wrong decisions (strip)"
+==
+"임계값(선)과 잘못된 판정(띠)"
+@@ w18
+"foot truly not slipping"
+==
+"실제로 미끄러지지 않는 발"
+@@ w18
+"Left: the two-link leg. Right: a magnified cloud of foot positions computed from noisy joint angles, with the two-sigma ellipse predicted by the Jacobian"
+==
+"왼쪽: two-link 다리. 오른쪽: noise가 섞인 joint 각도로 계산한 발 위치들을 확대한 구름과 Jacobian이 예측한 2σ 타원"
+@@ w18
+"foot position error, magnified"
+==
+"발 위치 오차 (확대)"
+@@ w18
+stat("Predicted 1σ",
+==
+stat("예측 1σ",
+@@ w18
+"from Jᵥ Σq Jᵥᵀ, first order (12.27)"
+==
+"Jᵥ Σq Jᵥᵀ로, 1차 근사 (12.27)"
+@@ w18
+stat("Measured 1σ, "+NSMP+" samples",
+==
+stat("측정 1σ, 샘플 "+NSMP+"개",
+@@ w18
+"through the exact fₚ(q)"
+==
+"정확한 fₚ(q)로 계산"
+@@ w18
+stat("Ellipse axes (1σ)",
+==
+stat("타원 축 (1σ)",
+@@ w18
++" and "+
+==
++" / "+
+@@ w18
+"long and short"
+==
+"긴 축 / 짧은 축"
+@@ w18
+h("div",{class:"vt"},"Encoder noise at the foot")
+==
+h("div",{class:"vt"},"발에서의 encoder noise")
+@@ w18
+"Each joint reading gets independent Gaussian noise. Dots: the exact forward kinematics of 300 noisy readings. Ellipse: the 2σ contour of the first-order covariance."
+==
+"각 joint 값에 독립 Gaussian noise가 더해집니다. 점: noise가 섞인 값 300개의 정확한 forward kinematics. 타원: 1차 covariance의 2σ 등고선."
+@@ w18
+button("New samples",
+==
+button("새 샘플",
+@@ w18
+"sampled foot positions"
+==
+"샘플링한 발 위치"
+@@ w18
+"2σ ellipse from the Jacobian"
+==
+"Jacobian으로 구한 2σ 타원"

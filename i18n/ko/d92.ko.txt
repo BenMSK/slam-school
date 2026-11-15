@@ -1,0 +1,200 @@
+@@ 1
+<span class="eyebrow">16주차 · Day 2</span>
+@@ 2
+IMU의 initial alignment와 noise 파라미터
+@@ 3
+오늘이 끝나면 정지 상태의 accelerometer 측정값으로부터 gravity-aligned 초기 회전을 계산하고, yaw가 왜 자유롭게 남는지 설명하고, 데이터시트나 Allan plot에서 IMU의 noise density와 bias random walk를 읽어 낼 수 있습니다.
+@@ 4
+약 60분 · §11.1.2, p. 307 읽기 (1쪽) · 16주차 Day 1 필요
+@@ 5
+먼저 읽기: §11.1.2, p. 307
+@@ 6
+밀도가 높은 한 쪽입니다. 읽으면서 찾아볼 것:
+@@ 7
+보통의 SLAM에서는 마음대로 정할 수 있는 시작 orientation이, IMU를 쓰면 왜 더 이상 마음대로 정할 수 없는지.
+@@ 8
+gravity만으로는 복원할 수 없는 회전은 무엇인지.
+@@ 9
+식 (11.6)에서 회전 행렬의 어느 열이 측정값에서 바로 나오고, 어느 두 열이 만들어지는지.
+@@ 10
+식 (11.7)에서 고급 IMU가 감지할 수 있는 두 번째 물리 벡터, 그리고 SO(3)로의 projection에 관한 마지막 언급.
+@@ 11
+gravity는 IMU가 직접 감지할 수 있는 world의 유일한 방향입니다. 그래서 가만히 서 있는 로봇은 어느 쪽이 위인지 알아낼 수 있고, 이것으로 세 orientation 각도 중 두 개(roll과 pitch)가 정해집니다. 세 번째인 yaw는 gravity로는 보이지 않습니다. 이 모든 것이 얼마나 잘 되는지는 센서마다 두 숫자, white-noise density와 bias random walk에 달려 있으며, 오늘의 후반부에서 이 둘을 설명합니다.
+@@ 12
+1. 첫 pose를 더 이상 마음대로 정할 수 없는 이유
+@@ 13
+IMU가 없는 SLAM에서는 첫 pose를 identity로 정해도 됩니다. 측정값 중 어느 것도 world frame이 어느 방향을 향하는지 신경 쓰지 않기 때문입니다. 식 (11.1)은 이를 바꿉니다. 이 식에는 world 좌표로 쓴 gravity 벡터 \(\mathbf{g}^w\)가 들어 있습니다. 이 식을 쓰려면 자신의 world frame에서 gravity의 방향을 알아야 합니다. 보통은 한 축을 수직 방향에 맞춘 <strong>gravity-aligned</strong> world frame을 고르고, 초기 회전 \(\mathbf{R}^w_b(0)\)를 그 선택에 맞도록 계산해야 합니다. 이 단계를 <strong>initial alignment</strong>(초기 정렬)라고 부릅니다. <span class="src">§11.1.2 · p. 307</span>
+@@ 14
+가장 단순한 방법은 로봇이 정지 상태에서 출발한다고 가정합니다. 그러면 \(\mathbf{a}^w = \mathbf{0}\)이고, (11.1)에 따라 accelerometer는 gravity의 반작용만 봅니다. 측정된 방향 하나로는 3-D orientation 전체를 정할 수 없습니다. 로봇을 수직축 둘레로 돌려도 accelerometer의 측정값은 바뀌지 않기 때문입니다. 따라서 <strong>yaw</strong>(gravity 둘레의 회전)는 복원할 수 없어 자유롭게 고르고, <strong>roll</strong>과 <strong>pitch</strong>(수평에서 벗어난 두 기울기)는 복원할 수 있습니다. <span class="src">§11.1.2 · p. 307</span>
+@@ 15
+2. Gram–Schmidt를 이용한 static initialization
+@@ 16
+책은 회전을 열 단위로 하나씩 만듭니다. <span class="src">§11.1.2 · p. 307</span>
+@@ 17
+여기서 \(\mathbf{g}^b\)는 body 좌표로 측정된 gravity 벡터이고 \(\mathbf{e}_1 = (1,0,0)\T\)입니다. 벡터 하나를 잡고, 다음 벡터에서 첫 벡터 방향의 성분을 제거하는 이 절차를 <strong>Gram–Schmidt orthonormalization</strong>(정규직교화)이라고 합니다.
+@@ 18
+빈틈 채우기: 왜 이것들이 열이 되는가
+@@ 19
+\(\mathbf{R}^b_w\)는 world 좌표를 body 좌표로 바꿉니다. 이것을 world의 세 번째 축 \((0,0,1)\T\)에 적용하면 결과는 행렬의 세 번째 열입니다. 따라서 세 번째 열은 body에서 본 world \(z\)축 <em>그 자체</em>이며, 책은 이를 \(\mathbf{z}^b_w\)로 씁니다. 마찬가지로 처음 두 열은 body에서 본 world \(x\)축과 \(y\)축입니다. world \(z\)축은 수직 방향으로 정의되어 있고 정지 상태의 측정값이 수직 방향이 어디인지 알려 주므로, 세 번째 열은 단순히 정규화한 측정값입니다.
+@@ 20
+나머지 두 열은 \(\mathbf{z}^b_w\)와 수직이고 서로 수직이기만 하면 됩니다. 이 구성은 처음부터 직교하도록 만들어져 있습니다.
+@@ 21
+body 자신의 \(x\)축인 \(\mathbf{e}_1\)에서 출발하는 것이 자유로운 yaw를 쓰는 지점입니다. world \(x\)축은 로봇의 앞머리가 가리키는 수평 방향이 됩니다. 다른 시작 벡터를 고르면 또 다른 유효한 yaw가 나옵니다. 이 방법이 깨지는 것은 \(\mathbf{e}_1\)이 \(\mathbf{z}^b_w\)와 평행할 때(로봇이 앞머리를 바닥에 대고 선 경우)뿐이며, 이때는 분자가 0이 됩니다. 그럴 때는 대신 \(\mathbf{e}_2\)에서 출발합니다.
+@@ 22
+<strong>부호는?</strong> (11.1)에 따라 정지한 accelerometer는 \(\mathbf{R}^b_w(-\mathbf{g}^w)\)를 출력하며, 이 벡터는 <em>위</em>를 향합니다. 이 측정값을 그대로 (11.6)의 \(\mathbf{g}^b\)로 넣으면 world \(z\)축은 위를 향하고 \(\mathbf{g}^w = (0,0,-9.81)\)입니다. 먼저 부호를 뒤집으면 world \(z\)는 아래를 향합니다. (11.1)의 \(\mathbf{g}^w\)가 그에 맞기만 하면 어느 쪽이든 일관됩니다. 이 코스는 측정값을 그대로 쓰고 \(z\)를 위로 잡습니다.
+@@ 23 attr
+평면에서의 Gram-Schmidt. 공통 원점에서 측정된 단위 벡터 z는 오른쪽 위를 향하고, body 축 e1은 오른쪽을 향합니다. e1에서 z 방향 성분을 제거하면 z에 수직인 벡터가 남고, 이를 단위 길이로 맞추면 새 x가 됩니다. 오른쪽에 번호가 붙은 세 단계가 적혀 있습니다.
+@@ 24
+z 방향 성분 제거
+@@ 25
+1. z = 측정값의 단위 벡터
+@@ 26
+2. x = e₁에서 z 방향 성분을 빼고
+@@ 27
+길이 1로 다시 맞춤
+@@ 28
+3. y = z × x로 frame 완성
+@@ 29
+그림으로 보는 식 (11.6). 측정값이 z를 정합니다. x축은 body 자신의 x축에서 수직 성분을 제거하고 남은 것이며, y는 외적으로 나옵니다.
+@@ 30
+<strong>계산 예제.</strong> 로봇이 가만히 서 있고, 1초 동안 평균한 accelerometer 측정값이 \((1.70, 0, 9.66)\) m/s²입니다. 길이는 \(\sqrt{1.70^2 + 9.66^2} = 9.81\)입니다.
+@@ 31
+\(\mathbf{e}_1\T\mathbf{z}^b_w = 0.1733\)이므로 \(\mathbf{e}_1 - 0.1733\,\mathbf{z}^b_w = (0.9700, 0, -0.1707)\)이고, 길이는 \(0.9849\)입니다. 나누면 \(\mathbf{x}^b_w = (0.9849, 0, -0.1733)\)입니다.
+@@ 32
+\(\sin 10^\circ = 0.1736\)이므로 이것은 \(y\)축 둘레로 10° 회전한 것입니다. \(\mathbf{R}^w_b\)의 첫 번째 열은 world 좌표로 쓴 body \(x\)축 \((0.9849, 0, 0.1733)\)입니다. 즉 앞머리가 수평선보다 10° 위를 가리킵니다. 검산: \(\mathbf{R}^b_w\,(0,0,9.81)\T = (1.70, 0, 9.66)\T\)로, 처음 측정값과 같습니다.
+@@ 33
+3. 가만히 서 있을 때 생길 수 있는 문제
+@@ 34
+static alignment는 측정값이 순수한 gravity라고 믿습니다. 이 믿음을 깨는 것이 두 가지 있습니다. 로봇이 가속하고 있으면 specific force는 더 이상 수직이 아닙니다. accelerometer에 수평축 방향의 bias \(b\)가 있으면 측정된 "위"가 약 \(b/g\) rad만큼 기울어집니다. bias 0.05 m/s²는 \(0.05/9.81 = 0.0051\) rad, 즉 0.29°만큼 기울입니다. 샘플을 더 많이 평균하면 white noise의 영향은 줄지만 bias에는 아무 효과가 없습니다.
+@@ 35
+직접 해 보기: "정지"를 누르고 추정된 pitch를 실제 pitch와 비교해 보세요. 그다음 수평 가속도를 1 m/s²로 올려 보세요.
+@@ 36
+눈여겨볼 점: 정지 상태에서는 추정된 pitch가 실제 pitch(20.0°)와 같습니다. 앞으로 1 m/s²의 가속도가 있으면 측정값이 기울어져 추정된 pitch가 25.8°가 됩니다. atan(1/9.81) = 5.8°의 오차입니다. 책의 방법이 정지 상태의 출발을 가정하는 이유입니다.
+@@ 37
+4. 고급 IMU를 이용한 alignment
+@@ 38
+지구는 하루에 한 번, 시간당 약 15°, 즉 \(7.3 \times 10^{-5}\) rad/s로 돕니다. 고급 gyroscope는 가만히 서 있는 동안 이 <strong>Earth rotation rate</strong>(지구 자전 각속도) \(\boldsymbol{\omega}_{ie}\)를 측정할 수 있습니다. 이것은 gravity와 평행하지 않은 두 번째 기지의 방향이며, 두 방향이 있으면 yaw를 포함한 orientation 전체가 정해집니다. <span class="src">§11.1.2 · p. 307</span>
+@@ 39
+빈틈 채우기: 식 (11.7)은 어디서 오는가
+@@ 40
+기지의 벡터는 각각 \(\mathbf{u}^b = \mathbf{R}^b_w\mathbf{u}^w\)를 만족합니다. 전치하면 \((\mathbf{u}^b)\T = (\mathbf{u}^w)\T\mathbf{R}^w_b\)입니다. 이것을 세 벡터, 즉 gravity, Earth rate, 그리고 둘의 외적에 대해 쓰고(회전은 두 벡터의 외적을 회전된 두 벡터의 외적으로 보냅니다) 세 행을 쌓으면 다음과 같습니다.
+@@ 41
+외적은 기지의 행렬을 정사각이고 역행렬이 있게 만들려고 넣은 것일 뿐입니다. (책의 인쇄본에는 오른쪽 행렬의 마지막 행에서 \(\boldsymbol{\omega}_{ie}\)에 위 첨자 \(w\)가 붙어 있지만, 유도 과정을 보면 body-frame 벡터여야 합니다.) 측정값에 noise가 있으면 결과가 정확한 회전 행렬이 아니므로 가장 가까운 회전 행렬로 바꾸는데, 책은 이를 \(\SO(3)\)로의 projection이라고 부릅니다. 표준적인 방법은 결과의 singular value decomposition \(\mathbf{U}\mathbf{S}\mathbf{V}\T\)를 구해 \(\mathbf{U}\mathbf{V}\T\)를 취하는 것입니다(행렬식이 \(-1\)이면 \(\mathbf{U}\)의 마지막 열의 부호를 뒤집습니다).
+@@ 42
+MEMS gyroscope로는 이렇게 할 수 없습니다. 0.1°/s의 bias는 시간당 360°로, 감지해야 할 신호의 24배입니다. 그래서 저가 시스템은 시작할 때 yaw를 자유롭게 남겨 둡니다.
+@@ 43
+5. 실제의 noise 파라미터
+@@ 44
+Day 1의 모델에는 센서마다 두 가지 랜덤 요소가 있습니다. white noise \(\boldsymbol{\eta}\), 그리고 random walk를 하는 bias \(\dot{\mathbf{b}} = \boldsymbol{\eta}^{b}\)(식 (11.32), Day 5)입니다. 각각은 숫자 하나로 기술되는데, 그 숫자의 단위가 처음에는 거의 모든 사람을 헷갈리게 합니다.
+@@ 45
+파라미터
+@@ 46
+일반적인 단위
+@@ 47
+주기 Δt에서 샘플 하나의 표준편차
+@@ 48
+시간 t 동안 적분한 후
+@@ 49
+=
+@@ 50
+=
+@@ 51
+각도 오차 \(\sigma_g\sqrt{t}\) ("angle random walk")
+@@ 52
+=
+@@ 53
+=
+@@ 54
+속도 오차 \(\sigma_a\sqrt{t}\) ("velocity random walk")
+@@ 55
+=
+@@ 56
+=
+@@ 57
+=
+@@ 58
+bias가 \(\sigma_{bg}\sqrt{t}\)만큼 떠돎
+@@ 59
+=
+@@ 60
+=
+@@ 61
+=
+@@ 62
+bias가 \(\sigma_{ba}\sqrt{t}\)만큼 떠돎
+@@ 63
+가운데 열의 두 규칙은 책의 \(\operatorname{Cov}(\boldsymbol{\eta}^{gd}) = \tfrac{1}{\Delta t}\operatorname{Cov}(\boldsymbol{\eta}^{g})\) <span class="src">§11.2.1 · p. 309</span>와 \(\boldsymbol{\Sigma}^{bgd} = \Delta t_{ij}\operatorname{Cov}(\boldsymbol{\eta}^{bg})\) <span class="src">§11.2.2.4 · p. 316</span>이며, 여기서 덧붙은 \(d\)는 "discrete-time"을 뜻합니다.
+@@ 64
+빈틈 채우기: 왜 √Δt로 나누는가?
+@@ 65
+연속 white noise는 모든 주파수에서 같은 파워를 가지므로 순간 분산이 무한대입니다. 유한한 것은 평균뿐입니다. 센서 샘플은 대략 샘플링 주기 하나에 걸친 평균이며, density가 \(\sigma\)인 white noise를 길이 \(\Delta t\)의 구간에서 평균하면 분산은 \(\sigma^2/\Delta t\)입니다. 구간이 짧으면 덜 평균되므로 샘플마다 noise가 더 큽니다. 이제 샘플 \(n\)개를 적분합니다. \(t = n\,\Delta t\)입니다. 독립인 항들의 분산은 더해집니다.
+@@ 66
+당연하게도 샘플링 주파수가 상쇄되었습니다. 적분된 오차는 density와 경과 시간에만 달려 있습니다. 예: 100 Hz로 샘플링한 \(\sigma_g = 0.01\)°/s/√Hz는 표준편차 \(0.01 \times \sqrt{100} = 0.1\)°/s의 샘플을 주고, 1분 뒤 각도 오차는 \(0.01 \times \sqrt{60} = 0.077\)°입니다. bias는 논리가 반대 방향입니다. bias 자체가 white noise의 적분이므로, \(\Delta t\) 동안의 변화량의 분산은 \(\sigma_b^2\,\Delta t\)입니다.
+@@ 67
+두 숫자는 어떻게 측정할까요? 센서를 오랫동안 정지 상태로 기록합니다. 기록을 길이 \(\tau\)의 블록으로 자르고 블록마다 평균을 냅니다. <strong>Allan variance</strong>는 연속한 블록 평균 사이의 차이를 제곱해 평균한 값의 절반이고, 그 제곱근이 <strong>Allan deviation</strong>입니다. density가 \(N\)인 white noise에서는 블록이 길수록 블록 평균이 조용해지고, Allan deviation은 \(N/\sqrt{\tau}\)입니다. 세기가 \(K\)인 random-walking bias는 멀리 떨어진 블록끼리 더 어긋나게 만들어 \(K\sqrt{\tau/3}\)을 보탭니다. log-log 그래프에서 이 둘은 기울기 \(-\tfrac12\)과 \(+\tfrac12\)의 직선입니다.
+@@ 68
+직접 해 보기: \(N\)과 \(K\)를 바꾸면서 두 갈래가 움직이는 모습을 보세요.
+@@ 69
+눈여겨볼 점: V 모양. 왼쪽 갈래에서는 noise density를 바로 읽을 수 있습니다. τ = 1 s에서 측정된 Allan deviation은 0.0200°/s이고 실제 N은 0.020입니다. 모델의 최솟값 τ = √3·N/K = 3.5 s는 평균이 아직 도움이 되는 가장 긴 시간입니다. 그보다 오래 평균하면 떠도는 bias가 다시 들어옵니다. "새 noise"를 몇 번 눌러 보세요. 맨 오른쪽 점들은 모델 곡선 주위에서 크게 튀는데, 10분 기록에는 블록이 십여 개밖에 들어가지 않기 때문입니다. K를 0으로 놓으면 오른쪽 갈래가 사라집니다.
+@@ 70
+<strong>"충분히 오래 평균하면 완벽한 gravity 방향을 얻는다."</strong> 평균은 white noise만 이깁니다. bias \(b\)는 아무리 오래 기다려도 약 \(b/g\)의 기울기 오차를 남깁니다.
+@@ 71
+<strong>"빠른 IMU는 noise가 더 크므로 더 나쁘다."</strong> 샘플 하나는 \(\sqrt{\text{rate}}\)배만큼 noise가 크지만 샘플이 그만큼 더 많으므로, 적분된 오차 \(\sigma\sqrt{t}\)는 변하지 않습니다.
+@@ 72
+<strong>"yaw를 모르는 것은 gyroscope가 나빠서다."</strong> gravity가 유일한 기준이면 어떤 accelerometer로도 yaw는 unobservable입니다. yaw를 정하려면 지구 자전 같은 두 번째 기준 방향이 필요합니다.
+@@ 73
+Q1. MEMS IMU를 이용한 static alignment가 yaw를 정할 수 없는 이유는 무엇입니까?
+@@ 74
+accelerometer noise가 너무 커서
+@@ 75
+로봇을 수직축 둘레로 돌려도 측정된 gravity 벡터가 바뀌지 않아서
+@@ 76
+yaw는 회전 행렬의 일부가 아니어서
+@@ 77
+Gram–Schmidt가 세 벡터에서는 실패해서
+@@ 78
+기준은 수직 방향 하나뿐입니다. 그 방향 둘레의 회전은 body-frame 측정값을 바꾸지 않으므로, 데이터를 아무리 모아도 드러나지 않습니다.
+@@ 79
+Q2. 정지한 accelerometer가 (0, 4.905, 8.496) m/s²를 출력하고, 길이는 9.81입니다. (11.6)을 쓰면 회전 행렬의 두 번째 열 y는 무엇입니까?
+@@ 80
+z = (0, 0.5, 0.866). e₁은 이미 z에 수직이므로 x = (1, 0, 0). 그러면 y = z × x = (0, 0.866, −0.5). 첫 번째 보기는 z 자체입니다.
+@@ 81
+Q3. gyroscope의 noise density가 0.005°/s/√Hz이고 400 Hz로 샘플링됩니다. 샘플 하나에 담긴 noise의 표준편차는 무엇입니까?
+@@ 82
+√Δt로 나누는 것은 √rate를 곱하는 것과 같습니다: 0.005 × √400 = 0.005 × 20 = 0.1°/s.
+@@ 83
+Q4. static alignment 동안 accelerometer에 0.1 m/s²의 수평 bias가 있습니다. 샘플을 많이 평균한 뒤 남는 기울기 오차는 대략 얼마입니까?
+@@ 84
+0: 평균하면 사라진다
+@@ 85
+bias는 길이 9.81의 수직 벡터에 수평 성분을 더해 0.1/9.81 = 0.0102 rad = 0.58°만큼 기울입니다. 평균으로는 bias가 사라지지 않습니다.
+@@ 86
+Q5. Allan deviation 그래프의 white-noise 갈래에서 평균 시간 τ를 100배로 늘립니다. Allan deviation은 어떻게 됩니까?
+@@ 87
+100배 감소
+@@ 88
+10배 감소
+@@ 89
+그대로
+@@ 90
+10배 증가
+@@ 91
+white noise에서 Allan deviation은 N/√τ이므로, 100배 더 평균하면 흩어짐은 √100 = 10배 줄어듭니다.
+@@ 92
+IMU를 쓰면 world frame이 gravity-aligned이므로, 초기 회전은 고르는 것이 아니라 계산해야 합니다.
+@@ 93
+정지 상태에서 정규화한 accelerometer 측정값은 \(\mathbf{R}^b_w\)의 세 번째 열입니다. 나머지 두 열은 Gram–Schmidt가 채웁니다(식 (11.6)). roll과 pitch는 정해지고 yaw는 자유롭습니다.
+@@ 94
+alignment 중의 가속도나 accelerometer bias는 추정된 수직 방향을 약 (수평 오차)/g만큼 기울입니다.
+@@ 95
+지구 자전을 감지할 만큼 좋은 gyroscope는 두 번째 방향을 제공해 yaw까지 정합니다(식 (11.7)).
+@@ 96
+white noise: 샘플당 표준편차 \(\sigma/\sqrt{\Delta t}\), 적분된 오차 \(\sigma\sqrt{t}\). bias random walk: drift \(\sigma_b\sqrt{t}\). Allan plot에 둘 다 나타납니다.
+@@ 97
+<em>SLAM Handbook</em>, §11.1.2 "Initial Alignment", p. 307; 이산 noise 관계식은 p. 309와 p. 316.
+@@ 98
+Groves, <em>Principles of GNSS, Inertial, and Multisensor Integrated Navigation Systems</em>, 2nd ed., 2013 (levelling, gyrocompassing, 센서 noise 파라미터).
+@@ 99
+IEEE Std 952-1997, <em>IEEE Standard Specification Format Guide and Test Procedure for Single-Axis Interferometric Fiber Optic Gyros</em>, 1997 (Allan variance의 정의와 noise 항별 기울기).
+@@ 100
+Woodman, <em>An Introduction to Inertial Navigation</em>, University of Cambridge technical report, 2007 (MEMS 센서의 white noise와 bias random walk).

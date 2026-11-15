@@ -1,0 +1,174 @@
+@@ 1
+<span class="eyebrow">22주차 · Day 1</span>
+@@ 2
+무엇인지 아는 map: landmark가 된 물체
+@@ 3
+오늘이 끝나면 metric-semantic map이 기하 map에 무엇을 더하는지 말하고, object landmark를 정의하고, 투영한 semantic landmark를 검출된 keypoint와 비교하는 residual을 쓸 수 있습니다.
+@@ 4
+약 60분 · 16장 도입부, §16.1, §16.2부터 §16.2.1.1까지, pp. 454–458 읽기 (5쪽) · 11주차 Day 5 필요
+@@ 5
+먼저 읽기: 16장 도입부, §16.1, 그리고 §16.2의 식 (16.3)까지, pp. 454–458
+@@ 6
+vision front-end가 keypoint 말고 무엇을 출력할 수 있는지 (pp. 454–455), 그리고 "closed-set"이 무슨 뜻인지 (p. 455).
+@@ 7
+Definition 16.1에 나오는 object landmark의 네 구성 요소 (p. 456).
+@@ 8
+p. 457의 식 (16.2)에서 offline으로 학습하는 것과 online으로 추정하는 것.
+@@ 9
+p. 458의 식 (16.3)에서 semantic landmark가 픽셀이 되기까지 거치는 변환들.
+@@ 10
+<strong>metric-semantic map</strong>은 사물이 어디에 있는지와 함께 무엇인지를 저장합니다. sparse한 형태에서는 landmark가 더 이상 이름 없는 3D 점이 아니라 category, pose, scale, shape를 가진 물체가 됩니다. back-end는 똑같은 least squares 기계로 남고, residual만 바뀝니다.
+@@ 11
+1. 기하만으로는 할 수 없는 것
+@@ 12
+기하 map은 "이 공간은 비어 있는가?"에 답합니다. 충돌 검사에는 이것으로 충분하지만, "사무실에 있는 노트북으로 가"에는 부족하고, 풀숲보다 인도를, 인도보다 차도를 골라야 하는 planner에게도 부족합니다. 이런 일에는 map 위의 label이 필요합니다. <span class="src">Ch. 16 intro · p. 454</span>
+@@ 13
+semantics는 SLAM 자체에도 도움이 됩니다. 물체는 여러 시점에서 알아볼 수 있고 corner보다 구별이 잘 되므로, data association과 loop closure의 모호함이 줄어듭니다. label은 움직일 수 있는 것도 표시해 줍니다 (<a href="#d122">21주차 · Day 2</a>). <span class="src">Ch. 16 intro · p. 454</span>
+@@ 14
+label은 front-end에 있는 학습된 vision 모델에서 나옵니다: <span class="src">Ch. 16 intro · pp. 454–455</span>
+@@ 15
+Front-end 출력
+@@ 16
+주는 것
+@@ 17
+=
+@@ 18
+물체마다 class 하나와 bounding box 하나
+@@ 19
+Semantic keypoint 또는 edge
+@@ 20
+이름 붙은 부위(바퀴, 문)의 이미지 위치
+@@ 21
+=
+@@ 22
+픽셀마다 class 하나
+@@ 23
+=
+@@ 24
+물체마다 mask 하나, 같은 class의 두 물체도 구분
+@@ 25
+=
+@@ 26
+둘 다: 배경 class와 개별 instance
+@@ 27
+이 장은 <strong>closed-set semantics</strong>를 가정합니다. label은 "chair", "table", "office"처럼 보통 100에서 1000개 단어로 된 고정 사전에서 나옵니다. open-set semantics(language embedding)는 다음 주에 다룰 17장의 주제입니다. <span class="src">Ch. 16 intro · p. 455</span>
+@@ 28
+§16.1은 label을 붙일 곳 세 가지를 꼽습니다. 물체가 되는 sparse landmark (§16.2, Day 1–3), dense map의 모든 point, surfel, voxel, mesh face (§16.3, Day 4), 그리고 방 같은 free space 영역 (§16.4, Day 5)입니다. 어느 쪽이든 주어진 map에 대해 detector가 무엇을 보고해야 하는지 말해 주는 모델과, noise 섞인 많은 보고를 fusion하는 방법이 필요합니다. <span class="src">§16.1 · pp. 455–456</span>
+@@ 29
+2. Object landmark
+@@ 30
+landmark 기반 SLAM은 측정값마다 하나씩인 residual 제곱의 합을 최소화합니다. 책은 factor \(i\)의 residual을 다음과 같이 씁니다.
+@@ 31
+여기서 \(\mathbf{z}_i\)는 측정값, \(\mathbf{T}_i\)는 로봇 pose, \(\boldsymbol{\ell}_i\)는 landmark, \(h_i\)는 measurement model이고, \(\norm{\mathbf{e}}_{\boldsymbol{\Sigma}}^2 = \mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\)는 <a href="#d8">2주차 · Day 2</a>의 Mahalanobis norm입니다. visual SLAM에서 \(\boldsymbol{\ell}_i\)는 3D 점이고 \(\mathbf{z}_i\)는 픽셀입니다. sparse metric-semantic SLAM은 (16.1)을 그대로 두고 \(\boldsymbol{\ell}\), \(\mathbf{z}\), \(h\)가 무엇인지를 바꿉니다. <span class="src">§16.2 · p. 456</span>
+@@ 32
+<strong>object landmark</strong>는 튜플 \(\boldsymbol{\ell} = (\sigma, \mathbf{q}, \lambda, \mathbf{s})\)입니다. <span class="src">Definition 16.1 · p. 456</span>
+@@ 33
+속하는 공간
+@@ 34
+=
+@@ 35
+"car", "chair", "table": 유일한 이산 요소
+@@ 36
+=
+@@ 37
+world frame에서 표현한 물체 자신의 frame
+@@ 38
+=
+@@ 39
+category의 canonical model 대비 크기
+@@ 40
+=
+@@ 41
+object frame에서의 표면 (오늘은 keypoint, 내일은 ellipsoid, mesh, latent code)
+@@ 42
+point landmark의 미지수는 3개입니다. object landmark는 미지수 \(6 + 1 + d\)개와 이산 label 하나를 가집니다. scale을 따로 두는 것은 자동차와 장난감 자동차가 shape 하나를 공유하고 \(\lambda\)만 다르게 하기 위해서입니다. <span class="src">§16.2.1 · p. 457</span>
+@@ 43
+3. Shape: semantic landmark의 집합
+@@ 44
+첫 번째 shape model은 물체의 이름 붙은 부위에 놓인 3D 점 몇 개의 목록 \(\{\mathbf{s}_j\}_j\)이고, 이 점들을 <strong>semantic landmark</strong>라고 부릅니다. 자동차라면 바퀴, 사이드미러, 번호판입니다. 이 점들을 이미지에 투영한 것이 <strong>semantic keypoint</strong> \(\mathbf{z}_j \in \R^2\)입니다. network는 부위마다 그 부위의 픽셀에서 볼록 솟는 heatmap을 출력해서 keypoint를 검출합니다. <span class="src">§16.2.1.1 · p. 457</span>
+@@ 45
+모든 \(\mathbf{s}_j\)가 자유롭다면 optimizer가 왼쪽 바퀴를 지붕으로 옮길 수도 있습니다. <strong>deformable shape model</strong>은 점들을 category template로부터 만들어서 이를 막습니다.
+@@ 46
+여기서 \(\mathbf{b}_{j,0}\)는 평균 자동차에서 부위 \(j\)의 위치이고, 각 \(\mathbf{b}_{j,k}\)는 자동차가 평균과 달라지는 한 가지 방식(<strong>mode of variability</strong>)이며, <strong>deformation coefficient</strong>(변형 계수) \(c_k \in \R_{\ge 0}\)는 이 자동차가 각 mode를 얼마나 가졌는지 나타냅니다. \(\mathbf{b}\)들은 category마다 고정되고, \(c_k\)는 물체마다 추정됩니다. <span class="src">§16.2.1.1 · p. 457</span>
+@@ 47
+직접 해 보기: 분홍 고리는 자동차 한 대에서 검출된 keypoint입니다. "shape만 맞추기"를 누른 다음 "Gauss-Newton step"을 네 번 누르세요.
+@@ 48
+눈여겨볼 점: shape만으로는 detection을 설명할 수 없습니다. scale과 yaw가 틀린 상태에서는 \(c_1\)이 상한에 걸리고 오차는 130 cm 위에 머뭅니다. 네 미지수 모두에 Gauss-Newton step을 세 번 적용하면 오차가 noise 수준에 가까운 약 6 cm로 내려가고, 이때 \(c_1 \approx 0.80\), \(c_2 \approx 0.53\), \(\lambda \approx 1.29\), yaw 25°입니다. 네 번째 step은 아무것도 바꾸지 않습니다.
+@@ 49
+빈틈 채우기: mode \(\mathbf{b}_{j,k}\)는 어디서 오는가
+@@ 50
+책은 mode를 PCA로 얻는다고 말합니다. 방법은 이렇습니다. 그 category의 CAD 모델 \(N\)개를 모으고, 모두에 똑같은 부위 \(J\)개를 표시합니다. 모델 \(n\)의 부위 위치 \(J\)개를 벡터 하나 \(\mathbf{m}_n \in \R^{3J}\)로 쌓습니다. 그러면
+@@ 51
+평균 \(\bar{\mathbf{m}}\)을 다시 3원소 묶음 \(J\)개로 자르면 \(\mathbf{b}_{j,0}\)가 됩니다. \(\mathbf{C}\)의 eigenvector 가운데 eigenvalue가 가장 큰 것들은 학습용 자동차들이 가장 많이 달라지는 방향입니다. eigenvector \(k\)를 3원소 묶음으로 자르면 \(\mathbf{b}_{j,k}\)가 됩니다.
+@@ 52
+미지수를 세어 봅시다. 부위가 \(J = 12\)개이면 자유로운 점들에는 자동차 한 대당 숫자 \(36\)개가 듭니다. mode가 \(K = 5\)개이면 shape에는 \(5\)개만 들고, keypoint의 절반이 가려져도 추정값은 자동차 모양을 유지합니다.
+@@ 53
+4. Keypoint residual
+@@ 54
+shape가 object frame에 고정되어 있으면, 물체 \(\boldsymbol{\ell}_i\)와 카메라 pose \(\mathbf{T}_i\)에서 검출한 keypoint \(\{\mathbf{z}_{i,j}\}_j\) 사이의 residual은 부위마다 하나씩인 reprojection error의 합입니다.
+@@ 55
+\(\pi(\mathbf{T}, \mathbf{s})\)는 점 \(\mathbf{s}\)를 pose가 \(\mathbf{T}\)인 카메라로 원근 투영한 것입니다. <span class="src">§16.2.1.1 · p. 458</span>
+@@ 56 attr
+화살표로 이어진 상자 네 개: s j를 담은 object frame, lambda로 scale한 뒤 q, world frame, T의 역, camera frame, 투영 pi, 픽셀, 그리고 detection z j와 비교.
+@@ 57
+=
+@@ 58
+=
+@@ 59
+=
+@@ 60
+픽셀
+@@ 61
+zⱼ와 비교
+@@ 62
+scale λ 후 q
+@@ 63
+식 (16.3)이 semantic landmark 하나에 하는 일. 가운데 두 화살표를 합치면 \(\mathbf{q}^{-1}\mathbf{T}\)의 역입니다.
+@@ 64
+빈틈 채우기: \(\pi(\mathbf{q}^{-1}\mathbf{T}, \lambda\mathbf{s})\)를 숫자로 읽기
+@@ 65
+\(\mathbf{T}\)(카메라)와 \(\mathbf{q}\)(물체)는 둘 다 자기 frame을 world frame으로 보냅니다. 따라서 \(\mathbf{q}^{-1}\mathbf{T}\)는 카메라 좌표를 물체 좌표로 보냅니다. 즉 물체에서 본 카메라의 pose입니다. 물체 좌표로 주어진 점을 투영하려면 반대 방향인 \((\mathbf{q}^{-1}\mathbf{T})^{-1} = \mathbf{T}^{-1}\mathbf{q}\)를 적용한 다음 <a href="#d63">11주차 · Day 3</a>의 pinhole model을 거쳐야 합니다.
+@@ 66
+카메라가 world 원점에 있고 \(\mathbf{T} = \mathbf{I}\), focal length 500 px, principal point \((320, 240)\)이라고 합시다. object frame은 회전하지 않았고 \((1, 0, 8)\) m에 있습니다. scale은 \(\lambda = 2\)이고, semantic landmark 하나는 \(\mathbf{s} = (0.5, 0.25, 0)\)입니다.
+@@ 67
+detector가 \(\mathbf{z} = (448, 270)\)을 보고하면 오차는 \(\mathbf{e} = (3, -1.25)\) px입니다. \(\boldsymbol{\Sigma} = 2^2\mathbf{I}\) px²이면 이 부위는 \(r_i^2\)에 \((3^2 + 1.25^2)/4 = 2.64\)를 더합니다. optimizer는 \(\mathbf{T}\), \(\mathbf{q}\), \(\lambda\), 또는 shape coefficient를 움직여 이 값을 줄일 수 있습니다.
+@@ 68
+<strong>"\(\mathbf{q}\)는 world 좌표를 물체 좌표로 보낸다."</strong> 이것은 world에서 본 object frame의 pose이므로, 물체 좌표를 world 좌표로 보냅니다. 그래서 (16.3)에는 \(\mathbf{q}\mathbf{T}\)가 아니라 \(\mathbf{q}^{-1}\mathbf{T}\)가 들어 있습니다.
+@@ 69
+Q1. 이미지에 카펫 위의 의자 두 개가 보입니다. 의자마다 mask를 따로 주고 카펫 픽셀에도 label을 붙이는 출력은 무엇입니까?
+@@ 70
+=
+@@ 71
+Semantic segmentation은 두 의자를 구분하지 못합니다. Panoptic segmentation은 instance를 구분하고 배경에도 label을 붙입니다.
+@@ 72
+Q2. 카메라는 world 원점에 있고 pose는 identity입니다. object frame은 회전 없이 (0, 0, 10) m에 있고 scale은 λ = 3입니다. semantic landmark s = (1, 0, 0)은 정규화 이미지 좌표 (x/z, y/z)에서 어디에 놓입니까?
+@@ 73
+먼저 scale: λs = (3, 0, 0). world로 이동: (3, 0, 10). depth로 나누기: (0.3, 0).
+@@ 74
+Q3. category model에 semantic landmark가 J = 10개, mode가 K = 4개 있습니다. shape를 coefficient로 최적화한다면 물체 하나가 문제에 더하는 연속 미지수는 몇 개입니까?
+@@ 75
+pose 6, scale 1, coefficient 4로 모두 11개입니다. 자유로운 점 열 개라면 6 + 1 + 30 = 37개가 듭니다.
+@@ 76
+Q4. 식 (16.3)에서 변환 q⁻¹T는 무엇입니까?
+@@ 77
+camera frame에서 본 물체의 pose
+@@ 78
+world frame에서 본 물체의 pose
+@@ 79
+object frame에서 본 카메라의 pose
+@@ 80
+직전 이미지 이후의 카메라 움직임
+@@ 81
+T는 카메라 좌표를 world로, q⁻¹는 world를 물체로 보내므로 q⁻¹T는 물체에서 본 카메라의 pose입니다.
+@@ 82
+metric-semantic map은 기하 정보와 함께 label을 담습니다. label은 sparse한 물체에, dense map의 원소에, 또는 영역에 붙습니다. label은 작업에 쓰이고 data association과 loop closure도 돕습니다.
+@@ 83
+object landmark는 \((\sigma, \mathbf{q}, \lambda, \mathbf{s})\), 즉 category, pose, scale, shape입니다.
+@@ 84
+deformable model (16.2)은 category 평균에 학습된 mode 몇 개를 더한 것이어서, shape 하나에 coefficient 몇 개면 됩니다.
+@@ 85
+residual (16.3)은 각 semantic landmark를 scale하고, 물체 → world → 카메라로 옮기고, 투영한 뒤, 검출된 keypoint와 비교합니다.
+@@ 86
+<em>SLAM Handbook</em>, 16장 도입부, §16.1, §16.2부터 §16.2.1.1까지, pp. 454–458.
+@@ 87
+Cootes, Taylor, Cooper, Graham, <em>Active Shape Models: Their Training and Application</em>, 1995 (평균에 mode를 더하는 모델과 그 PCA); Hartley와 Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (pinhole 투영).

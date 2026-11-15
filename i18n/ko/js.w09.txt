@@ -1,0 +1,268 @@
+@@ w09
+"Left: ten poses on a ring with their true and estimated headings and the measurement edges. Right: a dot plot, either of the final costs of 20 runs or of the eigenvalues of the certificate matrix."
+==
+"왼쪽: 고리 위의 pose 10개와 각각의 실제 heading, 추정 heading, 측정 edge. 오른쪽: 20회 실행의 최종 cost 또는 certificate matrix의 eigenvalue를 나타낸 점 그림."
+@@ w09
+"Final cost of each of 20 random starts"
+==
+"무작위 시작점 20개의 최종 cost"
+@@ w09
+"Press “Run 20 starts” to see"
+==
+"“시작점 20개 실행”을 누르면"
+@@ w09
+"where 20 random starts end up."
+==
+"시작점 20개가 끝나는 곳이 보입니다."
+@@ w09
+"The 20 eigenvalues of S = Q − Λ"
+==
+"S = Q − Λ의 eigenvalue 20개"
+@@ w09
+"Cost f(Y) at rank r = "+r
+==
+"rank r = "+r+"일 때 cost f(Y)"
+@@ w09
+"Cost at this critical point"
+==
+"이 critical point의 cost"
+@@ w09
+stat("Largest edge residual"
+==
+stat("가장 큰 edge residual"
+@@ w09
+"pink edges: above 15°"
+==
+"분홍 edge: 15° 초과"
+@@ w09
+stat("20 starts"
+==
+stat("시작점 20개"
+@@ w09
+" reach "+tally.best.toFixed(3)
+==
+"개가 "+tally.best.toFixed(3)+"에 도달"
+@@ w09
+" end higher"
+==
+"개는 더 높게 끝남"
+@@ w09
+"not run yet"
+==
+"아직 실행 안 함"
+@@ w09
+"Eigenvalues of YYᵀ / n"
+==
+"YYᵀ / n의 eigenvalue"
+@@ w09
+"Rounded cost f(R̂)"
+==
+"rounding한 cost f(R̂)"
+@@ w09
+"rotations in SO(2)"
+==
+"SO(2)의 회전"
+@@ w09
+"Min eigenvalue of S"
+==
+"S의 최소 eigenvalue"
+@@ w09
+"S is positive semidefinite"
+==
+"S는 positive semidefinite"
+@@ w09
+"S is not positive semidefinite"
+==
+"S는 positive semidefinite 아님"
+@@ w09
+"Certified. S ⪰ 0, so no feasible Z of the relaxation costs less than "+o.f.toFixed(3)+", and this solution uses rotations only (rank 2). It is a global optimum of the original problem."
+==
+"인증됨. S ⪰ 0이므로 relaxation의 어떤 feasible Z도 cost가 "+o.f.toFixed(3)+"보다 작지 않고, 이 해는 회전만 씁니다 (rank 2). 원래 문제의 global optimum입니다."
+@@ w09
+"The relaxation is solved (S ⪰ 0) but its solution has rank "+rk+", not 2: the relaxation is not tight here. p*SDP = "+o.f.toFixed(3)+" is only a lower bound. The rounded estimate costs "+fr.toFixed(3)+", so it is at most "+(fr-o.f).toFixed(3)+" above the optimum."
+==
+"Relaxation은 풀렸지만 (S ⪰ 0) 그 해의 rank가 2가 아니라 "+rk+"입니다: 여기서는 relaxation이 tight하지 않습니다. p*SDP = "+o.f.toFixed(3)+"는 lower bound일 뿐입니다. Rounding한 추정값의 cost는 "+fr.toFixed(3)+"이므로 optimum보다 최대 "+(fr-o.f).toFixed(3)+" 높습니다."
+@@ w09
+"No certificate: S has a negative eigenvalue, so YᵀY does not solve the relaxation. Y has "+(rk<r?"not converged to a second-order critical point":"full rank, so Theorem 6.2 does not apply")+". Climb the staircase: raise r."
+==
+"Certificate 없음: S에 음의 eigenvalue가 있으므로 YᵀY는 relaxation의 해가 아닙니다. "+(rk<r?"Y가 second-order critical point로 수렴하지 않았습니다":"Y가 full rank이므로 Theorem 6.2가 적용되지 않습니다")+". Staircase를 오르십시오: r을 올리십시오."
+@@ w09
+"No certificate: S has a negative eigenvalue. Either this is a spurious local minimum or the relaxation is not tight at this noise; the test cannot say which. Try another start"+(full?" or raise r.":".")
+==
+"Certificate 없음: S에 음의 eigenvalue가 있습니다. Spurious local minimum이거나, 이 noise에서 relaxation이 tight하지 않은 것입니다. 이 검사로는 어느 쪽인지 알 수 없습니다. "+(full?"다른 시작점을 시도하거나 r을 올리십시오.":"다른 시작점을 시도하십시오.")
+@@ w09
+range("Rotation noise σ per measurement"
+==
+range("측정값당 회전 noise σ"
+@@ w09
+range("Rank r of the factor Y"
+==
+range("factor Y의 rank r"
+@@ w09
+" (original problem)"
+==
+" (원래 문제)"
+@@ w09
+" (relaxed)"
+==
+" (relaxation)"
+@@ w09
+button("New start"
+==
+button("새 시작점"
+@@ w09
+button("New noise"
+==
+button("새 noise"
+@@ w09
+button("Run 20 starts"
+==
+button("시작점 20개 실행"
+@@ w09
+"Local search on a rotation-only pose graph"
+==
+"회전만 있는 pose graph의 local search"
+@@ w09
+"The certificate matrix S = Q − Λ"
+==
+"certificate matrix S = Q − Λ"
+@@ w09
+"The Riemannian staircase on a rotation-only pose graph"
+==
+"회전만 있는 pose graph의 Riemannian staircase"
+@@ w09
+"Ten headings, ten ring measurements and one chord (dashed). "
+==
+"Heading 10개, 고리 측정값 10개, chord 1개 (점선). "
+@@ w09
+"Riemannian gradient descent on Problem 6.4 from a random start, then rounding and the test λmin(S) ≥ 0."
+==
+"무작위 시작점에서 Problem 6.4에 Riemannian gradient descent를 돌린 뒤, rounding하고 λmin(S) ≥ 0을 검사합니다."
+@@ w09
+"Gradient descent on the headings from a random start"+(mode==="cert"?", then the test λmin(S) ≥ 0.":".")
+==
+"무작위 시작점에서 heading에 gradient descent를 돌립니다"+(mode==="cert"?". 그다음 λmin(S) ≥ 0을 검사합니다.":".")
+@@ w09
+"true heading"
+==
+"실제 heading"
+@@ w09
+"estimate (best global rotation applied)"
+==
+"추정 (최적 global 회전 적용)"
+@@ w09
+"edge residual above 15°"
+==
+"edge residual 15° 초과"
+@@ w09
+"Two unit circles. Left: the best choice of three variables that must each be plus or minus one, drawn as arrows pointing right or left. Right: the best choice when each variable may be any unit vector in the plane."
+==
+"단위원 두 개. 왼쪽: 각각 +1 또는 −1이어야 하는 세 변수의 최선의 선택을 오른쪽 또는 왼쪽을 가리키는 화살표로 그린 것. 오른쪽: 각 변수가 평면의 임의의 단위 벡터일 수 있을 때의 최선의 선택."
+@@ w09
+"QCQP: every x is +1 or −1"
+==
+"QCQP: 모든 x는 +1 또는 −1"
+@@ w09
+"Relaxation: any unit vector"
+==
+"Relaxation: 임의의 단위 벡터"
+@@ w09
+"best of the 4 sign patterns"
+==
+"부호 조합 4개 중 최선"
+@@ w09
+"tight: the relaxation is exact"
+==
+"tight: relaxation이 exact"
+@@ w09
+"not tight: a bound only"
+==
+"tight 아님: bound일 뿐"
+@@ w09
+stat("Eigenvalues of X*"
+==
+stat("X*의 eigenvalue"
+@@ w09
+"All three disagree (1, 1, 1)"
+==
+"셋 다 불일치 (1, 1, 1)"
+@@ w09
+"Consistent (1, 1, −1)"
+==
+"일관됨 (1, 1, −1)"
+@@ w09
+"A tiny QCQP and its Shor relaxation"
+==
+"작은 QCQP와 그 Shor relaxation"
+@@ w09
+"Minimize 2(c₁₂x₁x₂ + c₁₃x₁x₃ + c₂₃x₂x₃) subject to x₁² = x₂² = x₃² = 1. The relaxation replaces the products xᵢxⱼ by the entries of a positive semidefinite X with unit diagonal."
+==
+"x₁² = x₂² = x₃² = 1이라는 조건에서 2(c₁₂x₁x₂ + c₁₃x₁x₃ + c₂₃x₂x₃)를 최소화합니다. Relaxation은 곱 xᵢxⱼ를 대각 원소가 1인 positive semidefinite X의 원소로 바꿉니다."
+@@ w09
+"Top view of six poses: the true poses, and the poses whose rotations are set by the slider and whose positions are the optimal translations for those rotations"
+==
+"pose 6개를 위에서 본 그림: 실제 pose, 그리고 slider로 회전을 정하고 위치는 그 회전에 대한 최적 이동으로 둔 pose"
+@@ w09
+stat("Rotation term"
+==
+stat("회전 항"
+@@ w09
+"κ-weighted rotation residuals"
+==
+"κ 가중 회전 residual"
+@@ w09
+stat("Translation term"
+==
+stat("이동 항"
+@@ w09
+"τ-weighted residuals at t*(R)"
+==
+"t*(R)에서 τ 가중 residual"
+@@ w09
+stat("Sum: objective (6.9)"
+==
+stat("합: objective (6.9)"
+@@ w09
+"with t = t*(R)"
+==
+"t = t*(R)로 계산"
+@@ w09
+"no translations needed"
+==
+"이동 불필요"
+@@ w09
+"Reduced cost as a function of the twist angle of the selected pose"
+==
+"선택한 pose를 비튼 각도에 따른 reduced cost"
+@@ w09
+"twist of pose "+(k+1)
+==
+"pose "+(k+1)+" 비튼 각도"
+@@ w09
+"Translations follow rotations"
+==
+"회전을 따라가는 이동"
+@@ w09
+"Six planar poses, seven noisy relative-pose measurements (κ = 50, τ = 100). You set the rotations; the positions are recomputed from (6.16)."
+==
+"평면 pose 6개, noise 섞인 relative-pose 측정값 7개 (κ = 50, τ = 100). 회전은 여러분이 정하고, 위치는 (6.16)으로 다시 계산됩니다."
+@@ w09
+select("Pose to twist"
+==
+select("비틀 pose"
+@@ w09
+range("Twist added to its true heading"
+==
+range("실제 heading에 더한 비틀기"
+@@ w09
+"true poses"
+==
+"실제 pose"
+@@ w09
+"rotations you set, positions t*(R)"
+==
+"정한 회전, 위치 t*(R)"
+@@ w09
+"the twisted pose"
+==
+"비튼 pose"

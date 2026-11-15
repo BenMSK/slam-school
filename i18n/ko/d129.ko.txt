@@ -1,0 +1,152 @@
+@@ 1
+<span class="eyebrow">22주차 · Day 3</span>
+@@ 2
+이산 미지수와 연속 미지수를 함께: hybrid solver
+@@ 3
+오늘이 끝나면 metric-semantic SLAM을 이산-연속 factor graph로 쓰고, association과 기하를 번갈아 푸는 방식이 왜 감당할 만한지 설명하고, hard, max-mixture, EM association weight를 손으로 계산할 수 있습니다.
+@@ 4
+약 60분 · §16.2.2, pp. 466–471 읽기 (5쪽) · 6주차 Day 5 필요
+@@ 5
+먼저 읽기: §16.2.2 "Hybrid Solvers for Sparse Metric-Semantic SLAM", pp. 466–471
+@@ 6
+이산 변수가 문제에 들어오는 네 가지 경로 (p. 466).
+@@ 7
+이산 문제가 작은 문제들로 쪼개지는 조건인 p. 469의 (16.20).
+@@ 8
+E-step과 M-step이 각각 무엇을 고정하는지 (p. 470).
+@@ 9
+semantic SLAM에는 미분할 수 있는 미지수(pose, shape)와 나열할 수밖에 없는 미지수(class, association)가 있습니다. 어느 한쪽을 고정하면 다른 쪽은 쉬워집니다. 연속 미지수는 least squares로, 이산 미지수는 측정값마다 작은 선택 하나로 풀립니다. hybrid solver는 hard choice나 soft weight로 이 둘을 번갈아 풉니다.
+@@ 10
+1. 이산 미지수는 어디서 오는가
+@@ 11
+이산 변수는 네 가지 경로로 들어옵니다. shape와 묶여 있는 각 물체의 <strong>class</strong> \(\sigma\), <strong>symmetry</strong>(대칭: 정사각형 테이블은 90°마다 똑같아 보임), 학습된 front-end가 내놓는 여러 <strong>pose hypothesis</strong>, 그리고 어떤 detection을 map의 어느 물체가 만들었는가 하는 질문인 <strong>data association</strong> (<a href="#d31">6주차 · Day 1</a>)입니다. <span class="src">§16.2.2 · p. 466</span>
+@@ 12
+이를 모두 합치면, 추정 문제는 모든 측정값 \(Z\)가 주어졌을 때 로봇 pose \(X\), landmark \(L\), association \(D\)에 대한 MAP 문제입니다. <span class="src">§16.2.2 · p. 467</span>
+@@ 13
+class와 association이 한 문제에 들어가야 하는 이유는 서로에게 정보를 주기 때문입니다. "table"로 label된 detection이 의자일 가능성은 낮습니다. 그 대가로 탐색 공간은 nonconvex일 뿐 아니라 조합적이기도 합니다. detection 6개가 각각 물체 6개 중 어느 것에서든 나올 수 있다면 할당은 \(6^6 = 46{,}656\)가지이고, 최악의 경우 할당마다 연속 최적화를 따로 해야 합니다. <span class="src">§16.2.2 · p. 468</span>
+@@ 14
+2. Hybrid factor graph
+@@ 15
+연속 변수를 \(\Theta\)로, 이산 변수를 \(D\)로 묶습니다. posterior는 전과 같이 factor들의 곱으로 분해되고, 음의 로그를 취하면 곱이 합으로 바뀝니다. <span class="src">§16.2.2 · p. 468</span>
+@@ 16
+\(V_k\)는 factor \(k\)가 닿는 변수들의 집합입니다. factor에는 세 종류가 있습니다. 이산 \(\phi_k(D_k)\), 연속 \(\phi_k(\Theta_k)\), 그리고 <strong>discrete-continuous</strong>(이산-연속) \(\phi_k(\Theta_k, D_k)\)입니다. 마지막 종류는 이산 값을 고정하면 residual의 제곱이 된다고 가정합니다. <span class="src">§16.2.2 · p. 469</span>
+@@ 17
+detection factor가 대표적인 예입니다. 이 factor의 이산 변수 \(d_k \in \{1, \dots, J\}\)는 residual을 어느 landmark에 대해 계산할지 고릅니다: \(r_k = \boldsymbol{\Sigma}^{-1/2}\left(\mathbf{z}_k - h(\mathbf{T}, \boldsymbol{\ell}_{d_k})\right)\).
+@@ 18 attr
+hybrid factor graph. 로봇 pose T1과 두 object landmark l1, l2는 원입니다. 두 association 변수 d1, d2는 사각형입니다. 점으로 그린 두 detection factor는 각각 pose, 두 landmark, association 변수 하나를 잇습니다. pose에 붙은 또 하나의 점은 odometry factor입니다.
+@@ 19
+detection
+@@ 20
+원은 연속 변수, 사각형은 이산 변수, 점은 factor입니다. 각 detection factor는 pose, 그 detection이 보았을 수 있는 모든 landmark, association 변수 하나에 닿습니다. \(d_1\)과 \(d_2\)를 고정하면 factor마다 landmark edge가 하나만 남아 보통의 SLAM graph가 됩니다.
+@@ 21
+3. Alternating minimization: 한쪽을 고정하고 다른 쪽을 푼다
+@@ 22
+두 가지 관찰 덕분에 local 방법이 가능해집니다. <span class="src">§16.2.2 · p. 469</span>
+@@ 23
+\(D\)를 고정하면 연속 변수만 남고, <a href="#d10">2주차 · Day 4</a>의 Gauss-Newton 도구를 쓸 수 있습니다.
+@@ 24
+\(\Theta\)를 고정하면 이산 factor graph가 남습니다. 이산 변수가 \(\Theta\)가 주어졌을 때 conditionally independent한 작은 그룹 \(D_j\)들로 나뉜다면
+\[ p(D \mid \Theta, Z) \propto \prod_j p(D_j \mid \Theta, Z) \quad\Longrightarrow\quad \max_D\, p(D \mid \Theta, Z) \propto \prod_j \Big[\max_{D_j} p(D_j \mid \Theta, Z)\Big], \tag{16.20, 16.21} \]
+각 그룹을 따로 최적화할 수 있습니다.
+@@ 25
+DC-SAM은 이것을 \(\mathcal{L}\)이 더 줄지 않을 때까지 반복하는 loop로 만듭니다. <span class="src">§16.2.2 · p. 470</span>
+@@ 26
+빈틈 채우기: 곱의 최댓값은 왜 쪼개지는가, 그리고 무엇을 아끼는가
+@@ 27
+두 그룹을 생각합시다. 각 factor는 음이 아니고 자기 그룹에만 의존하므로
+@@ 28
+안쪽 최댓값은 \(D_1\) 입장에서는 음이 아닌 상수이므로 바깥 최댓값 밖으로 나옵니다. data association에서는 그룹 하나가 detection 하나의 변수 \(d_k\)입니다. pose와 landmark가 고정되어 있으면 detection 1이 본 것은 detection 2에 대해 더 알려 주는 것이 없습니다. 그러면 이산 step의 비용은 \(J^K\)(46,656) 대신 likelihood 계산 \(K \times J\)번(detection 6개와 물체 6개면 36번)이 됩니다.
+@@ 29
+(16.22)의 어느 step도 \(\mathcal{L}\)을 늘릴 수 없으므로 loop는 자리를 잡습니다. 다만 <em>local</em> minimum에서 멈춥니다. 잘못된 association이 기하를 그 association이 여전히 가장 좋아 보이는 곳으로 끌고 갈 수 있기 때문입니다.
+@@ 30
+<strong>Max-mixture factor</strong>는 같은 아이디어를 factor 안에 접어 넣은 것입니다. factor 안에서 \(d_k\)에 대해 최대화합니다.
+@@ 31
+solver는 매 iteration마다 현재 추정값에서 가장 작은 branch를 골라 여느 Gaussian factor처럼 linearization합니다. semantics는 \(w_{kj}\), 즉 물체가 \(j\)라면 보고된 label이 나올 확률을 통해 들어옵니다.
+@@ 32
+4. Expectation-maximization: soft association
+@@ 33
+alternating minimization이 후보 하나로 확정하는 자리에서, Bowman et al.은 모든 후보에 확률을 하나씩 유지합니다. <span class="src">§16.2.2 · p. 470</span>
+@@ 34
+<strong>E-step.</strong> pose와 landmark를 고정합니다. 각 detection \(k\)에 대해 그것이 물체 \(j\)에서 나왔을 확률을 계산합니다:
+\[ w_{kj} = \frac{\pi_{kj}\; \N\!\big(\mathbf{z}_k;\, h(\Theta, \boldsymbol{\ell}_j),\, \boldsymbol{\Sigma}\big)}{\sum_{j'} \pi_{kj'}\; \N\!\big(\mathbf{z}_k;\, h(\Theta, \boldsymbol{\ell}_{j'}),\, \boldsymbol{\Sigma}\big)}, \qquad \pi_{kj} = p(\text{label of } k \mid \text{class of } j). \]
+@@ 35
+<strong>M-step.</strong> weight를 고정합니다. 모든 detection-물체 쌍을 weight에 비례해 반영하여 pose와 landmark를 최적화합니다:
+\[ \Theta \leftarrow \argmin_\Theta \sum_k \sum_j w_{kj}\, \norm{\mathbf{z}_k - h(\Theta, \boldsymbol{\ell}_j)}^2_{\boldsymbol{\Sigma}} + (\text{나머지 factor}). \]
+@@ 36
+이 loop는 local optimum으로 점진적으로 수렴합니다. E-step 확률은 행렬의 permanent로 정확히 계산할 수도 있고, permanent를 근사해서 더 싸게 계산할 수도 있습니다. <span class="src">§16.2.2 · p. 470</span>
+@@ 37
+빈틈 채우기: detection 하나, 답 세 개
+@@ 38
+복도에 있는 로봇이 자신이 \(p = 2.5\) m에 있다고 믿습니다. map에는 \(4.0\) m에 테이블, \(5.2\) m에 의자가 있습니다. detection 하나가 "chair, 앞쪽 \(z = 2.0\) m"라고 보고하므로 물체는 \(4.5\) m에 놓입니다. 테이블에서 \(0.5\) m, 의자에서 \(0.7\) m 떨어진 곳입니다. \(\sigma = 0.3\) m로 두고, detector의 label은 90% 맞는다고 합시다.
+@@ 39
+기하 항 \(e^{-d^2/2\sigma^2}\)은 테이블에 대해 \(e^{-1.389} = 0.249\), 의자에 대해 \(e^{-2.722} = 0.066\)입니다. label 항 \(\pi\)는 테이블이 \(0.1\), 의자가 \(0.9\)입니다. 곱은 \(0.0249\)와 \(0.0592\)이고, 정규화하면 weight \(0.30\)과 \(0.70\)이 됩니다.
+@@ 40
+<strong>Nearest neighbour</strong>는 거리만 보고 테이블을 고릅니다. 그러면 이 detection은 로봇이 \(4.0 - 2.0 = 2.0\) m에 있다고 말합니다.
+@@ 41
+<strong>Max-mixture</strong>는 곱이 가장 큰 의자를 고릅니다: \(5.2 - 2.0 = 3.2\) m.
+@@ 42
+<strong>EM</strong>은 둘 다 씁니다: \(0.30 \times 2.0 + 0.70 \times 3.2 = 2.84\) m. label이 없다면 weight는 \(0.79\)와 \(0.21\)이고 답은 \(2.25\) m입니다.
+@@ 43
+M-step이 weighted least squares인 이유: EM은 association에 대해 평균한 log-likelihood \(\sum_k\sum_j w_{kj} \log\big[\pi_{kj}\,\N(\mathbf{z}_k; h(\Theta, \boldsymbol{\ell}_j), \boldsymbol{\Sigma})\big]\)를 최대화하는데, 이 중 \(\Theta\)에 의존하는 부분은 \(-\tfrac12\sum_k\sum_j w_{kj}\norm{\mathbf{z}_k - h(\Theta, \boldsymbol{\ell}_j)}^2_{\boldsymbol{\Sigma}}\)뿐입니다. 확률을 weight로 쓰는, IRLS(<a href="#d34">6주차 · Day 4</a>)의 "weight 계산, 그다음 weighted least squares" loop와 같습니다.
+@@ 44
+5. 한 문제에 적용한 세 방법
+@@ 45
+직접 해 보기: 로봇이 의자 넷, 테이블 둘이 있는 map 속 방으로 돌아옵니다. odometry는 0.8 m drift했고, 이는 한 줄로 놓인 물체 간격의 절반이 넘습니다. "한 step"을 세 번 누르세요. 그다음 class label을 끄고 반복하세요. 그다음 label을 끈 채로 EM을 해 보세요.
+@@ 46
+눈여겨볼 점: max-mixture에 label을 쓰면, detection z4의 label이 틀렸는데도 세 step 만에 오차가 0.62에서 0.23, 0.03 m로 줄고 잘못된 association은 3에서 1, 0으로 줄어듭니다. label 없이는 같은 방법이 잘못된 association 네 개와 함께 0.82 m에 머물고, nearest neighbour도 마찬가지입니다. label이 없어도 EM은 약 여섯 step 만에 빠져나옵니다. 잘못된 짝마다 맞는 물체에도 weight가 조금씩 남기 때문입니다. \(\sigma = 0.15\) m에서는 셋 다 갇힙니다. 지나치게 확신하는 noise model은 soft weight를 hard weight로 바꿉니다. \(\sigma = 0.8\) m에서는 z4의 틀린 label이 기하를 이깁니다.
+@@ 47
+책은 세 가지 계열을 더 꼽습니다. <strong>Multi-hypothesis</strong> solver(MH-iSAM2, iMHS)는 여러 할당을 살려 두고 탐색을 pruning합니다. <strong>Continuous relaxation</strong>은 label을 simplex 위의 확률 벡터로 바꾸고 연속 변수로 최적화합니다. <strong>Marginalization</strong>은 이산 변수를 합해서 없애며, 그러면 \(\Theta\)에 대한 non-Gaussian mixture가 남아 전용 solver가 필요합니다. <span class="src">§16.2.2 · pp. 470–471</span>
+@@ 48
+Q1. detection 열 개가 각각 map의 물체 네 개 중 하나에서 나올 수 있습니다. (16.20)이 성립할 때 (16.22)의 이산 step 한 번에 likelihood 계산이 몇 번 필요하고, joint 할당은 몇 가지입니까?
+@@ 49
+14와 40
+@@ 50
+40과 약 100만
+@@ 51
+40과 10,000
+@@ 52
+약 100만과 40
+@@ 53
+detection마다 따로 결정합니다: 10 × 4 = 40번 계산. joint 공간에는 4¹⁰ = 1,048,576가지 할당이 있습니다.
+@@ 54
+Q2. detection이 후보 A에서 0.3 m, 후보 B에서 0.6 m 떨어져 있고, σ = 0.3 m이며 label 정보는 없습니다. A의 EM weight는 얼마입니까?
+@@ 55
+기하 항: A는 exp(−0.09/0.18) = 0.607, B는 exp(−0.36/0.18) = 0.135. A의 weight = 0.607/(0.607 + 0.135) = 0.82.
+@@ 56
+Q3. 같은 상황에서 detection의 label은 "table"이고, A는 의자, B는 테이블이며, label은 90% 맞습니다. max-mixture factor는 어느 후보를 고릅니까?
+@@ 57
+B, 0.9 × 0.135가 0.1 × 0.607보다 크므로
+@@ 58
+A, 더 가까우므로
+@@ 59
+둘 다, weight 0.33과 0.67로
+@@ 60
+둘 다 아님, factor가 버려짐
+@@ 61
+곱: A는 0.1 × 0.607 = 0.061, B는 0.9 × 0.135 = 0.122. Max-mixture는 가장 큰 하나인 B만 남깁니다. EM이라면 weight 0.33과 0.67로 둘 다 남깁니다.
+@@ 62
+Q4. 모든 step이 cost를 낮추는데도 alternating minimization이 잘못된 association으로 끝날 수 있는 이유는 무엇입니까?
+@@ 63
+연속 step이 정확하지 않아서
+@@ 64
+(16.20)이 성립해도 이산 step이 NP-hard여서
+@@ 65
+각 step은 다른 block이 주어졌을 때만 최적이므로, loop가 local minimum에서 멈출 수 있어서
+@@ 66
+cost에 하한이 없어서
+@@ 67
+block coordinate descent는 어느 block도 혼자서는 더 나아질 수 없을 때 멈춥니다. label을 끈 위젯에서 본 그대로입니다.
+@@ 68
+class, symmetry, pose hypothesis, association은 이산 미지수입니다. 이들은 pose, shape와 함께 MAP 문제 (16.16)을 이루며, 이는 cost가 \(\mathcal{L}(\Theta, D)\)인 hybrid factor graph입니다.
+@@ 69
+\(D\)를 고정하면 least squares가 남습니다. \(\Theta\)를 고정하면 conditionally independent한 그룹들로 쪼개지는 이산 문제가 남습니다.
+@@ 70
+alternating minimization과 max-mixture는 hard choice를 하고, 매 iteration마다 다시 고릅니다. EM은 weight \(w_{kj}\)를 유지하고 weighted least squares를 풉니다.
+@@ 71
+모두 local 방법입니다. local 답이 맞는 답인지는 label과 적절한 noise model이 결정합니다.
+@@ 72
+=
+@@ 73
+Dempster, Laird, Rubin, <em>Maximum Likelihood from Incomplete Data via the EM Algorithm</em>, 1977; Bishop, <em>Pattern Recognition and Machine Learning</em>, 2006, 9장 (E-step weight와 weighted M-step).
+@@ 74
+Olson과 Agarwal, <em>Inference on Networks of Mixtures for Robust Robot Mapping</em>, 2013 (max-mixture factor).

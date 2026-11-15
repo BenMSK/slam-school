@@ -1,0 +1,160 @@
+@@ 1
+<span class="eyebrow">4주차 · Day 5</span>
+@@ 2
+Lie group 추가 도구: 차이, 역, adjoint, Jacobian
+@@ 3
+오늘이 끝나면 ⊖로 두 pose를 빼고, adjoint로 perturbation을 transformation의 한쪽에서 다른 쪽으로 옮기고, SO(3)의 Jacobian으로 두 rotation vector를 합칠 수 있습니다.
+@@ 4
+약 60분 · §2.1.5, pp. 60–62 읽기 (3쪽) · 4주차 Day 3 필요
+@@ 5
+먼저 읽기: §2.1.5, pp. 60–62
+@@ 6
+p. 60의 식 (2.25): 두 group 원소의 "차이"를 어떻게 정의하는지, 그리고 답이 어느 공간에 있는지.
+@@ 7
+p. 61의 식 (2.26): 역을 취할 때 perturbation이 곱해지는 쪽과 부호가 어떻게 되는지.
+@@ 8
+p. 61의 식 (2.28)–(2.31): adjoint, 그리고 (2.31)은 "근사가 필요 없다"는 언급.
+@@ 9
+p. 62의 식 (2.34)–(2.35): \(\boldsymbol{\theta}_1\), \(\boldsymbol{\theta}_2\) 중 어느 것이 작아야 하는지.
+@@ 10
+tangent space를 쓰면 pose에 대해 벡터식 계산을 할 수 있는데, 벡터에는 없는 복잡함이 하나 있습니다: 순서가 중요합니다. 이를 다루는 도구가 셋 있습니다. 연산자 \(\ominus\)는 차이를 잽니다. <strong>adjoint</strong>는 perturbation을 transformation 너머로 정확히 옮깁니다. <strong>Jacobian</strong>은 두 tangent vector가 어떻게 합쳐지는지를 근사적으로 알려 줍니다.
+@@ 11
+1. ⊕와 ⊖: 더하기와 빼기
+@@ 12
+\(\oplus\)는 Day 3에서 보았습니다. 그 짝은 "어떤 tangent vector가 나를 \(\mathbf{T}^0\)에서 \(\mathbf{T}\)로 데려가는가?"에 답합니다. <span class="src">§2.1.5.1 · p. 60, eqs. (2.24)–(2.25)</span>
+@@ 13
+유도는 한 줄입니다: 왼쪽 식에 \((\mathbf{T}^0)^{-1}\)을 곱하고 Log를 취합니다. 이 짝이 있으면 대부분의 벡터 공식에 group 버전이 생깁니다:
+@@ 14
+벡터
+@@ 15
+=
+@@ 16
+보정 더하기
+@@ 17
+차이
+@@ 18
+일관성
+@@ 19
+interpolation, \(s\in[0,1]\)
+@@ 20
+interpolation 행은 책의 이 절에 없지만 표준적인 구성이고, 다음 주의 continuous-time trajectory가 이것에 기댑니다. 평면 예: \(\mathbf{T}^0\)은 identity이고 \(\mathbf{T}^1\)은 \((1,1)\)에서 90° 돌아가 있습니다. Day 2에서 \(\mathbf{T}^1\ominus\mathbf{T}^0 = \Log(\mathbf{T}^1) = (\tfrac{\pi}{2},0,\tfrac{\pi}{2})\)입니다. 중간 지점은 \(\Exp(\tfrac{\pi}{4},0,\tfrac{\pi}{4})\)입니다: heading 45°, 위치 \(\big(\sin 45^\circ,\ 1-\cos 45^\circ\big) = (0.707, 0.293)\)으로 사분원 위의 점입니다. 대신 두 위치를 평균하면 \((0.5, 0.5)\)가 되어 모서리를 질러갑니다.
+@@ 21
+2. perturbation을 준 pose의 역
+@@ 22
+때로는 perturbation을 준 pose의 역이 필요합니다. <span class="src">§2.1.5.2 · p. 61, eq. (2.26)</span>
+@@ 23
+두 사실을 씁니다. 곱의 역은 순서를 뒤집습니다. 그리고 \(\Exp(\boldsymbol{\xi})^{-1} = \Exp(-\boldsymbol{\xi})\): 일정한 속도의 움직임을 되돌리려면 거꾸로 실행하면 됩니다. (엄밀히 말하면 \(\boldsymbol{\xi}^\wedge\)와 \(-\boldsymbol{\xi}^\wedge\)는 교환 가능하므로 여기서는 지수를 더해도 되고, 그러면 \(\exp(\mathbf{0}) = \mathbf{I}\)입니다.) 핵심: \(\mathbf{T}\)에 \(\boldsymbol{\xi}\)로 <em>오른쪽</em> perturbation을 준 것은 \(\mathbf{T}^{-1}\)에 \(-\boldsymbol{\xi}\)로 <em>왼쪽</em> perturbation을 준 것입니다. 이것이 p. 57 각주 1 뒤에 숨은 미묘한 점입니다: \(\mathbf{T}^c_w\)에 오른쪽에서 perturbation을 주는 것은 \(\mathbf{T}^w_c\)에 왼쪽에서 perturbation을 주는 것과 같습니다.
+@@ 24
+3. Adjoint: perturbation을 transformation 너머로 옮기기
+@@ 25
+작은 움직임은 pose 앞에 쓸 수도, 뒤에 쓸 수도 있습니다. \(\Exp(\boldsymbol{\epsilon})\,\mathbf{T} = \mathbf{T}\,\Exp(\boldsymbol{\xi})\)가 되도록, 오른쪽의 주어진 \(\boldsymbol{\xi}\)와 같은 왼쪽의 \(\boldsymbol{\epsilon}\)은 무엇일까요? 책의 답: <span class="src">§2.1.5.3 · p. 61, eqs. (2.28)–(2.31)</span>
+@@ 26
+\(\Ad(\mathbf{T})\)는 \(\mathbf{T}\)의 <strong>adjoint</strong>입니다: tangent vector에 작용하는 정사각 행렬이므로, \(\mathbf{T}\)가 4 × 4여도 3D pose에서는 6 × 6입니다. \(\boldsymbol{\xi}\)는 로봇의 local frame에서 기술한 움직임, \(\boldsymbol{\epsilon}\)은 같은 움직임을 global frame에서 기술한 것이라고 생각하면 됩니다.
+@@ 27
+빈틈 채우기: 왜 conjugation인가, 그리고 (2.30)은 어디서 오는가
+@@ 28
+<strong>(2.31)이 정확한 이유.</strong> 임의의 행렬에 대해 \((\mathbf{T}\mathbf{A}\mathbf{T}^{-1})^n = \mathbf{T}\mathbf{A}^n\mathbf{T}^{-1}\)입니다. 안쪽의 \(\mathbf{T}^{-1}\mathbf{T}\) 쌍이 지워지기 때문입니다. 이를 exponential 급수의 모든 항에 적용합니다:
+@@ 29
+오른쪽에 \(\mathbf{T}\)를 곱하면 (2.31)이 됩니다. 버린 항은 하나도 없습니다.
+@@ 30
+<strong>행렬 (2.30).</strong> Day 1의 \(\mathbf{T}^{-1}\)로 블록을 곱합니다:
+@@ 31
+외적의 두 인수를 모두 회전하면 결과도 회전하며, 이를 wedge 꼴로 쓰면 \(\mathbf{R}\boldsymbol{\theta}^\wedge\mathbf{R}\T = (\mathbf{R}\boldsymbol{\theta})^\wedge\)입니다. 따라서 \(\boldsymbol{\epsilon}\)의 회전 부분은 \(\mathbf{R}\boldsymbol{\theta}\)이고, 이동 부분은 \(\mathbf{R}\boldsymbol{\rho} - (\mathbf{R}\boldsymbol{\theta})\times\mathbf{t} = \mathbf{R}\boldsymbol{\rho} + \mathbf{t}^\wedge\mathbf{R}\boldsymbol{\theta}\)입니다. 둘을 쌓으면 (2.30)의 행렬을 읽어 낼 수 있습니다.
+@@ 32
+<strong>평면에서는</strong> \(\boldsymbol{\theta}^\wedge = \theta\mathbf{S}\)와 \(\mathbf{R}\mathbf{S}\mathbf{R}\T = \mathbf{S}\)로 같은 곱셈을 하면, 자유도마다 행과 열이 하나씩인 3 × 3 adjoint가 나옵니다:
+@@ 33
+(책은 \(\Ad(\mathbf{T})\)를 \((2d)\times(2d)\)라고 설명합니다. 이는 \(d = 3\)일 때 (2.30)의 6 × 6 행렬과 맞습니다.)
+@@ 34
+\(\mathbf{t} = (2, 0)\)에서 90° 방향(global y축 방향)을 보는 로봇으로 두 평면 예를 봅니다:
+@@ 35
+<strong>local "앞으로 한 단위"</strong>, \(\boldsymbol{\xi} = (1,0,0)\). 그러면 \(\boldsymbol{\epsilon} = (\mathbf{R}(1,0),\,0) = (0,1,0)\)으로, global y 방향의 움직임입니다. (2.31)을 확인해 봅니다: 왼쪽 변은 로봇을 앞으로 한 단위 옮긴 것으로 \((2,1)\)에 있습니다. 오른쪽 변은 pose 전체를 \((0,1)\)만큼 옮기므로 역시 \((2,1)\)입니다.
+@@ 36
+<strong>local "제자리 회전"</strong>, \(\boldsymbol{\xi} = (0,0,\phi)\). 그러면 \(\boldsymbol{\epsilon} = \phi\,(0,-2,1)\)입니다. global 관점에서 점 \((2,0)\)을 중심으로 한 회전은 원점을 중심으로 한 회전 <em>더하기</em> 이동입니다. 원점을 중심으로 돌기만 하면 로봇이 서 있던 곳에서 휩쓸려 벗어나기 때문입니다.
+@@ 37
+더 깊이 (선택): 불확실한 두 pose의 합성
+@@ 38
+\(\mathbf{T}_1 = \bar{\mathbf{T}}_1\Exp(\boldsymbol{\delta}_1)\)과 \(\mathbf{T}_2 = \bar{\mathbf{T}}_2\Exp(\boldsymbol{\delta}_2)\)가 독립이고, Day 4처럼 covariance가 \(\boldsymbol{\Sigma}_1\), \(\boldsymbol{\Sigma}_2\)라고 합시다. 곱에서 \(\Exp(\boldsymbol{\delta}_1)\)은 가운데에 끼어 있습니다. 식 (2.31)을 \(\mathbf{T} = \bar{\mathbf{T}}_2\)로 두고 오른쪽에서 왼쪽으로 읽으면 이것을 오른쪽으로 옮길 수 있습니다:
+@@ 39
+noise가 작으면 두 exponential은 1차까지 벡터를 더하는 것으로 합쳐지므로, 곱의 평균은 \(\bar{\mathbf{T}}_1\bar{\mathbf{T}}_2\)이고 covariance는 \(\boldsymbol{\Sigma}\approx\Ad(\bar{\mathbf{T}}_2^{-1})\,\boldsymbol{\Sigma}_1\,\Ad(\bar{\mathbf{T}}_2^{-1})\T + \boldsymbol{\Sigma}_2\)입니다. 어제의 한 step 모델로 시험해 봅니다: \(\boldsymbol{\Sigma}_1 = \diag(0,0,\sigma^2)\)(불확실한 회전), \(\bar{\mathbf{T}}_2\)는 noise 없이 길이 \(L\)만큼 가는 것입니다. \(\bar{\mathbf{T}}_2^{-1}\)의 \(\mathbf{t} = (-L, 0)\)이므로 그 adjoint의 마지막 열은 \((0, L, 1)\)이고, \(\boldsymbol{\Sigma} = \sigma^2(0,L,1)\T(0,L,1)\)입니다: Day 4에서 찾은 행렬입니다.
+@@ 40
+4. Jacobian: 두 exponential 합치기
+@@ 41
+Day 2에서 \(\Exp(\mathbf{a})\Exp(\mathbf{b})\ne\Exp(\mathbf{a}+\mathbf{b})\)임을 보았습니다. 정확한 관계는 무한 급수인 <strong>Baker-Campbell-Hausdorff (BCH) formula</strong>입니다. 두 벡터의 "commutator"가 외적인 rotation vector의 경우, 그 급수는 다음과 같이 시작합니다
+@@ 42
+축이 평행하면 모든 외적이 사라지고 각도가 더해집니다. 그렇지 않으면 보정이 붙습니다. 추정에서는 보통 둘 중 하나가 작은 perturbation입니다. 작은 쪽에 대해 선형인 항을 모두 남기고 나머지를 버리면 책의 공식이 나옵니다: <span class="src">§2.1.5.4 · p. 62, eqs. (2.34)–(2.35)</span>
+@@ 43
+\(\mathbf{J}\)는 \(\SO(3)\)의 <strong>(left) Jacobian</strong>입니다. 그 안에서 BCH 급수의 첫 항들을 볼 수 있습니다: \(\mathbf{J}(\boldsymbol{\theta}_2)^{-1} = \mathbf{I} - \tfrac12\boldsymbol{\theta}_2^\wedge + \tfrac1{12}(\boldsymbol{\theta}_2^\wedge)^2 - \dots\)이고, 이를 \(\boldsymbol{\theta}_1\)에 적용하면 \(\boldsymbol{\theta}_1 + \tfrac12\boldsymbol{\theta}_1\times\boldsymbol{\theta}_2 + \tfrac1{12}\boldsymbol{\theta}_2\times(\boldsymbol{\theta}_2\times\boldsymbol{\theta}_1)\)이 다시 나옵니다.
+@@ 44
+빈틈 채우기: J의 closed form과 그 친척들
+@@ 45
+이 급수는 Day 2의 \(\mathbf{V}\) 급수와 모양이 같습니다. 사실 그 행렬 <em>그 자체</em>입니다: 3D에서 \(\Exp(\boldsymbol{\xi})\)의 이동은 \(\mathbf{J}(\boldsymbol{\theta})\boldsymbol{\rho}\)입니다. 같은 요령, 곧 \(\boldsymbol{\theta} = \phi\,\mathbf{a}\)와 \((\mathbf{a}^\wedge)^3 = -\mathbf{a}^\wedge\)로 합을 구합니다:
+@@ 46
+급수의 홀수 거듭제곱은 \(\tfrac{\phi}{2!} - \tfrac{\phi^3}{4!} + \dots = \tfrac{1-\cos\phi}{\phi}\)로, 짝수 거듭제곱은 \(\tfrac{\phi^2}{3!} - \tfrac{\phi^4}{5!} + \dots = 1 - \tfrac{\sin\phi}{\phi}\)로 모입니다. \(\phi = 0\)에서는 두 계수가 모두 사라져 \(\mathbf{J} = \mathbf{I}\)입니다: 작은 회전에서는 벡터가 그냥 더해집니다.
+@@ 47
+<strong>Right Jacobian.</strong> <em>두 번째</em> 회전이 작은 쪽이면 거울상 공식이 성립합니다: \(\Exp(\boldsymbol{\theta}_1)\Exp(\boldsymbol{\theta}_2)\approx\Exp\big(\boldsymbol{\theta}_1 + \mathbf{J}_r(\boldsymbol{\theta}_1)^{-1}\boldsymbol{\theta}_2\big)\), 여기서 \(\mathbf{J}_r(\boldsymbol{\theta}) = \mathbf{J}(-\boldsymbol{\theta}) = \mathbf{J}(\boldsymbol{\theta})\T\)입니다.
+@@ 48
+<strong>Kinematics.</strong> 책은 \(\mathbf{J}\)를 식 (2.33) \(\dot{\boldsymbol{\theta}} = \mathbf{J}^{-1}(\boldsymbol{\theta})\,\boldsymbol{\omega}\)로 소개합니다. 말로 하면, 축이 고정되어 있지 않은 한 rotation vector의 변화율은 각속도가 아닙니다. \(\mathbf{J}\)가 둘 사이를 변환합니다. 평면에서는 \(\mathbf{J} = 1\)이고 \(\dot\theta = \omega\)입니다.
+@@ 49
+직접 해 보기: 단순 합과 식 (2.34)를 정확한 답과 비교합니다.
+@@ 50
+눈여겨볼 점: 기본 설정(θ₁ 크기 0.1 rad, θ₂ 60°, 두 축이 직각)에서 단순 합은 0.053 rad, 약 3° 틀리고, 식 (2.34)는 0.0009 rad 틀립니다. θ₁이 10배 줄어들 때마다 합의 오차는 10배, (2.34)의 오차는 100배 줄어듭니다: 1차 대 2차입니다. 두 축 사이 각도를 0°로 두면 두 오차 모두 차트 바닥 아래로 떨어집니다.
+@@ 51
+pose에도 Jacobian이 있어 \(\mathbf{J}(\boldsymbol{\xi})\)로 쓰며, 책은 같은 기호를 다시 씁니다. <span class="src">§2.1.5.4 · p. 62</span> 이 Jacobian들은 7주차에서 network 안에서 pose를 미분할 때 다시 나옵니다.
+@@ 52
+<strong>"\(\mathbf{T}\ominus\mathbf{T}^0\)은 \(\mathbf{T}-\mathbf{T}^0\)이다."</strong> 행렬의 차는 Lie algebra에 있지 않습니다. ⊖는 상대 transformation의 Log입니다.
+@@ 53
+<strong>"\(\Ad(\mathbf{T})\)는 \(\mathbf{T}\)와 크기가 같다."</strong> adjoint는 tangent vector에 곱해집니다: 3D에서 6 × 6, 평면에서 3 × 3입니다.
+@@ 54
+<strong>"adjoint 항등식은 작은 각도 근사다."</strong> (2.31)은 모든 \(\boldsymbol{\xi}\)에 대해 정확합니다. 근사인 것은 Jacobian 공식 (2.34)입니다.
+@@ 55
+<strong>"(2.34)는 θ₁과 θ₂를 똑같이 다룬다."</strong> 작은 쪽만 \(\mathbf{J}^{-1}\)에 곱해지고, Jacobian은 큰 쪽에서 계산합니다. 왼쪽 인수가 작으면 left Jacobian, 오른쪽 인수가 작으면 right Jacobian입니다.
+@@ 56
+Q1. \(\SO(2)\)에서 \(\mathbf{R}^0\)은 30° 회전이고 \(\mathbf{R}\)은 75° 회전입니다. \(\mathbf{R}\ominus\mathbf{R}^0\)은 무엇입니까?
+@@ 57
+2 × 2 행렬 \(\mathbf{R}-\mathbf{R}^0\)
+@@ 58
+105°, 약 1.83 rad
+@@ 59
+45°, 약 0.785 rad
+@@ 60
+−45°, 약 −0.785 rad
+@@ 61
+\(\Log\big((\mathbf{R}^0)\T\mathbf{R}\big)\): 상대 회전은 \(75^\circ - 30^\circ = 45^\circ\)이고, 그 Log가 바로 그 각도입니다. 답은 행렬이 아니라 tangent vector(여기서는 수 하나)입니다.
+@@ 62
+Q2. 평면 로봇이 \(\mathbf{t} = (3, 0)\)에 heading 0으로 있습니다. 로봇이 제자리에서 돕니다: \(\boldsymbol{\xi} = (0, 0, 0.1)\). 같은 움직임을 나타내는 왼쪽 perturbation \(\boldsymbol{\epsilon} = \Ad(\mathbf{T})\boldsymbol{\xi}\)는 무엇입니까?
+@@ 63
+\(\mathbf{R} = \mathbf{I}\)이므로 \(\boldsymbol{\epsilon} = (-\theta\,\mathbf{S}\mathbf{t},\ \theta) = (0.1\,(t_2, -t_1),\ 0.1) = (0, -0.3, 0.1)\)입니다. 원점을 중심으로 0.1 rad 돌면 로봇이 0.3만큼 들어 올려집니다. 이동 −0.3이 그것을 상쇄하므로 로봇은 제자리에 머물고 돌기만 합니다.
+@@ 64
+Q3. \(\big(\mathbf{T}^0\,\Exp(\boldsymbol{\xi})\big)^{-1}\)과 같은 식은 무엇입니까?
+@@ 65
+식 (2.26)입니다. 곱의 역은 순서를 뒤집고, \(\Exp(\boldsymbol{\xi})\)의 역은 \(\Exp(-\boldsymbol{\xi})\)입니다. perturbation이 왼쪽으로 옮겨 가며 부호가 바뀝니다.
+@@ 66
+Q4. 위젯에서 \(\boldsymbol{\theta}_1\)을 10배 작게 만듭니다. \(\boldsymbol{\theta}_1+\boldsymbol{\theta}_2\)의 오차와 식 (2.34)의 오차는 각각 대략 몇 배 줄어듭니까?
+@@ 67
+10과 10
+@@ 68
+10과 100
+@@ 69
+100과 100
+@@ 70
+100과 1000
+@@ 71
+단순 합은 \(\tfrac12\boldsymbol{\theta}_1\times\boldsymbol{\theta}_2\)처럼 \(\boldsymbol{\theta}_1\)에 대해 선형인 항을 놓치므로, 오차가 \(\norm{\boldsymbol{\theta}_1}\)에 비례합니다. 식 (2.34)는 선형 항을 모두 남기고 2차 항만 놓치므로, 오차가 \(\norm{\boldsymbol{\theta}_1}^2\)에 비례합니다.
+@@ 72
+\(\mathbf{T}\ominus\mathbf{T}^0 = \Log\big((\mathbf{T}^0)^{-1}\mathbf{T}\big)\)는 \(\mathbf{T}^0\)에서 \(\mathbf{T}\)로 가는 tangent vector입니다. ⊕와 함께 쓰면 차이, 오차, interpolation을 얻습니다.
+@@ 73
+\((\mathbf{T}^0\,\Exp(\boldsymbol{\xi}))^{-1} = \Exp(-\boldsymbol{\xi})(\mathbf{T}^0)^{-1}\): 역을 취하면 곱해지는 쪽이 바뀌고 부호가 뒤집힙니다.
+@@ 74
+\(\mathbf{T}\,\Exp(\boldsymbol{\xi}) = \Exp(\Ad(\mathbf{T})\boldsymbol{\xi})\,\mathbf{T}\)는 정확한 식입니다. \(\Ad(\mathbf{T})\)는 local tangent vector를 global frame에서 다시 표현합니다.
+@@ 75
+작은 \(\boldsymbol{\theta}_1\)에 대해 \(\Exp(\boldsymbol{\theta}_1)\Exp(\boldsymbol{\theta}_2)\approx\Exp(\boldsymbol{\theta}_2+\mathbf{J}(\boldsymbol{\theta}_2)^{-1}\boldsymbol{\theta}_1)\)입니다: \(\boldsymbol{\theta}_1\)에 대해 선형인 항까지만 남기고 자른 BCH 급수입니다.
+@@ 76
+\(\mathbf{J}(\boldsymbol{\theta}) = \sum(\boldsymbol{\theta}^\wedge)^n/(n+1)!\)은 0에서 \(\mathbf{I}\)이며, \(\boldsymbol{\rho}\)를 이동으로 바꾸는 바로 그 행렬입니다.
+@@ 77
+<em>SLAM Handbook</em>, §2.1.5 "Lie Group Extras", pp. 60–62, 식 (2.24)–(2.35).
+@@ 78
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (SE(3)의 adjoint, BCH formula, SO(3) Jacobian의 closed form과 그 역의 급수, left Jacobian과 right Jacobian).
+@@ 79
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (⊕와 ⊖, SE(2)의 adjoint, 합성의 covariance, interpolation).
+@@ 80
+Barfoot and Furgale, <em>Associating Uncertainty with Three-Dimensional Poses for Use in Estimation Problems</em>, 2014 (불확실한 pose의 합성).

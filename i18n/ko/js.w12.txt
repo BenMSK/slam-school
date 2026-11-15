@@ -1,0 +1,468 @@
+@@ w12
+": off"
+==
+": 끔"
+@@ w12
+": on"
+==
+": 켬"
+@@ w12
+"Top view of a flatland camera and twelve known map points, with the one-dimensional image below showing observed and predicted keypoint positions"
+==
+"flatland camera와 알려진 map point 12개를 위에서 본 모습. 아래의 1차원 이미지에 관측 keypoint와 예측 keypoint의 위치가 표시됩니다"
+@@ w12
+"top view"
+==
+"위에서 본 모습"
+@@ w12
+"the 1-D image (pixels)"
+==
+"1-D 이미지 (픽셀)"
+@@ w12
+stat("Iterations",
+==
+stat("iteration 수",
+@@ w12
+"start = previous pose"
+==
+"시작 = 이전 pose"
+@@ w12
+"all 12 matches"
+==
+"match 12개 전체"
+@@ w12
+stat("Position error",
+==
+stat("위치 오차",
+@@ w12
+stat("Heading error",
+==
+stat("방향 오차",
+@@ w12
+"Tracking one frame: pose-only BA"
+==
+"frame 하나 tracking: pose-only BA"
+@@ w12
+"Twelve map points are known. Gauss-Newton moves only the camera (x, z, heading) until the predicted keypoints meet the observed ones."
+==
+"map point 12개는 알려져 있습니다. Gauss-Newton은 예측 keypoint가 관측 keypoint와 만날 때까지 카메라(x, z, 방향)만 움직입니다."
+@@ w12
+"Pixel noise σ"
+==
+"픽셀 noise σ"
+@@ w12
+"Gauss-Newton step"
+==
+"Gauss-Newton 한 step"
+@@ w12
+"Reset pose"
+==
+"pose 초기화"
+@@ w12
+"New noise"
+==
+"새 noise"
+@@ w12
+"2 wrong matches"
+==
+"잘못된 match 2개"
+@@ w12
+"estimated camera, predicted keypoints"
+==
+"추정 카메라, 예측 keypoint"
+@@ w12
+"true camera (unknown to the tracker)"
+==
+"실제 카메라 (tracker는 모름)"
+@@ w12
+"observed keypoints"
+==
+"관측 keypoint"
+@@ w12
+"map points"
+==
+"map point"
+@@ w12
+"Top: the reference profile, the shifted profile and the shifted profile warped back by the current estimate. Bottom: the alignment cost as a function of the shift, with the current estimate and a strip showing which starting values converge to the true shift"
+==
+"위: 기준 곡선, 이동된 곡선, 그리고 현재 추정값으로 되돌린 이동 곡선. 아래: 이동량에 따른 alignment cost와 현재 추정값, 그리고 어떤 시작값이 실제 이동량으로 수렴하는지 보여 주는 띠"
+@@ w12
+"intensity along one image row, "+m+" pixels wide"
+==
+"이미지 한 행의 밝기, 폭 "+m+"픽셀"
+@@ w12
+"cost E(s) at this level"
+==
+"이 level의 cost E(s)"
+@@ w12
+"true shift"
+==
+"실제 이동량"
+@@ w12
+"shift s (pixels); the strip marks starting values that end at the true shift"
+==
+"이동량 s (픽셀) · 띠: 실제 이동량에 도달하는 시작값"
+@@ w12
+"True shift"
+==
+"실제 이동량"
+@@ w12
+stat("Estimate",s.toFixed(2)+" px",n+" step"+(n===1?"":"s")+(done?", converged":""))
+==
+stat("추정값",s.toFixed(2)+" px",n+" step"+(done?", 수렴":""))
+@@ w12
+stat("Working at",lev?"level "+lev:"full resolution",m+" pixels")
+==
+stat("현재 level",lev?"level "+lev:"원본 해상도",m+" 픽셀")
+@@ w12
+hi<0?"none":"about "+(2*(hi-lo)+2)+" px wide",pyr?"with the pyramid":"full resolution only"
+==
+hi<0?"없음":"폭 약 "+(2*(hi-lo)+2)+" px",pyr?"pyramid 사용":"원본 해상도만"
+@@ w12
+"Direct alignment in 1-D (Lucas-Kanade)"
+==
+"1-D direct alignment (Lucas-Kanade)"
+@@ w12
+"The pink profile is the blue one moved by the true shift. Gauss-Newton looks for the shift s that makes the warped (green, dashed) profile fall on the blue one. It starts at s = 0."
+==
+"분홍 곡선은 파란 곡선을 실제 이동량만큼 옮긴 것입니다. Gauss-Newton은 warp된 곡선(초록 점선)이 파란 곡선 위에 놓이게 하는 이동량 s를 찾습니다. s = 0에서 시작합니다."
+@@ w12
+"Run to convergence"
+==
+"수렴할 때까지 실행"
+@@ w12
+button("Reset",
+==
+button("초기화",
+@@ w12
+"New texture"
+==
+"새 texture"
+@@ w12
+"reference I₁"
+==
+"기준 I₁"
+@@ w12
+"shifted I₂"
+==
+"이동된 I₂"
+@@ w12
+"I₂ warped by the estimate"
+==
+"추정값으로 warp한 I₂"
+@@ w12
+"Top view of six flatland cameras and fourteen points: true positions, current estimates, and the observation rays"
+==
+"flatland camera 6대와 point 14개를 위에서 본 모습: 실제 위치, 현재 추정값, 관측 ray"
+@@ w12
+"Left: sparsity pattern of the full Hessian with camera block, point block and coupling blocks. Right: sparsity pattern of the reduced camera system after eliminating the points"
+==
+"왼쪽: 카메라 block, point block, 결합 block으로 이루어진 전체 Hessian의 sparsity pattern. 오른쪽: point를 소거한 뒤 reduced camera system의 sparsity pattern"
+@@ w12
+"Linearized at the initial guess."
+==
+"initial guess에서 linearize했습니다."
+@@ w12
+"Singular system; damping raised."
+==
+"시스템이 singular하여 damping을 올렸습니다."
+@@ w12
+"Points eliminated: the 46 × 46 system became 18 × 18."
+==
+"point 소거: 46 × 46 시스템이 18 × 18이 되었습니다."
+@@ w12
+"Reduced camera system solved; cameras moved."
+==
+"reduced camera system을 풀고 카메라를 옮겼습니다."
+@@ w12
+"Points back-substituted. Iteration "+it+" accepted: cost "
+==
+"point back-substitution 완료. iteration "+it+" 채택: cost "
+@@ w12
+"Converged: another step no longer lowers the cost ("
+==
+"수렴: step을 더 해도 cost가 줄지 않습니다 ("
+@@ w12
+"Step rejected (cost would rise from "+c0.toFixed(1)+" to "+(isFinite(c1)?c1.toExponential(1):"∞")+"); damping raised."
+==
+"step 거부 (cost가 "+c0.toFixed(1)+"에서 "+(isFinite(c1)?c1.toExponential(1):"∞")+"까지 오름); damping을 올렸습니다."
+@@ w12
+txt(rx,ry-28,"camera",
+==
+txt(rx,ry-28,"카메라",
+@@ w12
+"Press Next step to"
+==
+"다음 step을 누르면"
+@@ w12
+"eliminate the points."
+==
+"point가 소거됩니다."
+@@ w12
+"Step "+(phase+1)+" of 3 · "
+==
+"단계 "+(phase+1)+"/3 · "
+@@ w12
+obs.length+" observations"
+==
+"관측 "+obs.length+"개"
+@@ w12
+stat("Worst point error",
+==
+stat("최대 point 오차",
+@@ w12
+"against the true map"
+==
+"실제 map 기준"
+@@ w12
+stat("Schur vs. direct solve",
+==
+stat("Schur vs. 직접 풀이",
+@@ w12
+"largest difference in d"
+==
+"d의 최대 차이"
+@@ w12
+"Bundle adjustment, one Schur step at a time"
+==
+"Bundle adjustment, Schur step 하나씩"
+@@ w12
+"6 cameras (3 unknowns each) observe 14 points (2 unknowns each) through 1-D images. Cameras 1 and 2 are anchored. Each Gauss-Newton iteration is solved with the Schur complement, equation (7.7)."
+==
+"카메라 6대(각 미지수 3개)가 1-D 이미지로 point 14개(각 미지수 2개)를 관측합니다. 카메라 1과 2는 anchor되어 있습니다. 각 Gauss-Newton iteration은 Schur complement, 식 (7.7)로 풉니다."
+@@ w12
+"Initial error"
+==
+"초기 오차"
+@@ w12
+"Next step"
+==
+"다음 step"
+@@ w12
+"Run 10 iterations"
+==
+"10 iteration 실행"
+@@ w12
+"anchored cameras"
+==
+"anchor 카메라"
+@@ w12
+"estimated cameras"
+==
+"추정 카메라"
+@@ w12
+"estimated points"
+==
+"추정 point"
+@@ w12
+"truth (dashed, hollow)"
+==
+"실제값 (점선, 빈 원)"
+@@ w12
+"camera–camera H_cc"
+==
+"카메라–카메라 H_cc"
+@@ w12
+"camera–point H_cp"
+==
+"카메라–point H_cp"
+@@ w12
+"Top view of the bundle adjustment scene before and after the chosen transformation"
+==
+"선택한 변환 전후의 bundle adjustment 장면을 위에서 본 모습"
+@@ w12
+"Six smallest eigenvalues of H: "
+==
+"H의 가장 작은 eigenvalue 6개: "
+@@ w12
+"after the move"
+==
+"이동 후"
+@@ w12
+stat("Zero eigenvalues of H",
+==
+stat("H의 0 eigenvalue 수",
+@@ w12
+"directions the images cannot see"
+==
+"이미지가 못 보는 방향"
+@@ w12
+stat("Unknowns",
+==
+stat("미지수",
+@@ w12
+"18 camera + 28 point"
+==
+"카메라 18 + point 28"
+@@ w12
+"Gauge freedom: moves the images cannot see"
+==
+"Gauge freedom: 이미지가 못 보는 움직임"
+@@ w12
+"The scene of Day 3 with perfect measurements. Transform the whole solution and read off the reprojection error, then count the zero eigenvalues of the Hessian."
+==
+"오차 없는 측정값으로 본 Day 3의 장면입니다. 해 전체를 변환하고 reprojection error를 읽은 다음, Hessian의 0 eigenvalue 개수를 세어 보세요."
+@@ w12
+select("Move",
+==
+select("이동 방식",
+@@ w12
+"Shift everything along x"
+==
+"전체를 x 방향으로 이동"
+@@ w12
+"Shift everything along z"
+==
+"전체를 z 방향으로 이동"
+@@ w12
+"Rotate everything"
+==
+"전체 회전"
+@@ w12
+"Scale everything"
+==
+"전체 scale 변경"
+@@ w12
+"Shift only camera 4"
+==
+"카메라 4만 이동"
+@@ w12
+range("Amount",
+==
+range("크기",
+@@ w12
+select("Anchor priors",
+==
+select("Anchor prior",
+@@ w12
+["none","None"]
+==
+["none","없음"]
+@@ w12
+"Camera 1 pose (3 numbers)"
+==
+"카메라 1 pose (숫자 3개)"
+@@ w12
+"Camera 1 pose + x of camera 2 (4 numbers)"
+==
+"카메라 1 pose + 카메라 2의 x (숫자 4개)"
+@@ w12
+"original solution"
+==
+"원래 해"
+@@ w12
+"moved cameras"
+==
+"옮긴 카메라"
+@@ w12
+"moved points"
+==
+"옮긴 point"
+@@ w12
+"error 10^"
+==
+"오차 10^"
+@@ w12
+"Relative error of the truncated power series against the number of terms, on a logarithmic vertical axis"
+==
+"항 개수에 따른, 잘라 낸 power series의 상대 오차. 세로축은 로그 눈금"
+@@ w12
+"cut-off m (number of extra terms)"
+==
+"cut-off m (추가 항 수)"
+@@ w12
+"relative error"
+==
+"상대 오차"
+@@ w12
+"error of the m-term series"
+==
+"m항 series의 오차"
+@@ w12
+"of H_cc⁻¹ H_cp H_pp⁻¹ H_cpᵀ"
+==
+"H_cc⁻¹ H_cp H_pp⁻¹ H_cpᵀ"
+@@ w12
+stat("Terms for 1% error",
+==
+stat("1% 오차까지 항 수",
+@@ w12
+stat("Terms for 10⁻⁶ error",
+==
+stat("10⁻⁶ 오차까지 항 수",
+@@ w12
+"more than 40"
+==
+"40 초과"
+@@ w12
+"Power series for the inverse Schur complement"
+==
+"Schur complement 역행렬의 power series"
+@@ w12
+"Equation (7.9) on the 18 × 18 reduced camera system of Day 3: how close is the sum of the first m + 1 terms to the true inverse?"
+==
+"Day 3의 18 × 18 reduced camera system에 식 (7.9)를 적용합니다. 처음 m + 1개 항의 합은 실제 역행렬에 얼마나 가까울까요?"
+@@ w12
+"Signed distance along one viewing ray: each depth reading gives a truncated ramp, their average is the fused distance function, and its zero crossing is the fused surface"
+==
+"시선 ray 하나를 따른 signed distance: depth 측정값마다 잘린 경사를 주고, 그 평균이 fusion된 거리 함수이며, 그 zero crossing이 fusion된 표면입니다"
+@@ w12
+"true surface"
+==
+"실제 표면"
+@@ w12
+"in front of the surface: D > 0"
+==
+"표면 앞: D > 0"
+@@ w12
+"behind it: D < 0"
+==
+"표면 뒤: D < 0"
+@@ w12
+stat("Fused surface",
+==
+stat("fusion된 표면",
+@@ w12
+"zero crossing of D"
+==
+"D의 zero crossing"
+@@ w12
+stat("Mean of the readings",
+==
+stat("측정값 평균",
+@@ w12
+K+" depth image"+(K>1?"s":"")
+==
+"depth 이미지 "+K+"장"
+@@ w12
+stat("Error of the fused surface",
+==
+stat("fusion된 표면의 오차",
+@@ w12
+"one reading: about "
+==
+"측정 1회: 약 "
+@@ w12
+"Fusing depth images along one ray"
+==
+"ray 하나를 따라 depth 이미지 fusion"
+@@ w12
+"Every depth image gives each voxel on the ray a truncated signed distance to the surface it measured. Equation (7.12) averages them; the surface is where the average crosses zero."
+==
+"각 depth 이미지는 ray 위의 voxel마다 자신이 측정한 표면까지의 truncated signed distance를 줍니다. 식 (7.12)가 이를 평균하며, 평균이 0을 지나는 곳이 표면입니다."
+@@ w12
+range("Depth images",
+==
+range("depth 이미지 수",
+@@ w12
+"one depth image"
+==
+"depth 이미지 1장"
+@@ w12
+"fused D(x)"
+==
+"fusion된 D(x)"
+@@ w12
+"fused surface"
+==
+"fusion된 표면"

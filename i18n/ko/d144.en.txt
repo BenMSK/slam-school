@@ -1,0 +1,458 @@
+@@ 1
+<span class="eyebrow">Week 24 · Review</span>
+@@ 2
+Week 24 review: the computational structure, Part III, and the whole course
+@@ 3
+After today you can work Gaussian belief propagation and the week's other calculations by hand, place every chapter of Part III in one table, and draw the path from a factor graph to a Spatial AI system from memory.
+@@ 4
+Chapter 18 argues that Spatial AI is SLAM continued: a device keeps a persistent, close-to-metric world model and checks every measurement against it in a closed loop. Because products limit size, cost, and power, and because single-core speed stopped rising when Dennard scaling failed, the computation has to be spread over many simple units with little data movement. The design gives each graph in the problem matching hardware: a self-maintaining map store, a real-time loop, and processing at the sensor. Gaussian belief propagation is the estimation algorithm that fits, since it needs only local messages and tolerates any schedule, and it can carry learning in the same factor graph. Success is to be judged on a dozen metrics at once, read as trade-offs.
+@@ 5
+Fusing one more measurement
+@@ 6
+\(\Lambda \leftarrow \Lambda + 1/\sigma^2,\ \ \eta \leftarrow \eta + z/\sigma^2\); for equal weights \(\mu_{n} = \mu_{n-1} + (z_n - \mu_{n-1})/n\)
+@@ 7
+App addition to §18.3, p. 528 · <a href="#d140">Day 2</a>
+@@ 8
+Switching power and Dennard scaling
+@@ 9
+\(P = CV^2f\). Shrink by \(k\): power density \(\times 1\) if \(V \to V/k\); \(\times k^2\) if \(V\) fixed and \(f \to kf\)
+@@ 10
+Concept in §18.4.1, pp. 528–529 · <a href="#d140">Day 2</a>
+@@ 11
+Correlation of two landmarks seen from one pose
+@@ 12
+App addition to §18.5.1.1, p. 535 · <a href="#d141">Day 3</a>
+@@ 13
+Local averaging
+@@ 14
+\(x_i \leftarrow x_i + \sum_j w_{ij}(x_j - x_i)\), \(w_{ij} = \dfrac{1}{1+\max(d_i,d_j)}\); converges to the mean
+@@ 15
+App addition to §18.5.3, p. 539 · <a href="#d141">Day 3</a>
+@@ 16
+A linear factor in information form
+@@ 17
+App addition to §18.6 · <a href="#d142">Day 4</a>
+@@ 18
+GBP belief, and variable-to-factor message
+@@ 19
+\(\boldsymbol{\Lambda}_{b(x)} = \sum_f \boldsymbol{\Lambda}_{f\to x}\); \(\ \boldsymbol{\Lambda}_{x\to f} = \boldsymbol{\Lambda}_{b(x)} - \boldsymbol{\Lambda}_{f\to x}\) (the same for \(\boldsymbol{\eta}\))
+@@ 20
+App addition to §18.6, p. 541 · <a href="#d142">Day 4</a>
+@@ 21
+GBP factor-to-variable message
+@@ 22
+Add incoming messages to the factor, then \(\boldsymbol{\Lambda}_{aa} - \boldsymbol{\Lambda}_{ab}\boldsymbol{\Lambda}_{bb}^{-1}\boldsymbol{\Lambda}_{ba}\) and \(\boldsymbol{\eta}_a - \boldsymbol{\Lambda}_{ab}\boldsymbol{\Lambda}_{bb}^{-1}\boldsymbol{\eta}_b\)
+@@ 23
+Message through an odometry factor
+@@ 24
+mean \(\mu_{\text{in}} \pm z\), variance \(\sigma_{\text{in}}^2 + \sigma^2\)
+@@ 25
+<a href="#d142">Day 4</a>
+@@ 26
+Pareto dominance
+@@ 27
+\(A\) dominates \(B\) if \(A\) is no worse on every metric and better on one
+@@ 28
+Term in §18.8, p. 546 · <a href="#d143">Day 5</a>
+@@ 29
+2. Mixed quiz: Week 24
+@@ 30
+Q1. Which of these is <em>not</em> one of the six properties of a Spatial AI system in §18.2?
+@@ 31
+Every incoming piece of visual data is checked against a predictive model
+@@ 32
+The whole map is kept at maximum quality at all times
+@@ 33
+The world model is close to metric, at least locally
+@@ 34
+Sensors and low-power processing are embedded in the mobile device
+@@ 35
+Property 5 says the opposite: full quality only where the device is looking and about to act, with the rest stored at lower quality levels that can be upgraded on a revisit.
+@@ 36
+Q2. A camera tracks against a stored map with 9 landmarks in view and measurement noise σ = 0.06. What is the standard deviation of the fresh noise in its position estimate?
+@@ 37
+Averaging 9 independent measurements divides σ by √9: 0.06/3 = 0.02.
+@@ 38
+Q3. An estimate is stored as (η, Λ) = (40, 20). A new measurement z = 5 with variance 0.2 arrives. What is the new mean?
+@@ 39
+The measurement adds Λ = 1/0.2 = 5 and η = 5/0.2 = 25. New pair: (65, 25), mean 65/25 = 2.6.
+@@ 40
+Q4. Under ideal Dennard scaling with k = 3, by what factor does the switching power of one transistor change?
+@@ 41
+C → C/3, V² → V²/9, f → 3f, so P → P × (1/3)(1/9)(3) = P/9. Nine times as many transistors fit per area, so power density is unchanged.
+@@ 42
+Q5. Two pixel processors are linked only to each other and hold 2 and 8. With the averaging rule of Day 3, what do they hold after one round?
+@@ 43
+4 and 6
+@@ 44
+5 and 5
+@@ 45
+8 and 2
+@@ 46
+3 and 7
+@@ 47
+Each has one neighbour, so the weight is 1/(1 + 1) = 1/2. The first becomes 2 + (8 − 2)/2 = 5 and the second 8 + (2 − 8)/2 = 5.
+@@ 48
+Q6. An odometry factor has w = 1/σ² = 3. The message arriving from one pose has Λ = 6. What is Λ of the message the factor sends to the other pose?
+@@ 49
+Λ = wΛin/(w + Λin) = 18/9 = 2. In variances: 1/6 + 1/3 = 1/2.
+@@ 50
+Q7. In GBP Learning, what plays the part of a neural network's weights?
+@@ 51
+Random variables in the factor graph, shared across all observations and inferred by GBP
+@@ 52
+The noise covariances of the measurement factors
+@@ 53
+The message schedule
+@@ 54
+Constants set by gradient descent before the system runs
+@@ 55
+Parameters are variables like any others; inputs, outputs, and activations are variables copied per observation. Inference on the graph is the learning.
+@@ 56
+Q8. Four configurations, as (power, drift): A = (1 W, 3.0%), B = (2 W, 2.2%), C = (4 W, 1.4%), D = (8 W, 1.3%). With a 5 W budget, which do you pick for the lowest drift?
+@@ 57
+All four are on the Pareto front. D is over budget, and among A, B, C the lowest drift is C at 1.4%.
+@@ 58
+Three poses on a line. Prior: \(x_0 = 0\), variance 0.04. Odometry: \(x_1 - x_0 = 1.0\) and \(x_2 - x_1 = 1.2\), each with variance 0.09. Run GBP by hand and give the mean and variance of each belief. Why do the messages travelling back toward \(x_0\) carry nothing?
+@@ 59
+The prior gives \(x_0\): mean 0, variance 0.04. Through the first odometry factor the mean gains the step and the variances add: \(x_1\) has mean 1.0, variance \(0.04 + 0.09 = 0.13\). Through the second: \(x_2\) has mean 2.2, variance \(0.13 + 0.09 = 0.22\).
+@@ 60
+The message from \(x_2\) to the second odometry factor is \(x_2\)'s belief minus what that factor sent, and \(x_2\) has no other factor, so it is zero. A factor that receives zero information sends zero onward (\(\Lambda = w\cdot 0/(w+0) = 0\)). With no measurement downstream there is nothing to report upstream.
+@@ 61
+Add a position fix to Problem 1: \(x_2 = 2.0\) with variance 0.02. Compute the new beliefs of \(x_2\) and \(x_1\).
+@@ 62
+<em>Belief of \(x_2\).</em> Two incoming messages: from odometry (mean 2.2, variance 0.22), so \((\eta,\Lambda) = (10,\ 4.545)\); from the fix, \((100,\ 50)\). Sum: \((110,\ 54.545)\). Mean \(110/54.545 = 2.017\), variance \(1/54.545 = 0.0183\).
+@@ 63
+<em>Message back to \(x_1\).</em> \(x_2\) sends the second odometry factor its belief minus that factor's message, which leaves the fix: mean 2.0, variance 0.02. The factor passes it on with the step subtracted and the variances added: mean \(2.0 - 1.2 = 0.8\), variance \(0.02 + 0.09 = 0.11\).
+@@ 64
+<em>Belief of \(x_1\).</em> Forward message (mean 1.0, variance 0.13) is \((7.692,\ 7.692)\); backward message (mean 0.8, variance 0.11) is \((7.273,\ 9.091)\). Sum: \((14.965,\ 16.783)\). Mean \(0.892\), variance \(0.0596\). Solving the \(3\times3\) system \(\boldsymbol{\Lambda}\boldsymbol{\mu} = \boldsymbol{\eta}\) directly gives the same numbers, because the graph has no loop.
+@@ 65
+Four pixel processors sit in a ring, each linked to its two neighbours, and hold 0, 4, 8, 4. Using the averaging rule with \(w_{ij} = 1/(1+\max(d_i,d_j))\), find the values after one round, and the number of rounds until every pixel is within 0.05 of the mean.
+@@ 66
+Every pixel has degree 2, so every weight is \(1/3\). The mean is \(16/4 = 4\).
+@@ 67
+Round 1: pixel 1 becomes \(0 + \tfrac13(4-0) + \tfrac13(4-0) = 2.67\). Pixel 3 becomes \(8 + \tfrac13(4-8) + \tfrac13(4-8) = 5.33\). Pixels 2 and 4 see one neighbour 4 below and one 4 above and stay at 4. The values are 2.67, 4, 5.33, 4, and the sum is still 16.
+@@ 68
+The deviations from the mean went from \((-4, 0, 4, 0)\) to \((-1.33, 0, 1.33, 0)\): each round multiplies them by \(1/3\). After \(t\) rounds the largest deviation is \(4/3^t\). It is \(4/27 = 0.148\) at \(t = 3\) and \(4/81 = 0.049\) at \(t = 4\). Four rounds.
+@@ 69
+(Stretch.) Show with numbers that one forward step of GBP on a pose chain is one predict-and-update step of a Kalman filter. Prior: \(x_0\) has mean 0, variance 1. Odometry: \(x_1 - x_0 = 1\), variance 1. A position fix: \(x_1 = 3\), variance 1.
+@@ 70
+<em>Kalman filter.</em> Predict: mean \(0 + 1 = 1\), variance \(1 + 1 = 2\). Update with the fix: gain \(K = 2/(2+1) = 2/3\), mean \(1 + \tfrac23(3 - 1) = 2.33\), variance \((1 - \tfrac23)\cdot 2 = 0.667\).
+@@ 71
+<em>GBP.</em> The odometry factor's message to \(x_1\) is the prediction: mean 1, variance 2, so \((\eta,\Lambda) = (0.5,\ 0.5)\). The fix sends \((3,\ 1)\). The belief is the sum, \((3.5,\ 1.5)\): mean \(3.5/1.5 = 2.33\), variance \(1/1.5 = 0.667\).
+@@ 72
+The factor-to-variable message is the predict step, and adding the fix's message is the update step written in information form. Messages sent backward along the chain then turn the filter into a smoother. Compare <a href="#d3">Week 1 · Day 3</a>.
+@@ 73
+4. Part III in review: Weeks 19–24
+@@ 74
+Part III opened by asking whether SLAM is solved, and answered: only for small, static, feature-rich indoor scenes. <span class="src">Prelude III · p. 361</span> Each chapter removed one restriction or added one capability.
+@@ 75
+Week
+@@ 76
+What it adds to the SLAM of Parts I and II
+@@ 77
+The idea to keep
+@@ 78
+13. Boosting SLAM with deep learning
+@@ 79
+Learned depth, matching, and optical flow; differentiable bundle adjustment; pointmaps
+@@ 80
+A network can supply the measurements and their confidence. A factor graph still fuses them.
+@@ 81
+14. NeRF and Gaussian splatting
+@@ 82
+Maps that are optimized by rendering them and comparing with the images
+@@ 83
+If rendering is differentiable, the photometric error can train the map and the pose together.
+@@ 84
+15. Dynamic and deformable SLAM
+@@ 85
+Moving objects, scenes that change between visits, surfaces that deform
+@@ 86
+Without a static world, the system must decide what to remove, what to track, and what to update.
+@@ 87
+16. Metric-semantic SLAM
+@@ 88
+Objects as landmarks, labels on dense maps, hierarchical 3D scene graphs
+@@ 89
+Semantics adds discrete unknowns to the factor graph and layers of abstraction to the map.
+@@ 90
+17. Open-world Spatial AI
+@@ 91
+Features from foundation models stored in the map; open-vocabulary queries
+@@ 92
+The map grounds a language model in a place; the model gives the map a vocabulary not fixed in advance.
+@@ 93
+18. Computational structure
+@@ 94
+How all of the above can run on a real device
+@@ 95
+Find the graph in the computation and give it hardware of the same shape.
+@@ 96
+5. The whole course on one page
+@@ 97 attr
+Concept map in three bands. Part I, the back-end: factor graphs, sparse solvers, Lie groups and Gaussian processes, robust estimation, solver gradients, dense maps, certified optima, accuracy limits. Part II, the front-ends: camera, LiDAR, radar, event camera, IMU, legs, each becoming factors. Part III, Spatial AI: learned front-ends, rendered maps, dynamic scenes, semantics and scene graphs, open-world models, compute structure. A box at the bottom states the one idea underneath.
+@@ 98
+Part I · the back-end (Weeks 1–10)
+@@ 99
+Factor graphs
+@@ 100
+Weeks 1–2
+@@ 101
+Sparse solvers
+@@ 102
+Week 3
+@@ 103
+Lie groups, GPs
+@@ 104
+Weeks 4–5
+@@ 105
+Robust estimation
+@@ 106
+Week 6
+@@ 107
+Solver gradients
+@@ 108
+Week 7
+@@ 109
+Dense maps
+@@ 110
+Week 8
+@@ 111
+Certified optima
+@@ 112
+Week 9
+@@ 113
+Accuracy limits
+@@ 114
+Week 10
+@@ 115
+Part II · the front-ends (Weeks 11–18)
+@@ 116
+each sensor becomes factors
+@@ 117
+Weeks 11–12
+@@ 118
+Week 13
+@@ 119
+Week 14
+@@ 120
+Week 15
+@@ 121
+Weeks 16–17
+@@ 122
+Legs
+@@ 123
+Week 18
+@@ 124
+Part III · Spatial AI (Weeks 19–24)
+@@ 125
+same estimator, richer maps
+@@ 126
+Learned
+@@ 127
+front-ends
+@@ 128
+Week 19
+@@ 129
+Rendered
+@@ 130
+maps
+@@ 131
+Week 20
+@@ 132
+Dynamic
+@@ 133
+scenes
+@@ 134
+Week 21
+@@ 135
+Semantics,
+@@ 136
+scene graphs
+@@ 137
+Week 22
+@@ 138
+Open-world
+@@ 139
+models
+@@ 140
+Week 23
+@@ 141
+Compute
+@@ 142
+structure
+@@ 143
+Week 24
+@@ 144
+One idea underneath: unknowns are variables, every measurement or prior is a factor,
+@@ 145
+and the estimate minimizes a sum of squared, whitened residuals.
+@@ 146
+The course in three bands. Part I built one estimator. Part II fed it from six kinds of sensor. Part III made the map richer and asked how to run it all on a device.
+@@ 147
+Read the map as a sentence. A factor graph states what depends on what (<a href="#d7">Week 2</a>); Gaussian noise turns it into least squares, and sparsity makes that solvable at scale (<a href="#d13">Week 3</a>). Each sensor of Part II adds its own residual to the same graph, from reprojection error (<a href="#d65">Week 11</a>) to preintegrated IMU increments (<a href="#d94">Week 16</a>). Part III keeps the graph and changes what hangs on it. This week asks the graph to run itself, by passing messages.
+@@ 148
+6. Course quiz: Weeks 1–24
+@@ 149
+Check yourself: the whole course
+@@ 150
+Q1 (Week 2). With Gaussian noise on every factor, what is MAP inference on a factor graph equivalent to?
+@@ 151
+Sampling poses from the prior
+@@ 152
+Maximizing the number of satisfied measurements
+@@ 153
+Minimizing a sum of squared residuals, each weighted by its inverse covariance
+@@ 154
+Inverting the covariance matrix of the measurements
+@@ 155
+The negative log of a product of Gaussians is a sum of squared Mahalanobis distances, which is a nonlinear least-squares problem.
+@@ 156
+Q2 (Week 3). Why can a poor elimination order make sparse Cholesky slow?
+@@ 157
+Eliminating a variable links all its remaining neighbours, creating fill-in
+@@ 158
+It changes the solution of the least-squares problem
+@@ 159
+It makes the information matrix indefinite
+@@ 160
+It removes loop closures from the graph
+@@ 161
+Each elimination produces a factor on the variable's separator. A bad order makes separators large, so the triangular factor fills with nonzeros. The answer itself is the same in any order.
+@@ 162
+Q3 (Week 4). In the book's convention, how does Gauss-Newton apply a computed step ξ to a pose T?
+@@ 163
+T ← Log(T) + ξ
+@@ 164
+T ← T Exp(ξ)
+@@ 165
+Poses are not vectors. The step is computed in the tangent space and applied by the exponential map on the right, which keeps T a valid pose.
+@@ 166
+Q4 (Week 6). Half of the matches are inliers and a minimal sample needs 3 matches. About how many RANSAC iterations give a 99% chance of drawing at least one all-inlier sample?
+@@ 167
+An all-inlier sample has probability 0.5³ = 0.125. N = log(0.01)/log(1 − 0.125) = 4.605/0.1335 ≈ 34.5, so 35.
+@@ 168
+Q5 (Week 9). Shor's relaxation of a pose-graph problem returns the value d*. The true optimum is p*. What is guaranteed?
+@@ 169
+d* = p* always
+@@ 170
+d* ≤ p*, with equality certified when the solution matrix has rank one
+@@ 171
+Nothing, since the relaxation is a heuristic
+@@ 172
+A relaxation enlarges the feasible set, so its minimum is a lower bound. If the relaxed solution is rank one it is feasible for the original problem, so it is the global optimum.
+@@ 173
+Q6 (Week 12). In bundle adjustment, why are the landmarks eliminated first with the Schur complement?
+@@ 174
+Each landmark's block is small and independent of the others, so it is cheap to invert, leaving a much smaller system in the cameras
+@@ 175
+Landmarks are less important than cameras
+@@ 176
+Cameras cannot be eliminated
+@@ 177
+It removes the gauge freedom
+@@ 178
+No factor joins two landmarks, so the landmark part of the information matrix is block diagonal. Eliminating it gives the reduced camera system.
+@@ 179
+Q7 (Week 13). What does one iteration of point-to-point ICP do?
+@@ 180
+Extracts and matches descriptors, then triangulates
+@@ 181
+Renders the map and compares pixel colours
+@@ 182
+Integrates the scan into a signed distance field
+@@ 183
+Pairs each point with its nearest neighbour in the other cloud, then solves for the rigid transform in closed form
+@@ 184
+ICP alternates data association by nearest neighbour with a closed-form alignment (by SVD), and repeats until the transform stops changing.
+@@ 185
+Q8 (Week 15). When does a pixel of an event camera emit an event?
+@@ 186
+At every tick of a global frame clock
+@@ 187
+When its log brightness has changed by more than a contrast threshold since its last event
+@@ 188
+When its brightness exceeds a fixed level
+@@ 189
+When a neighbouring pixel emits one
+@@ 190
+Each pixel works independently and asynchronously and reports the time and sign of a brightness change. A static scene seen by a static camera produces almost no data.
+@@ 191
+Q9 (Week 17). How many directions of the state are unobservable for visual-inertial odometry in general motion?
+@@ 192
+Three: global position
+@@ 193
+Four: global position and rotation about gravity
+@@ 194
+Seven: position, orientation, and scale
+@@ 195
+The accelerometer sees gravity, which fixes roll and pitch, and makes scale observable. Global position and yaw are never measured and remain free.
+@@ 196
+Q10 (Week 20). In what order does 3D Gaussian splatting produce a pixel?
+@@ 197
+Project the Gaussians into the image, sort them by depth, alpha-blend front to back
+@@ 198
+Sample points along the ray, query an MLP, sum the densities
+@@ 199
+Intersect the ray with a mesh, then look up a texture
+@@ 200
+Blend back to front, then project
+@@ 201
+Splatting rasterizes: project, sort, blend. Sampling an MLP along each ray is NeRF's volume rendering.
+@@ 202
+Q11 (Week 23). What makes a map "open-vocabulary"?
+@@ 203
+It stores more object classes than older maps
+@@ 204
+It is built without any neural network
+@@ 205
+It is shared openly between robots
+@@ 206
+It stores features from a vision-language model, so it can be queried with text that was not fixed in advance
+@@ 207
+A closed-set map holds labels from a list chosen at training time. An open-vocabulary map holds embeddings that can be compared with any text query later.
+@@ 208
+Q12 (Weeks 3 and 24). What do variable elimination and Gaussian belief propagation have in common?
+@@ 209
+Both need a global variable ordering
+@@ 210
+Both remove variables from a Gaussian factor with a Schur complement; GBP does it inside each message and leaves the graph unchanged
+@@ 211
+Both create fill-in edges in the factor graph
+@@ 212
+Both give exact marginal variances on graphs with loops
+@@ 213
+The factor-to-variable message is a local elimination. Elimination applies it once in a global order and is exact; GBP applies it everywhere repeatedly, with exact means at convergence.
+@@ 214
+7. Where to go next
+@@ 215
+<strong>Build one toy system end to end.</strong> This is the Epilogue's advice. A good first one: a 2D pose graph with simulated odometry and loop closures, solved by Gauss-Newton (<a href="#d10">Week 2 · Day 4</a>), then given outliers and a robust loss (<a href="#d34">Week 6 · Day 4</a>), then solved again by GBP (<a href="#d142">Day 4</a>) and compared.
+@@ 216
+<strong>Use a real library.</strong> The book points to GTSAM in Chapter 1, and to Theseus and PyPose for differentiable optimization in Chapter 4. Rebuild your toy system in one of them.
+@@ 217
+<strong>Run a full system on a live camera.</strong> §18.8 lists open real-time systems, from ORB-SLAM to MASt3R-SLAM (p. 546). Push it until it fails and write down how it failed.
+@@ 218
+<strong>Follow the pointers</strong> in the "Further Readings &amp; Recent Trends" section that ends almost every chapter.
+@@ 219
+<strong>Pick an open problem.</strong> The Part III prelude lists where SLAM is not solved: underwater, on other planets, in disaster zones, in dense city traffic (p. 361).
+@@ 220
+You have finished the course if you can
+@@ 221
+Write a SLAM problem as a factor graph and turn it into whitened least squares.
+@@ 222
+Explain why sparsity, elimination order, and incremental updates decide whether it runs in real time.
+@@ 223
+Give the residual each sensor of Part II contributes, and say what each cannot observe.
+@@ 224
+Say what a learned component adds in Part III and what the estimator still does.
+@@ 225
+Derive a GBP message through an odometry factor and say when the result is exact.
+@@ 226
+Name the metrics you would report for a system beyond trajectory error.
+@@ 227
+<em>SLAM Handbook</em>, Chapter 18 and Epilogue, pp. 521–549; Prelude to Part III, pp. 361–365; Preludes to Parts I and II, pp. 3–18 and 185–192, for the course map.
+@@ 228
+Davison and Ortiz, <em>FutureMapping 2: Gaussian Belief Propagation for Spatial AI</em>, 2019; Weiss and Freeman, <em>Correctness of belief propagation in Gaussian graphical models of arbitrary topology</em>, 2001.
+@@ 229
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (the Kalman filter in Problem 4).

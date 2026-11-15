@@ -1,0 +1,152 @@
+@@ 1
+<span class="eyebrow">23주차 · Day 4</span>
+@@ 2
+Caption, scene graph, feature field, 그리고 task가 모양을 정하는 map
+@@ 3
+오늘이 끝나면 caption이 feature vector보다 나은 때를 말하고, 계층적 scene graph를 따라 내려가며 query 점수를 매기고, LERF relevancy score를 계산하고, task-driven clustering의 병합 한 번을 실행할 수 있습니다.
+@@ 4
+약 60분 · §17.3.2의 "Language Descriptions"부터 §17.3.4까지, pp. 506–514 읽기 (8쪽, 그중 3쪽은 큰 그림) · 23주차 Day 3 필요
+@@ 5
+먼저 읽기: §17.3.2의 "Language Descriptions"부터, §17.3.3, §17.3.4, pp. 506–514
+@@ 6
+feature retrieval이 틀리는 query (p. 506), 그리고 식 (17.5)의 layer들 (p. 508).
+@@ 7
+relevancy score (17.7), 그리고 LangSplat이 512개 숫자로 된 feature를 3개로 줄일 수 있는 이유 (pp. 510–511).
+@@ 8
+피아노 예와 식 (17.8)의 두 항 (pp. 511–512).
+@@ 9
+object마다 vector 하나를 둔 집합은 출발점일 뿐입니다. 오늘은 네 가지를 더합니다. 질문이 복잡할 때 vector 대신 쓰는 말, query를 단계별로 풀 수 있게 하는 edge와 layer, radiance field 안에 저장한 feature, 그리고 무엇을 object 하나로 칠지 정하는 규칙입니다. 그 규칙은 task가 정한다는 것입니다.
+@@ 10
+1. vector로 부족할 때: object를 말로 기술하기
+@@ 11
+object feature는 짧은 서술형 query에 가장 잘 맞습니다. 부정과 affordance는 놓칩니다. "소다 캔 말고 마실 것"도 여전히 소다 캔에 떨어집니다. 또한 feature는 사람이나 LLM이 읽을 수 없습니다. 대안은 <strong>caption</strong>입니다. object마다 가장 좋은 이미지 crop을 보관하고, VLM에게 가운데 물체를 기술하게 한 뒤, LLM이 view별 caption을 합치게 합니다. query에 답할 때는 LLM에게 caption 목록을 주고 가장 관련 있는 object를 묻습니다. 이 방법은 feature retrieval로는 풀 수 없는 복잡한 query를 처리하지만, 내적보다 훨씬 느립니다. 둘 다 보관하는 방법도 있습니다. <span class="src">§17.3.2 · pp. 506–507</span>
+@@ 12
+2. Scene graph: object 사이의 edge, 그 위의 layer
+@@ 13
+<strong>object scene graph</strong> \(\mathcal{G} = (\mathsf{V}_O, \mathsf{E}_O)\)는 쌍별 관계를 나타내는 edge를 더합니다. ConceptGraphs에서는 LLM이 object의 caption과 위치를 읽고 "a가 b 위에 있다" 같은 관계를 추론합니다. <span class="src">§17.3.2 · p. 507</span> <strong>hierarchical scene graph</strong>(22주차)는 node를 순서 있는 layer로 묶습니다. 실내라면 HOV-SG를 따라 다음과 같습니다: <span class="src">§17.3.2 · pp. 507–508</span>
+@@ 14
+root node \(\mathsf{V}_E\) 하나 아래로 층, region, object가 있고, edge는 연속한 layer 사이에만 있습니다. 모든 node가 CLIP feature를 적어도 하나 지니므로, 모든 layer를 말로 query할 수 있습니다.
+@@ 15 attr
+네 layer로 된 tree: root, 층 두 개, 2층 아래의 region 두 개(침실과 욕실), 침실 아래의 object 두 개(침대와 램프). root, 2층, 침실, 램프로 가는 경로가 강조되어 있습니다. 이 경로는 2층 침실의 램프라는 query에 해당하며, query는 2층, 침실, 램프라는 개념으로 나뉩니다.
+@@ 16
+환경
+@@ 17
+1층
+@@ 18
+2층
+@@ 19
+침실
+@@ 20
+욕실
+@@ 21
+침대
+@@ 22
+램프
+@@ 23
+=
+@@ 24
+층
+@@ 25
+region
+@@ 26
+object
+@@ 27
+“2층 침실의 램프” → “2층” · “침실” · “램프”
+@@ 28
+이 코스의 예. 각 개념은 바로 앞 단계에서 이긴 node 아래의 node들하고만 점수를 매깁니다 (다른 가지는 그리지 않음).
+@@ 29
+HOV-SG는 점 높이 histogram의 peak로 층을 찾습니다. region마다 그 안에 있는 카메라 view들의 CLIP embedding을 k-means로 대표 \(K\)개 \(\mathbf{f}_{r_k}\)로 줄입니다. 각 대표가 후보 목록 \(\mathsf{C}_R\)에서 category 하나에 투표하고, 다수결로 region의 이름을 정합니다: <span class="src">§17.3.2 · pp. 508–509</span>
+@@ 30
+<strong>숫자로 보기.</strong> \(K = 5\)이고 투표가 부엌, 부엌, 거실, 부엌, 복도이면 5표 중 3표로 부엌입니다. query에 대해서는 generative model이 문장을 layer마다 개념 하나씩으로 나누고, 각 개념을 맨 위 layer부터 아래로 점수 매깁니다. 층 2개, 층마다 region 5개, region마다 object 30개(이 코스의 숫자)라면, flat 검색은 query를 object 300개와 비교하고 계층 검색은 2 + 5 + 30 = 37개 feature와 비교합니다.
+@@ 31
+3. radiance field 안의 feature
+@@ 32
+<a href="#d116">20주차</a>의 radiance field도 언어를 담을 수 있습니다. <strong>LERF</strong>는 NeRF에 두 번째 출력, 즉 점 \(\mathbf{x}\)와 scale \(s\)에서의 semantic embedding을 줍니다. 이 embedding은 색과 같은 방식으로 ray를 따라 rendering되며, 여러 scale의 이미지 crop에 대한 CLIP embedding으로 학습합니다. query할 때는 rendering된 각 embedding의 유사도를 <strong>relevancy score</strong>로 바꿉니다: <span class="src">§17.3.3 · p. 510</span>
+@@ 33
+여기서 canonical embedding은 "object", "things", "stuff", "texture" 같은 일반적인 문구에서 나옵니다.
+@@ 34
+빈틈 채우기: (17.7)이 계산하는 것
+@@ 35
+텍스트와의 유사도를 \(a\), canonical phrase \(i\)와의 유사도를 \(b_i\)라고 씁니다. 분자와 분모를 \(e^{a}\)로 나누면 \(1/(1 + e^{\,b_i - a})\)가 되고, 이 값은 \(a - b_i\)가 클수록 커집니다. 따라서 최솟값은 가장 큰 \(b_i\)가 정합니다. 점수는 \(1/(1 + e^{\,b_{\max} - a})\)이고, query가 모든 일반 문구를 이길 때 정확히 0.5를 넘습니다. 날것의 cosine은 이것을 말해 줄 수 없습니다. "object"는 모든 것과 어느 정도 비슷하기 때문입니다.
+@@ 36
+<strong>숫자로 보기.</strong> \(a = 0.30\)이고 \(b = 0.20, 0.25, 0.10, 0.28\)이면 점수는 \(1/(1 + e^{-0.02}) = 0.505\)입니다. \(a = 0.22\)이면 \(1/(1 + e^{0.06}) = 0.485\)입니다. 이 점은 query보다 일반 문구에 더 가까워 보입니다.
+@@ 37
+<strong>LangSplat</strong>은 splat map의 Gaussian에 language feature를 붙이며, 세 단계 granularity의 SAM segment에 대한 CLIP vector를 씁니다. Gaussian마다 512개 숫자로 된 vector는 메모리가 너무 많이 들므로, 각 vector를 숫자 3개로 압축하는 scene 전용 network와 이를 복원하는 decoder를 학습합니다. scene 하나는 CLIP의 학습 corpus보다 훨씬 덜 다양하므로 숫자 3개로 충분합니다. <span class="src">§17.3.3 · pp. 510–511</span>
+@@ 38
+4. 무엇이 object인지는 task가 정한다
+@@ 39
+class 목록이 없다면 무엇이 object 하나일까요? 책의 피아노는 task가 옮기기라면 object 하나이고, 연주하기라면 90개가 넘으며(건반과 페달), 조율하기라면 수백 개입니다. <span class="src">§17.3.4 · pp. 511–512</span> <strong>Clio</strong>는 문제를 이렇게 세웁니다. "배낭 청소하기", "소스 봉지 가져오기" 같은 자연어 task가 주어지면, task에 필요한 granularity의 object로 된 map을 만듭니다. Clio는 <strong>Information Bottleneck</strong>을 씁니다. \(X\)를 잘게 나뉜 primitive(over-segmentation한 3D 조각), \(\tilde{X}\)를 cluster, \(Y\)를 task라고 합시다. 다음 문제를 푸는 할당 \(p(\tilde{x} \mid x)\)를 찾습니다: <span class="src">§17.3.4 · p. 512</span>
+@@ 40
+빈틈 채우기: mutual information과 병합 한 번의 비용
+@@ 41
+<strong>mutual information</strong>(상호 정보량)은 한 변수를 알면 다른 변수에 대해 얼마나 알게 되는지를 잽니다:
+@@ 42
+두 변수가 독립이면 0입니다. (17.8)에서 \(I(X;\tilde{X})\)가 작으면 압축이 강하다는 뜻이고 (cluster 하나면 0), \(I(\tilde{X};Y)\)가 크면 cluster가 여전히 각 조각이 어떤 task에 중요한지 알려 준다는 뜻입니다. \(\beta\)는 둘 사이의 교환 비율을 정합니다.
+@@ 43
+Clio는 이 문제를 greedy하게 풉니다 (Agglomerative Information Bottleneck). 모든 primitive가 각자 cluster로 시작하고, 이웃끼리 연결되며, 가중치가 가장 작은 쌍을 계속해서 병합합니다: <span class="src">§17.3.4 · p. 513</span>
+@@ 44
+\(D_{\mathrm{JS}}\)는 Jensen–Shannon divergence입니다. \(\pi_i = p(\tilde{x}_i)/(p(\tilde{x}_i) + p(\tilde{x}_j))\), \(\pi_j = 1 - \pi_i\), 그리고 혼합 분포 \(\bar{p} = \pi_i\, p(y \mid \tilde{x}_i) + \pi_j\, p(y \mid \tilde{x}_j)\)에 대해
+@@ 45
+병합한 cluster의 확률은 \(p(\tilde{x}_i) + p(\tilde{x}_j)\), task 분포는 \(\bar{p}\)이며, \(d_{ij}\)는 정확히 \(I(\tilde{X};Y)\)의 감소량입니다.
+@@ 46
+<strong>숫자로 보기.</strong> cluster 두 개가 각각 \(p = 1/12\)입니다. \(p(y \mid x)\)가 같으면 \(D_{\mathrm{JS}} = 0\)이므로 병합은 공짜입니다. 분포가 \((1, 0)\)과 \((0, 1)\)이면 \(\bar{p} = (\tfrac12, \tfrac12)\)이고 각 KL 항은 \(\log 2\)이므로, \(d = \tfrac{2}{12} \times 0.693 = 0.116\) nats입니다.
+@@ 47
+Clio는 \(p(y \mid x)\)의 대용으로 primitive의 평균 CLIP embedding과 task 텍스트 사이의 cosine 점수를 씁니다. <span class="src">§17.3.4 · pp. 512–513</span> 직접 해 보기: "5번 병합"을 누른 뒤 두 번 더 병합하세요. 그다음 task 목록을 "배낭 청소하기만"으로 바꿔 보세요.
+@@ 48
+눈여겨볼 점: 병합 일곱 번으로 primitive 12개가 cluster 5개(벽, 배낭, 의자와 테이블, 두 봉지, 냅킨·벽·포스터)가 되고 task 정보의 97.0%가 남습니다. 여덟 번째 병합은 0.097 nats로 일곱 번째의 여덟 배가 듭니다. 배낭 task만 있으면 값싼 병합이 cluster 3개까지 이어지며(99.6% 남음), 봉지들은 더 이상 object가 아닙니다. 이 장난감 예는 각 행의 합이 1이 되도록 "둘 다 아님"이라는 결과를 더합니다.
+@@ 49
+Clio는 free space의 영역도 같은 방식으로 clustering합니다. 책의 2026년 4월 판은 두 약점(cosine 대용, 그리고 여러 view에 걸친 semantics 집계)을 지적하고, 더 근거 있는 접근으로 Bayesian Fields를 인용하며, 주로 CLIP의 한계 때문에 task를 여전히 구체적으로 표현해야 한다고 적습니다. <span class="src">§17.3.4 · pp. 513–514</span>
+@@ 50
+Q1. rendering된 embedding의 유사도가 query와는 0.4, canonical phrase 세 개와는 0.1, 0.4, 0.2입니다. relevancy score (17.7)는 얼마입니까?
+@@ 51
+가장 큰 canonical 유사도 0.4가 query와 같으므로 1/(1 + e⁰) = 0.50입니다. 0.57은 가장 약한 문구 하나만 놓고 본 점수이지만, (17.7)은 최솟값을 취합니다.
+@@ 52
+Q2. 책은 object feature가 실패하고 LLM이 읽는 caption이 더 잘하는 경우를 보여 줄 때 어떤 query를 씁니까?
+@@ 53
+"소파"
+@@ 54
+map 점 클릭
+@@ 55
+"소다 캔 말고 마실 것"
+@@ 56
+"마실 것"
+@@ 57
+부정문의 feature는 여전히 소다 캔의 feature와 가깝습니다. caption을 읽는 LLM은 "말고"를 적용할 수 있습니다.
+@@ 58
+Q3. cluster A, B, C가 한 줄로 놓여 있고 확률은 같습니다. task 분포는 A = (0.9, 0.1), B = (0.9, 0.1), C = (0.1, 0.9)입니다. 어느 병합이 먼저 일어납니까?
+@@ 59
+B와 C. 가장 많이 다르기 때문
+@@ 60
+A와 C
+@@ 61
+없음. 모든 병합이 정보를 잃기 때문
+@@ 62
+A와 B, 비용 0
+@@ 63
+A와 B는 task 분포가 같으므로 Jensen–Shannon divergence와 가중치 (17.9)가 0입니다. B와 C를 병합하면 서로 다른 분포가 섞여 task 정보를 잃습니다.
+@@ 64
+Q4. 건물에 층이 3개, 층마다 region 4개, region마다 object 20개가 있습니다. 계층 query는 feature 몇 개를 비교하고, flat 검색은 object 몇 개를 비교합니까?
+@@ 65
+240 대 240
+@@ 66
+27 대 240
+@@ 67
+27 대 60
+@@ 68
+3 대 240
+@@ 69
+계층: 층 3개, 그다음 이긴 층의 region 4개, 그다음 이긴 region의 object 20개로 27개. flat: 3 × 4 × 20 = object 240개.
+@@ 70
+VLM이 만든 caption을 LLM으로 검색하면 feature가 놓치는 부정과 복잡한 query를 처리할 수 있지만, 비용이 훨씬 큽니다.
+@@ 71
+scene graph는 관계와 layer를 더합니다 (17.5). region은 투표로 이름 붙이고 (17.6), query는 layer별로 풉니다.
+@@ 72
+LERF와 LangSplat은 radiance field에 language feature를 넣습니다. relevancy score (17.7)는 query가 일반 문구를 이기는지 묻습니다.
+@@ 73
+task-driven mapping (17.8)은 병합 비용 (17.9)이 작은 동안 primitive를 병합하므로, task 목록이 granularity를 정합니다.
+@@ 74
+<em>SLAM Handbook</em>, §17.3.2 ("Language Descriptions"부터), §17.3.3, §17.3.4, pp. 506–514, 식 (17.5)–(17.9).
+@@ 75
+mutual information과 KL divergence: Cover and Thomas, <em>Elements of Information Theory</em>, 2006. 가중 Jensen–Shannon 병합 비용: Slonim and Tishby, <em>Agglomerative Information Bottleneck</em>, 1999.
+@@ 76
+위젯의 관련도 값은 손으로 정한 것이고, 검색 횟수는 이 코스가 계산한 것입니다.

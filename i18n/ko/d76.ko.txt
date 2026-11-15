@@ -1,0 +1,214 @@
+@@ 1
+<span class="eyebrow">13주차 · Day 4</span>
+@@ 2
+LiDAR place recognition: scan 전체를 묘사하기
+@@ 3
+오늘이 끝나면 place recognition 문제를 정의하고, scan의 ring-and-sector descriptor를 만들고, 회전이 있을 때 column shift로 두 descriptor를 비교하고, invariance, awareness, structural aliasing을 설명할 수 있습니다.
+@@ 4
+약 60분 · §8.3, pp. 236–240 읽기 (4쪽) · 11주차 Day 5 필요
+@@ 5
+먼저 읽기: §8.3, pp. 236–240
+@@ 6
+LiDAR에만 있는 두 가지 어려움: 성긴 데이터와 structural aliasing (p. 237, p. 236의 Figure 8.6).
+@@ 7
+query와 database의 정의 (p. 237), 그리고 둘 사이의 차이를 만드는 세 가지 원인 (p. 238).
+@@ 8
+invariance와 awareness의 차이, 그리고 awareness를 갖출 가치가 있는 두 가지 이유 (p. 238).
+@@ 9
+global descriptor의 바탕이 되는 두 가지 거친 표현: bird's-eye view와 range image (p. 239).
+@@ 10
+odometry는 drift하므로, 로봇은 자기 pose 추정값으로 예전 그 자리에 돌아왔다고 판단할 수 없습니다. scan만 보고 장소를 알아봐야 합니다. <strong>Place recognition</strong>(장소 인식)은 각 scan을 <strong>descriptor</strong>로 압축하고, 앞서 저장한 descriptor 중 비슷한 것을 찾습니다. 좋은 descriptor는 scan을 찍을 때 로봇이 어느 쪽을 향했는지에 신경 쓰지 않고, 더 좋은 descriptor는 얼마나 돌아 있었는지도 알려 줍니다. 다음 단계인 ICP에 initial guess가 필요하기 때문입니다.
+@@ 11
+1. 검색 문제
+@@ 12
+할 일은 loop closure 후보를 찾는 것입니다. <strong>query</strong>는 현재 scan입니다. <strong>database</strong>는 지금까지 모은 장소 descriptor의 집합입니다. 목표는 query와 비슷한 database 항목을 꺼내는 것입니다. <span class="src">§8.3.1 · p. 237</span> 같은 장치가 multi-session SLAM과 prior map 안에서의 global localization에도 쓰입니다. <span class="src">§8.3 · p. 236</span>
+@@ 13 attr
+pipeline: query scan을 descriptor로 바꾸고, 그 descriptor를 database에 저장된 descriptor들과 비교합니다. 가장 잘 맞는 것이 후보 장소와 heading 추측을 주고, ICP 검증이 후보를 loop closure constraint로 바꿉니다.
+@@ 14
+=
+@@ 15
+database
+@@ 16
+검색
+@@ 17
+후보
+@@ 18
++ heading 추측
+@@ 19
+ICP와
+@@ 20
+검사
+@@ 21
+이전 scan들의 descriptor
+@@ 22
+=
+@@ 23
+=
+@@ 24
+place recognition은 후보를 제안하고, fine registration과 검증(내일)이 결정합니다.
+@@ 25
+같은 장소라도 query와 저장된 scan은 결코 똑같이 보이지 않습니다. 센서가 다를 수 있고, 시간이 흘렀으며(물체가 옮겨지고 구조물이 바뀜), 무엇보다 로봇의 pose가 다릅니다. 이동이나 회전은 같은 주변이 sensor frame에서 보이는 모습을 바꿉니다. 방법은 이 세 가지 모두에 동시에 강건해야 합니다. <span class="src">§8.3.1 · pp. 237–238</span>
+@@ 26
+2. LiDAR가 카메라와 다른 점
+@@ 27
+LiDAR는 일관된 metric 3D 구조를 주고, 카메라보다 조명의 영향을 훨씬 덜 받습니다. 대신 고유한 어려움이 두 가지 있습니다. <span class="src">§8.3 · pp. 236–237</span>
+@@ 28
+뜻
+@@ 29
+방법들의 대응
+@@ 30
+성긴 데이터
+@@ 31
+점이 규칙적인 격자 위에 있지 않고, 밀도가 센서에 따라 다르며 range에 따라 떨어지고(Day 1), 해상도가 이미지보다 훨씬 낮음
+@@ 32
+점마다의 keypoint descriptor를 피함. segment나 scan 전체를 <strong>global descriptor</strong> 하나로 묘사
+@@ 33
+=
+@@ 34
+기하가 같은 서로 다른 장소가 똑같이 보임: 두 층의 복도, 비슷한 두 교차로 (Figure 8.6)
+@@ 35
+장소를 object나 segment의 집합으로 묘사 (SegMap, InstaLoc). 카메라 추가
+@@ 36
+카메라라면 벽에 붙은 포스터로 두 복도를 구별할 수 있습니다. LiDAR scan 하나로는 그럴 수 없고, Scan Context 같은 global descriptor는 보통 거기서 실패합니다. <span class="src">§8.3 · p. 237</span>
+@@ 37
+3. 손으로 계산할 수 있는 global descriptor
+@@ 38
+global descriptor는 scan 전체의 거친 패턴을 요약합니다. 한 계열은 <strong>bird's-eye view (BEV)</strong>에서 출발합니다. cloud를 위에서 내려다보고 그 위에 거친 격자를 씌우는데, polar 격자일 수도 있고 성긴 정규 격자일 수도 있습니다. Scan Context는 polar 버전을 쓰고, heading과 무관해지도록 두 descriptor를 yaw 방향으로 정렬합니다. <span class="src">§8.3.2.2 · p. 239</span> 책은 이 설명에서 멈추므로, 여기서 구성을 보이겠습니다.
+@@ 39
+빈틈 채우기: polar descriptor와 그 거리
+@@ 40
+센서 주변 지면을 \(N_r\)개의 <strong>ring</strong>(거리 기준)과 \(N_s\)개의 <strong>sector</strong>(azimuth 기준)로 나눕니다. range \(r\), azimuth \(\alpha\)인 점은 ring \(\lfloor N_r\, r / L_{\max} \rfloor\)와 sector \(\lfloor N_s\, \alpha / 2\pi \rfloor\)에 들어갑니다. bin마다 숫자 하나를 \(N_r \times N_s\) 행렬 \(\mathbf{I}\)에 저장합니다. Scan Context에서는 bin 안 점들의 최대 높이이고, 빈 bin이면 0입니다. 원 논문은 ring 20개, sector 60개, \(L_{\max} = 80\) m를 씁니다.
+@@ 41
+<strong>회전은 shift가 됩니다.</strong> 로봇이 같은 자리에 서서 \(\psi\)만큼 돌아 있다면, 모든 점의 azimuth는 \(-\psi\)만큼 바뀌고 range는 그대로입니다. 행은 영향을 받지 않고, 열은 \(\psi/(360^\circ/N_s)\)칸만큼 옆으로 밀리며 끝에서 반대편으로 돌아 들어갑니다.
+@@ 42
+<strong>거리.</strong> query의 열 \(j\)인 \(\mathbf{c}^q_j\)와 후보의 열 \(j\)인 \(\mathbf{c}^c_j\)를 cosine distance로 비교하고, 열에 대해 평균한 다음, 후보의 모든 column shift \(n\) 중 가장 좋은 것을 고릅니다:
+@@ 43
+최소가 되는 shift \(n^\ast\)는 의미 있는 부산물입니다. heading 차이는 \(n^\ast \times 360^\circ/N_s\)입니다.
+@@ 44
+<strong>작은 예제</strong>, ring 2개 × sector 4개 (sector 하나가 90°). 저장된 descriptor와 query descriptor:
+@@ 45
+shift가 없으면 네 열 쌍의 cosine은 \(6/(2\sqrt{10}) = 0.949\), \(0\), \(3/(3\sqrt2) = 0.707\), \(4/\sqrt{20} = 0.894\)이므로 \(d = \tfrac14(0.051 + 1 + 0.293 + 0.106) = 0.36\)입니다. 저장된 열을 오른쪽으로 하나 밀면 query와 정확히 같아져 \(d = 0\)입니다. 따라서 \(n^\ast = 1\)에서 \(D = 0\)입니다. 같은 장소이고, heading은 sector 하나, 곧 90°만큼 다릅니다.
+@@ 46
+직접 해 보기: 저장된 scan과 query는 방 안의 거의 같은 지점에서 찍혔고, query는 돌아 있습니다. 이 장난감 예제는 bin마다 점 개수를 저장합니다(2D scan에는 높이가 없기 때문입니다). heading을 바꾼 다음, 위치 offset을 키워 보십시오.
+@@ 47
+눈여겨볼 점: query가 90° 돌고 0.3 m 떨어져 있으면, 거리 곡선은 18열 shift에서 뚜렷한 최소 하나를 가지며 이는 90°의 heading 변화를 뜻합니다. 그리고 세 번째 격자가 첫 번째 격자와 맞아떨어집니다. 그때 거리는 0.15로, 4 m 떨어져 찍은 scan의 0.67과 대비됩니다. offset을 1.5 m까지 밀어 보십시오. 같은 장소와의 거리가 0.53으로 오르고 heading 추정이 틀려집니다. column shift는 회전을 다룰 뿐, 이동은 다루지 못합니다.
+@@ 48
+주변 풍경을 파노라마 사진처럼 띠 하나로 펼친다고 생각해 봅시다. 제자리에서 돌아도 파노라마는 바뀌지 않고, 띠를 자른 위치만 바뀝니다. 같은 장소의 두 파노라마를 비교하려면 맞아떨어질 때까지 한쪽을 다른 쪽을 따라 밀면 됩니다. 얼마나 밀었는지가 곧 얼마나 돌았는지입니다.
+@@ 49
+모든 shift를 모든 database 항목과 비교하면 느립니다. Scan Context는 먼저 ring마다 숫자 하나로 된 짧은 벡터로 검색합니다. 행 요약은 열의 순서를 무시하므로 이 벡터는 회전해도 변하지 않습니다. 그런 다음 가장 가까운 몇 후보에 대해서만 shift 비교를 돌립니다.
+@@ 50
+4. Invariance와 awareness
+@@ 51
+책은 query와 database 사이의 pose 차이에 대한 강건성을 두 수준으로 나눕니다. <span class="src">§8.3.1 · p. 238</span>
+@@ 52
+polar descriptor에서는
+@@ 53
+=
+@@ 54
+pose가 달라도 올바른 후보를 찾지만, 차이가 얼마인지는 말하지 못함
+@@ 55
+ring별 벡터: 어떤 heading에서도 같고, heading에 대해서는 아무것도 알려 주지 않음
+@@ 56
+=
+@@ 57
+pose 차이도 추정함
+@@ 58
+가장 좋은 column shift: 해상도가 sector 하나인 heading 추정값
+@@ 59
+awareness는 공들일 가치가 있으며, 이유는 두 가지입니다. fine registration에 initial guess를 건네주는데, initial guess 없이 ICP가 어떻게 되는지는 Day 2에서 보았습니다. 그리고 awareness를 목표로 하면, 예를 들어 heading 변화나 두 scan의 겹침 정도를 추정하면서 invariance도 좋아지는 경향이 있습니다. <span class="src">§8.3.1 · p. 238</span>
+@@ 60
+5. 방법의 계열
+@@ 61
+책의 설명
+@@ 62
+Local descriptor
+@@ 63
+visual place recognition처럼 keypoint마다 descriptor 하나, 또는 local keypoint의 histogram
+@@ 64
+dense RGB-D cloud용 descriptor는 성긴 실외 LiDAR에서 고전하고, scan 전체의 맥락이 없음 (pp. 238–239)
+@@ 65
+=
+@@ 66
+위에서 내려다본 거친 이미지, polar 또는 성긴 격자 (Scan Context++, RING++)
+@@ 67
+Scan Context는 yaw 방향으로 정렬함. RING++는 Radon transform으로 invariance와 awareness를 증명함 (p. 239)
+@@ 68
+=
+@@ 69
+scan을 range의 dense 이미지로 보고 CNN이나 vision transformer로 처리 (OverlapNet, FRAME)
+@@ 70
+dense multi-beam 센서에 알맞고 컴퓨터 비전 도구를 재사용함 (p. 239)
+@@ 71
+segmentation 기반
+@@ 72
+장소를 object나 segment의 집합으로 봄 (SegMap, InstaLoc)
+@@ 73
+scan당 descriptor 하나보다 구별력이 높고 aliasing에 덜 취약함 (p. 239)
+@@ 74
+Local + global
+@@ 75
+국소 기하와 전체 구조를 함께 유지 (BTC)
+@@ 76
+global descriptor는 도로 위 차량처럼 보는 방향이 일정하다고 가정하는데, 이 가정을 완화함 (pp. 239–240)
+@@ 77
+raw point에서 학습
+@@ 78
+network가 손으로 만든 규칙 없이 point-wise feature를 추출함
+@@ 79
+장소 구별과 상대 pose를 함께 학습하자 registration이 좋아짐 (p. 240)
+@@ 80
+LiDAR place recognition과 visual place recognition은 같은 역할을 하고 같은 지표로 평가되며, 실패하는 곳이 서로 다른 경향이 있습니다. 두 센서를 모두 단 로봇은 흔히 둘 다 씁니다. <span class="src">§8.3.3 · p. 240</span>
+@@ 81
+<strong>"로봇은 현재 pose 추정값 근처에 있는 옛 pose들을 확인해 loop closure를 찾을 수 있다."</strong> 긴 루프를 돈 뒤에는 추정값이 서로 다른 장소 사이의 거리보다 더 크게 틀릴 수 있습니다. place recognition은 겉모습으로 작동해야 합니다. pose prior는 drift가 작은 동안에만 탐색 범위를 좁힐 수 있습니다.
+@@ 82
+<strong>"rotation-invariant descriptor는 translation-invariant이기도 하다."</strong> polar 격자는 센서를 중심으로 합니다. 센서를 옆으로 옮기면 range와 azimuth가 함께 바뀌어 bin이 뒤섞입니다. 위젯이 이를 보여 줍니다.
+@@ 83
+<strong>"descriptor가 맞으면 loop closure다."</strong> 그것은 후보일 뿐입니다. 똑같은 두 복도는 완벽하게 맞습니다. 후보는 여전히 registration과 검증을 통과해야 합니다.
+@@ 84
+Q1. polar descriptor의 sector가 60개입니다. 저장된 descriptor와 가장 잘 맞는 것은 9열 shift에서입니다. 두 heading은 얼마나 다릅니까?
+@@ 85
+sector 하나는 360°/60 = 6°이고, 9 × 6° = 54°입니다.
+@@ 86
+Q2. 어떤 방법이 로봇의 heading과 상관없이 올바른 장소를 찾지만, heading에 대해서는 아무것도 내놓지 않습니다. 책의 용어로 이 방법이 가진 것은 무엇입니까?
+@@ 87
+awareness는 있지만 invariance는 없음
+@@ 88
+invariance와 awareness 둘 다
+@@ 89
+invariance는 있지만 awareness는 없음
+@@ 90
+둘 다 없음
+@@ 91
+invariance: pose 차이에도 후보를 찾습니다. awareness라면 그 차이까지 추정하며, 이것이 ICP에 initial guess를 줍니다.
+@@ 92
+Q3. 로봇이 사무실 건물의 map을 만듭니다. place recognition이 3층 복도를 2층 복도와 계속 맞춥니다. 이것은 무엇이며, 무엇이 도움이 됩니까?
+@@ 93
+Motion distortion; scan을 deskew
+@@ 94
+성긴 데이터; beam이 더 많은 센서 사용
+@@ 95
+rotation invariance 부족; 열을 shift
+@@ 96
+Structural aliasing; 장소를 segment나 object로 묘사하거나 카메라 사용
+@@ 97
+두 복도의 기하가 같으므로 scan당 descriptor 하나로는 둘을 가를 수 없습니다. object나 segment 수준의 묘사, 또는 시각적 텍스처라면 가를 수 있습니다.
+@@ 98
+Q4. 두 descriptor 열이 a = (1, 0, 2)와 b = (2, 0, 4)입니다. 둘의 cosine distance 1 − a·b/(|a||b|)는 얼마입니까?
+@@ 99
+b = 2a이므로 두 벡터는 평행합니다. a·b = 10, |a||b| = √5 × √20 = 10이고, 거리는 1 − 1 = 0입니다. cosine distance는 열의 전체 크기가 아니라 패턴을 비교합니다.
+@@ 100
+place recognition은 query scan에 대해, 방문한 장소들의 descriptor database에서 비슷한 항목을 꺼냅니다. 그 결과가 loop closure 후보입니다.
+@@ 101
+LiDAR 데이터는 성기고 구조가 없어 global descriptor가 유리하며, 기하가 반복되어 structural aliasing이 생깁니다.
+@@ 102
+polar bird's-eye-view descriptor는 heading 변화를 column shift로 바꿉니다. 가장 좋은 shift가 거리와 heading 추정값을 함께 줍니다.
+@@ 103
+invariance는 pose 차이에도 장소를 찾고, awareness는 그 차이까지 추정해 registration에 initial guess를 줍니다.
+@@ 104
+계열: local, global(BEV 또는 range image), segment 기반, local + global, raw point 학습. LiDAR와 카메라는 서로 보완합니다.
+@@ 105
+=
+@@ 106
+Kim, Kim, <em>Scan Context: Egocentric spatial descriptor for place recognition within 3D point cloud map</em>, 2018 (ring-and-sector 구성, column shift 거리, ring key, 20 × 60 × 80 m 설정).
+@@ 107
+위젯의 scan은 2D이므로 descriptor에 최대 높이 대신 점 개수를 저장합니다. 비교 방법은 같습니다.

@@ -1,0 +1,138 @@
+@@ 1
+<span class="eyebrow">22주차 · 복습</span>
+@@ 2
+22주차 복습: metric-semantic SLAM
+@@ 3
+오늘이 끝나면 물체 shape model마다 residual을 쓰고, hard와 soft data association을 한 step씩 실행하고, voxel에 class label을 fusion하고, loop closure 뒤에 mesh와 scene graph가 어떻게 consistent하게 유지되는지 설명할 수 있습니다.
+@@ 4
+metric-semantic map은 사물이 어디에 있는지뿐 아니라 무엇인지도 저장합니다. sparse map은 landmark를 class, pose, scale, shape를 가진 물체로 바꾸고, 각 shape model을 짝이 맞는 detector 출력(keypoint, 박스, mask, depth)과 비교합니다. class와 data association은 이산이므로, back-end는 이것들을 고르는 일(hard하게, 또는 EM으로 soft하게)과 least squares 풀기를 번갈아 합니다. dense map은 voxel마다 class 분포를 저장하고 log-odds를 더해 label을 fusion합니다. mesh는 deformation graph를 통해 loop closure를 따라가고, scene graph는 그 위에 object, place, room을 쌓으며 각 symbol을 한 번만 저장합니다.
+@@ 5
+=
+@@ 6
+=
+@@ 7
+=
+@@ 8
+=
+@@ 9
+Dual quadric과 그 투영
+@@ 10
+=
+@@ 11
+Hybrid cost와 번갈아 풀기
+@@ 12
+\(\mathcal{L}(\Theta, D) = \sum_k -\log\phi_k(V_k)\); \(D\)에 대해 최소화한 다음 \(\Theta\)에 대해 최소화
+@@ 13
+=
+@@ 14
+=
+@@ 15
+=
+@@ 16
+=
+@@ 17
+=
+@@ 18
+pose graph로서의 PGMO; mesh blending
+@@ 19
+=
+@@ 20
+메모리: flat과 hierarchical
+@@ 21
+\(L \cdot V/\delta^3\)와 \(V/\delta^3 + N_{\text{objects}} + N_{\text{rooms}} + \dots\)
+@@ 22
+=
+@@ 23
+Q1. 실제 자동차와 같은 차종의 1:10 장난감이 둘 다 map에 있습니다. pose 말고 두 object landmark에서 다른 요소는 무엇입니까?
+@@ 24
+category σ
+@@ 25
+scale λ
+@@ 26
+shape s
+@@ 27
+mode b
+@@ 28
+category도 같고 canonical shape도 같습니다. scale만 다릅니다.
+@@ 29
+Q2. 카메라가 world 원점에 있고 pose는 identity입니다. 회전하지 않은 object frame이 (2, 0, 10) m에 있고 λ = 1입니다. semantic landmark s = (0, 1, 0)은 정규화 이미지 좌표에서 어디에 나타납니까?
+@@ 30
+world 좌표의 점: (2, 1, 10). depth로 나누면 (0.2, 0.1)입니다.
+@@ 31
+Q3. 반지름 3 m인 구의 중심이 광축 위 depth 5 m에 있습니다. 정규화 이미지 좌표에서 이 구 윤곽의 반폭은 얼마입니까?
+@@ 32
+ρ²I − t tᵀ = diag(9, 9, 9 − 25) ∝ diag(9/16, 9/16, −1). 반폭 = 3/4 = 0.75이며, 3/5가 아닙니다.
+@@ 33
+Q4. 이 장이 쓰는 shape model과 detector 출력의 짝은 어느 것입니까?
+@@ 34
+ellipsoid와 segmentation mask
+@@ 35
+mesh와 bounding box
+@@ 36
+mesh와 segmentation mask
+@@ 37
+SDF와 semantic keypoint
+@@ 38
+ellipsoid는 bounding box와 (16.10), mesh는 mask와 (16.12), SDF는 depth 점과 (16.15) 짝을 이룹니다.
+@@ 39
+Q5. "chair"로 label된 detection이 물체 A(의자)와 물체 B(테이블)에서 같은 거리에 있습니다. label은 80% 맞습니다. A의 EM weight는 얼마입니까?
+@@ 40
+기하 항은 약분됩니다. label likelihood를 정규화하면 0.8/(0.8 + 0.2) = 0.8입니다.
+@@ 41
+Q6. 연속 변수가 고정되어 있을 때, 각 detection의 association을 따로 고를 수 있는 이유는 무엇입니까?
+@@ 42
+cost가 association에 대해 convex라서
+@@ 43
+EM이 보장해서
+@@ 44
+pose와 landmark가 주어지면 association은 conditionally independent하므로, 곱의 최댓값이 최댓값들의 곱이어서
+@@ 45
+모든 detection이 서로 다른 물체를 보아서
+@@ 46
+이것이 (16.20)과 (16.21)입니다. 후보 J개에 대한 탐색 K번이 할당 J^K개에 대한 탐색 한 번을 대신합니다.
+@@ 47
+Q7. class가 {free, A, B}인 voxel의 h = [0, 2, 2]입니다. φ⁻ = [0, −1.5, −1.5]인 ray가 이 voxel을 통과합니다. 그 뒤 "free"의 확률은 얼마입니까?
+@@ 48
+h는 [0, 0.5, 0.5]가 됩니다. softmax: 1/(1 + 2e^0.5) = 1/4.30 = 0.23. 통과 전에는 1/(1 + 2e²) = 0.06이었습니다.
+@@ 49
+Q8. 어떤 scene graph에서 건물의 room node들은 treewidth 2인 subgraph를 이루고, 어느 방 하나의 object들은 treewidth가 많아야 3인 subgraph를 이룹니다. (16.37)은 전체 graph에 대해 어떤 bound를 줍니까?
+@@ 50
+형제 그룹들의 treewidth 중 가장 큰 값 더하기 1: max(2, 3) + 1 = 4이며, 방이 몇 개든 상관없습니다.
+@@ 51
+오른쪽 아래 원소가 \(-1\)이 되도록 scale한 dual conic이 \(\begin{bmatrix}0.05 & 0.02 & -0.2\\ 0.02 & 0 & 0.1\\ -0.2 & 0.1 & -1\end{bmatrix}\)입니다. 이 conic이 나타내는 bounding box \((u, v, w, h)\)를 구하십시오.
+@@ 52
+곱을 풀어 쓴 (16.9)와 비교합니다. 중심은 마지막 열에 마이너스를 붙인 것입니다: \((c_u, c_v) = (0.2, -0.1)\). 그러면 \((w/2)^2 = C^*_{11} + c_u^2 = 0.05 + 0.04 = 0.09\)이므로 \(w = 0.6\)이고, \((h/2)^2 = C^*_{22} + c_v^2 = 0 + 0.01\)이므로 \(h = 0.2\)입니다. 비대각 원소로 검산: \(-c_uc_v = 0.02\). 모서리는 \((u, v) = (0.2 - 0.3,\ -0.1 - 0.1) = (-0.1, -0.2)\)입니다.
+@@ 53
+로봇이 직선 위를 움직입니다. map에는 의자 두 개, 2.0 m의 A와 3.0 m의 B가 있습니다. 로봇은 자신이 \(p = 0.4\) m에 있다고 믿고, 앞쪽 물체에 대한 detection 두 개 \(z_1 = 1.9\) m와 \(z_2 = 2.7\) m를 받습니다. \(\sigma = 0.5\) m이고 쓸모 있는 label은 없습니다. \(p\)에 대해 EM iteration을 한 번 하십시오. hard nearest-neighbour step과 비교하십시오.
+@@ 54
+E-step. detection은 \(2.3\) m와 \(3.1\) m에 놓일 것으로 예측됩니다. \(e^{-d^2/2\sigma^2} = e^{-2d^2}\)이므로, \(z_1\)은 거리 \(0.3\)과 \(0.7\)에서 \(0.835\)와 \(0.375\)를 얻어 \(w_{1A} = 0.69\), \(w_{1B} = 0.31\)입니다. \(z_2\)는 거리 \(1.1\)과 \(0.1\)에서 \(0.089\)와 \(0.980\)을 얻어 \(w_{2A} = 0.08\), \(w_{2B} = 0.92\)입니다.
+@@ 55
+M-step. \(\sum_{k,j} w_{kj}(z_k + p - \ell_j)^2\)를 최소화하면 값 \(\ell_j - z_k\)들의 weighted mean이 나오며, weight의 합은 2입니다: \(p = \tfrac12[0.69(0.1) + 0.31(1.1) + 0.08(-0.7) + 0.92(0.3)] = 0.31\) m.
+@@ 56
+nearest neighbour는 \(z_1\)을 A에, \(z_2\)를 B에 할당합니다: \(p = \tfrac12(0.1 + 0.3) = 0.2\) m. EM의 답이 다른 이유는 첫 번째 detection이 의자 B일 가능성에 여전히 31%를 주기 때문입니다.
+@@ 57
+voxel 하나의 class는 {free, wall, door}이고, 처음에는 세 class가 똑같이 그럴듯합니다. 센서는 cell이 free, wall, door일 때 "hit, wall"을 각각 확률 0.04, 0.64, 0.16으로, "hit, door"를 0.04, 0.16, 0.64로 보고하고, 0.92, 0.2, 0.2의 확률로 통과합니다. 이 cell이 hit wall, hit wall, hit door, pass를 차례로 받습니다. class 확률을 구하십시오.
+@@ 58
+"free"에 대한 log-odds 증가량: \(\mathbf{l}(\text{hit wall}) = [0, \ln 16, \ln 4]\), \(\mathbf{l}(\text{hit door}) = [0, \ln 4, \ln 16]\), \(\mathbf{l}(\text{pass}) = [0, \ln 0.217, \ln 0.217]\). 로그를 더하는 것은 비를 곱하는 것입니다: wall \(16 \cdot 16 \cdot 4 \cdot 0.217 = 222.6\), door \(4 \cdot 4 \cdot 16 \cdot 0.217 = 55.7\), free \(1\). 따라서 \(\mathbf{h} = [0, 5.41, 4.02]\)이고 \(p = [1, 222.6, 55.7]/279.3 = [0.004, 0.797, 0.199]\)입니다. wall이 door를 4 대 1로 앞섭니다. 순수하게 label 표 하나 차이이고, 그 표 하나의 가치가 \(0.64/0.16\)입니다.
+@@ 59
+mesh control node \(k\)와 \(l\)이 \(\mathbf{g}_k = (0,0,0)\)과 \(\mathbf{g}_l = (2,0,0)\)에서 시작합니다. loop closure 뒤 둘 다 \(z\)축을 중심으로 90° 회전했고, \(\mathbf{t}_k = (0,0,0)\), \(\mathbf{t}_l = (0, 2, 0.3)\)입니다. (a) (16.27)에서 edge \((k, l)\)의 rigidity residual과, \(\omega_t = 4\)일 때 그 cost를 계산하십시오. (b) 세 번째 node \(j\)는 \(\mathbf{g}_j = (1, 2, 0)\)에 있고 움직이지 않았습니다. \(m = 3\)일 때 (16.32)에 따라 mesh vertex \(\mathbf{v} = (1, 0, 0)\)는 어디로 갑니까?
+@@ 60
+(a) \(z\)축에 대한 90° 회전은 \((x, y, z)\)를 \((-y, x, z)\)로 보냅니다. 따라서 \(\mathbf{R}_k(\mathbf{g}_l - \mathbf{g}_k) + \mathbf{t}_k - \mathbf{t}_l = (0, 2, 0) + (0,0,0) - (0, 2, 0.3) = (0, 0, -0.3)\)입니다. cost: \(4 \times 0.09 = 0.36\).
+@@ 61
+(b) \(\mathbf{v}\)에서의 거리는 \(k\)까지 1, \(l\)까지 1, \(j\)까지 2이므로 \(d_{\max} = 2\), \(\bar{w} = (0.25, 0.25, 0)\), \(w = (0.5, 0.5, 0)\)입니다. node \(k\)는 \(\mathbf{v}\)를 \(\mathbf{R}_k(1,0,0) + \mathbf{t}_k = (0, 1, 0)\)으로 보냅니다. node \(l\)은 \(\mathbf{R}_l(-1, 0, 0) + \mathbf{t}_l = (0, -1, 0) + (0, 2, 0.3) = (0, 1, 0.3)\)으로 보냅니다. 섞은 결과는 \(\tilde{\mathbf{v}} = (0, 1, 0.15)\)입니다.
+@@ 62
+semantic landmark를 object frame에서 픽셀까지 따라가기
+@@ 63
+dual quadric으로 구를 투영하고, dual conic에서 bounding box 읽어 내기
+@@ 64
+detection 하나에 대해 nearest-neighbour, max-mixture, EM association 계산하기
+@@ 65
+multi-class log-odds 벡터를 갱신하고 다시 확률로 바꾸기
+@@ 66
+PGMO가 mesh 변형을 어떻게 pose-graph optimization으로 바꾸는지 설명하기
+@@ 67
+"closed-set"이 무슨 뜻인지 말하기. 다음 주에는 이 가정을 버립니다.
+@@ 68
+<em>SLAM Handbook</em>, 16장 "Metric-Semantic SLAM", pp. 454–489.
+@@ 69
+Hartley와 Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004; Bishop, <em>Pattern Recognition and Machine Learning</em>, 2006; Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (Day 2, 3, 4의 배경 지식).

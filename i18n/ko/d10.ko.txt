@@ -1,0 +1,182 @@
+@@ 1
+<span class="eyebrow">2주차 · Day 4</span>
+@@ 2
+Steepest descent와 Gauss-Newton
+@@ 3
+오늘이 끝나면 cost의 Taylor 전개에서 steepest-descent step과 Gauss-Newton step을 유도하고, 각각 한 step씩 손으로 계산하고, Gauss-Newton이 언제 실패하는지 말할 수 있습니다.
+@@ 4
+약 60분 · §1.4부터 §1.4.2까지, pp. 33–34 읽기 (2쪽) · 2주차 Day 3 필요
+@@ 5
+먼저 읽기: §1.4 도입부, §1.4.1, §1.4.2, pp. 33–34
+@@ 6
+오늘은 두 쪽뿐입니다. 그 뒤에 있는 유도가 나머지 시간을 채우기 때문입니다. 읽으면서 찾아볼 것:
+@@ 7
+모든 방법이 공유하는 구조: 시작하고, step을 계산하고, 더하고, 반복하기 (p. 33).
+@@ 8
+steepest-descent step (1.35)와, 책이 유도 없이 제시하는 gradient \(-2\mathbf{A}\T\mathbf{b}\) (p. 33).
+@@ 9
+Gauss-Newton step (1.36), 그리고 그 뒤에서 언제 빠르게 수렴하고 언제 발산하는지 말하는 두 문장 (p. 34).
+@@ 10
+nonlinear least-squares 문제는 어제의 선형 풀이를 반복해서 풉니다: 현재 추정값에서 선형화하고, step을 계산하고, 이동하고, 다시 선형화합니다. Steepest descent는 cost의 기울기만 쓰므로 안전하지만 느립니다. Gauss-Newton은 Jacobian에서 공짜로 얻는 곡률 추정도 쓰므로, 답 근처에서는 빠르고 답에서 멀면 믿을 수 없습니다.
+@@ 11
+1. 모든 방법이 공유하는 루프
+@@ 12
+최소화할 cost는 Day 2의 합이며, 책은 이제 이를 \(J\)라고 부릅니다. 식 (1.34): <span class="src">§1.4 · p. 33</span>
+@@ 13
+최소점을 주는 공식은 없습니다. 모든 방법은 초기 추정값 \(\mathbf{x}^0\)에서 시작해 \(\mathbf{x}^{t+1}=\mathbf{x}^t+\boldsymbol{\delta}\)로 한 step씩 개선하며, step이 아주 작아지는 것 같은 수렴 판정을 통과하면 멈춥니다. 방법들은 \(\boldsymbol{\delta}\)를 계산하는 방식만 다릅니다. <span class="src">§1.4 · p. 33</span>
+@@ 14
+이후 계속 \(\mathbf{A}\)와 \(\mathbf{b}\)는 현재 추정값 \(\mathbf{x}^t\)에서의 whitened Jacobian과 whitened prediction error입니다. \(\mathbf{x}^t\) 근처에서 cost는 2차식 \(J(\mathbf{x})\approx\norm{\mathbf{A}(\mathbf{x}-\mathbf{x}^t)-\mathbf{b}}_2^2\)로 근사됩니다.
+@@ 15
+=
+@@ 16
+<strong>Steepest descent (SD)</strong>(최급강하법)는 cost가 가장 빨리 줄어드는 방향, 즉 음의 gradient 방향으로 짧은 거리를 움직입니다. 식 (1.35): <span class="src">§1.4.1 · p. 33</span>
+@@ 17
+여기서 \(\alpha\gt 0\)은 <strong>step size</strong>입니다. 두 번째 형태는 linearization point에서의 gradient가 \(-2\mathbf{A}\T\mathbf{b}\)라는 책의 서술을 이용합니다.
+@@ 18
+빈틈 채우기: gradient가 −2Aᵀb인 이유
+@@ 19
+모든 whitened 오차를 블록이 \(\boldsymbol{\Sigma}_i^{-1/2}(\mathbf{z}_i-\mathbf{h}_i(\mathbf{x}_i))\)인 벡터 하나 \(\mathbf{r}(\mathbf{x})\)로 쌓습니다. 그러면 \(J(\mathbf{x})=\mathbf{r}(\mathbf{x})\T\mathbf{r}(\mathbf{x})=\sum_k r_k(\mathbf{x})^2\)입니다. Day 3의 정의에 따라 현재 추정값에서 \(\mathbf{r}(\mathbf{x}^t)=\mathbf{b}\)이고, \(\mathbf{x}\)에 대한 \(\mathbf{r}\)의 도함수는 \(-\mathbf{A}\)입니다: \(\mathbf{h}\)가 \(\mathbf{r}\)에 빼기 부호로 들어가므로 마이너스가 붙습니다. 제곱합에 chain rule을 적용하면
+@@ 20
+이것은 근사가 아니라 nonlinear cost의 정확한 gradient입니다: gradient에는 1차 도함수만 필요하고, \(\mathbf{A}\)에는 정확히 그것이 들어 있습니다. 같은 벡터 \(\mathbf{A}\T\mathbf{b}\)가 normal equations의 우변입니다.
+@@ 21
+어려운 점은 \(\alpha\)입니다. 너무 크면 step이 지나치고, 너무 작으면 아무 일도 일어나지 않습니다. <strong>line search</strong>는 그 방향을 따라 여러 값을 시도하고 가장 좋은 것을 고릅니다. 좋은 \(\alpha\)를 써도 SD는 최소점 근처에서 느리게 수렴합니다. <span class="src">§1.4.1 · p. 33</span> 책은 그 이유를 말하지 않습니다. 한 번쯤 볼 만한 이유입니다.
+@@ 22
+빈틈 채우기: steepest descent가 기어가는 이유
+@@ 23
+정확히 2차식인 cost \(\norm{\mathbf{A}\boldsymbol{\delta}-\mathbf{b}}^2\)을 생각하고, 최소점을 \(\boldsymbol{\delta}^*\)라 합니다. \(\mathbf{e}=\boldsymbol{\delta}-\boldsymbol{\delta}^*\)를 현재 오차라고 합시다. gradient는 \(2\mathbf{A}\T\mathbf{A}\,\mathbf{e}\)이므로, SD step 한 번은 오차를 다음과 같이 바꿉니다
+@@ 24
+eigenvalue가 \(\lambda_i\)인 \(\mathbf{A}\T\mathbf{A}\)의 eigenvector 방향에서는 매 step마다 오차에 \(1-2\alpha\lambda_i\)가 곱해집니다. \(|1-2\alpha\lambda_i|\lt 1\)일 때만 줄어들므로 step size는 \(\alpha\lt 1/\lambda_{\max}\)를 만족해야 합니다: 가장 가파른 방향이 한계를 정합니다. 그런데 그러면 가장 평평한 방향의 인수는 기껏해야 약 \(1-2\lambda_{\min}/\lambda_{\max}\)로, 1에 가깝습니다.
+@@ 25
+<em>숫자로 보기.</em> \(\mathbf{A}\T\mathbf{A}=\diag(100,\,1)\)이라 합시다. 안정하려면 \(\alpha\lt 0.01\)이어야 합니다. \(\alpha=0.005\)이면 인수는 \(1-1=0\)과 \(1-0.01=0.99\)입니다. 가파른 방향은 한 step에 해결됩니다. 평평한 방향은 매 step 오차의 99%가 남습니다: 100 step 후에도 \(0.99^{100}=37\%\)가 남아 있고, 1%까지 줄이려면 \(\ln(0.01)/\ln(0.99)\approx 458\) step이 걸립니다. step 수는 비율 \(\lambda_{\max}/\lambda_{\min}\), 즉 \(\mathbf{A}\T\mathbf{A}\)의 <strong>condition number</strong>(조건수)에 따라 늘어납니다. SLAM 문제는 condition number가 큽니다. 어떤 방향은 정밀하게 측정되고, 다른 방향(odometry 사슬의 먼 끝)은 느슨하게만 측정되기 때문입니다.
+@@ 26 attr
+높이보다 폭이 열 배 넓은 2차 cost의 등고선 타원, 즉 길고 좁은 골짜기. 왼쪽 위의 시작점에서 steepest descent는 한 step에 골짜기 바닥으로 내려간 뒤 바닥을 따라 아주 작은 step으로 기어가며, 100 step 후에도 최소점에서 멀리 있습니다. Gauss-Newton은 시작점에서 최소점까지 곧은 step 한 번에 갑니다.
+@@ 27
+최소점
+@@ 28
+Gauss-Newton: 한 step
+@@ 29
+steepest descent, step 1, 10, 20, … 100
+@@ 30
+숫자 예제의 cost 100u² + v²를 축척대로 그렸습니다. u는 세로, v는 가로입니다. α = 0.005이면 steepest descent는 곧바로 골짜기 바닥에 닿은 뒤 step마다 남은 거리의 1%만 나아갑니다. Gauss-Newton은 2차식을 한 step에 정확히 풉니다.
+@@ 31
+3. Gauss-Newton, 두 가지 유도
+@@ 32
+<strong>Gauss-Newton (GN)</strong>은 선형화된 문제의 normal equations를 푸는 step을 택합니다. 식 (1.36): <span class="src">§1.4.2 · pp. 33–34</span>
+@@ 33
+<strong>첫 번째 유도: 제곱 안에서 선형화.</strong> Day 3을 알고리즘으로 읽은 것입니다. 각 \(\mathbf{h}_i\)를 1차 Taylor 전개로 바꿉니다. cost는 \(\norm{\mathbf{A}\boldsymbol{\delta}-\mathbf{b}}^2\)이 되고, 이 그릇의 바닥은 normal equations로 찾습니다. 그릇 바닥으로 뛰어간 다음, 거기서 새 그릇을 만듭니다.
+@@ 34
+<strong>두 번째 유도: 한 항을 뺀 Newton 방법.</strong> 책은 GN이 "2차 update"를 쓰고 Hessian을 \(\mathbf{A}\T\mathbf{A}\)로 근사한다고 말합니다. 그 뜻은 다음과 같습니다.
+@@ 35
+빈틈 채우기: Gauss-Newton은 2차 항을 뺀 Newton 방법
+@@ 36
+Newton 방법은 cost 자체를 \(\mathbf{x}^t\) 주변에서 2차까지 전개합니다:
+@@ 37
+여기서 \(\nabla^2 J\)는 2차 도함수의 행렬인 <strong>Hessian</strong>입니다. \(\boldsymbol{\delta}\)에 대한 도함수를 0으로 두면 Newton step \(\nabla^2 J\,\boldsymbol{\delta}=-\nabla J\)를 얻습니다.
+@@ 38
+제곱합 \(J=\sum_k r_k^2\)에 대해 \(\partial J/\partial x_j=\sum_k 2r_k\,\partial r_k/\partial x_j\)를 곱의 미분법으로 한 번 더 미분합니다:
+@@ 39
+첫 부분에는 이미 가진 Jacobian만 필요합니다. 두 번째 부분에는 모든 측정 함수의 2차 도함수에 residual을 곱한 것이 필요합니다. Gauss-Newton은 두 번째 부분을 버립니다. \(\nabla^2J\approx 2\mathbf{A}\T\mathbf{A}\)와 \(\nabla J=-2\mathbf{A}\T\mathbf{b}\)를 쓰면 Newton step은 \(2\mathbf{A}\T\mathbf{A}\,\boldsymbol{\delta}=2\mathbf{A}\T\mathbf{b}\)가 되며, 이것이 (1.36)입니다. 인수 2가 약분되므로 책은 2 없이 \(\mathbf{A}\T\mathbf{A}\)를 "Hessian"이라고 부를 수 있습니다.
+@@ 40
+버린 부분이 작은 경우는 두 가지입니다: residual \(r_k\)가 작을 때(해 근처에서 측정이 잘 맞을 때), 그리고 측정 함수가 step 크기 범위에서 거의 선형일 때(2차 도함수가 작을 때). 두 경우 모두 GN은 Newton 방법과 거의 같이 동작하며, Newton 방법의 오차는 iteration마다 대략 제곱이 됩니다: \(10^{-1}\), \(10^{-2}\), \(10^{-4}\), \(10^{-8}\). 책이 말하는 "거의 2차 수렴"이 이것입니다.
+@@ 41
+이 항을 버려서 얻는 것도 있습니다. \(\mathbf{A}\)의 column rank가 full이면 \(\mathbf{A}\T\mathbf{A}\)는 positive definite이므로 \(\nabla J\T\boldsymbol{\delta}^{\text{gn}}=-2\,\mathbf{b}\T\mathbf{A}(\mathbf{A}\T\mathbf{A})^{-1}\mathbf{A}\T\mathbf{b}\lt 0\)입니다: GN step은 언제나 내리막을 가리킵니다. 실제 Hessian에는 이런 보장이 없습니다.
+@@ 42
+내리막을 가리킨다고 해서 더 낮은 곳에 도착하는 것은 아닙니다. 2차 모델이 잘 맞지 않으면 GN step을 끝까지 갔을 때 더 나쁜 추정값에 도착할 수 있고, iteration이 발산할 수 있습니다. <span class="src">§1.4.2 · p. 34</span>
+@@ 43
+=
+@@ 44
+\(\boldsymbol{\delta}^{\text{gn}}=(\mathbf{A}\T\mathbf{A})^{-1}\mathbf{A}\T\mathbf{b}\), 분해로 계산
+@@ 45
+기울기만
+@@ 46
+기울기와 근사 곡률
+@@ 47
+step당 계산량
+@@ 48
+행렬-벡터 곱 한 번
+@@ 49
+선형 풀이 한 번 (Day 3)
+@@ 50
+조정할 값
+@@ 51
+=
+@@ 52
+최소점 근처
+@@ 53
+condition number가 크면 느림
+@@ 54
+거의 2차 수렴
+@@ 55
+최소점에서 멀 때
+@@ 56
+\(\alpha\)가 작으면 안전
+@@ 57
+지나쳐서 발산할 수 있음
+@@ 58
+4. 미지수 하나를 손으로
+@@ 59
+landmark가 벽 \(x=1\) 위, 알 수 없는 높이 \(y\)에 있다는 것을 압니다. 원점의 로봇이 그 bearing을 \(\sigma=0.1\) rad로 \(z=0\)이라고 측정합니다. 예측은 \(h(y)=\operatorname{atan2}(y,1)=\arctan y\)이므로 cost는 \(J(y)=(\arctan y/0.1)^2\)이고 최소점은 \(y=0\)입니다. 추정값 \(y\)에서:
+@@ 60
+<em>\(y=1\)에서 출발.</em> \(\delta=-2(0.785)=-1.571\)이므로 \(y=-0.571\)이 됩니다. 이어서 \(\delta=+(1.326)(0.519)=0.688\)이므로 \(y=0.117\)입니다. 그다음은 \(y=-0.001\)입니다. 오차 \(1,\ 0.571,\ 0.117,\ 0.001\)이 점점 더 빠르게 줄어듭니다.
+@@ 61
+<em>\(y=2\)에서 출발.</em> \(A=2\), \(b=-11.07\), \(\delta=-5.54\)이므로 \(y=-3.54\)가 됩니다. cost가 \(122.6\)에서 \(167.7\)로 <em>올라갔습니다</em>. 다음 step들은 \(13.95\), 이어서 \(-279\)에 도착합니다. 방법이 발산했습니다.
+@@ 62
+직접 해 보기: 시작 추정값 2.0에서 "한 step"을 몇 번 누릅니다. 그다음 시작값을 1.0으로 옮기고 다시 step을 진행합니다.
+@@ 63
+눈여겨볼 점: 주황색 포물선입니다. 이것은 Gauss-Newton이 최소화하는 모델 \((A\delta-b)^2\)이며, \(-3.54\)에서 0에 닿습니다. 그곳의 실제 cost, 즉 빈 점은 채운 점보다 높습니다. 최소점에서 멀어지면 곡선이 평평해지고 기울기 \(A\)가 작아지며, 그것으로 나누면 거대한 step이 나옵니다. 1.3 이내에서 출발하면 iteration이 수렴합니다. 1.4 이상 떨어진 곳에서 출발하면 발산합니다.
+@@ 64
+Gauss-Newton은 측정 함수가 지금 이 자리의 기울기를 계속 유지한다고 가정합니다. \(\arctan\)은 0에서 멀면 기울기가 작으므로, 모델은 "bearing이 \(y\)에 따라 거의 변하지 않으니 이 오차를 없애려면 \(y\)가 아주 멀리 움직여야 한다"고 결론짓습니다. 실제 함수는 0 근처에서 훨씬 가파르므로, 긴 step은 답을 지나쳐 날아갑니다.
+@@ 65
+5. pose graph 위에서
+@@ 66
+실제 SLAM 문제에서 같은 두 방법을 봅니다: loop 하나를 도는 평면 pose 13개, 미지수 39개. factor는 첫 pose의 prior, odometry 측정 12개, loop closure 하나입니다. 초기 추정값은 odometry를 이어 붙인 것이라서 loop가 닫히지 않습니다.
+@@ 67
+직접 해 보기: "한 step"을 두 번 누른 뒤 "20번 실행"을 누릅니다. 그다음 SD step size를 1.20으로 두고 다시 실행합니다.
+@@ 68
+눈여겨볼 점: cost 곡선입니다. 둘 다 81.69에서 시작합니다. Gauss-Newton은 한 step 후 3.41, 두 step 후 최솟값 2.81에 도달합니다. Steepest descent는 55.75로 떨어진 뒤 평평해집니다: 22 step 후에도 17.19입니다. 슬라이더는 위에서 유도한 한계 \(1/\lambda_{\max}\)에 대한 비율로 \(\alpha\)를 정하며, 시작점에서 \(\mathbf{A}\T\mathbf{A}\)의 가장 큰 eigenvalue를 씁니다. 1.20에서는 SD cost가 세 step 동안 떨어지다가 수천으로 치솟습니다.
+@@ 69
+최소 cost는 0이 아닙니다. factor 14개가 미지수 39개에 대해 숫자 42개를 제공하고, noise가 있는 측정들은 서로 모순되며, 2.81은 어떤 trajectory로도 없앨 수 없는 불일치입니다.
+@@ 70
+<strong>"Gauss-Newton은 2차 방법이므로 2차 도함수가 필요하다."</strong> Jacobian만 필요합니다. 곡률 추정 \(\mathbf{A}\T\mathbf{A}\)는 1차 도함수로 만듭니다.
+@@ 71
+<strong>"descent direction이면 cost가 반드시 낮아진다."</strong> step이 충분히 짧을 때만 그렇습니다. \(y=2\)에서의 GN step 전체는 내리막을 가리키지만 더 높은 곳에 도착합니다.
+@@ 72
+<strong>"GN step 한 번이면 문제가 풀린다."</strong> Day 3처럼 문제가 선형일 때만 그렇습니다. 그렇지 않으면 각 step은 근사를 풀 뿐이므로 루프를 반복해야 합니다.
+@@ 73
+Q1. 미지수 하나, whitened 행 두 개: A는 열 (2, 1), b = (3, 1)입니다. Gauss-Newton step은 얼마입니까?
+@@ 74
+AᵀA = 4 + 1 = 5, Aᵀb = 6 + 1 = 7이므로 δ = 7/5 = 1.4입니다.
+@@ 75
+Q2. Gauss-Newton은 J의 정확한 Hessian 중 어느 부분을 빼놓습니까?
+@@ 76
+항 2AᵀA
+@@ 77
+gradient −2Aᵀb
+@@ 78
+covariance 행렬
+@@ 79
+residual에 residual 함수의 2차 도함수를 곱한 항
+@@ 80
+∇²J = 2AᵀA + 2Σ r_k ∇²r_k. GN은 Jacobian만 필요한 첫 부분을 남기고 두 번째 부분을 버립니다.
+@@ 81
+Q3. 미지수 하나인 bearing 예제에서 y = 0.5부터 Gauss-Newton step을 한 번 가면 어디에 도착합니까? (arctan 0.5 = 0.464)
+@@ 82
+δ = −(1 + 0.25)(0.464) = −0.580이므로 새 추정값은 0.5 − 0.580 = −0.08입니다. (−0.58은 step이지 도착점이 아닙니다.)
+@@ 83
+Q4. 2차 cost에서 AᵀA의 eigenvalue가 400과 4입니다. 고정 step size α가 얼마보다 크면 steepest descent가 발산합니까?
+@@ 84
+eigenvalue λ 방향의 오차에는 1 − 2αλ가 곱해지며, 이 값은 −1과 1 사이에 있어야 합니다. 따라서 α는 1/λmax = 1/400 = 0.0025보다 작아야 합니다. 그러면 condition number 100 때문에 평평한 방향이 느려집니다.
+@@ 85
+모든 비선형 solver는 반복합니다: 현재 추정값에서 선형화하고, step δ를 계산하고, x ← x + δ로 둡니다.
+@@ 86
+J의 gradient는 정확히 −2Aᵀb입니다. Steepest descent는 2αAᵀb를 따라 움직이며 step size가 필요합니다.
+@@ 87
+AᵀA의 condition number가 크면 steepest descent는 느립니다. α 하나가 가파른 방향과 평평한 방향 모두에 맞아야 하기 때문입니다.
+@@ 88
+Gauss-Newton은 AᵀAδ = Aᵀb를 풉니다. Hessian을 2AᵀA로 근사하고 2차 도함수가 든 항을 버린 Newton 방법입니다.
+@@ 89
+Gauss-Newton은 해 근처에서 거의 2차로 수렴하고, 선형 모델이 나쁘면 지나치거나 발산할 수 있습니다.
+@@ 90
+=
+@@ 91
+제곱합의 gradient와 Hessian, Gauss-Newton 근사, 2차식에서 steepest descent의 수렴 속도는 Nocedal and Wright, <em>Numerical Optimization</em>, 2006을 따릅니다.

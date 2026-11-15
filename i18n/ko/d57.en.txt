@@ -1,0 +1,194 @@
+@@ 1
+<span class="eyebrow">Week 10 · Day 3</span>
+@@ 2
+The Cramér-Rao lower bound and the Fisher information matrix
+@@ 3
+After today you can compute the Fisher information of a measurement model with Gaussian noise, use it to bound the covariance of any unbiased estimator, and summarize that bound in one number with the D, A, and E criteria.
+@@ 4
+About 60 min · Read §6.2 opening and §6.2.1, pp. 173–175 (3 pages) · Needs Week 1 Days 2–4 and Week 2 Day 3
+@@ 5
+Read first: §6.2 (opening) and §6.2.1, pp. 173–175
+@@ 6
+The definitions of estimator, bias, variance, and mean squared error in the "Some Terminology and Facts" paragraph (pp. 173–174).
+@@ 7
+The two formulas for the Fisher information matrix, (6.42) and (6.43), and what the book says the second one means (p. 174).
+@@ 8
+Equation (6.45) on p. 175, and footnote 9 beside it.
+@@ 9
+The three ways to turn a matrix into one number at the bottom of p. 175.
+@@ 10
+Yesterday's question was "did the solver find the best answer?". Today's is "how good can the best answer be?". For any unbiased estimator the covariance cannot be smaller than the inverse of the <strong>Fisher information matrix</strong>. With Gaussian noise that matrix is \(\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{J}\), the same matrix Gauss-Newton has been building since Week 2.
+@@ 11
+1. Estimators, bias, variance, mean squared error
+@@ 12
+The measurements \(\mathbf{z}\) are random because the noise is. An <strong>estimator</strong> is a function \(\hat{\mathbf{x}}(\mathbf{z})\) from measurements to an estimate, so the estimate is random too: run the same robot along the same path twice and you get two slightly different maps. Three numbers describe a scalar estimator of a true value \(x\): <span class="src">§6.2 · pp. 173–174</span>
+@@ 13
+Definition
+@@ 14
+How far off the estimator is on average
+@@ 15
+Variance
+@@ 16
+How much it scatters from run to run
+@@ 17
+Mean squared error (MSE)
+@@ 18
+Average squared distance from the truth
+@@ 19
+Filling the gap: MSE = bias² + variance
+@@ 20
+Write \(m=\E[\hat x]\) and split the error as \(\hat x-x=(\hat x-m)+(m-x)\). The second bracket is a constant, the bias.
+@@ 21
+For a vector the same steps give \(\text{MSE}=\tr\big(\cov(\hat{\mathbf{x}})\big)+\norm{\text{bias}}^2\). An <strong>unbiased</strong> estimator has zero bias, so its MSE is decided by its covariance alone.
+@@ 22
+2. The bound
+@@ 23
+The <strong>Cramér-Rao lower bound (CRLB)</strong> says that for any unbiased estimator \(\hat{\mathbf{x}}\) of \(\mathbf{x}_{\text{true}}\in\R^m\), <span class="src">§6.2.1 · p. 174</span>
+@@ 24
+where \(\mathbf{A}\succeq\mathbf{B}\) means \(\mathbf{A}-\mathbf{B}\) is positive semidefinite, and \(\mathcal{I}\) is the <strong>Fisher information matrix (FIM)</strong>:
+@@ 25
+\(p(\mathbf{z};\mathbf{x})\) is the likelihood, the derivatives are taken at \(\mathbf{x}_{\text{true}}\), and the average is over all measurements the sensors could have produced. The second form reads: the FIM is the average <em>curvature</em> of the negative log-likelihood at the truth. A sharply curved log-likelihood pins the parameter down; a flat one cannot, whatever estimator you use. <span class="src">§6.2.1 · p. 174</span>
+@@ 26
+What the matrix inequality gives you in practice: taking \(\mathbf{v}\T(\cdot)\mathbf{v}\) with \(\mathbf{v}\) a unit coordinate vector, \(\operatorname{var}(\hat x_i)\ge[\mathcal{I}^{-1}]_{ii}\). Note the order of operations: invert first, then read the diagonal. For \(\mathcal{I}=\begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}\), \(\mathcal{I}^{-1}=\tfrac13\begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix}\), so the bound on \(\operatorname{var}(\hat x_1)\) is \(0.667\), not \(1/2\). The value \(1/2\) would be right only if \(x_2\) were known.
+@@ 27
+Filling the gap: a proof sketch for one parameter
+@@ 28
+Define the <strong>score</strong> \(s(\mathbf{z})=\frac{\partial}{\partial x}\log p(\mathbf{z};x)\), so that \(\frac{\partial p}{\partial x}=p\,s\). Assume derivatives and integrals may be swapped (the book's "regularity conditions").
+@@ 29
+<em>Step 1: the score has mean zero.</em> \(\int p\,d\mathbf{z}=1\) for every \(x\). Differentiate: \(\int p\,s\,d\mathbf{z}=\E[s]=0\). Hence \(\operatorname{var}(s)=\E[s^2]=\mathcal{I}\), which is (6.42).
+@@ 30
+<em>Step 2: unbiasedness ties the estimator to the score.</em> Unbiased means \(\int\hat x(\mathbf{z})\,p(\mathbf{z};x)\,d\mathbf{z}=x\) for every \(x\). Differentiate both sides: \(\int\hat x\,p\,s\,d\mathbf{z}=\E[\hat x\,s]=1\). Subtract \(x\,\E[s]=0\): \(\E[(\hat x-x)\,s]=1\).
+@@ 31
+<em>Step 3: Cauchy-Schwarz.</em> For any two random variables, \(\E[uv]^2\le\E[u^2]\,\E[v^2]\). With \(u=\hat x-x\) and \(v=s\):
+@@ 32
+<em>Why (6.42) equals (6.43).</em> Differentiate \(\int p\,s\,d\mathbf{z}=0\) once more: \(\int\big(p\,s^2+p\,\tfrac{\partial s}{\partial x}\big)d\mathbf{z}=0\), that is \(\E[s^2]=-\E\big[\tfrac{\partial^2}{\partial x^2}\log p\big]\). The matrix case repeats these steps with vectors.
+@@ 33
+3. Gaussian noise: the FIM is JᵀΣ⁻¹J
+@@ 34
+The standing model of this course is \(\mathbf{z}=h(\mathbf{x}_{\text{true}})+\boldsymbol{\epsilon}\) with \(\boldsymbol{\epsilon}\sim\N(\mathbf{0},\boldsymbol{\Sigma})\) (6.44). For it, <span class="src">§6.2.1 · p. 175</span>
+@@ 35
+Filling the gap: deriving (6.45)
+@@ 36
+The log-likelihood is \(\log p(\mathbf{z};\mathbf{x})=-\tfrac12\big(\mathbf{z}-h(\mathbf{x})\big)\T\boldsymbol{\Sigma}^{-1}\big(\mathbf{z}-h(\mathbf{x})\big)+\text{const}\). Its gradient with respect to \(\mathbf{x}\), by the chain rule, is the score vector
+@@ 37
+Then (6.42) in matrix form is \(\E[\mathbf{s}\mathbf{s}\T]=\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\,\E[\boldsymbol{\epsilon}\boldsymbol{\epsilon}\T]\,\boldsymbol{\Sigma}^{-1}\mathbf{J}=\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\boldsymbol{\Sigma}\boldsymbol{\Sigma}^{-1}\mathbf{J}=\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{J}\).
+@@ 38
+You have met this matrix before. It is the left-hand side of the normal equations (<a href="#d9">Week 2 · Day 3</a>), the Gauss-Newton approximation of the Hessian (<a href="#d10">Week 2 · Day 4</a>), and the "information matrix" whose sparsity pattern you studied in Week 3. Footnote 9 on p. 175 makes the same remark. So every SLAM back-end computes the ingredients of its own accuracy bound.
+@@ 39
+<strong>Example 1: averaging.</strong> \(N\) measurements \(z_k=x+\epsilon_k\) with variance \(\sigma^2\). Then \(\mathbf{J}\) is a column of \(N\) ones, \(\boldsymbol{\Sigma}=\sigma^2\mathbf{I}\), and \(\mathcal{I}=N/\sigma^2\). No unbiased estimator has variance below \(\sigma^2/N\). The sample mean has exactly that variance, so it cannot be improved.
+@@ 40
+<strong>Example 2: a range.</strong> A robot at position \(x\) on a line measures its distance to a beacon 3 m off the line: \(h(x)=\sqrt{x^2+9}\), with \(\sigma=0.1\) m. The Jacobian is \(J=x/\sqrt{x^2+9}\). At \(x=4\): \(J=0.8\), \(\mathcal{I}=0.8^2/0.1^2=64\), so the standard deviation of any unbiased estimate of \(x\) is at least \(1/\sqrt{64}=0.125\) m. At \(x=0\), directly beside the beacon, \(J=0\) and \(\mathcal{I}=0\): a small step along the line does not change the range to first order, so one range says nothing about \(x\) there.
+@@ 41
+Try it: read the table at the default settings, then switch the histogram between the three estimators.
+@@ 42
+Notice: with N = 10 and σ = 1 the bound is 0.1. The sample mean's variance is about 1.0 times the bound, and its histogram matches the black curve. The median is unbiased too but wastes information: about 1.4 times the bound. The third estimator has variance 0.65 times the bound, which looks like a violation, but it is biased by about −0.4, and its MSE (about 0.22) is more than twice the bound.
+@@ 43
+<strong>"Nothing can have variance below the CRLB."</strong> Nothing <em>unbiased</em> can. An estimator that always answers "7" has variance zero.
+@@ 44
+<strong>"The bound on one variable is one over its diagonal entry of the FIM."</strong> It is the diagonal entry of the inverse, which is larger whenever the variable is coupled to others.
+@@ 45
+<strong>"A solver that reaches the global optimum beats the bound."</strong> The bound is about the data, not the solver. A certified optimum (Days 1–2) is the best use of the measurements; the CRLB says how good that best can be.
+@@ 46
+4. Maximum likelihood, and one number for a matrix
+@@ 47
+Under regularity conditions, as the number of measurements grows, the maximum likelihood estimator \(\hat{\mathbf{x}}_{\text{mle}}\) becomes distributed as \(\N\big(\mathbf{x}_{\text{true}},\mathcal{I}(\mathbf{x}_{\text{true}})^{-1}\big)\): asymptotically it is unbiased and attains the bound. Since \(\mathbf{x}_{\text{true}}\) is unknown, practice evaluates the FIM at the estimate and reports \(\mathcal{I}(\hat{\mathbf{x}}_{\text{mle}})^{-1}\) as the covariance of the solution. <span class="src">§6.2.1 · pp. 174–175</span> This is the covariance SLAM libraries return.
+@@ 48
+To compare two sensor layouts or two candidate paths you need one number, not a matrix. The field of <strong>optimal experimental design</strong> supplies three standard choices, all functions of the eigenvalues of the FIM. <span class="src">§6.2.1 · p. 175</span>
+@@ 49
+Criterion
+@@ 50
+Number
+@@ 51
+What it measures
+@@ 52
+Value for \(\mathcal{I}=\diag(1,4)\)
+@@ 53
+D-optimality
+@@ 54
+\(\det\mathcal{I}\) (larger is better)
+@@ 55
+Volume of the uncertainty ellipsoid, which is proportional to \(1/\sqrt{\det\mathcal{I}}\)
+@@ 56
+A-optimality
+@@ 57
+\(\tr(\mathcal{I}^{-1})\) (smaller is better)
+@@ 58
+Average variance: the sum of the variance bounds
+@@ 59
+E-optimality
+@@ 60
+\(\lambda_{\min}(\mathcal{I})\) (larger is better)
+@@ 61
+Worst direction: the largest variance is \(1/\lambda_{\min}\)
+@@ 62 attr
+An uncertainty ellipse for the covariance bound diag(1, 0.25): semi-axis 1 horizontally and 0.5 vertically. Notes on the right say that the D criterion relates to its area, the A criterion to the sum of squared semi-axes, and the E criterion to its longest semi-axis.
+@@ 63
+1σ ellipse of the bound
+@@ 64
+D: det = 4, area ∝ 1/√det = 0.5
+@@ 65
+A: trace of inverse = 1² + 0.5² = 1.25
+@@ 66
+E: λmin = 1, longest semi-axis = 1
+@@ 67
+The semi-axes of the 1σ ellipse are \(1/\sqrt{\lambda_i}\) for the eigenvalues \(\lambda_i\) of the FIM. D looks at the product of the axes, A at the sum of their squares, E at the longest one.
+@@ 68
+Going deeper (optional): two caveats
+@@ 69
+<strong>Biased estimators.</strong> If the bias is \(b(x)\), the scalar bound becomes \(\operatorname{var}(\hat x)\ge(1+b'(x))^2/\mathcal{I}\). For "0.8 × sample mean", \(b(x)=-0.2x\), so the bound is \(0.64\,\sigma^2/N\), which is what the widget measures.
+@@ 70
+<strong>Rotations and poses.</strong> The classical bound assumes parameters in a Euclidean space. For rotations and poses there is a version with an extra term that depends on the curvature of the space; the book notes that it is often negligible when the noise is small compared with the signal (footnote 8, p. 174).
+@@ 71
+Q1. An estimator has bias 0.3 and variance 0.16. What is its mean squared error?
+@@ 72
+MSE = bias² + variance = 0.09 + 0.16 = 0.25.
+@@ 73
+Q2. Two scalar measurements of the same unknown: z₁ = x + ε₁ and z₂ = 2x + ε₂, with independent unit-variance noise. What is the smallest variance an unbiased estimator of x can have?
+@@ 74
+J = [1; 2] and Σ = I, so the FIM is 1² + 2² = 5 and the bound is 1/5 = 0.2. The second measurement is four times as informative as the first.
+@@ 75
+Q3. In a simulation, an estimator's variance comes out at 60% of the Cramér-Rao bound, over many trials. What is the most likely explanation?
+@@ 76
+The estimator is better than maximum likelihood
+@@ 77
+The bound only holds for Gaussian noise
+@@ 78
+The Fisher information was evaluated at the estimate instead of the truth
+@@ 79
+The estimator is biased
+@@ 80
+The bound (6.41) applies to unbiased estimators only. Shrinking an estimate towards a fixed value lowers variance and adds bias, as the third estimator in the widget shows.
+@@ 81
+Q4. A FIM is diag(9, 1). Which statement is correct?
+@@ 82
+The worst-direction standard deviation bound is 1/3
+@@ 83
+The E-criterion is 1, and the bound on the largest variance is 1
+@@ 84
+The A-criterion is 10
+@@ 85
+The D-criterion is 10
+@@ 86
+λmin = 1, so the largest variance bound is 1/1 = 1. The A-criterion is 1/9 + 1 ≈ 1.11, and the D-criterion is 9.
+@@ 87
+Q5. In Example 2, the robot is at x = 3 (beacon 3 m off the line, σ = 0.1 m). What is the Fisher information for x from one range?
+@@ 88
+J = 3/√18 = 0.707, so J² = 0.5 and the FIM is 0.5/0.01 = 50.
+@@ 89
+MSE = bias² + variance. For an unbiased estimator the covariance is the whole story.
+@@ 90
+CRLB: \(\cov(\hat{\mathbf{x}})\succeq\mathcal{I}^{-1}\) for every unbiased estimator. The FIM is the expected curvature of the negative log-likelihood at the truth.
+@@ 91
+With additive Gaussian noise, \(\mathcal{I}=\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{J}\): the information matrix of SLAM.
+@@ 92
+Maximum likelihood attains the bound asymptotically, so \(\mathcal{I}(\hat{\mathbf{x}})^{-1}\) is used as the covariance of a SLAM solution.
+@@ 93
+D, A, and E criteria reduce the FIM to one number: volume, average variance, worst direction.
+@@ 94
+<em>SLAM Handbook</em>, §6.2 (opening) and §6.2.1 "Cramér-Rao Lower Bound and the Fisher Information Matrix", pp. 173–175.
+@@ 95
+Kay, <em>Fundamentals of Statistical Signal Processing: Estimation Theory</em>, 1993 (proof of the bound, the Gaussian case, the bound for biased estimators).
+@@ 96
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (the bound for linear-Gaussian estimation).
+@@ 97
+Pukelsheim, <em>Optimal Design of Experiments</em>, 1993; Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004 (D-, A-, and E-optimal design).

@@ -1,0 +1,198 @@
+@@ 1
+<span class="eyebrow">Week 1 · Review</span>
+@@ 2
+Week 1 review: the SLAM problem and its toolkit
+@@ 3
+After today you can describe a SLAM system and its history in a few sentences, fuse Gaussian estimates in information form, and solve a small weighted least-squares problem by hand with a Cholesky factorization.
+@@ 4
+SLAM estimates a robot's trajectory and a map together. A sensor-specific front-end turns raw data into odometry, landmark observations, and loop closures; a back-end finds the trajectory and map that fit them best. Odometry alone drifts, and loop closures bound the drift. The back-end serves a fast control loop and a slow planning loop and must stay online. Its history runs from the EKF through particle filters to factor-graph optimization, which won because the information matrix is sparse. The math underneath is short: beliefs are Gaussians, Bayes' rule combines them, independent information adds, and the MAP estimate under Gaussian noise is a weighted least-squares problem, solved by factoring a matrix and never by inverting it.
+@@ 5
+Measurement model
+@@ 6
+§I.2, p. 5 · <a href="#d1">Day 1</a>
+@@ 7
+Bayes' rule, MAP, and MLE
+@@ 8
+Named in §I.4.1, p. 15 · <a href="#d2">Day 2</a>
+@@ 9
+Gaussian density
+@@ 10
+Equation (1.9), p. 27 · <a href="#d2">Day 2</a>
+@@ 11
+Scalar prior plus measurement
+@@ 12
+<a href="#d2">Day 2</a>
+@@ 13
+Information form and fusion
+@@ 14
+\(\boldsymbol{\Lambda} = \boldsymbol{\Sigma}^{-1}\), \(\boldsymbol{\eta} = \boldsymbol{\Lambda}\boldsymbol{\mu}\); fusing: \(\boldsymbol{\Lambda} = \boldsymbol{\Lambda}_1+\boldsymbol{\Lambda}_2\), \(\boldsymbol{\eta} = \boldsymbol{\eta}_1+\boldsymbol{\eta}_2\)
+@@ 15
+Information matrix: §I.4.1, p. 15 · <a href="#d3">Day 3</a>
+@@ 16
+Information added by one measurement \(\mathbf{a}\T\mathbf{x}\) with noise σ
+@@ 17
+\(\mathbf{a}\mathbf{a}\T/\sigma^2\), so \(\boldsymbol{\Lambda} = \mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{A}\)
+@@ 18
+<a href="#d3">Day 3</a>, <a href="#d4">Day 4</a>
+@@ 19
+Normal equations
+@@ 20
+\(\mathbf{A}\T\mathbf{A}\,\mathbf{x} = \mathbf{A}\T\mathbf{b}\); weighted: \(\mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{A}\,\mathbf{x} = \mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{b}\)
+@@ 21
+Equation (1.25), p. 31 · <a href="#d4">Day 4</a>
+@@ 22
+Mahalanobis norm and whitening
+@@ 23
+Equations (1.10), p. 27, and (1.22), p. 30 · <a href="#d4">Day 4</a>
+@@ 24
+Cholesky solve
+@@ 25
+\(\boldsymbol{\Lambda} = \mathbf{R}\T\mathbf{R}\); \(\ \mathbf{R}\T\mathbf{y} = \mathbf{A}\T\mathbf{b}\), then \(\mathbf{R}\mathbf{x} = \mathbf{y}\)
+@@ 26
+Equations (1.26)–(1.28), p. 31 · <a href="#d5">Day 5</a>
+@@ 27
+QR solve and condition number
+@@ 28
+Equations (1.29)–(1.33), p. 32 · <a href="#d5">Day 5</a>
+@@ 29
+Q1. Which of these is a loop closure?
+@@ 30
+The relative motion between two consecutive LiDAR scans
+@@ 31
+An angular-rate reading from the IMU
+@@ 32
+A relative pose between the current pose and one from ten minutes ago, found by recognizing the place
+@@ 33
+The first pose, fixed at the origin
+@@ 34
+A loop closure ties the current pose to a much earlier one. The first option is odometry, which only links neighbours and therefore drifts.
+@@ 35
+Q2. The book says the back-end "must remain online". What does that require?
+@@ 36
+A runtime that does not grow without bound as data arrives, on the robot's own hardware
+@@ 37
+A permanent network connection
+@@ 38
+Answering within a few milliseconds
+@@ 39
+Never revising earlier poses
+@@ 40
+The back-end may lag the front-end by seconds, but it has to keep up with the data stream on embedded hardware. That requirement is what set SLAM apart from offline structure from motion.
+@@ 41
+Q3. Prior: x = 0 m with σ = 2 m. Measurement: z = 5 m with σ = 2 m. What is the posterior?
+@@ 42
+Mean 2.5 m, σ = 2 m
+@@ 43
+Mean 2.5 m, σ ≈ 1.41 m
+@@ 44
+Mean 5 m, σ = 1 m
+@@ 45
+Mean 2.5 m, σ = 4 m
+@@ 46
+Equal information on both sides gives the midpoint. Information adds: 1/4 + 1/4 = 1/2, so σ² = 2 and σ ≈ 1.41 m.
+@@ 47
+Q4. What made optimization-based SLAM practical between 2005 and 2015?
+@@ 48
+Particle filters with more particles
+@@ 49
+Dropping loop closures
+@@ 50
+Storing the full covariance matrix more compactly
+@@ 51
+The sparsity of the information matrix when past poses are kept
+@@ 52
+The covariance is dense, but its inverse is sparse with a predictable pattern, which allows solvers with close-to-linear cost (p. 15).
+@@ 53
+Q5. Two poses x₀, x₁ on a line. A prior on x₀ has σ = 1 and one odometry measurement of x₁ − x₀ has σ = 0.5. What is Λ?
+@@ 54
+Rows (5, −4) and (−4, 4)
+@@ 55
+Rows (2, −1) and (−1, 1)
+@@ 56
+Rows (3, −2) and (−2, 2)
+@@ 57
+Rows (1.25, −0.25) and (−0.25, 0.25)
+@@ 58
+The prior adds 1/1² = 1 to the top-left entry. The odometry adds (1/0.5²) × [1 −1; −1 1] = [4 −4; −4 4].
+@@ 59
+Q6. Three measurements of one unknown: 4 (σ = 1), 8 (σ = 1), and 9 (σ = 0.5). What is the weighted least-squares estimate?
+@@ 60
+Weights 1/σ² are 1, 1, 4. (4 + 8 + 4 × 9) / (1 + 1 + 4) = 48/6 = 8. The plain mean would be 7.
+@@ 61
+Q7. A QR factorization of A gives R with rows (3, 1) and (0, 2). What is AᵀA?
+@@ 62
+Rows (9, 1) and (1, 4)
+@@ 63
+Rows (10, 2) and (2, 4)
+@@ 64
+Rows (9, 3) and (3, 5)
+@@ 65
+It cannot be found without Q
+@@ 66
+AᵀA = RᵀQᵀQR = RᵀR = [3 0; 1 2][3 1; 0 2] = [9 3; 3 5]. The second option is RRᵀ, the wrong order.
+@@ 67
+Q8. In double precision (about 16 digits), a least-squares problem has κ(A) = 10⁵. Roughly how many correct digits can you expect from the normal equations, and from QR?
+@@ 68
+16 and 16
+@@ 69
+11 and 6
+@@ 70
+11 and 11
+@@ 71
+6 and 11
+@@ 72
+You lose about log₁₀ κ digits. The normal equations work with κ² = 10¹⁰ and keep about 6. QR works with κ = 10⁵ and keeps about 11.
+@@ 73
+From odometry, a robot gives a 2% chance to being back at a known place. A place recognizer fires with probability 0.9 on a true revisit and 0.05 otherwise. (a) It fires. What is the probability of a true revisit? (b) A second, independent recognizer with the same rates also fires. What is it now?
+@@ 74
+(a) Bayes' rule: \(\dfrac{0.9\times 0.02}{0.9\times 0.02 + 0.05\times 0.98} = \dfrac{0.018}{0.067} \approx 0.27\). Still more likely a look-alike than a revisit.
+@@ 75
+(b) The posterior from (a) becomes the new prior: \(\dfrac{0.9\times 0.269}{0.9\times 0.269 + 0.05\times 0.731} = \dfrac{0.242}{0.278} \approx 0.87\). Independent evidence compounds: two agreeing checks are worth far more than one.
+@@ 76
+Two independent estimates of a landmark position: \(\boldsymbol{\mu}_1 = (0, 0)\) with \(\boldsymbol{\Sigma}_1 = \diag(1, 9)\), and \(\boldsymbol{\mu}_2 = (2, 3)\) with \(\boldsymbol{\Sigma}_2 = \diag(4, 1)\). Find the fused mean and covariance.
+@@ 77
+Information matrices: \(\boldsymbol{\Lambda}_1 = \diag(1,\ 1/9)\), \(\boldsymbol{\Lambda}_2 = \diag(1/4,\ 1)\). Sum: \(\boldsymbol{\Lambda} = \diag(1.25,\ 1.111)\).
+@@ 78
+Information vectors: \(\boldsymbol{\eta}_1 = (0, 0)\), \(\boldsymbol{\eta}_2 = (2/4,\ 3/1) = (0.5,\ 3)\). Sum: \(\boldsymbol{\eta} = (0.5,\ 3)\).
+@@ 79
+Mean: \(\boldsymbol{\mu} = (0.5/1.25,\ 3/1.111) = (0.4,\ 2.7)\). Covariance: \(\boldsymbol{\Sigma} = \diag(0.8,\ 0.9)\). In \(x\) the result stays near estimate 1, which is the sharper one there; in \(y\) it goes most of the way to estimate 2.
+@@ 80
+Fit the line \(y = x_1 + x_2 t\) to the points \((t, y) = (0, 0),\ (1, 1),\ (2, 4)\) by least squares. Form the normal equations, solve them with a Cholesky factorization, and verify that the residual is orthogonal to both columns of \(\mathbf{A}\).
+@@ 81
+\(\mathbf{A}\) has rows \((1,0), (1,1), (1,2)\) and \(\mathbf{b} = (0,1,4)\). So \(\mathbf{A}\T\mathbf{A} = \begin{bmatrix} 3 & 3 \\ 3 & 5 \end{bmatrix}\) and \(\mathbf{A}\T\mathbf{b} = (5,\ 9)\).
+@@ 82
+Cholesky: \(r_{11} = \sqrt3\), \(r_{12} = 3/\sqrt3 = \sqrt3\), \(r_{22} = \sqrt{5-3} = \sqrt2\).
+@@ 83
+Forward, \(\mathbf{R}\T\mathbf{y} = (5, 9)\): \(y_1 = 5/\sqrt3\); \(\sqrt3\,y_1 + \sqrt2\,y_2 = 9\) gives \(y_2 = 4/\sqrt2 = 2\sqrt2\).
+@@ 84
+Back, \(\mathbf{R}\mathbf{x} = \mathbf{y}\): \(x_2 = 2\sqrt2/\sqrt2 = 2\); \(\sqrt3\,x_1 + \sqrt3\cdot 2 = 5/\sqrt3\) gives \(x_1 = 5/3 - 2 = -1/3\). The line is \(y = -\tfrac13 + 2t\).
+@@ 85
+Residual: \(\mathbf{r} = \mathbf{b}-\mathbf{A}\mathbf{x} = (\tfrac13,\ -\tfrac23,\ \tfrac13)\). Against \((1,1,1)\): \(\tfrac13-\tfrac23+\tfrac13 = 0\). Against \((0,1,2)\): \(-\tfrac23+\tfrac23 = 0\). The cost is \(\tfrac19+\tfrac49+\tfrac19 = \tfrac23\).
+@@ 86
+A robot moves along a line through poses \(x_0, x_1, x_2\). There are four measurements, all with \(\sigma = 1\): a prior \(x_0 = 0\); odometry \(x_1 - x_0 = 1\) and \(x_2 - x_1 = 1\); and a GPS fix \(x_2 = 2.6\). (a) Write \(\mathbf{A}\) and \(\mathbf{b}\). (b) Form \(\boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A}\) and solve for the poses. (c) How is the 0.6 m disagreement between odometry and GPS shared out? (d) Find the variance of \(x_2\) and compare it with the value 3 from <a href="#d3">Day 3</a>, where there was no GPS.
+@@ 87
+(a) One row per measurement:
+@@ 88
+(b) \(\boldsymbol{\Lambda} = \begin{bmatrix} 2 & -1 & 0 \\ -1 & 2 & -1 \\ 0 & -1 & 2 \end{bmatrix}\) and \(\mathbf{A}\T\mathbf{b} = (-1,\ 0,\ 3.6)\). It is the Day 3 matrix with one more unit of information on \(x_2\). Eliminate: row 1 gives \(x_0 = (x_1-1)/2\). Put that into row 2: \(1.5x_1 - x_2 = -0.5\). Row 3 gives \(x_1 = 2x_2 - 3.6\). Substituting, \(3x_2 - 5.4 - x_2 = -0.5\), so \(x_2 = 2.45\), then \(x_1 = 1.3\) and \(x_0 = 0.15\).
+@@ 89
+(c) The residuals are: prior \(0.15\), odometry \(1.15 - 1 = 0.15\) twice, GPS \(2.45 - 2.6 = -0.15\). Four equally trusted measurements each absorb a quarter of the 0.6 m. This is the "spread the gap evenly" behaviour of the loop-closure widget on <a href="#d1">Day 1</a>.
+@@ 90
+(d) The variance of \(x_2\) is the last entry of the solution of \(\boldsymbol{\Lambda}\mathbf{s} = (0,0,1)\). The same elimination gives \(\mathbf{s} = (0.25,\ 0.5,\ 0.75)\), so the variance is 0.75, a standard deviation of 0.87 m. Without the GPS it was 3. One absolute measurement at the end of the chain removed most of the drift.
+@@ 91
+Say what the front-end hands to the back-end, and what a loop closure adds that odometry cannot.
+@@ 92
+Write Bayes' rule and say which term is the prior, the likelihood, and the posterior.
+@@ 93
+Show that maximizing a product of Gaussians is minimizing a sum of squared errors divided by variances.
+@@ 94
+Fuse two Gaussian estimates by adding information matrices and information vectors.
+@@ 95
+Derive the normal equations and solve a 2 × 2 case by Cholesky factorization and substitution.
+@@ 96
+Explain why the information matrix of a chain of poses is sparse, and why solvers factor it instead of inverting it.
+@@ 97
+<em>SLAM Handbook</em>, Prelude to Part I, pp. 3–18; Notation, pp. xiv–xv; equations (1.9)–(1.10), p. 27, and (1.22)–(1.33), pp. 30–32, quoted ahead of Week 2.
+@@ 98
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (Bayes' rule, information form).
+@@ 99
+Strang, <em>Introduction to Linear Algebra</em>, 2016; Trefethen and Bau, <em>Numerical Linear Algebra</em>, 1997 (least squares, Cholesky, QR, conditioning).

@@ -1,0 +1,264 @@
+@@ 1
+<span class="eyebrow">Week 9 · Day 5</span>
+@@ 2
+Solving the relaxation at scale: Burer-Monteiro, the Riemannian staircase, and SE-Sync
+@@ 3
+After today you can explain how SE-Sync solves a huge semidefinite program through a small non-convex one, follow the Riemannian staircase step by step, and read the certificate that SE-Sync returns.
+@@ 4
+About 60 min · Read §6.1.2.3–6.1.2.5, pp. 161–164 (4 pages) · Needs Week 9 Day 4
+@@ 5
+Read first: §6.1.2.3 to §6.1.2.5, pp. 161–164
+@@ 6
+Why a general-purpose SDP solver is not an option, and the size at which it gives up (p. 161).
+@@ 7
+The Burer-Monteiro substitution, equation (6.22), and the definition of the Stiefel manifold, equation (6.23) (p. 162).
+@@ 8
+Theorem 6.2 and the paragraph after it that describes the Riemannian Staircase (p. 163).
+@@ 9
+Algorithm 3 and the two relations (6.26) and (6.27) (p. 164).
+@@ 10
+The SDP of Day 4 is convex but enormous. Its solution, however, has low rank. So search directly for a low-rank factor \(\mathbf{Y}\) with \(\mathbf{Z}=\mathbf{Y}\T\mathbf{Y}\). That problem is small and non-convex again, but with one extra property: a local solution that does not use all the rank it was given is guaranteed to be global. Increase the rank until that happens, round the result to rotations, and compare costs to get the certificate.
+@@ 11
+1. The SDP is too big, but its solution is small
+@@ 12
+Problem 6.3 can be solved in polynomial time in principle. In practice, general-purpose interior-point solvers store and factor the dense \(dn\times dn\) matrix \(\mathbf{Z}\), which stops working when its dimension passes a few thousand, and SLAM problems are one to two orders of magnitude larger than that. <span class="src">§6.1.2.3 · p. 161</span>
+@@ 13
+But look at what we expect the answer to be. When the relaxation is exact, \(\mathbf{Z}^\star=\mathbf{R}^{\star\mathsf{T}}\mathbf{R}^\star\) has rank \(d\), which is 2 or 3. Even when it is not exact, the rank of a minimizer is typically not much above \(d\). <span class="src">p. 161</span> A \(dn\times dn\) matrix of rank \(r\) can be written as \(\mathbf{Y}\T\mathbf{Y}\) with \(\mathbf{Y}\in\R^{r\times dn}\). Burer and Monteiro's idea is to substitute that factorization into the SDP: <span class="src">eq. (6.22) · p. 162</span>
+@@ 14
+Two things changed. The constraint \(\mathbf{Z}\succeq0\) is gone, because \(\mathbf{Y}\T\mathbf{Y}\) is positive semidefinite automatically: \(\mathbf{v}\T\mathbf{Y}\T\mathbf{Y}\mathbf{v}=\norm{\mathbf{Y}\mathbf{v}}^2\ge0\). And the number of unknowns dropped from \(dn(dn+1)/2\) to \(rdn\). For \(n=10\,000\) poses in 3-D and \(r=5\):
+@@ 15
+Compare (6.22) with (6.20) from Day 4: the same problem, except that \(\mathbf{Y}\) has \(r\) rows where \(\mathbf{R}\) had \(d\). With \(r=d\) we are back at the non-convex problem over \(\operatorname{O}(d)^n\). <span class="src">p. 162</span>
+@@ 16
+2. The feasible set is a product of Stiefel manifolds
+@@ 17
+Split \(\mathbf{Y}\) into \(n\) blocks of size \(r\times d\), \(\mathbf{Y}=(\mathbf{Y}_1\ \cdots\ \mathbf{Y}_n)\). The constraint says \(\mathbf{Y}_i\T\mathbf{Y}_i=\mathbf{I}_d\) for each \(i\): the \(d\) columns of \(\mathbf{Y}_i\) are orthonormal vectors in \(\R^r\). The set of all such matrices is the <strong>Stiefel manifold</strong>: <span class="src">eq. (6.23) · p. 162</span>
+@@ 18
+the set of \(k\) orthonormal vectors (a \(k\)-frame) in \(\R^p\).
+@@ 19
+Manifold
+@@ 20
+What a point is
+@@ 21
+Familiar name
+@@ 22
+one unit vector in \(\R^p\)
+@@ 23
+the unit sphere
+@@ 24
+\(p\) orthonormal vectors in \(\R^p\)
+@@ 25
+the orthogonal group \(\operatorname{O}(p)\)
+@@ 26
+two perpendicular unit vectors in \(\R^3\)
+@@ 27
+a planar frame that is free to tilt in space
+@@ 28
+So (6.22) is the same as Problem 6.4, <span class="src">eq. (6.24) · p. 162</span>
+@@ 29
+an <em>unconstrained</em> problem on a smooth manifold. This is the setting of <a href="#d21">Week 4 · Day 3</a>: stay on the manifold by construction and you never have to handle the constraints separately. The book notes that manifold solvers are simpler, faster, and more accurate here than general constrained solvers. <span class="src">p. 162</span>
+@@ 30
+On Day 2, three variables that had to be \(+1\) or \(-1\) were allowed to become arrows in a plane. Here each pose's rotation, a frame of \(d\) axes in \(d\) dimensions, is allowed to become a frame of \(d\) axes in \(r\) dimensions. A planar robot's heading frame may tip out of the page. The extra room is what lets a stuck configuration get unstuck.
+@@ 31
+Filling the gap: one step of Riemannian gradient descent on Problem 6.4
+@@ 32
+The book says "apply a Riemannian optimization algorithm" and moves on. Here is the simplest one, which the widget below runs. Write \(f(\mathbf{Y})=\tr(\tilde{\mathbf{Q}}\mathbf{Y}\T\mathbf{Y})\).
+@@ 33
+<strong>Ordinary gradient.</strong> \(f\) is quadratic in \(\mathbf{Y}\) and \(\tilde{\mathbf{Q}}\) is symmetric, so \(\nabla f(\mathbf{Y})=2\mathbf{Y}\tilde{\mathbf{Q}}\), an \(r\times dn\) matrix with blocks \(\mathbf{G}_i\).
+@@ 34
+<strong>Tangent directions.</strong> A small change \(\mathbf{V}_i\) of \(\mathbf{Y}_i\) keeps \(\mathbf{Y}_i\T\mathbf{Y}_i=\mathbf{I}\) to first order when \(\mathbf{Y}_i\T\mathbf{V}_i+\mathbf{V}_i\T\mathbf{Y}_i=\mathbf{0}\), that is, when \(\mathbf{Y}_i\T\mathbf{V}_i\) is skew-symmetric. Those \(\mathbf{V}_i\) form the tangent space.
+@@ 35
+<strong>Project.</strong> Removing the symmetric part does it. With \(\operatorname{sym}(\mathbf{M})=\tfrac12(\mathbf{M}+\mathbf{M}\T)\),
+@@ 36
+Check: \(\mathbf{Y}_i\T\operatorname{grad}_i=\mathbf{Y}_i\T\mathbf{G}_i-\operatorname{sym}(\mathbf{Y}_i\T\mathbf{G}_i)\) is the skew part of \(\mathbf{Y}_i\T\mathbf{G}_i\), as required. And look at the result: the Riemannian gradient is \(2\mathbf{Y}\mathbf{S}\) with the certificate matrix \(\mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda}\) of Day 4. A point where the gradient vanishes satisfies \(\mathbf{Y}\mathbf{S}=\mathbf{0}\), which is condition (i) of the certificate, for free.
+@@ 37
+<strong>Step and retract.</strong> Move against the gradient, then push each block back onto the manifold by re-orthonormalizing its columns (Gram-Schmidt):
+@@ 38
+SE-Sync uses a second-order (trust-region) version of this, which needs far fewer iterations, but the ingredients are the same.
+@@ 39
+3. Theorem 6.2 and the Riemannian staircase
+@@ 40
+There is an obvious objection. Problem 6.4 is non-convex, so its local solver can get stuck, and we seem to be back where we started. The answer is this result, adapted from Boumal and co-authors: <span class="src">Theorem 6.2 · p. 163</span>
+@@ 41
+<em>Suppose \(\mathbf{Y}\in\operatorname{St}(d,r)^n\) is a second-order critical point of Problem 6.4 and is (row) rank-deficient. Then \(\mathbf{Y}\) is a global minimizer of Problem 6.4, and \(\mathbf{Z}^\star=\mathbf{Y}\T\mathbf{Y}\) solves the SDP relaxation, Problem 6.3.</em>
+@@ 42
+The terms: a <strong>first-order critical point</strong> has zero Riemannian gradient. A <strong>second-order critical point</strong> in addition has no direction of negative curvature within the tangent space; this is what a good second-order local solver converges to. <strong>Row rank-deficient</strong> means \(\rank(\mathbf{Y})\lt r\): the \(r\) rows of \(\mathbf{Y}\) are linearly dependent, so the solution fits in fewer dimensions than it was offered.
+@@ 43
+Filling the gap: why a spare dimension proves optimality (sketch)
+@@ 44
+The book cites the theorem without proof. The argument is short once Day 4 is in place.
+@@ 45
+First-order critical means \(\mathbf{Y}\mathbf{S}=\mathbf{0}\) (see the box above): condition (i).
+@@ 46
+For this cost, the second derivative along a tangent direction \(\mathbf{V}\) at a critical point is \(2\tr(\mathbf{V}\mathbf{S}\mathbf{V}\T)\). (We take this formula from the references.) Second-order critical means it is non-negative for every tangent \(\mathbf{V}\).
+@@ 47
+Rank-deficient means there is a unit vector \(\mathbf{u}\in\R^r\) perpendicular to every column of \(\mathbf{Y}\): \(\mathbf{u}\T\mathbf{Y}=\mathbf{0}\). Take any \(\mathbf{v}\in\R^{dn}\) and set \(\mathbf{V}=\mathbf{u}\mathbf{v}\T\). It is tangent, because \(\mathbf{Y}_i\T\mathbf{V}_i=(\mathbf{Y}_i\T\mathbf{u})\mathbf{v}_i\T=\mathbf{0}\). It moves the poses into the unused dimension \(\mathbf{u}\).
+@@ 48
+Insert it into step 2: \(2\tr(\mathbf{u}\mathbf{v}\T\mathbf{S}\mathbf{v}\mathbf{u}\T)=2(\mathbf{v}\T\mathbf{S}\mathbf{v})(\mathbf{u}\T\mathbf{u})=2\,\mathbf{v}\T\mathbf{S}\mathbf{v}\ge0\). This holds for every \(\mathbf{v}\), so \(\mathbf{S}\succeq0\): condition (ii).
+@@ 49
+Conditions (i) and (ii) are the certificate of Day 4, so \(\mathbf{Y}\T\mathbf{Y}\) solves the SDP.
+@@ 50
+In words: an unused dimension is an escape hatch. If any feasible \(\mathbf{Z}\) had a lower cost, there would be a way down through the hatch, and a second-order critical point has no way down.
+@@ 51
+The <strong>Riemannian Staircase</strong> turns the theorem into an algorithm. <span class="src">§6.1.2.3 · p. 163</span>
+@@ 52 attr
+Flow chart of the Riemannian staircase. Start with a small rank r. A local solver on problem 6.24 returns a critical point Y star. Test whether Y star is row rank-deficient. If no, raise r by one and run the local solver again. If yes, Y star transpose Y star solves the SDP, and the algorithm proceeds to rounding and the certificate.
+@@ 53
+raise r by one
+@@ 54
+start with a small
+@@ 55
+rank r ≥ d
+@@ 56
+local solver on (6.24)
+@@ 57
+returns Y*
+@@ 58
+is Y* row
+@@ 59
+rank-deficient?
+@@ 60
+Y*ᵀY* solves the SDP:
+@@ 61
+round and certify
+@@ 62
+no
+@@ 63
+The staircase wraps an ordinary local solver. Each pass around the loop is one stair.
+@@ 64
+It must stop: \(\mathbf{Y}\) has \(dn\) columns, so its rank is at most \(dn\), and once \(r\ge dn+1\) every \(\mathbf{Y}\) is rank-deficient. In practice one or two stairs are enough. <span class="src">p. 163</span> The inner solver is the same kind of fast second-order local method SLAM already uses, so speed is kept and a global guarantee is added.
+@@ 65
+Try it: the widget solves Problem 6.4 on the graph of Days 1 and 4 for the rank \(r\) you choose. It starts at \(r=3\).
+@@ 66
+Notice that at \(r=3\) this start ends at cost 5.484 with \(\mathbf{Y}\mathbf{Y}\T/n\) having eigenvalues 1.00, 0.66, 0.34: full rank, so Theorem 6.2 is silent, and \(\lambda_{\min}(\mathbf{S})=-0.685\) confirms it is not optimal. Raise \(r\) to 4: the cost falls to 0.091, the eigenvalues become 1, 1, 0, 0 (rank-deficient), \(\lambda_{\min}(\mathbf{S})=0\), and the rounded rotations have the same cost: certified. Set \(r=2\) to see the Day 1 local minimum, 11.595. Then go back to \(r=4\) and set the noise to 80°: the SDP is solved at 5.204 but with rank 4, so it is not tight and only a bound comes out.
+@@ 67
+4. Rounding: from Y back to rotations
+@@ 68
+The staircase returns \(\mathbf{Y}^\star\in\operatorname{St}(d,r)^n\), which has \(r\) rows. The answer we want has \(d\) rows and blocks in \(\SO(d)\). If the relaxation is exact, then <span class="src">eq. (6.25) · p. 163</span>
+@@ 69
+so \(\mathbf{Y}^\star\) has rank \(d\) and \(\mathbf{R}^\star\) can be read off from a thin singular value decomposition (<a href="#d5">Week 1 · Day 5</a>). Write \(\mathbf{Y}^\star=\mathbf{U}_d\boldsymbol{\Sigma}_d\mathbf{V}_d\T\), keeping the \(d\) nonzero singular values. Then \(\hat{\mathbf{R}}=\boldsymbol{\Sigma}_d\mathbf{V}_d\T\) is \(d\times dn\) and satisfies \(\hat{\mathbf{R}}\T\hat{\mathbf{R}}=\mathbf{Y}^{\star\mathsf{T}}\mathbf{Y}^\star\). Two \(d\times dn\) matrices with the same product \(\mathbf{R}\T\mathbf{R}\) differ only by an orthogonal matrix on the left, so \(\hat{\mathbf{R}}=\mathbf{G}\mathbf{R}^\star\): the optimal rotations up to one global rotation (and, if the blocks come out with determinant \(-1\), one reflection to undo). That global rotation is the gauge freedom, which no relative measurement can fix.
+@@ 70
+A small example with \(d=2\), \(r=3\), \(n=2\):
+@@ 71
+Each \(3\times2\) block of \(\mathbf{Y}^\star\) has orthonormal columns, and the middle row is zero, so the rank is 2. Dropping the unused row leaves \(\hat{\mathbf{R}}_1=\mathbf{I}\) and \(\hat{\mathbf{R}}_2\), a rotation by 90°.
+@@ 72
+If the relaxation is not exact, \(\mathbf{Y}^\star\) has rank above \(d\). Then keep its \(d\) largest singular values (the best rank-\(d\) approximation), and replace each \(d\times d\) block of the result by the nearest rotation, again with an SVD. The outcome is feasible but only approximately optimal. <span class="src">§6.1.2.4 · pp. 163–164</span> All of this works on the small factor \(\mathbf{Y}^\star\); the big matrix \(\mathbf{Z}^\star\) is never formed.
+@@ 73
+5. SE-Sync, and what it hands back
+@@ 74
+<strong>SE-Sync</strong> (Algorithm 3) chains everything from Days 3 to 5. <span class="src">§6.1.2.5 · p. 164</span>
+@@ 75
+Step of Algorithm 3
+@@ 76
+Covered on
+@@ 77
+Input
+@@ 78
+An initial \(\mathbf{Y}\in\operatorname{St}(d,r_0)^n\) with \(r_0\ge d+1\); the data matrix \(\tilde{\mathbf{Q}}\) is built from the measurements
+@@ 79
+Day 3
+@@ 80
+Riemannian Staircase
+@@ 81
+Finds \(\mathbf{Y}^\star\) with \(\mathbf{Y}^{\star\mathsf{T}}\mathbf{Y}^\star\) solving the SDP
+@@ 82
+today, section 3
+@@ 83
+Lower bound
+@@ 84
+\(p^\star_{\text{SDP}}\) is the cost of \(\mathbf{Y}^\star\), \(\tr(\tilde{\mathbf{Q}}\mathbf{Y}^{\star\mathsf{T}}\mathbf{Y}^\star)\)
+@@ 85
+Day 4
+@@ 86
+Round
+@@ 87
+\(\hat{\mathbf{R}}\in\SO(d)^n\) from \(\mathbf{Y}^\star\)
+@@ 88
+today, section 4
+@@ 89
+Translations
+@@ 90
+\(\hat{\mathbf{t}}=\mathbf{t}^\star(\hat{\mathbf{R}})\) from (6.16)
+@@ 91
+Return
+@@ 92
+The poses \(\hat{\mathbf{T}}=(\hat{\mathbf{t}},\hat{\mathbf{R}})\) and the number \(p^\star_{\text{SDP}}\)
+@@ 93
+The returned number is what makes the algorithm certifiable. In the book's (6.26) and (6.27), \(F(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\) denotes the cost of a solution; read it as \(\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\). Since \(p^\star_{\text{SDP}}\le p^\star_{\text{MLE}}\), for <em>any</em> feasible poses, from SE-Sync or from anywhere else, <span class="src">eq. (6.26) · p. 164</span>
+@@ 94
+And if the relaxation is exact, the rounded estimate attains the bound, \(\tr(\tilde{\mathbf{Q}}\hat{\mathbf{R}}\T\hat{\mathbf{R}})=p^\star_{\text{SDP}}\) (6.27). Checking that equality after the fact is the certificate: two numbers agree, so \(\hat{\mathbf{T}}\) is a global optimum of Problem 6.1. In the widget at 10° noise and \(r=4\), both numbers are 0.091. At 80° they are 9.141 and 5.204, so the rounded estimate is at most 3.937 above optimal; the \(r=2\) run there found rotations costing 5.479, which (6.26) places within 0.275 of optimal.
+@@ 95
+The book adds that, in the experiments of the SE-Sync paper, this is as fast as or faster than traditional local solvers. <span class="src">p. 164</span>
+@@ 96
+<strong>"Problem 6.4 is non-convex, so the guarantee is lost."</strong> The guarantee moved. It no longer comes from convexity of the problem being solved, but from Theorem 6.2 plus a rank check on the answer.
+@@ 97
+<strong>"Full rank means the solution is wrong."</strong> It means the theorem does not apply at this \(r\). The staircase's response is to try \(r+1\).
+@@ 98
+<strong>"Rounding always gives the global optimum."</strong> Only when the relaxation is exact. Otherwise it gives a feasible estimate with a computable bound on its suboptimality.
+@@ 99
+Q1. A problem has n = 1000 poses in 3-D and is solved with r = 5. How many unknowns does Y have, compared with the free entries of Z?
+@@ 100
+5000 versus 9 million
+@@ 101
+15 000 versus 3000
+@@ 102
+15 000 versus about 4.5 million
+@@ 103
+3000 versus about 4.5 million
+@@ 104
+Y is r × dn = 5 × 3000, so 15 000 numbers. A symmetric 3000 × 3000 matrix has 3000 · 3001 / 2 = 4 501 500 free entries.
+@@ 105
+Q2. What is St(1, 3)?
+@@ 106
+The unit sphere in 3-D space
+@@ 107
+The rotation group SO(3)
+@@ 108
+All 3 × 1 vectors
+@@ 109
+The unit circle
+@@ 110
+St(k, p) is the set of p × k matrices with orthonormal columns. One column of unit length in three dimensions is a point on the unit sphere.
+@@ 111
+Q3. For d = 3, the staircase runs at r = 4 and the solver returns a second-order critical point Y* of rank 4. What now?
+@@ 112
+Y* is globally optimal by Theorem 6.2
+@@ 113
+The relaxation is not tight; stop and report failure
+@@ 114
+Restart at r = 4 from another initial guess
+@@ 115
+Increase r to 5 and solve again
+@@ 116
+Rank 4 with r = 4 is full row rank, so the theorem says nothing either way. The staircase climbs one step. Tightness can only be judged after the SDP is solved.
+@@ 117
+Q4. SE-Sync returns poses with cost 43.0 and p*_SDP = 41.2. What do you know?
+@@ 118
+The poses are a certified global optimum
+@@ 119
+The poses are at most 1.8 above the optimal cost; the relaxation was not exact, or rounding lost something
+@@ 120
+The optimal cost is 41.2
+@@ 121
+The poses are a local minimum
+@@ 122
+By (6.26) the suboptimality is at most 43.0 − 41.2 = 1.8. Equality (6.27) does not hold, so there is no certificate of exact optimality.
+@@ 123
+The SDP has about \((dn)^2/2\) unknowns but a solution of rank close to \(d\). Burer-Monteiro searches over a factor \(\mathbf{Y}\in\R^{r\times dn}\) with \(\mathbf{Z}=\mathbf{Y}\T\mathbf{Y}\).
+@@ 124
+The constraints say each block \(\mathbf{Y}_i\) is a point of the Stiefel manifold \(\operatorname{St}(d,r)\), so the problem is unconstrained optimization on a manifold, with gradient \(2\mathbf{Y}\mathbf{S}\).
+@@ 125
+Theorem 6.2: a rank-deficient second-order critical point is a global minimizer and solves the SDP. The Riemannian staircase raises \(r\) until that happens.
+@@ 126
+Rounding takes the best rank-\(d\) part of \(\mathbf{Y}^\star\) and projects its blocks onto \(\SO(d)\).
+@@ 127
+SE-Sync returns the estimate and \(p^\star_{\text{SDP}}\). Their difference bounds the suboptimality, and equality certifies a global optimum.
+@@ 128
+<em>SLAM Handbook</em>, §6.1.2.3 "Efficiently Solving the Relaxation via the Riemannian Staircase", §6.1.2.4 "Rounding the Solution", §6.1.2.5 "SE-Sync: The Complete Algorithm", pp. 161–164, equations (6.22)–(6.27), Theorem 6.2, Algorithm 3.
+@@ 129
+Rosen, Carlone, Bandeira, Leonard, <em>SE-Sync: A certifiably correct algorithm for synchronization over the special Euclidean group</em>, 2019: the Riemannian gradient and Hessian of Problem 6.4 used in the two "Filling the gap" boxes.
+@@ 130
+Boumal, Voroninski, Bandeira, <em>The non-convex Burer-Monteiro approach works on smooth semidefinite programs</em>, 2016: the argument behind Theorem 6.2.
+@@ 131
+Burer and Monteiro, <em>A nonlinear programming algorithm for solving semidefinite programs via low-rank factorization</em>, 2003.
+@@ 132
+Absil, Mahony, Sepulchre, <em>Optimization Algorithms on Matrix Manifolds</em>, 2008: tangent spaces, projections, and retractions on the Stiefel manifold.

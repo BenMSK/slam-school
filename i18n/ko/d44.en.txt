@@ -1,0 +1,194 @@
+@@ 1
+<span class="eyebrow">Week 8 · Day 2</span>
+@@ 2
+Signed distance fields and the TSDF
+@@ 3
+After today you can compute a projective signed distance from a beam, fuse several of them into a TSDF voxel by weighted averaging, and locate the surface at the zero crossing.
+@@ 4
+About 60 min · Read §5.2.2–5.2.3, pp. 124–126 (3 pages) · Needs Week 8 Day 1
+@@ 5
+Read first: §5.2.2 and §5.2.3, pp. 124–126
+@@ 6
+The sign convention of an implicit surface, and how Figure 5.6 shows it for a disk (p. 125).
+@@ 7
+The two distances: Euclidean (the ESDF) and projective, and the reason the second one is used when estimating a surface from measurements (pp. 125–126).
+@@ 8
+What the truncation band is and why it exists (p. 126).
+@@ 9
+The two differences between occupancy and distance fields in §5.2.3: directness and smoothness (p. 126).
+@@ 10
+Instead of asking "is this cell occupied?", ask "how far is this point from the nearest surface, and on which side?". The surface is then the set of points where the answer is zero. A range beam gives a cheap approximation of that distance for every voxel near its end point, and averaging the approximations from many beams gives a smooth field whose zero crossing locates the surface more finely than the voxel size.
+@@ 11
+1. A surface as the zero set of a function
+@@ 12
+An <strong>implicit surface</strong> is a function \(f(\mathbf{p})\) of position that is zero exactly on the surface, negative inside objects, and positive outside. <span class="src">§5.2.2 · pp. 124–125</span> The surface is never listed point by point; it is wherever \(f\) changes sign.
+@@ 13
+Example: a disk of radius 0.75 centred at the origin, as in Figure 5.6, can be described by
+@@ 14
+At \((1, 0)\), \(f = +0.25\): outside. At \((0.3, 0.4)\), \(f = 0.5 - 0.75 = -0.25\): inside. At \((0.45, 0.6)\), \(f = 0.75 - 0.75 = 0\): on the surface. Testing whether a point is inside an obstacle is one function evaluation and a sign check, and there is no resolution to choose. <span class="src">§5.2.2 · p. 125</span>
+@@ 15
+2. The Euclidean signed distance
+@@ 16
+Many functions have the same zero set. The most useful one is the <strong>Euclidean signed distance function (ESDF)</strong>: its magnitude is the distance to the nearest surface point and its sign says inside or outside. <span class="src">§5.2.2 · p. 125</span> The disk function above is one. At \((1, 0)\) it says "0.25 from the surface", which is true.
+@@ 17
+That makes collision checking cheap. A round robot of radius \(\rho\) centred at \(\mathbf{p}\) touches nothing exactly when \(f(\mathbf{p}) \gt \rho\). And the gradient \(\nabla f\) tells a planner which way to move to gain clearance.
+@@ 18
+Filling the gap: a distance field has gradient length 1
+@@ 19
+The book speaks of "high-quality proximity gradients". The reason they are high quality is the <strong>Eikonal property</strong>: wherever a distance function \(d\) is differentiable, \(\norm{\nabla d} = 1\). Two short steps show why, for the unsigned distance outside objects.
+@@ 20
+<em>Step 1: \(d\) cannot change faster than one metre per metre.</em> Take two points \(\mathbf{p}\) and \(\mathbf{q}\). One way to reach the surface from \(\mathbf{p}\) is to walk to \(\mathbf{q}\) and then to the surface point nearest to \(\mathbf{q}\), so \(d(\mathbf{p}) \le \norm{\mathbf{p} - \mathbf{q}} + d(\mathbf{q})\). Swapping the roles gives \(|d(\mathbf{p}) - d(\mathbf{q})| \le \norm{\mathbf{p} - \mathbf{q}}\), hence \(\norm{\nabla d} \le 1\).
+@@ 21
+<em>Step 2: in one direction it changes at exactly that rate.</em> Let \(\mathbf{s}\) be the surface point nearest to \(\mathbf{p}\), and walk a distance \(\varepsilon\) straight towards it. The new point is at distance \(d(\mathbf{p}) - \varepsilon\) from \(\mathbf{s}\), and by step 1 it cannot be closer to the surface than that. So \(d\) drops by exactly \(\varepsilon\): the slope along the unit vector \(\mathbf{u}\) from \(\mathbf{s}\) to \(\mathbf{p}\) is 1.
+@@ 22
+A gradient of length at most 1 with slope 1 along \(\mathbf{u}\) must be \(\mathbf{u}\) itself: \(\nabla d = \mathbf{u}\), a unit vector pointing straight away from the nearest surface point. Check on the disk: \(\nabla f = (x, y)/\sqrt{x^2 + y^2}\), which has length 1 everywhere except at the centre, where the nearest surface point is not unique. On the surface itself, \(\nabla f\) is the surface normal.
+@@ 23
+Computing an ESDF needs, for every map point, the closest surface point. For a known surface, algorithms such as Fast Marching do this efficiently. While the surface is still being estimated from measurements, it is too expensive and too fragile. <span class="src">§5.2.2 · p. 125</span>
+@@ 24
+3. What one beam gives: the projective distance
+@@ 25
+A beam from the sensor origin \(\mathbf{o}\) that returns range \(r\) says where the surface is <em>along that beam</em>. For a query point \(\mathbf{q}\) on the beam, the <strong>projective signed distance</strong> is the distance from \(\mathbf{q}\) to the beam's end point, measured along the beam: <span class="src">§5.2.2 · pp. 125–126</span>
+@@ 26
+It is positive in front of the surface, zero at the hit, negative behind. It costs one subtraction, with no search for a closest point.
+@@ 27 attr
+A beam from a sensor hits a wall at an angle alpha to the wall normal. For a point q on the beam, the projective distance is measured along the beam to the hit point and is longer than the Euclidean distance, which is measured straight to the wall.
+@@ 28
+solid
+@@ 29
+wall normal
+@@ 30
+sensor o
+@@ 31
+projective distance, along the beam
+@@ 32
+Euclidean distance
+@@ 33
+For a flat wall hit at angle α to its normal, Euclidean distance = projective distance × cos α. Both are zero at the same place.
+@@ 34
+The projective distance is never smaller in magnitude than the true one: the beam's end point is itself a surface point, so the nearest surface point can only be as close or closer. For a flat wall hit at angle \(\alpha\) to its normal the factor is \(1/\cos\alpha\); at \(\alpha = 60^\circ\) the projective distance is twice the true one. What survives is the place where it is zero. The estimated surface is correct even though the distances around it are overestimates. <span class="src">§5.2.2 · p. 126</span>
+@@ 35
+4. Truncate and average: the TSDF
+@@ 36
+Far from the surface the overestimate is large and useless, and behind the surface the beam knows nothing at all. So the projective distance is clamped to a <strong>truncation band</strong> of half-width \(\tau\) around the surface. The clamped field is the <strong>Truncated Signed Distance Function (TSDF)</strong>. <span class="src">§5.2.2 · p. 126</span> A common convention, and the one used in this lesson: a voxel in front of the band receives \(+\tau\), which only says "free", and a voxel more than \(\tau\) behind the hit receives nothing.
+@@ 37 attr
+Value stored along one beam. In free space far in front of the surface the value is clamped to plus tau. Inside the truncation band it falls linearly, crossing zero at the measured surface, down to minus tau. Farther behind the surface nothing is updated.
+@@ 38
+measured surface
+@@ 39
+free space, clamped to +τ
+@@ 40
+not updated
+@@ 41
+truncation band
+@@ 42
+distance along the beam →
+@@ 43
+What one beam contributes to the voxels along it. Only the band around the hit carries distance information; in front of it the value just says "free".
+@@ 44
+Each voxel stores a value \(D\) and a weight \(W\), both starting at zero. For every new measurement \(d\) (the clamped projective distance at the voxel centre) with weight \(w\), the update of Curless and Levoy, made popular in robotics by KinectFusion, is a running weighted average: <span class="src">§5.2.2 · p. 126</span>
+@@ 45
+Filling the gap: why an average, and why it can be done one measurement at a time
+@@ 46
+Suppose a voxel has received \(d_1, \dots, d_n\) with weights \(w_1, \dots, w_n\). The single value that fits them best in the weighted least-squares sense minimizes \(J(D) = \sum_i w_i (D - d_i)^2\). Setting the derivative to zero,
+@@ 47
+With \(w_i = 1/\sigma_i^2\) this is the maximum-likelihood estimate under Gaussian noise (<a href="#d4">Week 1 · Day 4</a>). Now write \(W_{n-1} = \sum_{i \lt n} w_i\). The old average satisfies \(W_{n-1} D_{n-1} = \sum_{i \lt n} w_i d_i\), so
+@@ 48
+That is the update above. The two numbers \(D\) and \(W\) carry everything needed from the past, the same economy as the log-odds of Day 1. Averaging also removes noise: \(n\) independent measurements with standard deviation \(\sigma\) average to one with \(\sigma/\sqrt{n}\). Range noise of 5 cm becomes 1 cm after 25 scans.
+@@ 49
+Worked example, with \(w = 1\). A voxel receives \(d = 0.12, 0.08, 0.13\) m. After the first, \(D = 0.12\), \(W = 1\). After the second, \(D = (1 \times 0.12 + 0.08)/2 = 0.10\). After the third, \(D = (2 \times 0.10 + 0.13)/3 = 0.11\), \(W = 3\).
+@@ 50
+The surface lies between two neighbouring voxels whose values have opposite signs. Because the field is nearly linear there, linear interpolation places it. If the voxel at position \(x_a\) has \(D_a \gt 0\) and the next one at \(x_b\) has \(D_b \lt 0\),
+@@ 51
+With voxels at 2.0 m and 2.1 m holding \(+0.06\) and \(-0.04\): \(x^{*} = 2.0 + 0.1 \times 0.06/0.10 = 2.06\) m. The voxels are 10 cm apart, yet the surface is placed to the centimetre.
+@@ 52
+Try it: the same room as yesterday on a finer grid, now storing a TSDF. Read the two error tiles, press "Auto tour", and read them again. Then look at the thin wall in the middle.
+@@ 53
+Notice that after one scan the zero crossing is no better than the raw end points (3.6 cm against 2.6 cm), since nothing has been averaged yet. After the 50 scans of the tour its typical error is about 1 cm: a tenth of the 12.5 cm cell, and well below the 5 cm range noise. The probe cell reads 0.40 m where the true distance is 0.19 m, the overestimate of section 3. The thin wall is the failure case: seen from both sides, it comes out about three times too thick. Set τ to 0.10 m, less than one cell, and the outline after one scan is full of gaps.
+@@ 54
+5. Occupancy or distance?
+@@ 55
+Both are volumetric: they estimate a quantity everywhere in the observed space. They differ in what they make easy. <span class="src">§5.2.3 · p. 126</span>
+@@ 56
+Occupancy map
+@@ 57
+Distance field (TSDF)
+@@ 58
+How directly do beams give the quantity?
+@@ 59
+Directly: a beam says free, occupied, or nothing. Few heuristics.
+@@ 60
+Indirectly: the true distance is not measurable from one beam, so a proxy (projective, truncated) is used.
+@@ 61
+How smooth is the stored field?
+@@ 62
+It models a yes-or-no property, so it jumps at surfaces.
+@@ 63
+Smooth and differentiable: gradients, and sub-voxel accuracy by interpolation.
+@@ 64
+Thin obstacles
+@@ 65
+Kept.
+@@ 66
+Easily lost.
+@@ 67
+The last row is the price of estimating negative values behind a surface. If a thin object is seen from both sides, a voxel just behind it for one viewpoint is just in front of it for the other. Positive and negative values are averaged, and the zero crossing can move or vanish. <span class="src">§5.4.4.1 · p. 138</span> This is what displaced the outline of the thin wall in the widget.
+@@ 68
+<strong>"A TSDF stores the distance to the nearest surface."</strong> It stores an average of clamped distances along beams. It is close to the true distance only near surfaces seen roughly head-on, and it overestimates elsewhere. A planner that needs true clearances should build an ESDF from it.
+@@ 69
+<strong>"A larger truncation band is always safer."</strong> A wide band fuses more overestimates and erases objects thinner than the band. A band narrower than a voxel leaves holes, because the voxels on the two sides of a surface are no longer both updated.
+@@ 70
+<strong>"Negative values mean the sensor saw inside the object."</strong> No beam goes there. The negative side is extrapolated from the hit point, which is why it is trusted only within the band.
+@@ 71
+Q1. A disk of radius 2 m centred at the origin has f(x, y) = √(x² + y²) − 2. What does f say about the point (1.2, 0.5)?
+@@ 72
+Outside, 0.7 m from the surface
+@@ 73
+Inside, 0.7 m from the surface
+@@ 74
+Inside, 1.3 m from the surface
+@@ 75
+On the surface
+@@ 76
+√(1.44 + 0.25) = 1.3, so f = 1.3 − 2 = −0.7. Negative means inside, and the magnitude is the distance to the surface.
+@@ 77
+Q2. A beam returns r = 4.00 m and τ = 0.20 m. A voxel centre lies on the beam, 3.70 m from the sensor. What does this beam contribute to that voxel?
+@@ 78
+Nothing, the voxel is skipped
+@@ 79
+The projective distance is 4.00 − 3.70 = +0.30 m, which is clamped to +τ = 0.20 m. A voxel at 4.50 m would have −0.50 m, deeper than τ behind the surface, and would be skipped.
+@@ 80
+Q3. A voxel holds D = 0.10 m with W = 3. A new measurement d = 0.02 m arrives with weight 1. What is the new D?
+@@ 81
+(3 × 0.10 + 1 × 0.02) / 4 = 0.08 m, and W becomes 4. The old value counts three times because it already summarizes three measurements; 0.06 would be the answer only if W were 1.
+@@ 82
+Q4. Two neighbouring voxel centres are 5 cm apart and hold D = +0.03 m and D = −0.02 m. Where is the surface?
+@@ 83
+2 cm from the positive voxel
+@@ 84
+2.5 cm from the positive voxel
+@@ 85
+3 cm from the positive voxel
+@@ 86
+At the negative voxel
+@@ 87
+The fraction of the way is 0.03 / (0.03 + 0.02) = 0.6, and 0.6 × 5 cm = 3 cm. The surface is closer to the voxel whose value is closer to zero.
+@@ 88
+Q5. A beam hits a flat wall at 60° to the wall's normal. At some point on the beam the projective distance is 0.40 m. How far is that point from the wall?
+@@ 89
+Euclidean distance = projective distance × cos α = 0.40 × 0.5 = 0.20 m. The projective distance overestimates, here by a factor of two.
+@@ 90
+An implicit surface is the zero set of a function that is negative inside and positive outside.
+@@ 91
+The Euclidean signed distance has a gradient of length 1 that points away from the nearest surface point. It gives one-lookup collision checks and useful gradients.
+@@ 92
+One beam gives the projective distance \(r - \norm{\mathbf{q} - \mathbf{o}}\): cheap, an overestimate, but zero in the right place.
+@@ 93
+A TSDF clamps it to a band \(\pm\tau\) and fuses by \(D \leftarrow (WD + wd)/(W + w)\), the incremental form of weighted least squares.
+@@ 94
+Occupancy is direct and keeps thin obstacles. Distance fields are smooth, differentiable, and accurate below the voxel size, but can erase thin objects.
+@@ 95
+<em>SLAM Handbook</em>, §5.2.2 "Implicit Surface and Distance Fields" and §5.2.3 "Occupancy Maps or Distance Fields?", pp. 124–126; the thin-object failure is described in §5.4.4.1, p. 138.
+@@ 96
+Curless and Levoy, <em>A Volumetric Method for Building Complex Models from Range Images</em>, 1996 (the weighted running average).
+@@ 97
+Osher and Fedkiw, <em>Level Set Methods and Dynamic Implicit Surfaces</em>, 2003 (signed distance functions and the property \(\norm{\nabla d} = 1\)).

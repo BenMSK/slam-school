@@ -1,0 +1,178 @@
+@@ 1
+<span class="eyebrow">3주차 · Day 1</span>
+@@ 2
+SLAM이 sparse한 이유: Jacobian, information matrix, 그리고 그 그래프
+@@ 3
+오늘이 끝나면 factor graph에서 Jacobian과 information matrix의 nonzero 패턴을 곧바로 읽어 내고, variable ordering이 분해의 계산 비용은 바꾸지만 답은 바꾸지 않는 이유를 설명할 수 있습니다.
+@@ 4
+약 60분 · §1.5, pp. 35–39 읽기 (4쪽) · 2주차 Day 3 필요
+@@ 5
+먼저 읽기: §1.5, p. 35 아래쪽부터 p. 39까지
+@@ 6
+p. 35 위쪽은 지난주에 본 dogleg 방법의 끝부분입니다. "1.5 Factor Graphs and Sparsity"라는 제목부터 읽습니다. 읽으면서 찾아볼 것:
+@@ 7
+p. 36의 개수 세기 논증: 시뮬레이션 예제에 factor가 몇 개까지 있을 수 있고, 실제로는 몇 개 있는지.
+@@ 8
+p. 37의 Figure 1.7. 각 블록 행을 toy 예제의 factor 하나에, 각 블록 열을 변수 하나에 대응시켜 보십시오.
+@@ 9
+p. 37의 Figure 1.8. \(\boldsymbol{\Lambda}\)의 블록이 옆 그래프에 edge가 있는 바로 그 자리에서만 채워져 있는지 확인하십시오.
+@@ 10
+p. 39 Figure 1.9의 두 숫자: 같은 문제에서 nonzero 9399개와 4168개.
+@@ 11
+SLAM에서 측정 하나는 변수 몇 개만 다루므로, 우리가 분해하는 행렬의 원소는 거의 모두 0입니다. factor graph는 그 0들을 그린 그림입니다. factor 하나는 \(\mathbf{A}\)의 블록 행이고 변수 하나는 블록 열이며, 두 변수는 factor를 공유할 때 그리고 그때에만 \(\boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A}\)의 nonzero 블록을 공유합니다. 0을 건너뛰는 solver는 수백만 개의 미지수도 다루며, 분해 후에 0이 얼마나 남는지는 변수의 순서에 달려 있습니다.
+@@ 12
+1. factor 세어 보기
+@@ 13
+<a href="#d9">2주차 · Day 3</a>의 solver는 \(\mathbf{A}\)를 숫자로 꽉 찬 표로 다루었습니다. 책의 시뮬레이션 예제(Figure 1.5, pose 약 100개와 landmark 20개)에서도 이미 작업 대부분이 낭비됩니다. 있을 수 있는 것과 실제로 있는 것을 세어 봅니다: <span class="src">§1.5 · p. 36</span>
+@@ 14
+<strong>pose와 pose 사이.</strong> 사슬 모양의 odometry factor가 약 100개 있습니다. 가능한 쌍은 100²개입니다.
+@@ 15
+<strong>pose와 landmark 사이.</strong> 가능한 100 × 20 = 2000개 가운데 약 400개입니다. landmark는 가까운 pose에서만 보이기 때문입니다.
+@@ 16
+<strong>landmark와 landmark 사이.</strong> 하나도 없습니다. 한 landmark를 다른 landmark에 대해 측정하는 것은 없습니다.
+@@ 17
+이유는 물리적입니다. 센서는 측정 범위가 제한되어 있고 로봇은 한 step에 짧은 거리만 움직이므로, 측정 하나는 공간이나 시간에서 가까운 것들만 연결할 수 있습니다. 책은 이 구조가 대부분의 SLAM 문제에서 전형적이라고 말합니다.
+@@ 18
+이 구조를 무시하면 비용이 금세 커집니다. dense Cholesky에는 약 \(n^3/3\)번의 연산이 듭니다(2주차). Figure 1.9의 미지수 \(n = 333\)개라면 1200만 번의 연산이므로 문제없습니다. \(n = 10^5\)이면 \(3.3 \times 10^{14}\)번으로, 초당 10억 번 연산해도 약 나흘이 걸리고, \(10^{10}\)개의 숫자로 된 dense \(\boldsymbol{\Lambda}\)는 80 GB를 차지합니다. 실제 문제에는 "수천, 심지어 수백만 개의 미지수"가 있으며, <span class="src">§1.5 · p. 36</span> 이런 문제를 풀 수 있는 것은 오로지 0을 저장하지도 건드리지도 않기 때문입니다.
+@@ 19
+2. factor graph는 곧 Jacobian의 패턴
+@@ 20
+모든 Gauss-Newton step 안에 들어 있는 선형 문제, 식 (1.40)을 떠올려 봅니다:
+@@ 21
+여기서 \(\boldsymbol{\delta}_i\)는 factor \(i\)에 연결된 변수만 담고 있습니다. 이 항들을 쌓으면 큰 행렬 \(\mathbf{A}\) 하나가 되는데, 그 안에서 <strong>모든 factor는 블록 행이고 모든 변수는 블록 열</strong>입니다. 블록은 factor가 그 변수에 연결된 곳에서만 nonzero입니다. <span class="src">§1.5.1 · p. 36</span> 이후 책은 \(\boldsymbol{\delta}\)를 빼고 미지수를 \(\mathbf{x}\)로 씁니다. 아래 내용은 이 선형 문제가 어디서 왔는지와 무관하기 때문입니다.
+@@ 22
+빈틈 채우기: 나머지 블록이 정확히 0인 이유
+@@ 23
+factor는 자기 변수만 읽는 measurement model \(h_i\)에서 나옵니다. toy 예제의 factor \(\phi_8\)은 \(\mathbf{p}_2\)와 \(\boldsymbol{\ell}_1\)만으로 측정값을 예측하고, 다른 것은 쓰지 않습니다. Jacobian에서 이 factor의 행은 그 예측값을 다섯 변수 각각으로 미분한 값을 담는데, \(h_8\)에 나오지 않는 변수로 미분하면 0입니다. 근사는 전혀 없습니다.
+@@ 24
+블록의 크기는 (측정된 값의 개수) × (변수의 크기)입니다. 평면 pose(숫자 3개)와 점 landmark(숫자 2개)를 쓰면 Figure 1.5의 \(\mathbf{A}\)는 열이 \(3 \times 95 + 2 \times 24 = 333\)개이고, 1126개의 행은 각각 스칼라 측정값 하나입니다. <span class="src">Fig. 1.9 · p. 39</span>
+@@ 25
+이번 주 내내 Figure 1.3의 toy 예제를 손으로 계산할 수 있게 바꾼 버전을 씁니다. 로봇을 직선 위에 두어 모든 pose와 landmark가 숫자 하나가 되게 하고, 모든 측정에 분산 1의 noise를 둡니다. factor 아홉 개는 행 아홉 개가 됩니다:
+@@ 26
+의미
+@@ 27
+ϕ₁ p₁의 prior
+@@ 28
+=
+@@ 29
+=
+@@ 30
+ϕ₄ ℓ₁의 prior
+@@ 31
+ϕ₅ ℓ₂의 prior
+@@ 32
+ϕ₆ p₁의 절대 위치
+@@ 33
+ϕ₇ p₁에서 ℓ₁ 관측
+@@ 34
+ϕ₈ p₂에서 ℓ₁ 관측
+@@ 35
+ϕ₉ p₃에서 ℓ₂ 관측
+@@ 36
+채워진 칸은 Figure 1.7에서 블록 \(\mathbf{A}_{13}, \mathbf{A}_{23}, \mathbf{A}_{24}, \dots\)가 있는 자리와 같습니다(첫 번째 첨자는 factor, 두 번째는 열이며, 열의 순서는 \(\boldsymbol{\ell}_1, \boldsymbol{\ell}_2, \mathbf{p}_1, \mathbf{p}_2, \mathbf{p}_3\)입니다). 45칸 가운데 14칸만 채워져 있고, 어느 행도 두 칸을 넘지 않습니다.
+@@ 37
+3. information matrix와 그 그래프
+@@ 38
+Cholesky는 <strong>information matrix</strong>(정보 행렬) \(\boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A}\)를 다루며, 이 행렬은 Hessian이라고도 부릅니다. 엄밀히 말하면 Hessian의 Gauss-Newton 근사입니다(<a href="#d10">2주차 · Day 4</a>). 대칭이고, MAP 해가 유일하면 positive definite입니다. <span class="src">§1.5.2 · pp. 36–37</span> 직선 위의 toy 문제에서 위 표를 곱해 보면 다음과 같습니다:
+@@ 39
+Figure 1.8(a)와 비교해 보십시오. 0의 위치가 같습니다.
+@@ 40
+빈틈 채우기: \(\mathbf{A}\T\mathbf{A}\)에서 nonzero인 블록
+@@ 41
+factor \(i\)의 행에서 변수 \(j\)의 열에 있는 블록을 \(\mathbf{A}_{ij}\)라고 씁니다. 곱의 블록 \((j,k)\)는 행에 대한 합입니다:
+@@ 42
+어떤 항이 남으려면 factor \(i\)가 변수 \(j\)와 변수 \(k\)에 모두 연결되어 있어야 합니다. 따라서 \(\boldsymbol{\Lambda}_{jk} \neq \mathbf{0}\)이려면 두 변수를 모두 포함하는 factor가 적어도 하나 있어야 합니다. toy 예제에서 \(\boldsymbol{\Lambda}_{14} = \mathbf{A}_{81}\T\mathbf{A}_{84}\)는 \(\phi_8\) 하나에서만 나오고(숫자로는 \(1 \cdot (-1) = -1\)), \(\boldsymbol{\ell}_1\)과 \(\mathbf{p}_3\)을 잇는 factor가 없으므로 \(\boldsymbol{\Lambda}_{15} = \mathbf{0}\)입니다.
+@@ 43
+대각 블록 \(\boldsymbol{\Lambda}_{jj} = \sum_i \mathbf{A}_{ij}\T\mathbf{A}_{ij}\)는 변수 \(j\)에 걸린 모든 factor를 모읍니다. \(p_1\) 자리의 4는 \(\phi_1, \phi_2, \phi_6, \phi_7\)이 1씩 더한 값입니다. prior 같은 unary factor는 대각에만 더해지고 다른 곳에는 아무것도 더하지 않습니다.
+@@ 44
+여기서 두 번째 그래프가 나옵니다. 변수마다 node를 하나씩 그리고, 같은 factor에 함께 나오는 두 변수를 잇습니다. 이 그래프를 \(G\)라고 부릅니다. 블록 단위로 보면 \(\boldsymbol{\Lambda}\)의 nonzero 패턴은 \(G\)의 인접 행렬입니다. 변수 셋 이상에 걸친 factor는 그 변수들을 모두 서로 잇습니다(<strong>clique</strong>). <span class="src">§1.5.2 · p. 37</span> 책은 \(G\)가 Markov random field의 그래프라는 점만 짚고 넘어갑니다. 이 코스는 Day 2와 Day 3에서 \(G\)를 써서 분해가 새 nonzero를 어디에 만드는지 예측합니다.
+@@ 45 attr
+왼쪽: toy 예제의 factor graph. 둥근 변수 node 다섯 개와 작은 사각형 factor node 아홉 개. 오른쪽: information matrix의 그래프 G. 같은 다섯 변수가 edge 다섯 개로 이어져 있습니다: l1–p1, l1–p2, p1–p2, p2–p3, l2–p3.
+@@ 46
+factor graph: A의 행
+@@ 47
+그래프 G: Λ의 비대각 블록
+@@ 48
+edge 5개 = 대각 위 nonzero 블록 5개
+@@ 49
+factor graph에서 G를 얻으려면 factor node를 지우고, 각 factor에 연결되어 있던 변수들을 서로 잇습니다. unary factor 네 개는 edge를 남기지 않고 Λ의 대각만 키웁니다.
+@@ 50
+측정 하나하나를 이름 두세 개가 나오는 짧은 문장이라고 생각해 보세요. Jacobian은 그 문장들의 목록이에요. information matrix는 누가 누구와 함께 언급됐는지 적어 둔 표예요. 모두가 이웃 이야기만 하는 동네라면 그 표는 거의 텅 비어 있어요.
+@@ 51
+4. sparse 분해, fill-in, 그리고 ordering
+@@ 52
+2주차의 두 방법, 즉 \(\boldsymbol{\Lambda}\)에 대한 Cholesky와 \(\mathbf{A}\)에 대한 QR에는 모두 sparse 버전이 있습니다. 이들은 0을 건너뛰므로 dense일 때보다 훨씬 적은 연산으로 끝납니다. 책은 대부분의 패키지가 호출하는 라이브러리(CHOLMOD와 SuiteSparseQR)를 소개하고, sparse 문제에서는 Cholesky나 LDU가 QR보다 상수배 이상 빠르다고 말합니다. <span class="src">§1.5.3 · p. 38</span>
+@@ 53
+다만 함정이 있습니다. \(\mathbf{R}\T\mathbf{R} = \boldsymbol{\Lambda}\)를 만족하는 삼각 factor \(\mathbf{R}\)은 \(\boldsymbol{\Lambda}\)가 0인 곳에도 nonzero를 가질 수 있습니다. 이렇게 더 생긴 원소를 <strong>fill-in</strong>이라고 하며, 그 개수는 열의 순서인 <strong>variable ordering</strong>(변수 순서)에 따라 달라집니다. Figure 1.9에서 자연스러운 순서(pose 다음 landmark)로는 nonzero가 9399개인 \(\mathbf{R}\)이 나옵니다. <strong>COLAMD</strong> 휴리스틱(column approximate minimum degree)으로 열을 재정렬하면 4168개가 됩니다. 두 경우 모두 back-substitution은 같은 추정값을 돌려줍니다. <span class="src">§1.5.3 · p. 38</span>
+@@ 54
+직접 해 보기: 위젯은 작은 문제를 만들어 \(\mathbf{A}\)와 \(\boldsymbol{\Lambda}\)를 그리고, 고른 ordering에 대해 \(\mathbf{R}\)의 패턴을 계산합니다. ordering을 "pose 먼저, 그다음 landmark"에서 "minimum degree"로 바꾼 뒤, 다른 것도 시도해 보십시오.
+@@ 55
+눈여겨볼 점: Λ에는 361칸 중 nonzero가 91개 있습니다. pose를 먼저 두면 R의 nonzero는 109개이고 그중 54개가 fill-in입니다. minimum degree는 이를 70개(fill-in 15개)로 줄이고, 무작위 순서는 그 사이 어딘가에 놓입니다. 문제는 하나도 바뀌지 않았고, 열의 순서만 바뀌었습니다.
+@@ 56
+빈틈 채우기: 변수 네 개로 보는 fill-in 예
+@@ 57
+서로는 연결되지 않은 세 변수에 모두 연결된 "hub" 변수 하나를 생각합니다. hub를 맨 앞에 두고 분해하면 다음과 같습니다(<a href="#d5">1주차 · Day 5</a>의 Cholesky 절차를 따라가 보십시오):
+@@ 58
+\(\boldsymbol{\Lambda}\)의 0 세 개가 nonzero가 되어 \(\mathbf{R}\)이 완전히 꽉 찼습니다. 이제 hub를 맨 뒤로 옮깁니다. 변수 이름만 바꾸는 일입니다:
+@@ 59
+fill-in이 전혀 없습니다. hub를 먼저 없애면 그 이웃 셋이 서로를 고려해야 하지만, 마지막에 없애면 그럴 일이 없습니다. Day 3에서는 이것을 그래프에 적용할 수 있는 규칙으로 정리합니다.
+@@ 60
+<strong>답이 바뀔 수 없는 이유.</strong> 재정렬은 치환 행렬 \(\mathbf{P}\)입니다. \(\mathbf{P}\mathbf{P}\T = \mathbf{I}\)이므로 \(\mathbf{A}\mathbf{x} = (\mathbf{A}\mathbf{P})(\mathbf{P}\T\mathbf{x})\)입니다. cost \(\norm{\mathbf{A}\mathbf{x} - \mathbf{b}}^2\)는 미지수의 순서만 바꿔 쓴 같은 함수이므로, 그 최소점도 원소 순서만 섞인 같은 벡터입니다.
+@@ 61
+fill-in이 가장 적은 ordering을 찾는 문제는 NP-hard이므로, solver는 COLAMD 같은 휴리스틱을 씁니다. <span class="src">§1.5.3 · p. 38</span> 책은 대안으로 반복 solver(preconditioned conjugate gradient, 그리고 visual SLAM의 power iteration)도 언급하지만, 대부분의 SLAM 문제에서는 여전히 sparse 분해가 가장 많이 쓰이는 방법이라고 말합니다.
+@@ 62
+<strong>"sparse하다는 것은 측정이 적다는 뜻이다."</strong> 측정 하나하나가 관여하는 변수가 적다는 뜻입니다. Figure 1.9에는 측정 행이 1126개 있지만 여전히 매우 sparse합니다.
+@@ 63
+<strong>"더 좋은 ordering이 더 좋은 추정값을 준다."</strong> 어떤 ordering이든 같은 MAP 추정값을 줍니다. ordering은 분해에 드는 계산량과 메모리만 바꿉니다.
+@@ 64
+<strong>"Λ가 sparse하면 그 역행렬도 sparse하다."</strong> covariance \(\boldsymbol{\Lambda}^{-1}\)는 보통 완전히 꽉 차 있습니다. 측정의 사슬을 거쳐 모든 변수가 다른 모든 변수와 상관되어 있기 때문입니다. sparsity는 information matrix와 그 factor에 있습니다. 그래서 이들로 풀고, 역행렬은 절대 만들지 않습니다.
+@@ 65
+Q1. 어떤 문제에 평면 pose 50개(각각 숫자 3개)와 점 landmark 30개(각각 숫자 2개)가 있습니다. A의 열은 몇 개입니까?
+@@ 66
+미지수 하나에 열 하나: 50 × 3 + 30 × 2 = 210. 행의 개수는 변수가 아니라 측정에 따라 정해집니다.
+@@ 67
+Q2. toy 예제에서 Λ의 어느 블록이 0입니까?
+@@ 68
+ℓ₁과 p₁ 사이의 블록
+@@ 69
+p₂와 p₃ 사이의 블록
+@@ 70
+ℓ₁과 p₃ 사이의 블록
+@@ 71
+ℓ₂와 p₃ 사이의 블록
+@@ 72
+ℓ₁과 p₃을 함께 포함하는 factor가 없으므로, 그 블록에 대한 합의 모든 항이 0이 됩니다. 나머지 세 쌍은 각각 ϕ₇, ϕ₃, ϕ₉를 공유합니다.
+@@ 73
+Q3. toy 예제에 세 변수에 걸친 factor ϕ(p₁, p₂, ℓ₂) 하나를 추가합니다. G에는 새 edge가 몇 개 생깁니까?
+@@ 74
+ternary factor는 세 쌍을 모두 잇습니다. p₁–p₂ 쌍은 이미 ϕ₂로 이어져 있으므로, 새 edge는 p₁–ℓ₂와 p₂–ℓ₂입니다.
+@@ 75
+Q4. 한 변수가 다른 모든 변수와 factor를 공유하고, 나머지 변수끼리는 factor를 공유하지 않습니다. fill-in을 피하려면 이 변수를 ordering의 어디에 두어야 합니까?
+@@ 76
+맨 앞
+@@ 77
+중간
+@@ 78
+상관없음
+@@ 79
+맨 뒤
+@@ 80
+hub 예제입니다. hub를 먼저 소거하면 그 이웃이 모두 서로 묶여 R이 완전히 채워집니다. 마지막에 소거하면 새 nonzero가 생기지 않습니다.
+@@ 81
+측정 하나는 공간이나 시간에서 가까운 것들만 연결하므로 SLAM은 sparse합니다. landmark와 landmark 사이의 factor는 아예 없습니다.
+@@ 82
+모든 factor는 A의 블록 행이고 모든 변수는 블록 열입니다. 블록은 factor가 그 변수에 연결된 곳에서만 nonzero입니다.
+@@ 83
+\(\boldsymbol{\Lambda}_{jk} = \sum_i \mathbf{A}_{ij}\T\mathbf{A}_{ik}\)는 두 변수를 모두 포함하는 factor가 있을 때만 nonzero입니다. Λ의 패턴은 그래프 G의 인접 행렬입니다.
+@@ 84
+factor R에는 fill-in, 즉 Λ가 0인 곳의 nonzero가 생길 수 있습니다. 그 양은 variable ordering에 달려 있습니다.
+@@ 85
+모든 ordering은 같은 추정값을 줍니다. 가장 좋은 ordering을 찾는 것은 NP-hard이므로 solver는 COLAMD 같은 휴리스틱을 씁니다.
+@@ 86
+<em>SLAM Handbook</em>, §1.5 "Factor Graphs and Sparsity", pp. 35–39, Figure 1.7–1.9와 식 (1.40). dense 연산 횟수는 §1.3.3, p. 31에서 가져왔습니다.
+@@ 87
+Golub, Van Loan, <em>Matrix Computations</em>, 4판, 2013 (변수 네 개 예제에 쓴 Cholesky 분해).
+@@ 88
+Davis, <em>Direct Methods for Sparse Linear Systems</em>, 2006 (fill-in, hub 예제, minimum-degree ordering).
+@@ 89
+직선 위의 toy 문제와 그 숫자는 이 코스가 직접 만든 것이며, 그래프는 책의 Figure 1.3과 같습니다.

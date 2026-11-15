@@ -1,0 +1,194 @@
+@@ 1
+<span class="eyebrow">Week 6 · Day 3</span>
+@@ 2
+Pairwise consistency maximization and the maximum clique
+@@ 3
+After today you can write a consistency function for point matches and for loop closures, build the consistency graph, and find the inlier set as its maximum clique.
+@@ 4
+About 60 min · Read §3.2.2, pp. 81–85 (5 pages) · Needs Week 6 Day 2
+@@ 5
+Read first: §3.2.2, pp. 81–85
+@@ 6
+The two reasons on p. 81 why RANSAC does not fit pose-graph problems.
+@@ 7
+The two consistency functions: (3.5) for 3D-3D correspondences on p. 82 and (3.6) for loop closures on p. 83. Neither contains the state \(\mathbf{x}\).
+@@ 8
+The definition of a clique and the four-step summary on p. 84.
+@@ 9
+The trade-offs between PCM and RANSAC on p. 85, including footnote 11.
+@@ 10
+Instead of asking "does this measurement agree with a model?", ask "do these two measurements agree with each other?". That question needs no model and no solver. Draw a graph with an edge for every pair that agrees. The inliers all agree with one another, so they form a group in which every pair is connected, a clique, and the largest clique is taken as the inlier set.
+@@ 11
+1. Why a second front-end method
+@@ 12
+RANSAC needs a small minimal set and a fair share of inliers. Loop closures in a pose graph offer neither: the smallest sample that determines \(N\) poses has \(N-1\) measurements, and perceptual aliasing can make most candidate loop closures wrong. <span class="src">§3.2.2 · p. 81</span> <strong>Pairwise Consistency Maximization (PCM)</strong> does not sample. It looks for the largest set of measurements that are consistent with one another, and the book reports it sorting through sets with upwards of 90% outliers. <span class="src">§3.2.2 · p. 82</span>
+@@ 13
+On Day 1 you saw that no estimator survives more than 50% arbitrary outliers. PCM does not contradict that. It relies on an assumption: the wrong measurements are wrong in unrelated ways and so rarely agree with each other, while the right ones always do.
+@@ 14
+2. Consistency functions
+@@ 15
+A <strong>consistency function</strong> \(F\) takes two measurements and returns a number that is small when both could be correct at the same time:
+@@ 16
+with \(\gamma\) set by the noise level. It is <strong>state independent</strong>: \(\mathbf{x}\) does not appear, so the test is evaluated directly on the data. <span class="src">§3.2.2 · p. 83</span> You must design \(F\) for each kind of measurement. The book gives two.
+@@ 17
+<strong>3D-3D correspondences (Example 3.2).</strong> An RGB-D camera gives 3D points. Correspondence \(i\) pairs a point \(\mathbf{z}_i(k-1)\) seen at time \(k-1\) with a point \(\mathbf{z}_i(k)\) seen at time \(k\). If \(i\) and \(j\) are both correct matches of static points, the distance between the two points is the same in both frames:
+@@ 18
+Filling the gap: why the distance cannot change
+@@ 19
+Both frames see the same static points, from two camera poses related by an unknown rotation \(\mathbf{R}\) and translation \(\mathbf{t}\). Every correct correspondence obeys \(\mathbf{z}(k-1) = \mathbf{R}\,\mathbf{z}(k) + \mathbf{t}\) with the <em>same</em> \(\mathbf{R}, \mathbf{t}\). Subtract the equation for \(j\) from the one for \(i\). The translation cancels:
+@@ 20
+A rotation does not change lengths, because \(\mathbf{R}\T\mathbf{R} = \mathbf{I}\): for any vector \(\mathbf{v}\), \(\norm{\mathbf{R}\mathbf{v}}^2 = \mathbf{v}\T\mathbf{R}\T\mathbf{R}\mathbf{v} = \mathbf{v}\T\mathbf{v} = \norm{\mathbf{v}}^2\). So the two distances in (3.5) are equal, up to noise, whatever the camera motion was. The unknown motion has been eliminated, which is why no solver is needed.
+@@ 21
+<strong>Numbers (in 2D for brevity).</strong> At \(k-1\): \(\mathbf{z}_1 = (0,0)\), \(\mathbf{z}_2 = (3,4)\), \(\mathbf{z}_3 = (6,8)\). At \(k\): \(\mathbf{z}_1 = (1,1)\), \(\mathbf{z}_2 = (-3,4)\), \(\mathbf{z}_3 = (2,2)\).
+@@ 22
+Pair (1,2): distance 5 at \(k-1\), and \(\sqrt{(-4)^2 + 3^2} = 5\) at \(k\). Difference 0: consistent.
+@@ 23
+Pair (1,3): distance 10 at \(k-1\), and \(\sqrt{1^2 + 1^2} = 1.41\) at \(k\). Difference 8.59: inconsistent for any sensible \(\gamma\).
+@@ 24
+The test on pair (1,3) says that 1 and 3 cannot both be right. It does not say which one is wrong. That is decided by looking at all pairs together.
+@@ 25
+<strong>Loop closures (Example 3.3).</strong> Assume the odometry is trustworthy and only loop closures may be wrong. Take two loop closures, \(\mathbf{T}^a_b\) between poses \(a\) and \(b\) and \(\mathbf{T}^c_d\) between poses \(c\) and \(d\). Together with the odometry they form a cycle, and relative poses composed around a cycle must return to the start:
+@@ 26
+where \(\bar{\mathbf{T}}^b_c\) and \(\bar{\mathbf{T}}^d_a\) are the odometry measurements chained from \(b\) to \(c\) and from \(d\) to \(a\), and dist measures how far a pose is from the identity \(\mathbf{I}\). <span class="src">§3.2.2 · p. 83</span>
+@@ 27 attr
+Four poses a, b, c, d at the corners of a rectangle, joined in a cycle. The top edge from a to b and the bottom edge from c to d are loop closures. The right edge from b to c and the left edge from d to a are chains of odometry. Going once around the cycle must bring you back to where you started.
+@@ 28
+loop closure, a to b
+@@ 29
+loop closure, c to d
+@@ 30
+odometry, b to c
+@@ 31
+odometry, d to a
+@@ 32
+once around the cycle:
+@@ 33
+the four motions must cancel
+@@ 34
+Equation (3.6) as a picture. If both loop closures are correct, composing the four relative poses gives (nearly) the identity.
+@@ 35
+<strong>A one-dimensional example.</strong> In a straight corridor a pose is a position, a relative pose is a signed displacement, composing is adding, and the identity is 0. Suppose the measurements are \(T^a_b = +0.1\) m, \(\bar{T}^b_c = +3.0\) m, \(T^c_d = -0.2\) m, \(\bar{T}^d_a = -3.1\) m. Around the cycle: \(0.1 + 3.0 - 0.2 - 3.1 = -0.2\) m. With \(\gamma = 0.5\) m the pair is consistent. Now replace the second loop closure with an aliased one that claims \(T^c_d = +4.0\) m: the sum is \(4.0\) m, and the pair is inconsistent. In practice \(\gamma\) grows with the length of the loop, because a longer odometry chain accumulates more noise (footnote 9, p. 83).
+@@ 36
+3. From pairs to a graph, from a graph to a clique
+@@ 37
+PCM asks for the largest set of measurements in which <em>every</em> pair is consistent:
+@@ 38
+<span class="src">§3.2.2 · p. 83</span> Compare with consensus maximization (3.4): \(\mathbf{x}\) is gone, and all the constraints can be computed once, in advance.
+@@ 39
+Build the <strong>consistency graph</strong>: one node per putative measurement, and an edge between \(i\) and \(j\) whenever \(F(\mathbf{z}_i, \mathbf{z}_j) \le \gamma\). A <strong>clique</strong> is a set of nodes in which every two are joined by an edge. The <strong>maximum clique</strong> is the largest one. Problem (3.8) is exactly the maximum clique problem on the consistency graph. <span class="src">§3.2.2 · pp. 83–84</span>
+@@ 40
+<strong>By hand.</strong> Six measurements A–F have these consistent pairs: A–B, A–C, A–D, B–C, B–D, C–D, D–E, D–F, E–F. That is 9 edges out of \(6\times5/2 = 15\) possible pairs. The set {A, B, C, D} is a clique: all six of its pairs are in the list. {D, E, F} is a clique of size 3. Is there a clique of size 5? Every member of one would have at least 4 neighbours, and only D has that many (A, B, C, E, F). So there is none, and the maximum clique is {A, B, C, D}, and PCM keeps those four and rejects E and F. Note that D is consistent with E and F as well. One edge to an outlier does no harm. What counts is membership of the large mutually consistent group.
+@@ 41
+Try it: ten point matches between two frames. The widget applies (3.5) to all 45 pairs and searches every subset for the maximum clique.
+@@ 42
+Notice: at the default γ = 0.15, 22 of the 45 pairs are consistent: the 15 pairs among the six true inliers (1, 2, 3, 4, 9, 10) and 7 chance pairs. The chance edges do not form a large clique, so the maximum clique is exactly the six inliers. Lower γ to 0.05 and two inliers drop out because noise breaks some of their edges. Raise γ to 0.50 and outlier 7 joins the clique. Back at γ = 0.15, set 7 outliers: the three inliers are still found, with 70% outliers.
+@@ 43
+4. What it costs
+@@ 44
+The four steps of PCM are: choose \(F\); evaluate it on every pair and build the graph; find the maximum clique; return its measurements. <span class="src">§3.2.2 · p. 84</span>
+@@ 45
+Filling the gap: counting the work
+@@ 46
+<strong>Building the graph is cheap.</strong> \(N\) measurements have \(N(N-1)/2\) pairs: 45 for \(N = 10\), 499 500 for \(N = 1000\). Each test is a few arithmetic operations.
+@@ 47
+<strong>Finding the clique is the hard part.</strong> The widget checks all \(2^{10} = 1024\) subsets. That brute force doubles with every added measurement: \(N = 60\) already gives about \(10^{18}\) subsets. The maximum clique problem is NP-hard, and it is also hard to approximate. <span class="src">§3.2.2 · p. 84</span> In practice two families of algorithms are used:
+@@ 48
+<strong>Exact</strong> algorithms, usually branch and bound. They explore subsets but discard whole branches that cannot beat the best clique found so far. For example, a node with only 3 neighbours cannot belong to a clique larger than 4, so it is dropped once a clique of size 4 is known. Worst-case time is still exponential.
+@@ 49
+<strong>Heuristic</strong> algorithms, which are faster and may return a clique that is large but not the largest.
+@@ 50
+The density of the graph decides which is practical. Recent exact solvers find maximum cliques quickly in large sparse graphs. Dense graphs, where many pairs are consistent, are slow for exact solvers. <span class="src">§3.2.2 · pp. 84–85</span>
+@@ 51
+5. PCM versus RANSAC
+@@ 52
+RANSAC
+@@ 53
+PCM
+@@ 54
+What is tested?
+@@ 55
+Each measurement against a model \(\hat{\mathbf{x}}\) from a minimal solver
+@@ 56
+Each pair of measurements against each other
+@@ 57
+Needs a minimal solver?
+@@ 58
+Yes, with a small minimal set
+@@ 59
+Needs a consistency function?
+@@ 60
+Yes, and for some problems (2D-2D correspondences) none is easy to design
+@@ 61
+Outlier rates
+@@ 62
+Effective below about 70%
+@@ 63
+Has handled upwards of 90%
+@@ 64
+Hard step
+@@ 65
+Number of samples grows like \(1/\omega^n\)
+@@ 66
+Maximum clique is NP-hard, slow on dense graphs
+@@ 67
+Also returns
+@@ 68
+An estimate \(\hat{\mathbf{x}}\)
+@@ 69
+Only the set of measurements
+@@ 70
+Both tests are <strong>necessary but not sufficient</strong> for a measurement to be an inlier (footnote 11, p. 85). A pairwise test can be too permissive. Here is a concrete case for (3.5): a mirror image. If the points at time \(k\) were a reflection of the points at \(k-1\), every pairwise distance would be preserved and every pair would pass, yet no rotation and translation maps one set to the other. A minimal solver would notice. Pairwise distances cannot. The book makes the general point that (3.5) may accept some outliers that RANSAC would reject. <span class="src">§3.2.2 · p. 85</span>
+@@ 71
+The quality of PCM rests on the choice of \(F\). The useless function \(F \equiv 0\) makes every pair consistent, the graph complete, and the maximum clique the whole set: nothing is rejected. A function that only inliers can pass rejects every outlier. <span class="src">§3.2.2 · p. 85</span> Real functions sit in between, and whatever passes goes on to a back-end that must cope with the rest. That is tomorrow.
+@@ 72
+<strong>"A measurement with an edge to an inlier is an inlier."</strong> Edges to single inliers happen by chance, and more often as γ grows. Only membership of the maximum clique counts.
+@@ 73
+<strong>"An inconsistent pair tells you which measurement is wrong."</strong> It says the two cannot both be right. The graph as a whole decides.
+@@ 74
+<strong>"PCM beats the 50% limit, so it is strictly stronger than RANSAC."</strong> It works when outliers are mutually inconsistent. Outliers that agree with each other, such as many false loop closures between the same two look-alike corridors, can form the largest clique.
+@@ 75
+Q1. A place-recognition module proposes 20 loop closures. How many pairwise consistency tests does PCM evaluate?
+@@ 76
+Every unordered pair once: 20 × 19 / 2 = 190.
+@@ 77
+Q2. In a corridor (1-D), two loop closures measure +0.3 m (a to b) and −0.1 m (c to d). Odometry gives +5.0 m from b to c and −5.4 m from d to a. With γ = 0.25 m, are the two loop closures consistent?
+@@ 78
+Yes: the cycle sums to −0.2 m, and 0.2 ≤ 0.25
+@@ 79
+No: the cycle sums to 10.8 m
+@@ 80
+No: the sum must be exactly zero
+@@ 81
+It cannot be decided without estimating the poses
+@@ 82
+0.3 + 5.0 − 0.1 − 5.4 = −0.2 m. Its distance from the identity (zero) is 0.2 m, within γ. The test uses only measurements, never the estimated poses.
+@@ 83
+Q3. A consistency graph on nodes 1–6 has edges 1–2, 1–3, 2–3, 3–4, 3–5, 3–6, 4–5, 4–6, 5–6. How large is the maximum clique?
+@@ 84
+{3, 4, 5, 6} is a clique: all six pairs 3–4, 3–5, 3–6, 4–5, 4–6, 5–6 are edges. A clique of 5 would need one more node joined to all four of them, but nodes 1 and 2 are not joined to 4, 5, or 6.
+@@ 85
+Q4. Why can PCM be applied to loop closures in a pose graph with thousands of poses, where RANSAC cannot?
+@@ 86
+PCM solves the full pose graph for each pair
+@@ 87
+Maximum clique is easier than consensus maximization, since it is solvable in polynomial time
+@@ 88
+PCM does not need a threshold
+@@ 89
+Its test involves two measurements and the odometry between them, not a model estimated from a minimal set of N − 1 measurements
+@@ 90
+The consistency function (3.6) is state independent and pairwise. RANSAC would have to sample a spanning tree of N − 1 measurements. Maximum clique is NP-hard, and γ is still needed.
+@@ 91
+A consistency function \(F(\mathbf{z}_i, \mathbf{z}_j) \le \gamma\) tests whether two measurements can both be correct, without the state.
+@@ 92
+For 3D-3D matches: rigid motion preserves the distance between two points (3.5). For loop closures: poses composed around a cycle give the identity (3.6).
+@@ 93
+PCM (3.8) = the maximum clique of the consistency graph.
+@@ 94
+Building the graph costs \(N(N-1)/2\) tests. Maximum clique is NP-hard, and solved exactly by branch and bound or approximately by heuristics.
+@@ 95
+Pairwise consistency is necessary, not sufficient, so some outliers reach the back-end.
+@@ 96
+<em>SLAM Handbook</em>, §3.2.2 "Graph-theoretic Outlier Rejection and Pairwise Consistency Maximization", pp. 81–85, equations (3.5)–(3.8), Examples 3.2 and 3.3, Figures 3.3 and 3.4.
+@@ 97
+The proof that rotations preserve length, the mirror-image example, and the subset counts are standard linear algebra and counting, added here.

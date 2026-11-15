@@ -1,0 +1,174 @@
+@@ 1
+<span class="eyebrow">Week 15 · Day 1</span>
+@@ 2
+How an event camera works
+@@ 3
+After today you can state the event generation model, predict how many events a brightness change produces, and explain where the sensor's speed and dynamic range come from.
+@@ 4
+About 60 min · Read §10.1, pp. 282–286 (5 pages) · Needs Week 11 Day 3
+@@ 5
+Read first: §10.1, pp. 282–286
+@@ 6
+Equation (10.1) on p. 283 and the three things an event carries: pixel, time, polarity.
+@@ 7
+The sentence on p. 284 that says a pixel "adapts its sampling rate". Ask yourself what sets that rate.
+@@ 8
+The four advantages on p. 285 and the number attached to each.
+@@ 9
+Why the authors say on p. 286 that more pixels are not automatically better.
+@@ 10
+A standard camera asks every pixel "how bright are you?" at fixed times. An event camera lets every pixel speak for itself, and only when its brightness has changed by a set amount. The output is a stream of <strong>events</strong>, each saying "pixel \(\mathbf{x}\) got brighter (or darker) at time \(t\)". One short equation, (10.1), describes the whole sensor.
+@@ 11
+1. A pixel that reports only change
+@@ 12
+The cameras of <a href="#d63">Week 11 · Day 3</a> expose all pixels together and deliver a full image at a rate set by a clock, for example 30 Hz. Between two frames they see nothing, and if nothing moves they send the same picture again. <span class="src">Ch. 10 intro · p. 282</span>
+@@ 13
+The pixels of an <strong>event camera</strong>, such as the <strong>Dynamic Vision Sensor (DVS)</strong>, work independently of each other. Each one watches its own <strong>log intensity</strong> \(L = \log I\), where \(I\) is the light falling on it. It memorizes \(L\) at the moment it last sent an event and keeps comparing the current value with that memory. When the difference reaches the <strong>contrast threshold</strong> \(C\), the pixel sends a new event and memorizes the new level: <span class="src">§10.1.1 · p. 283</span>
+@@ 14
+The event is the triple \(e_k \doteq (\mathbf{x}_k, t_k, p_k)\): the pixel location \(\mathbf{x}_k\), the time \(t_k\), and the one-bit <strong>polarity</strong> \(p_k \in \{+1, -1\}\), which says whether the brightness went up (an <strong>ON</strong> event) or down (an <strong>OFF</strong> event). \(\Delta t_k\) is the time since the previous event at the same pixel. Equation (10.1) is called the <strong>event generation model</strong>.
+@@ 15 attr
+A plot of one pixel's log intensity against time. Dashed horizontal levels are spaced C apart. The intensity rises through four levels and the pixel fires four ON events, one at each crossing. It then falls, and the pixel fires two OFF events, each when the signal is C below the level memorized at the previous event. A staircase shows the memorized level.
+@@ 16
+events
+@@ 17
+ON (p = +1)
+@@ 18
+OFF (p = −1)
+@@ 19
+time →
+@@ 20
+log intensity L(t)
+@@ 21
+level memorized at the last event
+@@ 22
+One pixel. The signal climbs 4.3 thresholds, so four ON events fire. It then drops 2.8 thresholds from its peak, but only 2.5 from the memorized level, so two OFF events fire. The comparison is always with the memory, never with the peak.
+@@ 23
+A worked example with \(C = 0.2\). A pixel has just fired, and the light on it then rises from 40 to 100 units. The log intensity rises by \(\ln(100/40) = \ln 2.5 = 0.916\). That is \(0.916 / 0.2 = 4.58\) thresholds, so the pixel fires 4 ON events and is left \(0.116\) above its last memorized level. If the light now falls to 50 units, \(L\) sits at \(\ln(50/40) = 0.223\) above the start, which is \(0.8 - 0.223 = 0.577\) below the memory: 2 OFF events. In general, a pixel that has just fired and then sees a change \(\Delta L\) in one direction sends
+@@ 24
+The book does not fix the base of the logarithm. This course uses the natural logarithm; another base only rescales \(C\).
+@@ 25
+Filling the gap: why the logarithm?
+@@ 26
+The book says each event is a change of "logarithmic intensity" and leaves it there. Three consequences follow from one identity, \(\log a - \log b = \log(a/b)\).
+@@ 27
+<strong>The threshold is a ratio.</strong> \(\Delta L = \log I_\text{new} - \log I_\text{old} = \log (I_\text{new}/I_\text{old})\). An ON event with \(C = 0.3\) means the light grew by the factor \(e^{0.3} = 1.35\), that is by 35%. An OFF event means it shrank by the factor \(e^{-0.3} = 0.74\). The same 35% step triggers an event in moonlight and in sunlight.
+@@ 28
+<strong>The lighting level cancels.</strong> Model the light reaching a pixel as illumination times surface reflectance, \(I = E\,\rho\). Then \(L = \log E + \log \rho\). If the lamp is made 100 times brighter, every \(L\) shifts by the same constant \(\log 100\), and every difference \(\Delta L\) stays what it was. The events do not change. You will test this in the widget below.
+@@ 29
+<strong>Dynamic range in decibels.</strong> The dynamic range of an image sensor is the ratio of the brightest to the darkest light it can register, quoted as \(20 \log_{10}(I_{\max} / I_{\min})\) decibels (dB). The book's figures <span class="src">§10.1.2 · p. 285</span> translate to
+@@ 30
+So "more than 120 dB against 60 dB" means the usable brightness ratio is at least a thousand times larger. The book gives two reasons: each pixel works on its own, with no exposure setting shared by the whole image, and each pixel converts light to voltage on a logarithmic scale.
+@@ 31
+2. Events against frames
+@@ 32
+Event cameras are <strong>data-driven</strong>: how much they output depends on how much the scene changes. Faster motion gives more events per second, because each pixel samples its signal at the rate the signal changes. <span class="src">§10.1.1 · pp. 283–284</span>
+@@ 33
+Try it: a bright bar crosses a row of 60 pixels. Change the speed, then the threshold, then the scene light.
+@@ 34
+Notice four things. At the start there are 593 events, 7 per pixel for each edge that passes, because \(\lfloor \ln 10 / 0.30 \rfloor = 7\). Raising the speed does not change that 7; it squeezes the same events into less time, so the rate goes up. The frame camera smears the bar over speed × exposure (7.5 px) and misses everything between frames (16.7 px of travel). And with the light 100 times dimmer or brighter the events are identical, while the frame keeps 3 or 0 grey levels of contrast out of 229.
+@@ 35
+A frame camera is a class photo taken every so often: everyone is in it whether they moved or not. An event camera is a room where each person calls out only when something changes for them. A quiet room tells you nothing moved. A burst of calls tells you where and exactly when.
+@@ 36
+3. What the design buys
+@@ 37
+The book lists four advantages. Each follows from "independent pixels that report log changes". <span class="src">§10.1.2 · p. 285</span>
+@@ 38
+Advantage
+@@ 39
+Figure in the book
+@@ 40
+Where it comes from
+@@ 41
+High temporal resolution
+@@ 42
+Events are timestamped with microsecond resolution
+@@ 43
+A pixel fires at the moment of the crossing, so fast motion causes no blur and there is no blind time between frames
+@@ 44
+Low latency
+@@ 45
+Sub-millisecond
+@@ 46
+No pixel waits for a global exposure to finish
+@@ 47
+Low power and bandwidth
+@@ 48
+Under 10 mW at the die level; embedded systems of 100 mW or less
+@@ 49
+Only changes are sent; a static scene sends almost nothing
+@@ 50
+High dynamic range
+@@ 51
+Typically more than 120 dB, against 60 dB
+@@ 52
+Independent pixels and logarithmic conversion
+@@ 53
+The DVS pixel has three stages that turn light into a voltage, subtract the memorized level, and compare the difference with the threshold. The book relates them to three layers of the retina (Figure 10.2). Some sensors, the <strong>ATIS</strong> and the <strong>DAVIS</strong>, also output ordinary grayscale images from the same chip. <span class="src">§10.1.1 · p. 284</span>
+@@ 54
+4. Which camera for SLAM?
+@@ 55
+The book notes four trends in commercial devices. <span class="src">§10.1.3 · pp. 285–286</span>
+@@ 56
+<strong>Smaller pixels.</strong> The pixel pitch fell from 40 µm in the DVS128 to under 5 µm. An event pixel needs more transistors than an ordinary one, so stacked chips and backside illumination are used to keep enough light-sensitive area.
+@@ 57
+<strong>Grayscale output is disappearing.</strong> Newer high-definition models dropped it to leave room for the event circuit.
+@@ 58
+<strong>Colour is rare.</strong> Motion tasks seldom need it.
+@@ 59
+<strong>A built-in IMU is common.</strong> It allows visual-inertial odometry, the subject of Weeks 16 and 17.
+@@ 60
+More pixels are not automatically better. A one-megapixel event camera moving fast over a textured scene can emit hundreds of millions of events per second. That can saturate the camera's output bus, and according to the book no current algorithm and hardware pair processes such a rate in real time without first converting the events to arrays or dropping some. For prototyping and for robots with little computing power, the book recommends a lower resolution such as QVGA, and adds that the choice of lens (field of view) often matters as much as the pixel count. <span class="src">§10.1.3 · p. 286</span>
+@@ 61
+<strong>"An event tells you how bright the pixel is."</strong> It tells you only that the log brightness moved by \(C\) since the last event, and in which direction. Absolute brightness is not transmitted.
+@@ 62
+<strong>"The number of events from an edge depends on how fast it moves."</strong> In the ideal model the count per pixel depends on the brightness ratio and on \(C\). Speed sets how close together in time they arrive.
+@@ 63
+<strong>"A still camera in a still scene sends a steady stream."</strong> With constant lighting it sends nothing except noise. Events need motion or changing light. <span class="src">§10.1.1 · p. 283</span>
+@@ 64
+Q1. A pixel has just fired. The light on it then triples. With C = 0.25 (natural log), how many ON events does the ideal pixel send?
+@@ 65
+ΔL = ln 3 = 1.099, and 1.099 / 0.25 = 4.39, so 4 events fire. The remaining 0.099 stays below the threshold.
+@@ 66
+Q2. The same edge crosses the same pixel twice as fast. In the ideal model, what changes?
+@@ 67
+The pixel fires twice as many events
+@@ 68
+The pixel fires half as many events
+@@ 69
+The polarity flips
+@@ 70
+The same number of events arrives in half the time
+@@ 71
+The count is set by the total change in log brightness divided by C. The speed only compresses the timestamps, which doubles the event rate.
+@@ 72
+Q3. A scene is filmed twice with the same camera motion, once under a lamp and once under a lamp ten times brighter. How do the ideal event streams compare?
+@@ 73
+They are the same
+@@ 74
+The brighter one has ten times more events
+@@ 75
+The brighter one has ln 10 times more events
+@@ 76
+The brighter one has only ON events
+@@ 77
+Ten times more light adds the constant log 10 to every L. Events depend only on differences of L, and the constant cancels.
+@@ 78
+Q4. A sensor with 120 dB of dynamic range is compared with one of 60 dB. By what factor is its ratio of brightest to darkest usable light larger?
+@@ 79
+With 20 log₁₀ of the ratio, 120 dB is a ratio of 10⁶ and 60 dB is 10³. The ratio of the two is 10³ = 1000.
+@@ 80
+Each pixel memorizes its log intensity at its last event and fires again when the current value differs from it by the contrast threshold \(C\): equation (10.1).
+@@ 81
+An event is (pixel, time, polarity). It carries the sign of a change, not a brightness.
+@@ 82
+A change \(\Delta L\) produces \(\lfloor |\Delta L| / C \rfloor\) events. Faster motion gives the same events sooner, so a higher rate.
+@@ 83
+Because \(L\) is a logarithm, the threshold is a brightness ratio and the lighting level cancels. That, with independent pixels, gives the high dynamic range.
+@@ 84
+For SLAM, a moderate resolution is often the practical choice: megapixel sensors can produce more events than can be transmitted or processed.
+@@ 85
+<em>SLAM Handbook</em>, Chapter 10 introduction and §10.1 "Sensor Description", pp. 282–286.
+@@ 86
+The event count \(\lfloor |\Delta L|/C \rfloor\) follows directly from (10.1). Quoting dynamic range as \(20\log_{10}\) of the intensity ratio is the usual convention for image sensors; it is the one behind the 120 dB and 60 dB figures, which also appear in Gallego et al., <em>Event-based Vision: A Survey</em>, 2022 (the book's reference [361]).
+@@ 87
+The model \(I = E\rho\) (illumination times reflectance) is the standard Lambertian image-formation model, as in Szeliski, <em>Computer Vision: Algorithms and Applications</em>, 2010.

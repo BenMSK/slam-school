@@ -1,0 +1,152 @@
+@@ 1
+<span class="eyebrow">24주차 · Day 3</span>
+@@ 2
+Spatial AI graph를 하드웨어에 대응시키기: map store, real-time loop, 그리고 image plane
+@@ 3
+오늘이 끝나면 이 장이 제안하는 Spatial AI 프로세서 설계를 스케치하고, 어떤 계산이 map store, real-time loop, 센서에 속하는지 말하고, 순전히 local한 message passing이 어떻게 global 추정값에 도달하는지 보여 줄 수 있습니다.
+@@ 4
+약 60분 · §18.5, pp. 532–540 읽기 (8쪽) · 3주차 Day 3과 24주차 Day 2 필요
+@@ 5
+먼저 읽기: §18.5, pp. 532–540
+@@ 6
+Figure 18.1의 구성 요소들, 그리고 계산의 대부분이 하나의 중앙 프로세서에 남는 이유 (p. 533).
+@@ 7
+함께 관측된 feature들이 강하게 상관되는 이유, 그리고 그로부터 sparse graph가 나오는 과정 (p. 535).
+@@ 8
+map store 안의 다섯 가지 유지 관리 작업 (p. 536)과 real-time loop의 다섯 요소 (p. 537).
+@@ 9
+tracking에서의 local regularization 대 global regularization, 그리고 이어지는 제안 (p. 539).
+@@ 10
+Spatial AI의 알고리즘은 이미 graph 구조를 가지고 있습니다. map은 feature의 graph이고, real-time loop는 고정된 처리 graph이며, 이미지는 픽셀의 grid입니다. 이 장의 설계는 각 graph에 같은 모양의 하드웨어를 주어, 대부분의 계산이 데이터가 이미 있는 곳에서 일어나게 하고, 조각들을 되도록 적은 bit로 연결합니다.
+@@ 11
+1. 그림 하나로 보는 설계
+@@ 12
+이 장은 탑재된 자원만으로 작동하는 기기 하나를 다룹니다. 그래야 어디서든 작동하기 때문입니다. <span class="src">§18.5 · pp. 532–533</span> 이 장의 주장은 장기적인 효율이 알고리즘의 graph 구조를 하드웨어의 물리적 배치에 맞추는 데서 나온다는 것입니다. 그렇다면 작업을 센서 쪽으로 밀어내야 할 것 같습니다. 그런데도 계산의 대부분은 중앙에 남습니다. 이유는 하나, world model입니다. 새로 들어오는 모든 데이터는 결국 world model과 비교된 뒤, world model을 갱신하거나 버려집니다. <span class="src">§18.5 · p. 533</span> Figure 18.1은 그 결과를 "Spatial AI 두뇌"로 그립니다. <span class="src">§18.5.1 · p. 534</span>
+@@ 13
+구성 요소
+@@ 14
+하는 일
+@@ 15
+센서 가까이의 프로세서, 카메라마다 하나
+@@ 16
+이미지 stream이 센서를 떠나기 전에 줄이기
+@@ 17
+모든 픽셀, 항상
+@@ 18
+카메라 interface (main 프로세서 안)
+@@ 19
+자기 카메라에서 들어오는 데이터를 모델링하고 예측하기
+@@ 20
+매 frame
+@@ 21
+=
+@@ 22
+이미지 stream을 world model에 연결하기
+@@ 23
+=
+@@ 24
+world model을 보관하고 유지 관리하기
+@@ 25
+백그라운드에서
+@@ 26
+센서와 actuator interface
+@@ 27
+그 밖의 입력, 그리고 과제로 나가는 출력
+@@ 28
+과제가 요구하는 대로
+@@ 29
+마지막 열은 이 앱의 해석이며, 책은 주기를 제시하지 않습니다. 중앙 장치는 RAM이 달린 CPU가 아닙니다. CPU는 어느 메모리 칸이든 거의 같은 비용으로 접근하지만, 공간 데이터는 local하며, 그 데이터에 무언가를 더하는 작업도 마찬가지입니다. 이 설계는 저장과 처리를 graph 모양의 한 장치로 합치기를 요구합니다. Graphcore의 IPU가 그런 예로, IPU에서는 프로그램이 core들 위의 연산, 데이터, 통신 채널 배치로 컴파일됩니다. <span class="src">§18.5.1 · p. 534</span>
+@@ 30
+2. map store: 스스로를 유지 관리하는 graph
+@@ 31
+여기서 "feature"는 점부터 물체까지, scene 안의 개체를 추상화한 것이라면 무엇이든 가리킵니다. 각 feature는 특정 범위의 카메라 위치에서만 측정할 수 있으므로, 카메라가 움직이면 feature들은 서로 겹치는 무리를 지어 시야에 들어옵니다. 같은 시각에 측정된 feature들은 불확실한 카메라 state를 통해 강하게 상관되고, 짧은 움직임만큼 떨어진 feature들은 그보다 덜, 멀리 떨어진 feature들은 약하게만 상관됩니다. 강하게 상관된 feature들을 잇고 threshold 아래의 edge를 자르면, 가까운 feature들로 된 sparse graph가 남습니다. <span class="src">§18.5.1.1 · p. 535</span>
+@@ 32
+빈틈 채우기: "카메라 state를 통해 상관된다"를 숫자로
+@@ 33
+1차원에서 카메라 위치의 오차 분산을 \(\sigma_x^2\)라고 합시다. 카메라는 landmark 두 개를 측정하는데, 각 측정에는 분산이 \(\sigma_z^2\)인 독립 noise가 있으며, landmark를 \(\hat{l}_i = \hat{x} + z_i\)에 놓습니다. 각 landmark의 오차는 카메라의 오차에 자기 noise를 더한 것입니다.
+@@ 34
+공유 항 \(\hat{x}-x\)가 covariance가 되므로 상관계수는 \(\rho = \sigma_x^2/(\sigma_x^2 + \sigma_z^2)\)입니다. \(\sigma_x = 0.1\), \(\sigma_z = 0.02\)이면 \(\rho = 0.01/0.0104 = 0.96\)입니다. 카메라는 자기가 어디 있는지 모르지만, landmark들이 <em>서로에 대해</em> 어디 있는지는 잘 압니다.
+@@ 35
+이제 카메라가 landmark 2를 측정하기 전에 odometry step을 \(n\)번 밟고, 각 step이 오차 분산 \(\sigma_o^2\)를 더한다고 합시다. 그러면 \(\operatorname{var}(\hat{l}_2) = \sigma_x^2 + n\sigma_o^2 + \sigma_z^2\)이고, 공유 부분은 여전히 \(\sigma_x^2\)입니다. \(n\sigma_o^2 = 0.09\)이면:
+@@ 36
+두 관측 사이의 움직임이 클수록 edge는 약해집니다. <a href="#d15">3주차 · Day 3</a>의 언어로 말하면, pose 하나를 eliminate하면 그 pose에서 본 feature 쌍이 모두 연결되므로, feature graph는 co-visibility를 따릅니다.
+@@ 37
+pose graph도 feature 대신 pose가 들어갈 뿐 같은 모양이며, 이 장은 둘 사이에 근본적인 차이가 없다고 봅니다. 결론은 이렇습니다. 공간을 feature의 graph로 표현하되, 카메라 움직임을 따르는 multi-scale 패턴으로 연결하고, dense 예측을 만들어 낼 수 있게 하라는 것입니다. <span class="src">§18.5.1.1 · pp. 535–536</span> 그 graph는 연결 구조가 graph를 그대로 닮은 많은 core에 걸쳐 배치됩니다. 그러면 대규모 SLAM의 많은 부분이 유지 관리 작업으로서 store <em>안에서</em> 돌 수 있습니다. feature를 clustering하고 물체를 segmentation하기, loop closure 검출하기, 그 뒤에 최적화하기, map을 smoothing하기, 새로운 semantic category 발견하기입니다. smoothing과 segmentation은 각 부분에 따로 작용하고, global 최적화에는 message passing을 쓸 수 있습니다 (<a href="#d142">내일</a>). 메모리가 시간 제약을 겁니다. IPU는 tile당 약 1 MB, tile 1000개에 걸쳐 약 1 GB를 가지므로, dense 데이터는 빨리 간결한 object-level 형태로 추상화해야 합니다. <span class="src">§18.5.1.1 · p. 536</span>
+@@ 38
+3. real-time loop, 그리고 움직이는 window의 문제
+@@ 39
+이 장은 가장 촘촘한 loop가 오늘날의 dense SLAM (<a href="#d71">12주차 · Day 5</a>)처럼 생길 것으로 예상합니다. 새로 들어오는 모든 픽셀을 예측과 비교할 수 있을 만큼 세계를 generative하게 자세히 모델링하는 것입니다. 그 요소는 <strong>labeling</strong>(픽셀을 feature로, 보통 network로), <strong>rendering</strong>(map에서 만든 dense 예측 이미지), <strong>tracking</strong>(예측과 이미지를 정렬하고 outlier와 독립적인 움직임 찾기), <strong>fusion</strong>(기하와 label을 다시 써넣기), 그리고 self-supervised learning입니다. rendering은 map을 읽고 fusion은 map에 씁니다. <span class="src">§18.5.2 · p. 537</span>
+@@ 40
+이것들은 대규모 병렬 작업으로 된 고정된 block이므로, 고정된 처리 graph에 잘 맞습니다. 어려운 부분은 map과의 연결입니다. 시야에 들어온 부분은 움직임에 따라 끊임없이 바뀌므로, "관련 메모리"로 가는 고정된 데이터 경로가 없습니다. 제안된 답은 <strong>interface node</strong>의 집합입니다. 한쪽은 loop에, 다른 쪽은 map graph의 여러 지점에 연결된 통신 전문 node입니다. store가 <strong>small-world</strong> topology, 즉 어떤 두 node든 몇 hop 안에 닿는 구조를 가지면, interface node는 map에서 필요한 부분을 몇 번의 연산으로 복사해 올 수 있습니다. <span class="src">§18.5.2 · pp. 537–538</span>
+@@ 41
+4. image plane 가까이에서의 처리
+@@ 42
+픽셀은 grid를 이루고 이웃 픽셀은 보통 같은 물체를 보므로, 각 픽셀을 네 이웃과 잇는 graph가 dense matching과 optical flow의 smoothing 밑바탕에 깔려 있습니다. <span class="src">§18.5.3 · p. 538</span> SCAMP5 같은 칩은 이런 bottom-up 작업을 직접 할 수 있습니다. optical flow가 잘 맞는 예입니다. optical flow의 병렬 형태는 픽셀별 data step과 이웃 간 smoothing을 번갈아 합니다. <span class="src">§18.5.3 · pp. 538–539</span>
+@@ 43
+SLAM tracking은 하나의 <em>global</em> 움직임 parameter 집합을 원하므로 더 어렵습니다. 일반 하드웨어에서 dense tracking은 병렬 step(모든 픽셀의 오차)과 <strong>reduction</strong> step(모든 오차를 합하고 parameter 갱신)을 번갈아 합니다. reduction은 global regularizer이며, 픽셀 프로세서의 grid는 모든 것을 한곳으로 보내지 않고는 이를 할 수 없습니다. 이 장의 탈출구는 보장된 global consistency를 포기하고 그쪽으로 수렴해 가는 것입니다. 각 픽셀이 global parameter에 대한 자기 추정값을 갖고, 매 iteration마다 이웃과 공유합니다. 충분히 많은 round가 지나면 어느 픽셀에 물어도 쓸 만한 답을 얻을 수 있고, 더 긴 link나 small-world 패턴이 있으면 이 과정이 빨라질 것입니다. <span class="src">§18.5.3 · p. 539</span>
+@@ 44
+직접 해 보기: 픽셀 64개가 각자 하나의 global 숫자에 대한 local 추정값을 가집니다. Round 수 슬라이더는 이웃끼리의 평균을 돌리고, 두 번째 슬라이더는 긴 link를 더합니다.
+@@ 45
+눈여겨볼 점: grid link만 있을 때는 숫자들이 몇 round 안에 국소적으로 매끄러워지지만, 왼쪽에서 오른쪽으로 올라가는 기울기는 살아남습니다. 20 round 뒤에도 퍼짐은 여전히 1.34이고, 모든 픽셀이 global 평균 2.045의 0.05 이내로 들어오기까지 100 round가 걸립니다. long-range link 16개를 더해 보세요. 가장 긴 최단 경로가 14 hop에서 7 hop으로 줄고, 같은 수준의 합의에 32 round가 걸립니다. 어떤 픽셀도 global 합을 계산한 적이 없습니다.
+@@ 46
+빈틈 채우기: local 평균이 global 평균을 찾는 이유
+@@ 47
+책은 수렴을 기대할 뿐 규칙은 주지 않습니다. 가장 단순한 규칙은 이렇습니다. 모든 link \((i,j)\)에 가중치 \(w_{ij} = w_{ji}\)를 주고, 매 round마다 모든 픽셀이 각 이웃 쪽으로 움직이게 합니다.
+@@ 48
+여기서 \(d_i\)는 픽셀 \(i\)의 이웃 수입니다.
+@@ 49
+<em>합은 절대 변하지 않습니다.</em> link \((i,j)\)는 픽셀 \(i\)에 \(w_{ij}(x_j - x_i)\)를 더하고 픽셀 \(j\)에는 그 반대를 더합니다.
+@@ 50
+<em>멈춰 있을 수 있는 유일한 상태는 합의입니다.</em> 이 가중치에서는 각 새 값이 그 픽셀과 이웃들의 가중 평균이므로, 최댓값은 내려가기만 하고 최솟값은 올라가기만 하다가 모두 같아집니다. 합이 고정되어 있으므로 공통값은 시작 값들의 평균이며, 이것이 바로 reduction step이 계산했을 값입니다.
+@@ 51
+한 줄로 놓인 픽셀 세 개가 1, 2, 6을 가진 경우로 확인해 봅시다. degree는 1, 2, 1이므로 두 link 모두 가중치가 \(1/3\)입니다. 한 round 뒤에는 \(1 + \tfrac13(2-1) = 1.33\), \(2 + \tfrac13(1-2) + \tfrac13(6-2) = 3\), \(6 + \tfrac13(2-6) = 4.67\)이 됩니다. 합은 여전히 9이고, 값들은 3을 향해 갑니다.
+@@ 52
+정보는 round마다 한 hop씩 움직이므로 graph의 모양이 속도를 정합니다. 평균은 모든 픽셀을 똑같이 믿을 만하다고 취급합니다. 내일 볼 Gaussian belief propagation은 추정값과 함께 불확실성도 전달합니다.
+@@ 53
+흐름이 한 방향일 필요는 없습니다. main 프로세서가 자기 예측을 카메라로 보내면, 카메라는 예측과 다른 부분만 보고하면 됩니다. event camera는 밝기가 변한 픽셀을 보고하는데, 이는 아무것도 변하지 않는다고 예측하는 것과 같습니다. <strong>model-based event camera</strong>라면 모델의 예측에서 벗어난 픽셀을 보고할 것입니다. <span class="src">§18.5.1 · p. 535; §18.5.3 · p. 540</span> 처음부터 끝까지 목표는 link 위의 bit를 줄이고, 그와 함께 통신 전력을 줄이는 것입니다. <span class="src">§18.4.2 · p. 532</span>
+@@ 54
+Q1. 한 줄로 놓인 픽셀 세 개가 0, 3, 9를 가지고 "빈틈 채우기"의 가중치로 평균합니다. 한 round 뒤 가운데 픽셀의 값은 얼마입니까?
+@@ 55
+두 link 모두 가중치가 1/3입니다. 가운데 픽셀은 3 + (0 − 3)/3 + (9 − 3)/3 = 4가 됩니다. 양 끝은 1과 7이 되고, 합은 12로 그대로입니다.
+@@ 56
+Q2. 같은 카메라 pose에서 landmark 두 개를 측정합니다. pose 오차 분산은 0.04이고 각 측정값의 noise 분산은 0.01입니다. 두 landmark 추정값 사이의 상관계수는 얼마입니까?
+@@ 57
+ρ = σx² / (σx² + σz²) = 0.04 / 0.05 = 0.8. 공유된 카메라 오차가 covariance입니다.
+@@ 58
+Q3. 이 장이 real-time loop가 아니라 map store 안에 두는 작업은 무엇입니까?
+@@ 59
+예측 view를 rendering하기
+@@ 60
+예측을 새 이미지와 정렬하기
+@@ 61
+들어오는 이미지의 픽셀에 label 붙이기
+@@ 62
+loop closure 뒤에 map 최적화하기
+@@ 63
+loop closure 검출과 최적화, smoothing, clustering은 store가 스스로에게 하는 유지 관리입니다. rendering, tracking, fusion은 지금 들어오는 이미지를 map에 연결합니다.
+@@ 64
+Q4. 이 설계에서 real-time loop와 map store 사이에 interface node가 필요한 이유는 무엇입니까?
+@@ 65
+map store는 스스로 아무 처리도 할 수 없음
+@@ 66
+시야에 들어온 map 부분이 계속 바뀌므로, 고정된 데이터 경로로는 닿을 수 없음
+@@ 67
+real-time loop가 별도의 칩에서 돌아감
+@@ 68
+loop closure는 중앙 node의 승인을 받아야 함
+@@ 69
+움직임에 따라 loop가 필요로 하는 map node가 바뀝니다. small-world map graph의 여러 지점에 연결된 interface node는 어떤 부분이든 몇 hop 만에 가져올 수 있습니다.
+@@ 70
+이 설계는 하드웨어를 알고리즘 안의 graph에 맞추지만, 모든 데이터가 하나의 world model과 비교되므로 계산의 대부분은 중앙에 둡니다.
+@@ 71
+map은 sparse graph입니다. 함께 보인 feature들은 카메라 state를 통해 강하게 상관됩니다. store는 이 graph를 많은 core에 걸쳐 보관하고 제자리에서 유지 관리합니다.
+@@ 72
+real-time loop는 labeling, rendering, tracking, fusion을 합니다. interface node와 small-world map topology가 이 loop를, 관련 부분이 계속 움직이는 map에 연결합니다.
+@@ 73
+image plane 가까이에서는 local message passing으로 global 추정값에 도달할 수 있으며, 그 대가인 round 수는 graph에 달려 있습니다. 양방향 link가 있으면 센서는 모델이 예측하지 못한 것만 보내면 됩니다.
+@@ 74
+<em>SLAM Handbook</em>, 18장, §18.5 "Mapping Spatial AI Graphs to Hardware", pp. 532–540, Figure 18.1.
+@@ 75
+Xiao, Boyd, <em>Fast linear iterations for distributed averaging</em>, 2004 (대칭 가중치를 쓰는 graph 위의 평균).
+@@ 76
+Xiao, Boyd, Lall, <em>A scheme for robust distributed sensor fusion based on average consensus</em>, 2005 (위젯에 쓰인 Metropolis 가중치).

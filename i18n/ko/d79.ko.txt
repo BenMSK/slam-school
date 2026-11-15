@@ -1,0 +1,192 @@
+@@ 1
+<span class="eyebrow">14주차 · Day 1</span>
+@@ 2
+Radar 센서와 FMCW: beat frequency로 range를, 위상으로 속도를
+@@ 3
+오늘이 끝나면 로보틱스에서 쓰는 두 가지 radar 종류를 말하고, FMCW chirp의 beat frequency로 target의 range를 계산하고, 두 chirp 사이의 위상 변화로 radial velocity를 계산할 수 있습니다.
+@@ 4
+약 60분 · §9.1.1–9.1.2.3, pp. 250–256 읽기 (7쪽) · 13주차 Day 1 필요
+@@ 5
+먼저 읽기: §9.1.1–9.1.2.3, pp. 250–256
+@@ 6
+Figure 9.1 (p. 250): front-end와 back-end는 이미 아는 그대로입니다. radar에만 있는 상자 두 개를 찾으세요.
+@@ 7
+각 센서 종류의 주된 데이터 산출물: polar radargram과 radar datacube (p. 252).
+@@ 8
+p. 255의 식 (9.2), 그리고 slope \(S\)가 무엇인지.
+@@ 9
+p. 256의 식 (9.4)와 (9.5), 그리고 한계 \(v_{\max}\)가 어디서 오는지.
+@@ 10
+FMCW radar는 스톱워치로 echo의 시간을 재지 않습니다. 주파수가 꾸준히 올라가는 신호를 보내고, 돌아온 echo를 그 순간 보내고 있는 신호와 비교합니다. echo는 더 일찍 출발했으므로 주파수가 더 낮고, 그 차이의 크기가 range에 비례합니다. 속도는 두 번째 비교에서 나옵니다. 차이 신호의 위상이 한 chirp에서 다음 chirp까지 얼마나 돌았는지를 봅니다.
+@@ 11
+1. 두 종류의 radar
+@@ 12
+<strong>Radar</strong>(radio detection and ranging)는 전파를 보내고 반사파를 듣습니다. 연기, 먼지, 비, 어둠 속에서도 작동하고, 멀리까지 닿으며, 속도를 직접 잴 수 있습니다. 그래서 SLAM에서 radar를 쓰는 일이 늘고 있습니다. <span class="src">Ch. 9 intro · p. 250</span> 로보틱스에서는 <strong>millimeter-wave (mmWave)</strong> radar를 씁니다. 파장은 1–10 mm, 주파수는 30–300 GHz이며, 실제로는 대부분 자동차용으로 지정된 76–81 GHz 대역을 씁니다. <span class="src">§9.1.2 · p. 253</span> 파장과 주파수는 \(\lambda = c/f\)로 묶여 있으므로, 77 GHz radar의 파장은 \(\lambda = 3\times10^{8}/77\times10^{9} \approx 3.9\) mm입니다.
+@@ 13
+두 가지 센서 설계가 주류입니다. <span class="src">§9.1.1 · pp. 250–252</span>
+@@ 14
+=
+@@ 15
+=
+@@ 16
+각도를 덮는 방법
+@@ 17
+기계적으로 회전하는 안테나 하나
+@@ 18
+신호를 결합하는 고정된 송신·수신 안테나 array
+@@ 19
+주된 데이터 산출물
+@@ 20
+<strong>Polar radargram</strong>: azimuth와 range bin마다의 수신 전력
+@@ 21
+=
+@@ 22
+차원
+@@ 23
+2D: azimuth와 range. echo는 수직 beam 전체에서 오지만 elevation은 없음
+@@ 24
+azimuth, elevation, range, radial velocity: "3+1D" 또는 "4D". 수직 안테나가 적으면 "2+1D"
+@@ 25
+속도
+@@ 26
+대개 없음: 안테나 각도마다 pulse 하나로는 부족합니다. 최근 연구는 이웃 azimuth에서 이를 복원합니다
+@@ 27
+모든 return마다 측정됨
+@@ 28
+360° 전체 시야, 100 m 너머의 물체도 검출
+@@ 29
+가볍고 저전력, 움직이는 부품 없음
+@@ 30
+3D LiDAR처럼 beam을 여러 층 쌓은 회전식 3D radar는 실용적이지 않습니다. radar 안테나와 집속 장치가 레이저 다이오드보다 훨씬 크기 때문입니다. <span class="src">§9.1.1.1 · p. 252</span>
+@@ 31
+물체가 얼마나 강하게 반사하는지는 <strong>radar cross section (RCS)</strong>(레이더 단면적)으로 나타냅니다. 같은 에너지를 반사할 가상의 구의 크기입니다. RCS는 재질, 크기, 모양에 따라 달라집니다. 트럭이나 콘크리트 벽은 RCS가 크고, 보행자는 작습니다. echo의 세기를 <strong>radar intensity</strong>라고 하며, 송신 전력과 RCS에 따라 정해집니다. <span class="src">§9.1.2.1 · p. 253</span> intensity는 Day 4에서 다시 만납니다. 거기서는 LiDAR descriptor가 쓰는 높이 대신 intensity를 씁니다.
+@@ 32
+2. chirp와 beat frequency
+@@ 33
+<strong>FMCW</strong>는 frequency-modulated continuous wave의 약자입니다. 송신 안테나(TX)는 <strong>chirp</strong>를 내보냅니다. 시간 \(T\) 동안 주파수가 \(f_m\)에서 \(f_M\)까지 선형으로 올라가는 신호입니다. <strong>bandwidth</strong>(대역폭)는 \(B = f_M - f_m\)이고 <strong>slope</strong>(기울기)는 \(S = B/T\)입니다. up chirp를 하나씩 이어 붙여 반복하는 것을 <strong>sawtooth modulation</strong>(톱니파 변조)이라고 합니다. <span class="src">§9.1.2.2 · pp. 253–255</span>
+@@ 34
+거리 \(d\)에 있는 target의 echo는 왕복 시간 \(t_0\) 뒤에 돌아옵니다. 식 (9.1)을 거꾸로 읽은 것입니다:
+@@ 35
+수신기는 echo를 그 순간 송신하고 있는 chirp와 섞습니다. 출력은 <strong>intermediate frequency (IF) signal</strong>(중간 주파수 신호)이며, <strong>beat signal</strong>이라고도 합니다. 주파수가 \(f_0\)로 일정한 사인파입니다.
+@@ 36 attr
+chirp 하나의 시간에 따른 주파수. 송신 chirp는 시간 0의 f m에서 시간 T의 f M까지 올라가는 직선입니다. echo는 같은 직선을 지연 t zero만큼 오른쪽으로 민 것입니다. t zero와 T 사이 어느 시각에서나 두 직선 사이의 수직 간격이 beat frequency f zero입니다.
+@@ 37
+주파수
+@@ 38
+송신 chirp
+@@ 39
+=
+@@ 40
+echo는 송신 chirp를 t₀만큼 오른쪽으로 민 것입니다. 두 직선 모두 slope가 S이므로, t₀와 T 사이(음영)에서 수직 간격은 일정합니다: f₀ = S·t₀. 지연은 실제보다 훨씬 크게 그렸습니다. 실제로는 T의 1% 미만입니다.
+@@ 41
+그림을 기하로 읽어 봅시다. 시각 \(t\)에 송신기의 주파수는 \(f_m + St\)입니다. 그 순간 도착하는 echo는 시각 \(t - t_0\)에 출발했으므로 주파수가 \(f_m + S(t - t_0)\)입니다. 그 차이는 \(t\)에 의존하지 않습니다:
+@@ 42
+<strong>계산 예제.</strong> \(B = 300\) MHz, \(T = 40\ \mu\text{s}\), 거리 \(d = 12\) m인 target을 생각합시다. 지연은 \(t_0 = 24/(3\times10^{8}) = 80\) ns입니다. slope는 \(S = 3\times10^{8}/(40\times10^{-6}) = 7.5\times10^{12}\) Hz/s입니다. beat frequency는 \(f_0 = 7.5\times10^{12}\times 80\times10^{-9} = 600\) kHz입니다. 직접 재기 어려운 10억분의 80초의 지연이, 재기 쉬운 600 kHz 톤으로 바뀌었습니다.
+@@ 43
+빈틈 채우기: 섞으면 왜 차 주파수가 나오는가
+@@ 44
+책은 echo를 송신 chirp와 "섞는다"고 말합니다. 믹서는 두 신호를 곱하며, 두 cosine의 곱은 다음과 같습니다
+@@ 45
+합 항은 77 GHz의 약 두 배로 진동하므로 저역 통과 필터로 제거됩니다. 차 항은 남습니다. 이를 구하려면 송신 chirp의 위상을 써 봅니다. 주파수는 위상의 변화율을 \(2\pi\)로 나눈 것이므로, 주파수 \(f_m + St\)를 적분하면 위상은 다음과 같습니다
+@@ 46
+echo는 위상이 \(\varphi_{\text{TX}}(t - t_0)\)인 지연된 사본입니다. 빼고 \((t-t_0)^2 = t^2 - 2t\,t_0 + t_0^2\)를 전개하면:
+@@ 47
+따라서 IF signal은 주파수 \(f_0 = S t_0\)와 일정한 위상 \(\phi_0\)를 가진 정현파입니다. \(\phi_0\)의 두 번째 부분은 첫 번째의 \(S t_0/(2 f_m) = f_0/(2 f_m)\)배에 불과하며, 예제에서는 약 \(4\times10^{-6}\)입니다. 책은 이 부분을 버립니다. 남는 것이 식 (9.3)입니다:
+@@ 48
+3. sample에서 range로
+@@ 49
+radar는 아날로그-디지털 변환기로 IF signal을 sampling하고, chirp 하나의 sample에 Fourier transform(FFT)을 적용합니다. 각 target은 하나의 톤이므로 스펙트럼의 피크 하나가 되고, 식 (9.2)가 피크의 주파수를 range로 바꿉니다. <span class="src">§9.1.2.2 · p. 255</span> target이 여러 개면 IF signal은 톤들의 합이고 스펙트럼에 피크가 여러 개 생깁니다. 안테나 방향 하나에 대한 이 스펙트럼이 radargram의 한 행입니다.
+@@ 50
+빈틈 채우기: range 해상도와 최대 range
+@@ 51
+책은 두 target이 얼마나 가까워지면 피크가 합쳐지는지 말하지 않습니다. 시간 \(T\) 동안 관측한 톤은 다른 톤과 주파수가 약 \(1/T\) 이상 달라야 구분되며, 이는 FFT bin의 간격이기도 합니다. \(\Delta f = 1/T\)를 식 (9.2)에 넣으면:
+@@ 52
+<strong>range 해상도는 bandwidth에만 의존합니다.</strong> \(B = 300\) MHz이면 0.5 m, 1 GHz이면 15 cm입니다.
+@@ 53
+스펙트럼에는 위쪽 끝도 있습니다. radar가 chirp마다 complex sample을 \(N\)개 얻는다면 sampling rate는 \(N/T\)이고, 이것이 표현할 수 있는 가장 높은 beat frequency입니다. 그 주파수는 다음 range에 해당합니다
+@@ 54
+즉 sample \(N\)개는 크기가 \(c/(2B)\)인 range bin \(N\)개를 줍니다. sample 수가 고정되어 있으면 bandwidth가 클수록 bin은 촘촘해지고 닿는 거리는 짧아집니다.
+@@ 55
+직접 해 보기: 위젯은 chirp 두 개의 beat signal을 시뮬레이션하고 그로부터 range와 속도를 추정합니다. "두 번째 target 추가"를 누른 다음, bandwidth를 50 MHz로 낮췄다가 600 MHz로 올려 보세요.
+@@ 56
+눈여겨볼 점: 처음에는 beat frequency가 600 kHz이고 피크는 약 12.05 m에 있습니다. 1.5 m 뒤에 두 번째 target이 있으면 300 MHz에서는 피크가 두 개 보이지만, 50 MHz에서는 range bin이 3 m라서 둘이 하나로 합쳐집니다. 600 MHz에서는 bin이 0.25 m로 줄고 모호성 없는 range는 32 m로 떨어집니다. 처음의 여분 5 cm는 noise가 아닙니다. 속도를 올리면 커집니다. 이유는 Day 2에서 설명합니다.
+@@ 57
+4. 두 chirp 사이의 위상으로 구하는 속도
+@@ 58
+식 (9.3)에 따르면 beat signal의 위상은 \(\phi_0 = 4\pi d/\lambda\)입니다. range가 \(\lambda/2\), 즉 77 GHz에서 약 1.95 mm 바뀔 때마다 위상은 한 바퀴를 돕니다. 그래서 절대 range에는 쓸모가 없습니다. radar는 몇 바퀴를 돌았는지 알 수 없기 때문입니다. 대신 range의 작은 <em>변화</em>를 재는 데는 매우 좋습니다. <span class="src">§9.1.2.3 · p. 255</span>
+@@ 59
+up chirp 두 개를 시간 \(T\) 간격으로 보냅니다. <strong>radial velocity</strong>(시선 속도) \(v\), 즉 range가 변하는 속도를 가진 target은 그 사이에 \(\Delta d = vT\)만큼 움직입니다. 두 beat signal의 주파수는 거의 같지만 위상은 다음만큼 다릅니다
+@@ 60
+속도에 대해 풀면:
+@@ 61
+<span class="src">§9.1.2.3 · p. 256</span> 책은 \(T\)를 chirp의 길이와 chirp 사이의 시간 둘 다에 씁니다. chirp를 연달아 보내면 둘은 같습니다.
+@@ 62
+<strong>계산 예제.</strong> \(T = 40\ \mu\text{s}\), \(v = 5\) m/s이면 target은 chirp 사이에 \(\Delta d = 0.2\) mm 움직입니다. 0.5 m range bin보다 2500배 작으므로 두 스펙트럼은 똑같아 보입니다. 그런데도 \(\Delta\phi = 4\pi \times 2\times10^{-4}/3.896\times10^{-3} = 0.645\) rad, 즉 37°이며, 이는 재기 쉽습니다.
+@@ 63
+위상은 몇 바퀴를 돌았는지까지는 알 수 없습니다. 값이 모호하지 않은 것은 \(|\Delta\phi| \lt \pi\)인 동안뿐이며, 이로부터 chirp 한 쌍이 보고할 수 있는 최대 속도가 나옵니다:
+@@ 64
+위 수치로는 \(v_{\max} = 3.896\times10^{-3}/(160\times10^{-6}) = 24.4\) m/s입니다. 위젯에서 속도를 28 m/s로 놓으면 추정값이 약 −20.6 m/s로 뛰는데, 이는 \(28 - 2 v_{\max}\)입니다. 이것이 <strong>velocity aliasing</strong>입니다.
+@@ 65
+계속 위로 미끄러져 올라가는 음으로 휘파람을 불면서 절벽 앞에 서 있다고 상상해 보세요. 들리는 메아리는 조금 전의 음이라서 지금 부는 음보다 약간 낮아요. 절벽이 멀수록 메아리는 더 오래된 음이고, 음높이 차이도 커져요. range가 바로 그 차이예요. 속도를 알려면 같은 미끄러지는 음을 두 번 불고, 그사이에 메아리의 물결이 물결 하나의 몇 분의 일만큼 밀렸는지 확인해요.
+@@ 66
+더 깊이 (선택): 여러 chirp와 datacube
+@@ 67
+위젯에서 보듯이 chirp 두 개로 구한 속도는 noise가 큽니다(실제 5.0에 대해 약 5.2 m/s). 실제 센서는 chirp \(N_c\)개로 된 frame을 보냅니다. range bin 하나에서 위상은 chirp마다 같은 \(\Delta\phi\)만큼 나아가므로, \(N_c\)개의 복소수 값은 주파수 \(\Delta\phi/(2\pi T) = 2v/\lambda\)인 톤을 이루고, chirp에 걸친 두 번째 FFT가 이를 찾아냅니다. 책이 말하는 여러 chirp에 걸친 일련의 FFT가 이것입니다. <span class="src">§9.1.2.2 · p. 255</span> frame의 길이는 \(N_c T\)이므로, 3절의 논리에 따라 주파수 해상도는 \(1/(N_c T)\)이고 <strong>velocity resolution</strong>(속도 해상도)은 다음과 같습니다
+@@ 68
+\(N_c = 128\), \(T = 40\ \mu\text{s}\)이면 0.38 m/s입니다. range FFT, 그다음 Doppler FFT, 그다음 각도를 구하는 안테나 방향의 세 번째 변환(Day 2)을 거치면 SoC radar의 datacube가 됩니다.
+@@ 69
+<strong>"radar는 빠른 시계로 time of flight를 잰다."</strong> FMCW는 주파수 차이를 잽니다. chirp의 slope가 나노초 단위의 지연을 킬로헤르츠 단위의 beat frequency로 바꿉니다.
+@@ 70
+<strong>"bandwidth가 크면 range가 늘어난다."</strong> bandwidth는 range bin의 크기 \(c/(2B)\)를 정합니다. sample 수가 고정되어 있으면 bandwidth가 클수록 모호성 없는 range는 짧아집니다.
+@@ 71
+<strong>"radar는 target이 얼마나 빨리 움직이는지 잰다."</strong> radial 성분, 즉 range의 변화율만 잽니다. range를 일정하게 유지하며 센서 앞을 가로지르는 차의 Doppler 속도는 0입니다.
+@@ 72
+<strong>"위상은 매우 정밀한 range를 준다."</strong> 위상은 반 파장마다 한 바퀴 돌아 되풀이됩니다. 그래서 위상 차이만 씁니다. chirp 사이의 차이로 속도를, 안테나 사이의 차이로 각도를 구합니다.
+@@ 73
+Q1. chirp의 B = 600 MHz, T = 40 µs입니다. 어떤 target의 beat frequency가 1 MHz입니다. 이 target은 얼마나 떨어져 있습니까? (c = 3 × 10⁸ m/s를 쓰세요.)
+@@ 74
+=
+@@ 75
+Q2. bandwidth가 1 GHz인 chirp의 range 해상도는 얼마입니까?
+@@ 76
+=
+@@ 77
+=
+@@ 78
+=
+@@ 79
+c/(2B) = 3 × 10⁸/(2 × 10⁹) = 0.15 m. 반송파 주파수나 chirp 길이와는 무관합니다.
+@@ 80
+Q3. radar의 λ = 4 mm이고 chirp를 50 µs 간격으로 보냅니다. 두 chirp 사이에 beat 위상이 π/2만큼 바뀝니다. radial velocity는 얼마입니까?
+@@ 81
+Q4. 많은 spinning radar가 return의 속도를 주지 못하는 이유는 무엇입니까?
+@@ 82
+파장이 너무 길어 Doppler 효과를 쓸 수 없습니다
+@@ 83
+안테나의 회전이 Doppler shift를 상쇄합니다
+@@ 84
+bandwidth가 너무 작습니다
+@@ 85
+안테나 각도마다 pulse를 하나만 보내는데, 속도를 구하려면 비교할 pulse가 적어도 두 개 필요합니다
+@@ 86
+속도는 같은 target을 향한 chirp 사이의 위상 변화에서 나옵니다. azimuth마다 pulse가 하나뿐이면 비교할 대상이 없습니다 (p. 252).
+@@ 87
+Q5. chirp 사이의 시간을 절반으로 줄이면 모호성 없는 최대 속도는 어떻게 됩니까?
+@@ 88
+네 배가 됩니다
+@@ 89
+v_max = λ/(4T). 시간이 절반이면 chirp 사이에 target이 움직이는 거리도 절반이므로, 위상 변화 π 안에 두 배의 속도가 들어갑니다.
+@@ 90
+spinning radar는 360°에 걸친 2D polar radargram과 긴 range를 줍니다. SoC radar는 안테나 array를 쓰고, 움직이는 부품이 없으며, range, 각도, radial velocity를 줍니다.
+@@ 91
+FMCW chirp는 주파수가 slope \(S = B/T\)로 올라갑니다. echo는 \(t_0 = 2d/c\)만큼 지연되므로 섞으면 beat 톤 \(f_0 = S t_0\)가 나오고, range는 \(d = c f_0/(2S)\)입니다.
+@@ 92
+chirp 하나의 FFT는 각 target을 피크로 바꿉니다. bin의 폭은 \(c/(2B)\)입니다.
+@@ 93
+beat 위상은 \(4\pi d/\lambda\)입니다. chirp 사이의 위상 변화로 \(v = \lambda\Delta\phi/(4\pi T)\)를 얻으며, \(\lambda/(4T)\)까지 모호성이 없습니다.
+@@ 94
+<em>SLAM Handbook</em>, 9장 "Radar SLAM", §9.1.1 "Sensor Types" 및 §9.1.2.1–9.1.2.3, pp. 250–256, 식 (9.1)–(9.5), Figures 9.1–9.4.
+@@ 95
+Richards, <em>Fundamentals of Radar Signal Processing</em>, 2nd ed., 2014 (mixing과 beat signal, range 해상도 c/(2B), 모호성 없는 range와 속도, 속도 해상도).
+@@ 96
+Skolnik, <em>Introduction to Radar Systems</em>, 3rd ed., 2001 (FMCW 거리 측정).

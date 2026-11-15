@@ -1,0 +1,388 @@
+@@ w22
+range("Shape c₁ (longer front)",
+==
+range("shape c₁ (앞 길이)",
+@@ w22
+range("Shape c₂ (wider)",
+==
+range("shape c₂ (폭)",
+@@ w22
+range("Yaw of pose q",
+==
+range("pose q의 yaw",
+@@ w22
+"aria-label":"Top view of a car outline built from six semantic landmarks, compared with six detected keypoints"
+==
+"aria-label":"semantic landmark 여섯 개로 만든 자동차 윤곽과 검출된 keypoint 여섯 개를 위에서 본 모습"
+@@ w22
+["var(--c5)","predicted semantic landmarks λ·R·sⱼ"]
+==
+["var(--c5)","예측한 semantic landmark λ·R·sⱼ"]
+@@ w22
+["var(--c3)","detected keypoints zⱼ"]
+==
+["var(--c3)","검출된 keypoint zⱼ"]
+@@ w22
+["var(--c2)","residuals"]
+==
+["var(--c2)","residual"]
+@@ w22
+"world axes; the object sits at the origin"
+==
+"world 축; 물체는 원점에 있음"
+@@ w22
+stat("Cost Σ‖zⱼ − prediction‖²",
+==
+stat("Cost Σ‖zⱼ − 예측‖²",
+@@ w22
+"6 keypoints, 12 residuals"
+==
+"keypoint 6개, residual 12개"
+@@ w22
+stat("RMS keypoint error",
+==
+stat("RMS keypoint 오차",
+@@ w22
+"noise level is about 7 cm"
+==
+"noise 수준은 약 7 cm"
+@@ w22
+stat("Estimate (c₁, c₂, λ, yaw)",
+==
+stat("추정값 (c₁, c₂, λ, yaw)",
+@@ w22
+"4 unknowns instead of 12 free coordinates"
+==
+"자유 좌표 12개 대신 미지수 4개"
+@@ w22
+h("div",{class:"vt"},"A deformable shape model fitted to keypoints")
+==
+h("div",{class:"vt"},"keypoint에 맞춘 deformable shape model")
+@@ w22
+"Shape sⱼ = bⱼ,₀ + c₁bⱼ,₁ + c₂bⱼ,₂, then scaled by λ and rotated by the object's yaw. A bird's-eye camera is assumed, so the projection only drops the height."
+==
+"shape sⱼ = bⱼ,₀ + c₁bⱼ,₁ + c₂bⱼ,₂를 λ로 scale하고 물체의 yaw로 회전합니다. 위에서 내려다보는 카메라를 가정하므로 투영은 높이만 버립니다."
+@@ w22
+button("Fit shape only (c₁, c₂)",
+==
+button("shape만 맞추기 (c₁, c₂)",
+@@ w22
+button("Gauss-Newton step (all four)",
+==
+button("Gauss-Newton step (넷 모두)",
+@@ w22
+button("Reset",
+==
+button("초기화",
+@@ w22
+"aria-label":"Left: the image plane with the projected ellipse of an ellipsoid, its bounding box, and the detected bounding box. Right: top view of the camera, the ellipsoid, and the two tangent rays"
+==
+"aria-label":"왼쪽: ellipsoid를 투영한 타원과 그 bounding box, 검출된 bounding box가 있는 이미지 평면. 오른쪽: 카메라, ellipsoid, 두 접선 ray를 위에서 본 모습"
+@@ w22
+["var(--c5)","projected conic and its box"]
+==
+["var(--c5)","투영된 conic과 그 박스"]
+@@ w22
+["var(--c3)","detected bounding box z"]
+==
+["var(--c3)","검출된 bounding box z"]
+@@ w22
+["var(--muted)","tangent rays (top view)"]
+==
+["var(--muted)","접선 ray (위에서 본 모습)"]
+@@ w22
+"image plane (normalized coordinates)"
+==
+"이미지 평면 (정규화 좌표)"
+@@ w22
+"top view (x right, depth z up)"
+==
+"위에서 본 모습 (x 오른쪽, depth z 위쪽)"
+@@ w22
+"The camera is inside the ellipsoid's depth range, so there is no outline. Increase the distance."
+==
+"카메라가 ellipsoid의 depth 범위 안에 있어서 윤곽이 없습니다. 거리를 늘리세요."
+@@ w22
+stat("Detected box (w × h)",
+==
+stat("검출된 박스 (w × h)",
+@@ w22
+"made with λ = 1, d = 6 m, yaw 30°"
+==
+"λ = 1, d = 6 m, yaw 30°로 만듦"
+@@ w22
+stat("Projected box (w × h)",
+==
+stat("투영된 박스 (w × h)",
+@@ w22
+"none","from the dual conic C*ₓ"
+==
+"없음","dual conic C*ₓ에서 읽음"
+@@ w22
+"equation (16.11), Σ = I"
+==
+"식 (16.11), Σ = I"
+@@ w22
+h("div",{class:"vt"},"From an ellipsoid to a bounding box")
+==
+h("div",{class:"vt"},"ellipsoid에서 bounding box까지")
+@@ w22
+"A car-sized ellipsoid (semi-axes 2.2, 0.75, 0.9 m, times λ) is projected with C* = P T⁻¹ Q* T⁻ᵀ Pᵀ. The widget reads the box off the conic and compares it with one detection. The object sits at camera height, so its outline is an axis-aligned ellipse like the one inside a box; in general the outline is tilted and (16.10) cannot reach exactly zero."
+==
+"자동차 크기의 ellipsoid(반축 2.2, 0.75, 0.9 m에 λ를 곱함)를 C* = P T⁻¹ Q* T⁻ᵀ Pᵀ로 투영합니다. 위젯은 conic에서 박스를 읽어 detection 하나와 비교합니다. 물체가 카메라 높이에 있으므로 윤곽은 박스 안의 타원처럼 축 정렬 타원입니다. 일반적으로는 윤곽이 기울어져 있어서 (16.10)이 정확히 0이 될 수 없습니다."
+@@ w22
+range("Distance d",
+==
+range("거리 d",
+@@ w22
+"aria-label":"Top view: six mapped objects, the robot's true and estimated position, the six detections placed with the current estimate, and lines showing which object each detection is associated with"
+==
+"aria-label":"위에서 본 모습: map의 물체 여섯 개, 로봇의 실제 위치와 추정 위치, 현재 추정값으로 배치한 detection 여섯 개, 각 detection이 어느 물체와 association되었는지 보여 주는 선"
+@@ w22
+["var(--c1)","weight on the right object"]
+==
+["var(--c1)","맞는 물체의 weight"]
+@@ w22
+["var(--c3)","weight on a wrong object"]
+==
+["var(--c3)","틀린 물체의 weight"]
+@@ w22
+"true position"
+==
+"실제 위치"
+@@ w22
+"estimate",{
+==
+"추정",{
+@@ w22
+stat("Position error",
+==
+stat("위치 오차",
+@@ w22
+"after "+it+" step"+(it>1?"s":""):"odometry guess"
+==
+it+" step 후":"odometry 추측값"
+@@ w22
+stat("Wrong associations",
+==
+stat("잘못된 association",
+@@ w22
+wrong+" of 6","largest weight is not the true object"
+==
+"6개 중 "+wrong,"가장 큰 weight가 실제 물체가 아님"
+@@ w22
+stat("Detected labels",
+==
+stat("검출된 label",
+@@ w22
+"truth: C C T C C T"
+==
+"실제값: C C T C C T"
+@@ w22
+"Association weights used in step "+it+" (rows: detections with their reported label; columns: mapped objects)."
+==
+"step "+it+"에서 쓴 association weight (행: 보고된 label이 붙은 detection, 열: map의 물체)."
+@@ w22
+"No associations yet. Press Step."
+==
+"아직 association이 없습니다. 한 step을 누르세요."
+@@ w22
+button("Class labels: used",
+==
+button("class label: 사용",
+@@ w22
+"Class labels: "+(sem?"used":"ignored")
+==
+"class label: "+(sem?"사용":"무시")
+@@ w22
+select("Method ",
+==
+select("방법 ",
+@@ w22
+"Max-mixture (hard, re-chosen every step)"
+==
+"Max-mixture (hard, 매 step 다시 선택)"
+@@ w22
+"Nearest neighbour (hard, chosen once)"
+==
+"Nearest neighbour (hard, 한 번만 선택)"
+@@ w22
+"EM (soft weights)"
+==
+"EM (soft weight)"
+@@ w22
+h("div",{class:"vt"},"Which chair is which? Three ways to associate")
+==
+h("div",{class:"vt"},"어느 의자가 어느 것인가? association 방법 세 가지")
+@@ w22
+"The map (six objects) is known. The robot's position is the only continuous unknown; it starts at the drifted odometry guess. Each step re-estimates the associations, then the position."
+==
+"map(물체 여섯 개)은 알고 있습니다. 로봇 위치가 유일한 연속 미지수이며, drift된 odometry 추측값에서 시작합니다. 각 step은 association을 다시 추정한 다음 위치를 다시 추정합니다."
+@@ w22
+button("Step",
+==
+button("한 step",
+@@ w22
+button("Run 10 steps",
+==
+button("10 step 실행",
+@@ w22
+button("New noise",
+==
+button("새 noise",
+@@ w22
+ZN=["ray passes through","hit labelled chair","hit labelled table"]
+==
+ZN=["ray 통과","hit, label chair","hit, label table"]
+@@ w22
+aria:"Probability of each class for the voxel after each observation"
+==
+aria:"관측할 때마다 갱신되는 voxel의 class별 확률"
+@@ w22
+label:"observations fused"
+==
+label:"fusion한 관측 수"
+@@ w22
+label:"probability"
+==
+label:"확률"
+@@ w22
+NAME[k]+" after "+i
+==
+NAME[k]+", 관측 "+i+"개 후"
+@@ w22
+"Observation "+n+": "
+==
+"관측 "+n+": "
+@@ w22
+"No observations yet: h = [0, 0, 0], a uniform prior over the three classes."
+==
+"아직 관측 없음: h = [0, 0, 0], 세 class에 대한 uniform prior."
+@@ w22
+select("True class of the voxel ",
+==
+select("voxel의 실제 class ",
+@@ w22
+h("div",{class:"vt"},"Bayesian label fusion in one voxel")
+==
+h("div",{class:"vt"},"voxel 하나의 Bayesian label fusion")
+@@ w22
+"Each observation adds its log-odds vector l(z) to the voxel's h. The softmax of h gives the class probabilities. Sampled observations come from the sensor model with the true class chosen below."
+==
+"관측마다 자신의 log-odds 벡터 l(z)를 voxel의 h에 더합니다. h의 softmax가 class 확률입니다. 샘플링한 관측은 아래에서 고른 실제 class를 넣은 센서 모델에서 뽑습니다."
+@@ w22
+range("Label accuracy of the segmentation",
+==
+range("segmentation의 label 정확도",
+@@ w22
+button("Sample 1",
+==
+button("샘플 1개",
+@@ w22
+button("Sample 10",
+==
+button("샘플 10개",
+@@ w22
+button("Add: hit chair",
+==
+button("추가: hit chair",
+@@ w22
+button("Add: hit table",
+==
+button("추가: hit table",
+@@ w22
+button("Add: pass through",
+==
+button("추가: 통과",
+@@ w22
+{t:"Bring me the mug in the kitchen",
+==
+{t:"kitchen의 mug 가져오기",
+@@ w22
+{t:"Go to the living room",
+==
+{t:"living room으로 가기",
+@@ w22
+{t:"Which room is the bed in?",
+==
+{t:"bed가 있는 방은?",
+@@ w22
+{t:"Count the chairs in the flat",
+==
+{t:"flat의 chair 세기",
+@@ w22
+"aria-label":"A scene graph drawn as a tree: one building node, four room nodes, fourteen object nodes. Nodes examined by the query and the answer nodes are highlighted"
+==
+"aria-label":"tree로 그린 scene graph: building node 하나, room node 넷, object node 열넷. query가 살펴본 node와 답 node가 강조됩니다"
+@@ w22
+["var(--c2)","examined by the query"]
+==
+["var(--c2)","query가 살펴본 node"]
+@@ w22
+["var(--c1)","answer"]
+==
+["var(--c1)","답"]
+@@ w22
+["var(--line2)","not touched"]
+==
+["var(--line2)","건드리지 않음"]
+@@ w22
+"Answer: "
+==
+"답: "
+@@ w22
+hit.length+" chairs, at "
+==
+"chair "+hit.length+"개, 위치 "
+@@ w22
+"nothing found"
+==
+"찾지 못함"
+@@ w22
+stat("Nodes examined, scene graph",
+==
+stat("살펴본 node, scene graph",
+@@ w22
+seen.length+" of "+all.length
+==
+all.length+"개 중 "+seen.length
+@@ w22
+"1 building + rooms + opened rooms' objects"
+==
+"building 1 + room + 열어 본 room의 object"
+@@ w22
+stat("Entries examined, flat object list",
+==
+stat("살펴본 항목, flat 목록",
+@@ w22
+"every object, each tagged with its room"
+==
+"모든 object, 각각 room 표시"
+@@ w22
+stat("Memory, labels in every voxel",
+==
+stat("메모리, voxel마다 label",
+@@ w22
+"L·V/δ³ with L = "+Lsym+" symbols, V = 150 m³"
+==
+"L·V/δ³, L = symbol "+Lsym+"개, V = 150 m³"
+@@ w22
+stat("Memory, hierarchy",
+==
+stat("메모리, hierarchy",
+@@ w22
+"V/δ³ + 14 objects + 4 rooms + 1 building"
+==
+"V/δ³ + object 14 + room 4 + building 1"
+@@ w22
+h("div",{class:"vt"},"Asking a 3D scene graph")
+==
+h("div",{class:"vt"},"3D scene graph에 질문하기")
+@@ w22
+"A 10 m × 6 m flat stored as building → rooms → objects. Every node carries a position. The query walks down from the top and skips rooms it can rule out."
+==
+"10 m × 6 m 아파트(flat)를 building → room → object로 저장했습니다. 모든 node는 위치를 가집니다. query는 꼭대기에서 아래로 내려가며 배제할 수 있는 room은 건너뜁니다."
+@@ w22
+range("Voxel size δ",
+==
+range("voxel 크기 δ",

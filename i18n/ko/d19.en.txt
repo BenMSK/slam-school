@@ -1,0 +1,186 @@
+@@ 1
+<span class="eyebrow">Week 4 · Day 1</span>
+@@ 2
+Rotations, poses, and why they are not vectors
+@@ 3
+After today you can read the book's frame notation, build and invert a transformation matrix, count the degrees of freedom of a rotation or a pose, and explain why these objects cannot be added like vectors.
+@@ 4
+About 60 min · Read §2.1 opening and §2.1.1, pp. 53–55 (3 pages) · Needs Week 2 Day 4
+@@ 5
+Read first: Chapter 2 opening and §2.1.1, pp. 53–55
+@@ 6
+The loose definition of a manifold on p. 53, and what Figure 2.1 (p. 54) says the tangent space is used for.
+@@ 7
+The two constraints every rotation matrix satisfies, and the count "nine entries but only three degrees of freedom" (p. 54).
+@@ 8
+Equation (2.3) on p. 55: one matrix product that rotates and translates a landmark.
+@@ 9
+The sentence on p. 55 that says why rotation and transformation matrices are "not vectors".
+@@ 10
+A rotation or a pose is stored as a matrix with more entries than it has degrees of freedom, and the entries are tied together by constraints. The matrices that satisfy the constraints form a curved set, a <strong>manifold</strong>, not a flat vector space. The Gauss-Newton update "add a small vector to the estimate" from Week 2 therefore breaks, and the rest of this week builds its replacement.
+@@ 11
+1. Frames, and how to read the indices
+@@ 12
+A <strong>reference frame</strong> \(\mathcal{F}^a\) is an origin plus a set of perpendicular axes. A point in space has no coordinates until you pick a frame, so the book always writes the frame as a superscript: \(\boldsymbol{\ell}^a\) is the landmark \(\boldsymbol{\ell}\) expressed in \(\mathcal{F}^a\). <span class="src">Notation · p. xv</span>
+@@ 13
+A <strong>rotation matrix</strong> \(\mathbf{R}^b_a\) converts coordinates from \(\mathcal{F}^a\) to a frame \(\mathcal{F}^b\) that has the same origin but turned axes:
+@@ 14
+Read the indices bottom to top: <em>from</em> \(a\) <em>to</em> \(b\). When you chain rotations, a subscript must meet the same letter as a superscript next to it, and the pair cancels: \(\mathbf{R}^c_a = \mathbf{R}^c_b\,\mathbf{R}^b_a\). In the plane the matrix has one parameter, the angle \(\theta\): <span class="src">§2.1.1 · p. 54, eq. (2.1)</span>
+@@ 15
+A useful way to read any rotation matrix: feed it \((1,0)\) and \((0,1)\). The outputs are its columns. So <em>the columns of \(\mathbf{R}^b_a\) are the axes of \(\mathcal{F}^a\), written in \(\mathcal{F}^b\)</em>. In the example the x-axis of \(\mathcal{F}^a\) points along \((0.866, 0.5)\) when seen from \(\mathcal{F}^b\): frame \(a\) is turned 30° counter-clockwise.
+@@ 16
+2. Constraints and degrees of freedom
+@@ 17
+Every rotation matrix, in two or three dimensions, satisfies two constraints: <span class="src">§2.1.1 · p. 54</span>
+@@ 18
+The set of all \(d \times d\) matrices that satisfy both is called the <strong>special orthogonal group</strong> \(\SO(d)\). The number of <strong>degrees of freedom</strong> is the number of independent numbers you need to pick one member: one angle for \(\SO(2)\), three numbers (for example roll, pitch, yaw) for \(\SO(3)\), even though the matrix has nine entries.
+@@ 19
+Filling the gap: what the constraints mean, and how to count
+@@ 20
+<strong>\(\mathbf{R}\T\mathbf{R}=\mathbf{I}\) means "keeps dot products".</strong> For any two vectors, \((\mathbf{R}\mathbf{u})\T(\mathbf{R}\mathbf{v}) = \mathbf{u}\T\mathbf{R}\T\mathbf{R}\,\mathbf{v} = \mathbf{u}\T\mathbf{v}\). Lengths and angles are built from dot products, so they do not change. That is what "rigid" means. Equivalently, the columns of \(\mathbf{R}\) are unit vectors perpendicular to each other.
+@@ 21
+<strong>\(\det(\mathbf{R})=1\) rules out mirrors.</strong> Taking the determinant of \(\mathbf{R}\T\mathbf{R}=\mathbf{I}\) gives \(\det(\mathbf{R})^2 = 1\), so \(\det(\mathbf{R}) = \pm 1\). The matrices with \(-1\), such as \(\diag(1,-1)\), keep lengths but flip handedness. No physical motion of a robot does that.
+@@ 22
+<strong>Counting.</strong> \(\mathbf{R}\T\mathbf{R}\) is symmetric, so \(\mathbf{R}\T\mathbf{R}=\mathbf{I}\) is only \(d(d+1)/2\) independent equations: the diagonal and one triangle. The freedom left is
+@@ 23
+The determinant condition removes nothing more. It only picks one of two separate halves (rotations, not reflections).
+@@ 24
+What it describes
+@@ 25
+Stored as
+@@ 26
+Degrees of freedom
+@@ 27
+Planar rotation
+@@ 28
+2 × 2 matrix, 4 entries
+@@ 29
+3D rotation
+@@ 30
+3 × 3 matrix, 9 entries
+@@ 31
+Planar pose
+@@ 32
+3 × 3 matrix
+@@ 33
+3 (2 translation + 1 rotation)
+@@ 34
+3D pose
+@@ 35
+4 × 4 matrix
+@@ 36
+6 (3 translation + 3 rotation)
+@@ 37
+The last two rows are the book's formula "\(3(d-1)\) degrees of freedom" for a pose with \(d = 2\) and \(d = 3\). <span class="src">§2.1.1 · p. 54</span>
+@@ 38
+3. Poses and transformation matrices
+@@ 39
+The <strong>pose</strong> of a robot is a rotation \(\mathbf{R}^b_a \in \SO(d)\) together with a translation \(\mathbf{t}^b_a \in \R^d\). Here \(\mathbf{t}^b_a\) is the position of the origin of \(\mathcal{F}^a\), expressed in \(\mathcal{F}^b\). <span class="src">Notation · p. xv</span> Converting a landmark now takes a rotation and a shift, \(\boldsymbol{\ell}^b = \mathbf{R}^b_a\boldsymbol{\ell}^a + \mathbf{t}^b_a\). The book packs both into one \((d+1)\times(d+1)\) <strong>transformation matrix</strong> and appends a 1 to the landmark, which is its <strong>homogeneous</strong> form \(\tilde{\boldsymbol{\ell}}\): <span class="src">§2.1.1 · pp. 54–55, eqs. (2.2)–(2.3)</span>
+@@ 40
+Multiply the blocks out and the top row is exactly \(\mathbf{R}^b_a\boldsymbol{\ell}^a + \mathbf{t}^b_a\), the bottom row is \(1 = 1\). The set of all such matrices is the <strong>special Euclidean group</strong> \(\SE(d)\).
+@@ 41 attr
+Two planar frames. Frame b sits at the lower left with horizontal and vertical axes. Frame a has its origin two units right and one unit up from frame b and is turned by 30 degrees. A landmark is drawn with one line from the origin of frame a and another from the origin of frame b. A panel on the right lists the numbers: the landmark is (2, 1) in frame a and (3.23, 2.87) in frame b.
+@@ 42
+frame b
+@@ 43
+frame a
+@@ 44
+landmark
+@@ 45
+R: rotation by θ = 30°
+@@ 46
+One landmark, two descriptions. In frame a it is at (2, 1). Rotating by R gives (1.23, 1.87), and adding t = (2, 1), the origin of frame a seen from frame b, gives (3.23, 2.87).
+@@ 47
+The numbers in the figure: \(\mathbf{R}^b_a\boldsymbol{\ell}^a = (0.866\cdot 2 - 0.5\cdot 1,\; 0.5\cdot 2 + 0.866\cdot 1) = (1.232, 1.866)\), and adding \(\mathbf{t}^b_a = (2,1)\) gives \(\boldsymbol{\ell}^b = (3.232, 2.866)\).
+@@ 48
+Filling the gap: composing and inverting transformations
+@@ 49
+The book uses products and inverses of \(\mathbf{T}\) from here on without writing them out. Multiply two transformation matrices block by block:
+@@ 50
+Rotations multiply, but translations do not simply add: the inner one is rotated first. For the inverse, solve \(\boldsymbol{\ell}^b = \mathbf{R}\boldsymbol{\ell}^a + \mathbf{t}\) for \(\boldsymbol{\ell}^a\), using \(\mathbf{R}^{-1} = \mathbf{R}\T\):
+@@ 51
+In the example, \(\mathbf{R}\T\mathbf{t} = (0.866\cdot 2 + 0.5\cdot 1,\; -0.5\cdot 2 + 0.866\cdot 1) = (2.232, -0.134)\), so the inverse has translation \((-2.232, 0.134)\). Check it on the landmark: \(\mathbf{R}\T(3.232, 2.866) = (4.232, 0.866)\), and \((4.232 - 2.232,\; 0.866 + 0.134) = (2, 1)\). We are back at \(\boldsymbol{\ell}^a\).
+@@ 52
+4. Why these are not vectors
+@@ 53
+In Week 2 every unknown was a vector, and <a href="#d10">Gauss-Newton</a> improved it with \(\mathbf{x} \leftarrow \mathbf{x} + \boldsymbol{\Delta}\). That works because vectors form a <strong>vector space</strong>: sums and multiples of vectors are again valid vectors. Rotation matrices fail this test at once. \(\mathbf{R} + \mathbf{R} = 2\mathbf{R}\) stretches everything by two, and the zero matrix is not a rotation. The book states it plainly: you cannot add two rotation matrices and get a rotation matrix. <span class="src">§2.1.1 · p. 55</span>
+@@ 54
+Try it: pick two planar rotations and look at their entry-wise average.
+@@ 55
+Notice that with the default angles, 20° and 110°, the average has determinant 0.50. It turns the square by 65° but also shrinks its sides to 0.71. Set the two angles 180° apart and the average collapses to the zero matrix. The green midpoint, taken along the circle, is always a proper rotation.
+@@ 56
+The picture on the left of the widget is the whole story in one dimension. A planar rotation is a point on a circle. The average of two points on a circle lies on the chord between them, inside the circle. In formulas, \(\tfrac12\big(\mathbf{R}(\theta_1) + \mathbf{R}(\theta_2)\big) = \cos\!\big(\tfrac{\theta_1-\theta_2}{2}\big)\,\mathbf{R}\big(\tfrac{\theta_1+\theta_2}{2}\big)\): a rotation scaled by a factor below one.
+@@ 57
+A circle and the surface of a sphere are the book's two examples of a <strong>manifold</strong>: a set that is curved as a whole but looks like flat Euclidean space near each point. <span class="src">§2.1 · p. 53</span> \(\SO(d)\) and \(\SE(d)\) are manifolds too, of dimension 1, 3, 3, and 6 as in the table above. At each point \(\boldsymbol{\chi}\) of a manifold \(\mathcal{M}\) there is a <strong>tangent space</strong> \(T_{\boldsymbol{\chi}}\mathcal{M}\): the flat space that touches the manifold there, like a sheet of paper resting on a ball (Figure 2.1). It has as many dimensions as the manifold has degrees of freedom, and it <em>is</em> a vector space. <span class="src">§2.1 · pp. 53–54</span>
+@@ 58
+A city map is a tangent plane to the Earth. Near the city it is accurate, you can add displacements on it like vectors, and nobody worries that the ground is curved. Far from the city it is wrong. Optimization on a manifold works the same way: do the arithmetic on the flat local map, take a small step, then move the map to the new point.
+@@ 59
+5. Other ways to store a rotation
+@@ 60
+Why not avoid the trouble by storing three angles? The book mentions roll, pitch, yaw only in passing, so here is the standard comparison.
+@@ 61
+Numbers
+@@ 62
+Constraints
+@@ 63
+Weak point
+@@ 64
+Euler angles (roll, pitch, yaw)
+@@ 65
+Singular: at pitch ±90° roll and yaw turn about the same axis, and one degree of freedom is lost (gimbal lock)
+@@ 66
+Rotation vector (axis × angle)
+@@ 67
+Not unique: angles \(\phi\) and \(\phi + 2\pi\) about the same axis are the same rotation
+@@ 68
+Unit quaternion
+@@ 69
+1 (unit length)
+@@ 70
+Two quaternions, \(\mathbf{q}\) and \(-\mathbf{q}\), for every rotation
+@@ 71
+Rotation matrix
+@@ 72
+Most redundant, constraints must be kept
+@@ 73
+It is a known fact that every three-number description of 3D rotations has a singularity or an ambiguity somewhere. Estimation software therefore stores a redundant form without singularities, a matrix or a unit quaternion, and uses a three-number description only for <em>small changes</em> around the current estimate, where it is well behaved. The rotation vector is that three-number description. Tomorrow it gets its proper name: an element of the Lie algebra.
+@@ 74
+<strong>"\(\mathbf{R}^b_a\) turns frame \(b\) into frame \(a\)."</strong> It converts <em>coordinates</em> from \(a\) to \(b\). Its columns are the axes of \(a\) seen from \(b\).
+@@ 75
+<strong>"The inverse of \(\mathbf{T}\) has translation \(-\mathbf{t}\)."</strong> It is \(-\mathbf{R}\T\mathbf{t}\). The shift must be expressed in the other frame.
+@@ 76
+<strong>"A 4 × 4 pose matrix has 16 unknowns."</strong> The bottom row is fixed and the rotation block has 6 constraints. Only 6 numbers are free.
+@@ 77
+<strong>"To average two rotations, average the matrices."</strong> The result is not a rotation. Averages, differences, and updates all need the tools of the next four days.
+@@ 78
+Q1. A planar transformation \(\mathbf{T}^b_a\) has \(\theta = 90^\circ\) and \(\mathbf{t}^b_a = (2, 1)\). A landmark is at \(\boldsymbol{\ell}^a = (1, 0)\). What is \(\boldsymbol{\ell}^b\)?
+@@ 79
+Rotating (1, 0) by 90° gives (0, 1). Adding the translation (2, 1) gives (2, 2). The answer (3, 1) forgets the rotation, and (0, 1) forgets the translation.
+@@ 80
+Q2. A 3D pose is stored as a 4 × 4 matrix. How many independent numbers does it take to describe a small change of that pose?
+@@ 81
+Three for translation and three for rotation: \(3(d-1) = 6\) for \(d = 3\). The other entries are fixed by the bottom row and by the six constraints in \(\mathbf{R}\T\mathbf{R}=\mathbf{I}\).
+@@ 82
+Q3. What is the determinant of the entry-wise average of the planar rotations by 0° and by 120°?
+@@ 83
+The average is \(\cos(60^\circ) = 0.5\) times a rotation by 60°. A 2 × 2 matrix scaled by 0.5 has determinant \(0.5^2 = 0.25\). You can confirm it in the widget.
+@@ 84
+Q4. For the transformation of Q1 (\(\theta = 90^\circ\), \(\mathbf{t} = (2,1)\)), what is the translation part of \(\mathbf{T}^{-1}\)?
+@@ 85
+It is \(-\mathbf{R}\T\mathbf{t}\). Here \(\mathbf{R}\T\) rotates by −90°, so \(\mathbf{R}\T(2,1) = (1,-2)\), and the minus sign gives (−1, 2). Check: the inverse must send \(\boldsymbol{\ell}^b = (2,2)\) back to (1, 0), and \(\mathbf{R}\T(2,2) + (-1,2) = (2,-2) + (-1,2) = (1,0)\).
+@@ 86
+\(\mathbf{R}^b_a\) converts coordinates from frame \(a\) to frame \(b\). \(\mathbf{T}^b_a\) does the same for frames with different origins, acting on homogeneous points.
+@@ 87
+Rotation matrices satisfy \(\mathbf{R}\T\mathbf{R}=\mathbf{I}\) and \(\det\mathbf{R}=1\). That leaves 1 degree of freedom in the plane and 3 in space. Poses have 3 and 6.
+@@ 88
+\(\mathbf{T}^{-1}\) has blocks \(\mathbf{R}\T\) and \(-\mathbf{R}\T\mathbf{t}\). Products of transformations rotate the inner translation before adding.
+@@ 89
+\(\SO(d)\) and \(\SE(d)\) are manifolds, not vector spaces: sums and averages of their members leave the set.
+@@ 90
+Each point of a manifold has a flat tangent space of the same dimension. That is where the arithmetic will happen.
+@@ 91
+<em>SLAM Handbook</em>, Chapter 2 opening, §2.1 and §2.1.1 "Rotations and Poses", pp. 53–55, and the 3D Geometry Notation table, p. xv.
+@@ 92
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (rotation representations and their singularities, counting constraints, inverse of a transformation matrix).
+@@ 93
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (manifold and tangent-space picture).

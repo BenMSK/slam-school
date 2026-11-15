@@ -1,0 +1,244 @@
+@@ 1
+<span class="eyebrow">14주차 · Day 4</span>
+@@ 2
+Radar place recognition: 왜 어렵고 무엇이 통하는가
+@@ 3
+오늘이 끝나면 한 장소의 radar scan이 시점에 따라 왜 바뀌는지 설명하고, radar에 맞게 고친 Scan Context descriptor를 만들어 비교하고, spinning radar와 SoC radar에 어떤 학습 기반 방법과 hand-crafted 방법이 맞는지 말할 수 있습니다.
+@@ 4
+약 60분 · §9.3, pp. 269–273 읽기 (4쪽) · 13주차 Day 4 필요
+@@ 5
+먼저 읽기: §9.3, pp. 269–273
+@@ 6
+radar place recognition을 어렵게 만드는 요인의 목록, 그리고 Figure 9.10 (p. 269).
+@@ 7
+이 작업에 대한 spinning radar와 SoC radar의 비교 (p. 270).
+@@ 8
+각 scan을 어디서 찍었는지 몰라도 학습 데이터를 모으는 방법 (pp. 270–271).
+@@ 9
+radar 버전에서 Scan Context의 높이 값을 무엇이 대신하는지 (pp. 271–272), 그리고 좁은 field of view에 대한 해결책 (pp. 272–273).
+@@ 10
+place recognition은 현재 scan이 로봇이 전에 가 본 곳에서 찍혔는지를 묻습니다. LiDAR 방법은 큰 틀에서 radar로 옮겨 오지만, 같은 장소의 radar scan은 반복성이 떨어집니다. 거칠고 noise가 많으며 보는 각도에 따라 바뀝니다. 그래서 radar 버전은 높이 대신 intensity로 장소를 기술하고, filtering과 motion compensation을 거친 여러 scan으로 descriptor를 만들며, field of view가 좁을 때는 odometry에 기댑니다.
+@@ 11
+1. 두 번의 방문 사이에 무엇이 바뀌는가
+@@ 12
+<strong>Place recognition (PR)</strong>은 다른 차선 같은 다른 위치와, 다른 길에서 교차로로 들어오는 것 같은 다른 heading에 대처해야 합니다. <span class="src">§9.3 · p. 269</span> radar는 여기에 고유한 어려움 네 가지를 더합니다. <span class="src">§9.3.1 · p. 269</span>
+@@ 13
+scan에 미치는 영향
+@@ 14
+낮은 해상도
+@@ 15
+세부가 적어 장소를 구별할 feature도 적음
+@@ 16
+넓은 beam
+@@ 17
+각도 모호성: 먼 물체는 넓은 얼룩으로 나타나 가까이서 볼 때와 꽤 다르게 보임
+@@ 18
+낮은 signal-to-noise ratio
+@@ 19
+적절한 filtering이 없으면 noise가 장소를 식별하는 구조를 가림 (Figure 9.6)
+@@ 20
+수신기 포화
+@@ 21
+강한 방사형 줄무늬가 생기며, 그 모양은 target을 보는 각도에 따라 달라집니다. Figure 9.10은 같은 위치에서 찍었지만 이렇게 다른 두 scan을 보여 줍니다
+@@ 22
+빈틈 채우기: 먼 거리에서 beam은 얼마나 넓은가
+@@ 23
+각도 폭이 \(\theta_b\)(radian)인 beam은 range \(r\)에서 길이 \(w \approx r\,\theta_b\)인 호를 덮습니다. beam 폭이 2°, 즉 \(2\pi/180 = 0.035\) rad라고 합시다. 100 m에서 호의 길이는 3.5 m이고, 10 m에서는 0.35 m입니다. 그래서 가로등 기둥은 멀리서 보면 3.5 m로 번진 얼룩이고 가까이서 보면 점이며, 두 scan으로 만든 descriptor는 그 bin에서 일치하지 않습니다. 이것이 책이 말하는 각도 모호성이며, Day 2에서 radar의 각도가 거칠다고 한 이유이기도 합니다.
+@@ 24
+센서 종류가 방법을 결정합니다. <span class="src">§9.3.1 · pp. 269–270</span>
+@@ 25
+=
+@@ 26
+=
+@@ 27
+시야
+@@ 28
+360°, 매우 긴 range: 실외에서 주변 구조를 담기에 좋음
+@@ 29
+제한된 range와 field of view
+@@ 30
+사용하는 데이터
+@@ 31
+이미지로 다루는 2D radargram, 또는 CFAR 같은 검출기를 거친 point cloud
+@@ 32
+2D 또는 3D point cloud, 더 sparse하고 noise가 많음. 전체 datacube는 드물게 씀
+@@ 33
+빌려 온 곳
+@@ 34
+visual PR (image retrieval)과 2D LiDAR PR
+@@ 35
+=
+@@ 36
+=
+@@ 37
+scan이 느려서 저속에서도 나타남
+@@ 38
+회전할 부분이 없어서 작음
+@@ 39
+=
+@@ 40
+3+1D 센서에서 사용 가능, 짧은 range로 충분한 실내에서 유용함
+@@ 41
+spinning radar에 대한 PR 연구가 더 많습니다. 넓은 시야가 더 풍부한 정보를 주기도 하고, 큰 dataset이 있기 때문이기도 합니다. <span class="src">§9.3.1 · p. 270</span>
+@@ 42
+2. Hand-crafted descriptor: radar용 Scan Context
+@@ 43
+<a href="#d76">13주차 · Day 4</a>의 Scan Context를 떠올려 봅시다. 센서 주변 영역을 ring(range별)과 sector(azimuth별)로 나누고 bin마다 숫자 하나를 저장합니다. 결과는 ring마다 행 하나, sector마다 열 하나인 작은 행렬입니다. LiDAR에서 그 숫자는 bin 안 점들의 최대 높이입니다. radar에서는 바꿔야 할 것이 있습니다. <span class="src">§9.3.3 · pp. 271–272</span>
+@@ 44
+<strong>spinning radar에는 높이가 없습니다.</strong> 대신 return의 세기를 씁니다. 한 변형은 bin 안 점들의 <em>intensity 합</em>을 저장하는데, 이는 점들이 얼마나 강한지와 얼마나 많은지를 함께 담습니다.
+@@ 45
+<strong>scan 하나는 sparse하고 noise가 많습니다.</strong> azimuth마다 가장 강한 k개의 return만 남겨 noise를 많이 없앤 뒤, registration한 여러 scan으로 descriptor를 만들어 너무 sparse하지 않게 합니다.
+@@ 46
+<strong>scan이 느립니다.</strong> 먼저 점들을 de-skew합니다 (Day 3). 그렇지 않으면 같은 장소라도 속도에 따라 다른 descriptor가 나옵니다.
+@@ 47
+<strong>3+1D radar의 높이는 믿을 수 없습니다.</strong> 가짜 점이 최대 높이를 왜곡하므로 Intensity Scan Context는 bin마다 최대 intensity를 저장합니다. intensity 합은 수직 구조도 담을 수 있는 대안입니다.
+@@ 48
+빈틈 채우기: 두 descriptor 비교하기, 그리고 회전이 왜 shift인가
+@@ 49
+query descriptor의 열을 \(\mathbf{q}_j\), database descriptor의 열을 \(\mathbf{c}_j\)라고 합시다. sector는 \(j = 1,\dots,N_s\)입니다. 두 열은 사잇각의 cosine으로 비교하고, descriptor distance는 열들에 대한 평균입니다:
+@@ 50
+index \(j+s\)는 끝에서 처음으로 돌아갑니다. 왜 shift \(s\)가 필요할까요? sector는 sensor frame에서 셉니다. 첫 방문 이후 센서가 각도 \(\psi\)만큼 돌았다면, sector \(j+s\)에 있던 물체는 이제 sector \(j\)에 있고, \(s = \psi/(360°/N_s)\)입니다. 행렬 전체가 \(s\)열만큼 옆으로 shift되고, range는 바뀌지 않으므로 행은 그대로입니다. 모든 shift를 시도해 가장 작은 distance를 취하면 비교가 heading과 무관해지고, 최적 shift는 heading 변화의 추정값이 됩니다. 10° sector가 36개라면 60° 회전은 6열 shift입니다.
+@@ 51
+cosine은 열의 전체 크기에 무관하므로, 같은 벽이 다른 날 더 강하거나 약한 전력을 돌려줄 때 도움이 됩니다.
+@@ 52
+직접 해 보기: 두 격자는 같은 장소의 descriptor이며, 오른쪽은 heading이 다르고 품질이 떨어진 scan에서 만든 것입니다. heading 슬라이더를 움직여 보세요. 그다음 field of view를 120°로 놓고 다시 움직여 보세요.
+@@ 53
+눈여겨볼 점: 360° 시야에서는 최적 shift가 heading을 복원하고(60°에 6 sector), 맞는 장소까지의 distance는 어떤 heading에서나 0.42로 유지되어 다른 장소의 0.79보다 훨씬 낮습니다. 120° 시야에서는 센서가 많이 돌수록 두 scan이 공유하는 장면이 줄어듭니다. distance는 0°에서 0.40, 60°에서 0.63으로 올라가고, 90°에서는 맞는 장소(0.84)가 틀린 장소(0.81)보다 나을 것이 없습니다. 위젯에서 두 scan 모두 비어 있는 sector는 건너뛰고, 한쪽만 비어 있는 sector는 완전한 불일치로 셉니다.
+@@ 54
+이 실험의 후반부가 SoC radar에 대한 책의 경고입니다. 센서가 작은 field of view만 덮으면 한 장소가 두 시점에서 꽤 다르게 보이므로 rotation invariance를 얻기 어렵습니다. 한 가지 해결책은 odometry로 미리 거르는 것입니다. 추정 yaw가 일정 범위, 예를 들어 20° 이내인 frame하고만 현재 descriptor를 비교합니다. <span class="src">§9.3.3 · pp. 272–273</span>
+@@ 55
+radar에 맞게 고쳐진 descriptor는 Scan Context만이 아닙니다. <span class="src">§9.3.3 · pp. 271–272</span>
+@@ 56
+책에 설명된 radar 적응 방식
+@@ 57
+=
+@@ 58
+3D point cloud용으로 설계되었고, radargram에서 추출한 2D point cloud에 적용
+@@ 59
+=
+@@ 60
+회전과 이동에 불변인 sinogram. 두 sinogram의 단순 correlation은 radar noise에 약하며, auto-correlation을 더하면 결과가 좋아집니다
+@@ 61
+=
+@@ 62
+bin마다 intensity의 합 또는 최댓값, filtering과 motion compensation을 거친 여러 scan으로 만든 descriptor
+@@ 63
+빈틈 채우기: 지루한 scan을 가려내는 eigenvalue 검사
+@@ 64
+어떤 scan은 place recognition에 아예 쓰지 말아야 합니다. 고속도로에서는 모든 구간이 서로 비슷해 보입니다. M2DP 기반 시스템은 2D 점들의 principal component analysis (PCA)로 이를 검출합니다. <span class="src">§9.3.3 · p. 272</span> 점 좌표의 2 × 2 covariance 행렬과 두 eigenvalue \(\lambda_1 \ge \lambda_2\)를 계산합니다. 각 eigenvalue는 한 주성분 방향을 따른 점들의 분산입니다.
+@@ 65
+예: 점들이 도로를 따라 40 m(1 표준편차), 가로로 3 m 퍼진 고속도로 scan은 \(\lambda_1 = 1600\ \text{m}^2\), \(\lambda_2 = 9\ \text{m}^2\)이며 비율은 178입니다. 이 scan은 한 방향으로만 구조가 있으므로 건너뜁니다. 퍼짐이 30 m와 25 m인 교차로는 eigenvalue가 900과 625, 비율이 1.4이므로 남깁니다.
+@@ 66
+3. 학습된 descriptor
+@@ 67
+다른 길은 network가 scan을 descriptor 벡터로 바꾸게 하고 벡터끼리 비교하는 것입니다. <span class="src">§9.3.2 · pp. 270–271</span>
+@@ 68
+spinning radar에서 radargram은 이미지이므로 image retrieval을 적용할 수 있습니다. 초기 방법 하나는 polar 이미지가 한 바퀴 돌아 이어지는 성질을 존중하는 cylindrical convolution을 쓴 convolutional network로, 회전에 따라 바뀌지 않는 descriptor를 학습합니다. query를 이런 descriptor의 database와 match하면 <strong>topological</strong> place recognition이 됩니다. 정확한 pose가 아니라 저장된 장소 중 어디에 있는지를 알려 줍니다. pose refinement 단계를 더하면 <strong>topometric</strong> 시스템이 됩니다.
+@@ 69
+학습 예제는 어디서 올까요? network는 같은 장소의 scan 쌍과 다른 장소의 scan 쌍을 봐야 합니다. ground-truth 위치가 있으면 이를 얻을 수 있지만, 꼭 필요하지는 않습니다. <span class="src">§9.3.2 · pp. 270–271</span>
+@@ 70 attr
+한 번의 주행에서 기록된 순서대로 놓인 scan들. 한 scan이 anchor입니다. 바로 뒤에 기록된 scan은 positive 예로 씁니다. 훨씬 나중에 기록된 scan은 negative 예로 씁니다.
+@@ 71
+주행 한 번, 기록 순서대로 놓인 scan →
+@@ 72
+=
+@@ 73
+positive (당김)
+@@ 74
+negative (밀어냄)
+@@ 75
+연달아 기록된 scan은 거의 같은 장소를 보여 주므로, 순서상 이웃이 positive 예가 됩니다. 그 polar 이미지를 shift하면 인위적인 회전이 더해집니다. 순서상 멀리 떨어진 scan은 negative 예가 됩니다.
+@@ 76
+network는 anchor와 그 positive에는 비슷한 descriptor를 주고, negative와는 구별하도록 학습됩니다. metric 위치가 필요 없으므로 학습은 unsupervised입니다.
+@@ 77
+SoC radar는 range가 짧고 field of view가 작아서 따로 다뤄야 합니다. <span class="src">§9.3.2 · p. 271</span>
+@@ 78
+sparse하고 noise가 많은 SoC 데이터를 다루는 방법
+@@ 79
+2D 이미지로 투영한 point cloud에 쓰는 spatiotemporal encoder, 그 뒤에 NetVLAD layer
+@@ 80
+feature를 RCS로 다시 순위 매겨 무관한 것을 버리고, 차량 주위의 여러 radar로 시야를 넓힙니다
+@@ 81
+3D cloud에 대한 kernel point convolution, 그 뒤에 NetVLAD
+@@ 82
+point importance estimator가 인식에 중요한 점을 학습하고, 별도의 network가 RCS 값을 encode합니다. scan 하나로 작동합니다
+@@ 83
+LiDAR PR network에서 영감을 받은 radar 전용 backbone
+@@ 84
+RANSAC ego-velocity 추정(Day 3)이 static inlier를 남기고 나머지를 noise로 버립니다
+@@ 85
+두 길은 같은 적과 싸웁니다. descriptor는 같은 장소가 두 번 같은 숫자를 줄 때만 쓸모가 있습니다. hand-crafted radar descriptor는 scan의 대부분을 버리고(k strongest), scan을 합치고, 움직임을 되돌려서 거기에 도달합니다. 학습된 descriptor는 match되어야 할 쌍을 많이 보면서 scan의 어느 부분을 무시할지 배워서 거기에 도달합니다.
+@@ 86
+<strong>"LiDAR descriptor는 radar 점에 그대로 적용할 수 있다."</strong> spinning radar에는 높이가 없고, 3+1D radar에서는 가짜 점 하나가 최대 높이를 망칩니다. radar 버전은 intensity를 저장합니다.
+@@ 87
+<strong>"Scan Context는 rotation invariant이므로 field of view는 상관없다."</strong> column shift는 두 scan이 같은 주변을 볼 때만 통합니다. 시야가 좁으면 돌아간 센서는 장면의 다른 부분을 봅니다.
+@@ 88
+<strong>"descriptor가 match되면 loop closure다."</strong> 그것은 후보일 뿐입니다. Day 5에서 pipeline이 graph에 넣기 전에 odometry와 기하로 이를 어떻게 검사하는지 봅니다.
+@@ 89
+Q1. Scan Context descriptor의 sector가 60개입니다. 로봇이 heading이 90° 바뀐 채로 어떤 장소에 돌아옵니다. descriptor는 몇 열 shift됩니까?
+@@ 90
+sector 하나는 360°/60 = 6°이므로 90°는 90/6 = 15열입니다.
+@@ 91
+Q2. radar 버전의 Scan Context가 bin에 intensity 합을 저장하는 이유는 무엇입니까?
+@@ 92
+intensity는 날씨에 의존하지 않습니다
+@@ 93
+descriptor가 작아집니다
+@@ 94
+합하면 multipath ghost가 사라집니다
+@@ 95
+높이가 없거나 믿을 수 없고, 합은 점의 세기와 개수를 함께 담습니다
+@@ 96
+spinning radar에는 elevation이 없고, 3+1D radar에서는 가짜 점이 최대 높이를 왜곡합니다. intensity 합은 점 밀도와 return 세기를 함께 반영합니다 (p. 272).
+@@ 97
+Q3. field of view가 좁은 3+1D radar를 loop 검출에 씁니다. rotation invariance가 부족한 문제에 대처하려고 책은 무엇을 제안합니까?
+@@ 98
+odometry yaw가 현재 frame과 정해진 범위 안에 있는 frame하고만 비교하기
+@@ 99
+descriptor에 sector를 더 많이 쓰기
+@@ 100
+intensity 대신 최대 높이를 저장하기
+@@ 101
+column shift 탐색 끄기
+@@ 102
+field of view가 작으면 다른 heading에서 본 장소가 다르게 보이므로, odometry로 추정한 yaw로 후보를 미리 거릅니다. 예를 들어 20° 이내입니다 (pp. 272–273).
+@@ 103
+Q4. scan의 점들에 PCA를 하니 eigenvalue가 900 m²와 4 m²입니다. M2DP 기반 시스템은 이 scan을 어떻게 처리합니까?
+@@ 104
+신뢰도 높은 loop 후보로 씁니다
+@@ 105
+두 scan으로 나눕니다
+@@ 106
+길쭉하고 특징이 없으므로 place recognition에서 뺍니다
+@@ 107
+첫 번째 eigenvector에 맞춰 회전합니다
+@@ 108
+eigenvalue가 크게 다르다는 것은 고속도로처럼 점들에 한 방향의 구조가 없다는 뜻입니다. 이런 scan은 place recognition에서 고려하지 않습니다 (p. 272).
+@@ 109
+Q5. ground-truth 위치 없이 학습된 radar descriptor의 positive 학습 쌍을 어떻게 얻을 수 있습니까?
+@@ 110
+모든 scan을 무작위로 고른 다른 scan과 짝지어서
+@@ 111
+기록 순서상 이웃인 scan끼리 짝짓고, polar 이미지를 shift해 인위적인 회전을 더해서
+@@ 112
+평균 intensity가 같은 scan끼리 짝지어서
+@@ 113
+radar scan을 위성 이미지와 짝지어서
+@@ 114
+연속된 scan은 거의 같은 장소를 보여 줍니다. polar radargram을 shift하면 다른 heading을 흉내 냅니다. 순서상 멀리 떨어진 scan은 negative 역할을 합니다 (pp. 270–271).
+@@ 115
+한 장소의 radar scan은 낮은 해상도, 넓은 beam, noise, 수신기 포화 때문에 달라집니다.
+@@ 116
+spinning radar는 360° 장거리 시야를 제공하며 visual PR과 2D LiDAR PR에서 방법을 빌려 옵니다. SoC radar는 시야가 좁고 LiDAR PR에서 빌려 옵니다.
+@@ 117
+radar Scan Context는 ring-sector bin마다 intensity를 저장합니다. heading 변화는 column shift이며, 모든 shift에 대해 평균 cosine distance를 최소화해 찾습니다.
+@@ 118
+field of view가 좁으면 heading 변화가 클 때 shift 탐색이 실패하므로, odometry yaw로 후보를 미리 거릅니다.
+@@ 119
+학습된 descriptor는 순서상 이웃을 positive로 써서 위치 없이 학습할 수 있습니다.
+@@ 120
+<em>SLAM Handbook</em>, 9장, §9.3 "Radar Place Recognition", pp. 269–273, Figure 9.10.
+@@ 121
+Kim and Kim, <em>Scan Context: Egocentric Spatial Descriptor for Place Recognition within 3D Point Cloud Map</em>, 2018 (열 단위 cosine distance와 column shift).
+@@ 122
+Bishop, <em>Pattern Recognition and Machine Learning</em>, 2006 (principal component analysis: 분산으로서의 covariance 행렬 eigenvalue).

@@ -1,0 +1,250 @@
+@@ 1
+<span class="eyebrow">Week 20 · Day 5</span>
+@@ 2
+Gaussian splatting SLAM, and what is still hard
+@@ 3
+After today you can explain how a Gaussian splat map serves both tracking and mapping in SLAM, state the advantages the book claims over NeRF, and list the open problems of rendering-based SLAM.
+@@ 4
+About 60 min · Read §14.3.2–14.4, pp. 410–416 (7 pages, half of them figures) · Needs Week 20 Day 4
+@@ 5
+Read first: §14.3.2, §14.3.3, and §14.4, pp. 410–416
+@@ 6
+What SuGAR and 2DGS add to get accurate surfaces, and why editing a splat scene is easier than editing a NeRF (p. 411).
+@@ 7
+The two advantages of 3DGS over NeRF for SLAM (p. 412).
+@@ 8
+The RGB-D route and the monocular route of MonoGS, and why discrete primitives help loop closure (p. 413).
+@@ 9
+The systems that pair 3DGS with ORB-SLAM, ICP, or LiDAR (p. 414).
+@@ 10
+The four challenges of §14.4 and the remedies proposed for each (pp. 415–416).
+@@ 11
+A splat map can be both the thing you render and the thing you localize against. Hold the Gaussians fixed and descend on the camera pose: that is tracking. Hold the poses fixed and descend on the Gaussians: that is mapping. The map renders fast and its primitives can be added, moved, and removed, which suits SLAM. But optimizing it is still slow, and tracking by photometric error alone is not yet as accurate as classical sparse methods.
+@@ 12
+1. Beyond view synthesis: surfaces and semantics
+@@ 13
+Like NeRF before it, 3DGS has been adapted to other 3D tasks. The book picks two. <span class="src">§14.3.2 · pp. 410–412</span>
+@@ 14
+Goal
+@@ 15
+Problem with plain 3DGS
+@@ 16
+What the cited methods do
+@@ 17
+<strong>Surface reconstruction</strong>
+@@ 18
+3DGS is built for photorealistic view synthesis and does not guarantee accurate geometry
+@@ 19
+SuGAR adds a geometric regularizer: it defines a surface normal for each Gaussian and encourages neighbouring Gaussians to be flat, so a mesh can be extracted. 2DGS replaces the 3D Gaussians with 2D discs, which have a normal by construction, and adds normal and depth consistency losses.
+@@ 20
+<strong>Semantic understanding</strong>
+@@ 21
+Gaussians carry only colour
+@@ 22
+Give each Gaussian a semantic feature and train it from 2D segmentations through the differentiable renderer. LangSplat and FMGS fuse 2D foundation-model features (CLIP, DINO) into the Gaussians, which enables open-vocabulary segmentation.
+@@ 23
+Because the Gaussians are explicit and discrete, editing the scene, for example moving or deleting an object, is more direct than in a continuous NeRF. <span class="src">§14.3.2 · p. 411</span>
+@@ 24
+2. One loss for tracking and mapping
+@@ 25
+As with neural fields (<a href="#d117">Day 3</a>), the appeal for SLAM is end-to-end optimization through the renderer: localization and mapping share one objective, there is no chain of hand-designed stages, and the map can represent complex light, including transparent objects. On top of that the book names two advantages specific to 3DGS. <span class="src">§14.3.3 · pp. 411–412</span>
+@@ 26
+<strong>Fast rendering.</strong> Rasterization is much faster than ray marching, which matters for anything that must interact with the map in real time, such as robot navigation.
+@@ 27
+<strong>Flexible primitives.</strong> Discrete, point-like Gaussians can be allocated and updated freely. That fits SLAM, where the scene's boundary grows and loop closures move parts of the map. This is the "dynamic allocation" row of Table 14.1.
+@@ 28
+How does a renderer estimate a pose? Camera poses are among the parameters in Figure 14.2. The pose enters equation (14.5) through \(\mathbf{W}\) and through the camera-frame mean \(\boldsymbol{\mu}_c\), so the rendered image is a differentiable function of the pose, and the loss has a gradient with respect to it.
+@@ 29
+Filling the gap: the gradient of a pixel with respect to the camera position
+@@ 30
+Use the 2D world of <a href="#d118">Day 4</a>: a Gaussian at \((x, z)\), a camera at sideways position \(c_x\) looking along \(z\). The footprint centre is
+@@ 31
+Moving the camera to the right slides every footprint to the left, near ones more than far ones. That is parallax. Ignoring the smaller change in footprint width, the opacity at pixel \(u\) is \(\alpha = o\,\exp\bigl(-(u - \mu')^2 / 2\sigma'^2\bigr)\), so by the chain rule
+@@ 32
+Numbers: \(o = 0.8\), \(\sigma' = 0.25\), \(z = 2\). At a pixel one \(\sigma'\) from the centre, \(u - \mu' = 0.25\): \(\alpha = 0.8\,e^{-0.5} = 0.485\) and \(\partial\alpha/\partial c_x = 0.485 \times 0.25 / 0.0625 \times (-0.5) = -0.97\). At a pixel four \(\sigma'\) away, \(u - \mu' = 1\): \(\alpha = 0.8\,e^{-8} = 0.0003\) and the derivative is \(-0.002\).
+@@ 33
+The second number is the catch. A pixel tells the camera where to move only if a footprint already reaches it. If the rendered image and the recorded image do not overlap, the gradient carries almost no information, and the estimate can settle somewhere wrong.
+@@ 34
+Try it: the three Gaussians of Day 4 are now a finished map. The camera recorded one image at x = 0. Press "Run". Then set "Starting guess x" to −2.0 and run again. Then raise "Image noise".
+@@ 35
+Notice that from the default guess of 0.8 the estimate reaches 0.000 in about ten steps. From −2.0 it slides the wrong way and stops near −2.82, in a local minimum where the rendered image shares little with the recorded one. From +2.0 it still converges: the loss curve is not symmetric. With image noise at 0.30 the minimum moves to 0.015 and the loss can no longer reach zero (0.051).
+@@ 36
+3. The systems the book describes
+@@ 37 attr
+Two designs. End-to-end: the Gaussian map and camera pose are rendered to an image, compared with the camera image in a photometric and depth loss, and the gradient updates both the map and the pose. Hybrid: a classical tracker using ORB features or ICP supplies the camera pose, the Gaussian map is rendered and compared, and the gradient updates the map.
+@@ 38
+End-to-end
+@@ 39
+Gaussian map + camera pose
+@@ 40
+Rendered image
+@@ 41
+Photometric (+ depth) loss
+@@ 42
+render
+@@ 43
+compare with photo
+@@ 44
+gradient to
+@@ 45
+map and pose
+@@ 46
+Hybrid
+@@ 47
+Tracker: ORB features or ICP
+@@ 48
+Gaussian map
+@@ 49
+camera pose
+@@ 50
+render, compare
+@@ 51
+the map
+@@ 52
+Two ways to use a splat map in SLAM. End-to-end systems get the pose from the rendering loss. Hybrid systems leave tracking to a proven classical method and use the Gaussians as the map.
+@@ 53
+What the book says
+@@ 54
+<strong>RGB-D</strong> (several early systems)
+@@ 55
+A depth camera supplies dense depth that initializes the Gaussians' positions and regularizes them through a depth rendering loss. Tracking is accurate and rendering is fast, but extra hardware is needed.
+@@ 56
+<strong>Monocular</strong> (MonoGS)
+@@ 57
+Colour images only. The Gaussians start at random positions and are refined by multi-view optimization, with no depth supervision.
+@@ 58
+<strong>Loop closure</strong> (LoopSplat)
+@@ 59
+Discrete Gaussians act as features that can be registered across times and viewpoints, so segments of the scene can be matched and aligned.
+@@ 60
+<strong>Physical imaging</strong> (I²-SLAM)
+@@ 61
+Adds motion blur and tone mapping to the rendering model, and reconstructs a high-dynamic-range map while tracking the camera.
+@@ 62
+<strong>Hybrid with keypoints or ICP</strong>
+@@ 63
+Photo-SLAM pairs ORB-SLAM's sparse tracking with a 3DGS map. GS-ICP SLAM and RTG-SLAM track with ICP, and RTG-SLAM adds a back-end optimization based on ORB keypoints.
+@@ 64
+<strong>LiDAR + 3DGS</strong>
+@@ 65
+Hybrid frameworks use the Gaussians as one map shared by several sensor types.
+@@ 66
+<span class="src">§14.3.3 · pp. 412–414 · Figs. 14.17–14.20</span> The hybrids work because a set of Gaussians with its extra attributes left out is a point cloud, so established point-based algorithms apply directly: ICP from <a href="#d74">Week 13 · Day 2</a>, the ORB-SLAM pipeline from <a href="#d71">Week 12 · Day 5</a>. <span class="src">p. 414</span>
+@@ 67
+4. What is still hard
+@@ 68
+The chapter ends with four limits of NeRF- and 3DGS-based SLAM. <span class="src">§14.4 · pp. 414–416</span>
+@@ 69
+Challenge
+@@ 70
+The problem
+@@ 71
+Directions the book proposes
+@@ 72
+<strong>Real-time performance</strong>
+@@ 73
+End-to-end systems are very slow. The book contrasts ElasticFusion, which tracked, mapped, and rendered in real time on a 2015 GPU, with most NeRF and 3DGS SLAM methods, which struggle to exceed 5 frames per second on modern GPUs. Rendering is fast; optimizing is the bottleneck.
+@@ 74
+Fewer Gaussians (compact representations). A higher-order optimizer in place of first-order gradient descent. A network that predicts poses and Gaussians in one forward pass.
+@@ 75
+<strong>Tracking accuracy</strong>
+@@ 76
+Often behind classical sparse SLAM. These methods assume photometric consistency across frames, which holds on synthetic data such as Replica and breaks in real scenes through unmodelled effects such as sensor noise and rolling shutter.
+@@ 77
+Model the light field and the imaging process more precisely. Match in a domain other than colour. Use a robust feed-forward prediction model.
+@@ 78
+<strong>4D scenes</strong>
+@@ 79
+Most methods assume a static world, and commonly mask out possibly moving objects.
+@@ 80
+Build on the success of 3DGS in non-rigid and 4D reconstruction and point tracking, toward a full 4D SLAM.
+@@ 81
+<strong>Large and outdoor scenes</strong>
+@@ 82
+Most methods are limited to room-scale sequences. Outdoors, illumination changes with weather and time of day.
+@@ 83
+Efficient map updates such as adaptive resolution, and drift correction over long distances.
+@@ 84
+On the feed-forward direction the book is specific. PixelSplat and MVSplat predict Gaussian parameters from posed images without any optimization at test time. DUSt3R (<a href="#d113">Week 19 · Day 5</a>) showed that a network can predict pointmaps without pose input, and NoPoSplat extends that to predicting Gaussians from two unposed views. Using such predictors in an incremental, multi-view SLAM setting is left as future work. <span class="src">§14.4 · pp. 415–416 · Fig. 14.21</span>
+@@ 85
+"Higher-order optimizer" is a pointer back to <a href="#d10">Week 2 · Day 4</a>. Gradient descent knows only the slope, so on a loss that is steep in some directions and flat in others it takes many small steps, as you saw the widget do from a distant start. Gauss-Newton also uses curvature and can cover the same ground in a few steps. The price is building and solving a linear system over a very large number of Gaussian parameters.
+@@ 86
+<strong>"3DGS renders in real time, so 3DGS SLAM runs in real time."</strong> Rendering one image is fast. SLAM must run many optimization steps per frame, and that is the slow part. <span class="src">p. 415</span>
+@@ 87
+<strong>"A photorealistic map means accurate geometry."</strong> 3DGS optimizes appearance. Accurate surfaces need extra regularization, as in SuGAR or 2DGS. <span class="src">p. 411</span>
+@@ 88
+<strong>"Rendering-based tracking has replaced feature-based tracking."</strong> The book says its accuracy often falls behind classical sparse SLAM, and several practical systems still track with ORB features or ICP. <span class="src">pp. 414–415</span>
+@@ 89
+Q1. In the 2D world, the camera moves 0.2 to the right. A Gaussian at depth z = 4 stays where it is. How does its footprint centre move on the image line z = 1?
+@@ 90
+0.2 to the left
+@@ 91
+0.05 to the right
+@@ 92
+0.05 to the left
+@@ 93
+0.8 to the left
+@@ 94
+∂μ′/∂cₓ = −1/z = −0.25, so the centre moves by −0.25 × 0.2 = −0.05. A Gaussian at z = 1 would move four times as far: parallax.
+@@ 95
+Q2. In the widget, why does tracking fail from a starting guess of −2.0?
+@@ 96
+The rendered and recorded images overlap too little, so the gradient does not point toward the true pose and the estimate settles in a local minimum
+@@ 97
+The map is wrong on the left side
+@@ 98
+Gradient descent cannot move a camera to the right
+@@ 99
+The image noise is too high
+@@ 100
+A pixel gives a useful gradient only where a footprint already has some opacity. Far from the truth the loss curve has a hump, and descent goes down its wrong side.
+@@ 101
+Q3. What lets MonoGS do monocular SLAM with no depth sensor, according to the book?
+@@ 102
+It tracks with ICP
+@@ 103
+It uses a LiDAR prior
+@@ 104
+It predicts Gaussians with a feed-forward network
+@@ 105
+Gaussians can be placed anywhere, so they are initialized at random and refined by multi-view optimization
+@@ 106
+The flexibility of where Gaussians are allocated lets the positions be estimated incrementally from colour images alone.
+@@ 107
+Q4. Why can 3DGS be combined so directly with ORB-SLAM or ICP?
+@@ 108
+Both use spherical harmonics
+@@ 109
+Without its extra attributes, a set of Gaussians is a point cloud, which point-based algorithms already handle
+@@ 110
+ICP is differentiable
+@@ 111
+ORB features are Gaussians
+@@ 112
+The Gaussian means are 3D points. Classical tracking supplies the pose, and the Gaussians supply the dense, renderable map.
+@@ 113
+Q5. Which reason does the book give for tracking accuracy falling behind classical sparse SLAM on real data?
+@@ 114
+Gaussians cannot represent planes
+@@ 115
+The rasterizer is not differentiable with respect to pose
+@@ 116
+Photometric consistency breaks down through unmodelled effects such as sensor noise and rolling shutter
+@@ 117
+Real scenes have too few Gaussians
+@@ 118
+The loss assumes a point looks the same in every frame. That holds on synthetic sequences and fails in real ones unless the imaging process is modelled.
+@@ 119
+3DGS has been extended to accurate surfaces (SuGAR, 2DGS) and to semantic maps with foundation-model features (LangSplat, FMGS).
+@@ 120
+For SLAM, a splat map offers end-to-end optimization like a neural field, plus fast rendering and freely allocated primitives.
+@@ 121
+Tracking is gradient descent on the pose through the renderer. It needs the rendered and recorded images to overlap.
+@@ 122
+Systems range from end-to-end (RGB-D, monocular MonoGS) to hybrids that track with ORB features, ICP, or LiDAR.
+@@ 123
+Open problems: optimization speed, tracking accuracy on real data, dynamic scenes, and large outdoor scenes.
+@@ 124
+<em>SLAM Handbook</em>, §14.3.2 "Applications of 3D Gaussian Splatting", §14.3.3 "3D Gaussian Splatting for SLAM", §14.4 "Further Readings &amp; Recent Trends", pp. 410–416, Figures 14.15–14.21.
+@@ 125
+The pose gradient in "Filling the gap" is the chain rule applied to equations (14.5) and (14.7) in the 2D setting of Day 4. The tracking widget is this course's own toy, not a system from the book.

@@ -1,0 +1,246 @@
+@@ 1
+<span class="eyebrow">24주차 · Day 5</span>
+@@ 2
+Spatial AI 시스템 측정하기, 그리고 편집자들의 맺음말
+@@ 3
+오늘이 끝나면 이 장이 제안하는 열두 가지 성능 지표를 나열하고, 정확도 benchmark 하나로는 부족한 이유를 설명하고, Pareto front에서 시스템을 고르고, 책이 말하는 이 분야의 방향을 요약할 수 있습니다.
+@@ 4
+약 60분 · §18.8–18.9와 Epilogue, pp. 545–549 읽기 (5쪽) · 11주차 Day 1 필요
+@@ 5
+먼저 읽기: §18.8, §18.9, 그리고 Epilogue, pp. 545–549
+@@ 6
+pose, dense 기하, semantic label 각각에 대해 ground truth를 얻는 방법 (p. 545).
+@@ 7
+benchmark에 대한 구체적인 불만들, 그중에서도 어떤 test sequence가 보고되는지에 관한 불만 (p. 546).
+@@ 8
+SLAMBench가 측정한 것, 그리고 "Pareto fronts"라는 두 단어 (p. 546).
+@@ 9
+열두 가지 지표 (pp. 546–547), 그리고 Epilogue (pp. 548–549)에서 가장 간직하고 싶은 조언.
+@@ 10
+Spatial AI 시스템은 여러 자원 제약 아래에서 많은 출력을 내므로, 어떤 숫자 하나로도 두 시스템의 순위를 매길 수 없습니다. 이 장은 정확도, robustness, latency, scene understanding, 자원을 아우르는 짧은 지표 목록을 제안하고, 선택은 trade-off 곡선을 보고 하게 될 것으로 봅니다. 또 어떤 표보다 live demo를 더 믿습니다.
+@@ 11
+1. 오늘 무엇을, 무엇에 대해 측정하는가
+@@ 12
+§18.8은 소수의 지표가 유용성을 포착한다는 <a href="#d139">Day 1</a>의 가설로 돌아갑니다. 오늘날 평가는 대부분 <strong>localization 정확도</strong>에 관한 것입니다. motion-capture 시스템이 외부 pose를 제공하고 이를 <strong>ground truth</strong>로 취급하며, SLAM 추정값을 그것과 비교합니다. <span class="src">§18.8 · p. 545</span> 이것이 <a href="#d61">11주차 · Day 1</a>의 absolute trajectory error와 relative trajectory error입니다. 그 밖의 모든 것은 확인하기가 더 어렵습니다.
+@@ 13
+출력
+@@ 14
+ground truth의 출처
+@@ 15
+책의 예
+@@ 16
+어려운 점
+@@ 17
+카메라 pose
+@@ 18
+=
+@@ 19
+Benchmark trajectory dataset
+@@ 20
+여러 출력 중 하나만 다룸
+@@ 21
+Dense scene 모델
+@@ 22
+실제 scene의 laser scanning, 또는 computer graphics로 rendering한 합성 scene
+@@ 23
+ICL-NUIM (합성)
+@@ 24
+scanning은 느리고 비쌈; rendering한 세계가 실제와 같은가?
+@@ 25
+Semantic label
+@@ 26
+합성 scene
+@@ 27
+=
+@@ 28
+같은 의문
+@@ 29
+대규모 기하와 label
+@@ 30
+crowdsourcing으로 모은 실제 촬영 데이터
+@@ 31
+=
+@@ 32
+실제 데이터지만 대규모로 모으기 어려움
+@@ 33
+이 장은 합성 데이터에 대한 의심을 받아들이면서도, rendering이 좋아질수록 합성 데이터의 중요성이 커질 것으로 봅니다. <span class="src">§18.8 · p. 545</span>
+@@ 34
+2. 이 장이 benchmark를 불신하면서도 계속 쓰는 이유
+@@ 35
+비판은 직설적입니다. dataset에서 몇 퍼센트 포인트를 짜내는 데 너무 많은 노력이 들어갑니다. SLAM benchmark는 scene 종류, 센서와 그 배치, frame rate, 해상도를 고정한 뒤 주로 정확도만 채점하며, 적어도 그만큼 중요한 효율과 robustness는 측정되지 않습니다. 논문은 자기 방법이 대체로 작동하는 sequence만 보고하는 경우가 많습니다. <span class="src">§18.8 · p. 546</span>
+@@ 36
+이에 맞서 이 장은 live demo를 내세웁니다. visual SLAM 시스템을 1분 동안 가지고 놀면서 시각화를 지켜보고 이리저리 밀어붙여 보면, 점수보다 많은 것을 알게 됩니다. 발전은 사람들이 직접 써 볼 수 있었던 공개 real-time 시스템의 계보에서 더 잘 읽힙니다: MonoSLAM, PTAM, KinectFusion, LSD-SLAM, ORB-SLAM, OKVIS, SVO, ElasticFusion, DROID-SLAM, Gaussian Splatting SLAM, MASt3R-SLAM. <span class="src">§18.8 · p. 546</span>
+@@ 37
+그렇다면 benchmark를 아예 하지 말아야 할까요? 답은 해야 한다는 것이며, 두 가지를 바꿔야 합니다. benchmark가 측정하는 범위를 넓히고, benchmark를 덜 믿는 것입니다. <span class="src">§18.8 · p. 546</span>
+@@ 38
+3. 여러 목표를 동시에: Pareto front
+@@ 39
+<strong>SLAMBench</strong>는 시스템 전체를 평가하려는 첫걸음이었습니다. KinectFusion이라는 알고리즘 하나를 골라 여러 프로세서 플랫폼과 언어 구현에 걸쳐 정확도와 계산 비용을 모두 측정했습니다. 이 장은 benchmark가 실제 과제에서의 성능을 예측하는 지표 쪽으로 옮겨 가기를 바랍니다. 그러면 서로 반대로 당기는 목표들의 집합이 생기며, 이 장은 <strong>Pareto front</strong> 분석이 설계자가 특정 응용에 맞게 고르도록 해 줄 것이라고 말합니다. <span class="src">§18.8 · p. 546</span>
+@@ 40
+빈틈 채우기: Pareto front란 무엇이고 어떻게 찾는가
+@@ 41
+책은 이 용어를 정의하지 않고 씁니다. 모든 후보 시스템을 각 지표로 채점하되, 낮을수록 좋다고 합시다. 후보 \(A\)가 모든 지표에서 \(B\)보다 나쁘지 않고 적어도 하나에서 확실히 나으면 \(A\)가 \(B\)를 <strong>dominate</strong>(지배)한다고 합니다. dominate당한 후보를 고를 이유는 결코 없습니다. <strong>Pareto front</strong>는 어떤 것에도 dominate당하지 않는 후보들의 집합입니다. 그 안에서는 한 지표를 개선하면 언제나 다른 지표에서 대가를 치르므로, 선택은 응용에 달려 있습니다.
+@@ 42
+다섯 가지 구성을 (전력 W, drift %)로 채점합니다:
+@@ 43
+\(C\)는 \(B\)에게 dominate당합니다. \(B\)가 전력을 덜 쓰고(2 대 3) drift도 적습니다(2.0 대 2.5). \(E\)도 같은 식으로 \(D\)에게 dominate당합니다. \(A\), \(B\), \(D\)는 살아남습니다. \(A\)에서 \(B\)로, 다시 \(D\)로 갈 때마다 와트를 써서 정확도를 삽니다. front는 \(\{A, B, D\}\)입니다.
+@@ 44
+고르려면 제품에서 오는 제약을 하나 더합니다. 예산이 4 W이면 후보는 \(A\)와 \(B\)이고, drift가 더 낮은 것은 \(B\)입니다. 지표가 두 개이면 front는 전력으로 정렬한 뒤 자기보다 싼 모든 후보보다 drift가 낮은 후보만 남기면 찾을 수 있습니다.
+@@ 45
+직접 해 보기: 한 시스템의 합성 구성 40개를 전력과 drift로 채점했습니다. 전력 예산을 움직여 보세요.
+@@ 46
+눈여겨볼 점: 구성 40개 중 front에 있는 것은 10개뿐입니다. 나머지 30개는 각각 두 지표 모두에서 다른 무언가에 집니다. 1 W 예산에서 최선의 선택은 0.49 W를 쓰고 drift가 1.73%입니다. 예산을 2 W로 올리면 1.06%로 떨어집니다. 거기서부터 곡선은 거의 평평합니다. 20 W에서 최선은 0.61%입니다. front가 꺾이는 곳이 1와트의 가치를 알려 줍니다.
+@@ 47
+4. 열두 가지 지표
+@@ 48
+이 장의 후보 목록을, 여기서는 각 지표가 무엇을 지키는지에 따라 묶었습니다. <span class="src">§18.8 · pp. 546–547</span>
+@@ 49
+지표 (책의 번호)
+@@ 50
+이 코스에서 만난 곳
+@@ 51
+(1) 새로 탐색한 영역에서의 local pose 정확도, 즉 visual odometry drift rate. (2) 잘 mapping된 영역에서의 long-term metric pose 반복성.
+@@ 52
+Drift: <a href="#d1">1주차 · Day 1</a>. 두 경우는 <a href="#d139">Day 1</a> 위젯의 두 곡선입니다.
+@@ 53
+=
+@@ 54
+(3) tracking robustness 백분율. (4) relocalisation robustness 백분율.
+@@ 55
+Outlier, <a href="#d31">6주차</a>; place recognition, 11, 13, 14주차.
+@@ 56
+시간
+@@ 57
+(5) SLAM 시스템 latency.
+@@ 58
+Incremental solving, <a href="#d17">3주차 · Day 5</a>.
+@@ 59
+기하
+@@ 60
+(6) 모든 픽셀에서의 dense 거리 예측 정확도.
+@@ 61
+Dense map, 8주차와 20주차.
+@@ 62
+=
+@@ 63
+(7) object segmentation 정확도. (8) object classification 정확도.
+@@ 64
+22주차와 23주차.
+@@ 65
+디스플레이
+@@ 66
+(9) 증강 현실을 위한 픽셀 registration 정확도.
+@@ 67
+Reprojection error, <a href="#d65">11주차 · Day 5</a>.
+@@ 68
+변화
+@@ 69
+(10) scene change detection 정확도.
+@@ 70
+21주차.
+@@ 71
+자원
+@@ 72
+(11) 전력 사용량. (12) 기기 내 데이터 이동량, 단위는 bit × 밀리미터.
+@@ 73
+=
+@@ 74
+책은 이 지표들의 이름만 들고 수식은 주지 않습니다. 작은 계산 세 개로 지표가 어떤 모습일지 보이겠습니다. 정의는 이 레슨을 위해 고른 자연스러운 것이며, 책이 정한 것은 아닙니다.
+@@ 75
+<strong>Drift rate.</strong> loop closure 없이, 끝점 오차를 이동 거리로 나눈 값. 100 m 뒤 0.5 m 오차이면 0.5%입니다.
+@@ 76
+<strong>Tracking robustness.</strong> tracker가 유지된 frame의 비율. 6 000 frame 중 5 820 frame에서 tracking했다면 97%입니다.
+@@ 77
+<strong>데이터 이동.</strong> 보낸 bit 수에 그 bit가 이동한 거리를 곱한 값. 1 Mbit frame을 50 mm link로 보내는 카메라는 frame당 \(10^6 \times 50 = 5\times10^7\) bit·mm를 옮깁니다. 픽셀 수준의 처리 덕분에 차이 10 kbit만 보내면 된다면 \(5\times10^5\)로, 백 배 적습니다.
+@@ 78
+5. 책이 말하는 이 분야의 방향
+@@ 79
+§18.9는 두 단계로 장을 마무리합니다. 첫째, 능력은 올라가고 그에 필요한 자원은 내려가야 하며, 그러려면 알고리즘, 프로세서, 센서를 함께 생각해야 합니다. 계산 구조를 찾고, 알고리즘과 저장 모두에서 sparse graph 패턴을 위해 설계하고, 그것을 새 하드웨어에 맞추라는 것입니다. 둘째, 손으로 설계한 추정과 머신러닝은 둘 다 남을 것이며, 수렴할 것입니다. 추정 시스템은 학습된 부분을 얻어 가고 학습된 network는 구조와 domain knowledge를 얻어 가고 있으며, 이 장은 두 길이 같은 곳에 도착해 계산 구조에 관한 같은 질문을 마주하리라고 봅니다. <span class="src">§18.9 · p. 547</span>
+@@ 80
+책은 이어서 Epilogue로 끝납니다. 저자들이 이름을 밝히지 않고 남긴 짧은 말들을 모은 두 쪽입니다. <span class="src">Epilogue · pp. 548–549</span> 원문으로 읽어 보세요. 아래는 주제별로 묶고, 각각을 이 코스의 어디에서 연습했는지 함께 적은 것입니다.
+@@ 81
+주제
+@@ 82
+조언 (풀어 쓴 것)
+@@ 83
+엄밀함
+@@ 84
+수학을 믿으세요. 수학, 코드, 논문에서 표기를 명확하게 유지하세요. 모델링 오류는 그렇게 잡힙니다. SLAM을 최적화 문제로 정식화한 것이 커지더라도 엄밀하게 유지하세요.
+@@ 85
+Certificate, <a href="#d52">9주차 · Day 4</a>; observability, <a href="#d99">17주차 · Day 3</a>
+@@ 86
+실천
+@@ 87
+이론은 로봇에 적용할 때 몸에 뱁니다. 완벽하게 통제된 합성 데이터로 된 toy problem에서 시작해 쌓아 올리세요. live 카메라를 꽂고 시각화하세요. 그렇게 보낸 5분이 수많은 dataset 결과보다 더 많이 가르쳐 줍니다.
+@@ 88
+이 앱의 모든 위젯이 그런 toy problem입니다
+@@ 89
+핵심 기술
+@@ 90
+서로 충돌하는 측정값에서 진실을 뽑아내는 것이 SLAM에서 가장 중요한 일입니다.
+@@ 91
+Robust estimation, <a href="#d34">6주차 · Day 4</a>
+@@ 92
+야망
+@@ 93
+SLAM이 해결되었다고 받아들이지 마세요. state of the art보다 두세 걸음 앞선 문제를 다루세요. 새 센서들이 쓰이기를 기다리고 있으며, event camera가 그 한 예입니다.
+@@ 94
+각 장 끝의 open problem; <a href="#d85">15주차</a>
+@@ 95
+목적
+@@ 96
+SLAM은 기계가 세계를 지각하고, 이해하고, 추론하게 하는 일이며, 로봇 자율성의 중추이자 의사결정으로 이어지는 interface입니다. differentiable optimization이 핵심 역할을 할 것으로 기대됩니다.
+@@ 97
+<a href="#d37">7주차</a>; Part III
+@@ 98
+<strong>"trajectory error가 가장 낮은 시스템이 최고의 시스템이다."</strong> 그 시스템은 전력을 열 배 쓸 수도 있고, 아무도 보고하지 않은 sequence의 절반에서 실패할 수도 있고, 너무 늦게 반응할 수도 있습니다. 정확도는 열둘 중 하나입니다.
+@@ 99
+<strong>"Pareto front 위의 한 점이 최적이다."</strong> front 위의 모든 점은 어떤 trade-off에서는 최적입니다. 그중 하나를 고르는 것은 응용의 제약입니다.
+@@ 100
+Q1. 네 가지 구성을 (전력, drift)로 채점했습니다: P = (1 W, 4%), Q = (2 W, 2%), R = (3 W, 3%), S = (4 W, 1%). dominate당하는 것은 어느 것입니까?
+@@ 101
+Q는 R보다 전력을 덜 쓰고 drift도 적으므로, Q가 R을 dominate합니다. P, Q, S는 각각 한 지표에서는 다른 후보를 이기고 다른 지표에서는 지므로, 이 셋이 front를 이룹니다.
+@@ 102
+Q2. loop closure 없이, visual odometry 시스템이 300 m를 이동한 뒤 실제값에서 1.2 m 떨어져 있습니다. drift rate는 얼마입니까?
+@@ 103
+1.2 / 300 = 0.004, 즉 이동 거리의 0.4%입니다.
+@@ 104
+Q3. 센서가 frame당 500 kbit를 40 mm link로 보냅니다. 센서 가까이에서 처리해 이것을 5 kbit로 줄입니다. 그 뒤 frame당 데이터 이동량은 얼마입니까?
+@@ 105
+=
+@@ 106
+=
+@@ 107
+=
+@@ 108
+=
+@@ 109
+5 000 bit × 40 mm = 2 × 10⁵ bit·mm. 이전에는 500 000 × 40 = 2 × 10⁷로, 백 배 많았습니다.
+@@ 110
+Q4. 이 장이 1분짜리 live demo를 benchmark 점수보다 높이 평가하는 이유는 무엇입니까?
+@@ 111
+demo가 motion capture보다 정확함
+@@ 112
+demo는 정확도 표가 빠뜨리는 robustness, 효율, 유연성을 드러냄
+@@ 113
+benchmark는 trajectory error를 측정할 수 없음
+@@ 114
+demo에는 ground truth가 필요 없어서 더 저렴함
+@@ 115
+dataset은 고정된 가정 아래에서 성능의 제한된 측면, 주로 정확도만 포착합니다. 돌아가는 시스템과 직접 상호작용하면 밀어붙였을 때 어떻게 동작하는지 보입니다.
+@@ 116
+motion capture에 대한 pose 정확도가 흔한 benchmark입니다. dense 기하와 semantics의 ground truth는 비싸므로, 합성 데이터와 crowdsourcing이 빈자리를 채웁니다.
+@@ 117
+benchmark는 너무 많은 가정을 고정하고, robustness와 효율보다 정확도를 보상합니다. 이 장은 benchmark를 넓혀서 유지하되, live demo를 더 믿습니다.
+@@ 118
+목표가 여러 개이면 하나의 승자는 없습니다. Pareto front는 dominate당하지 않는 후보들의 집합이며, 그중에서 무엇을 고를지는 응용의 한계가 정합니다.
+@@ 119
+제안된 열두 지표는 localization, robustness, latency, 기하, semantics, AR registration, change detection, 전력, 그리고 bit × 밀리미터 단위의 데이터 이동을 아우릅니다.
+@@ 120
+책의 맺음말은 이렇습니다. 알고리즘, 프로세서, 센서를 sparse graph 구조를 중심으로 함께 설계하고, 추정과 학습이 수렴하리라 예상하고, 수학을 믿고, 실제 시스템에서 시험하라는 것입니다.
+@@ 121
+<em>SLAM Handbook</em>, 18장, §18.8 "Performance Metrics"와 §18.9 "Further Readings &amp; Recent Trends", pp. 545–547; Epilogue, pp. 548–549.
+@@ 122
+Boyd, Vandenberghe, <em>Convex Optimization</em>, 2004 (multi-criterion 문제에서의 Pareto optimality, §4.7).
+@@ 123
+4절의 지표 정의와 위젯의 구성은 이 앱이 직접 만든 예시입니다.

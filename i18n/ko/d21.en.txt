@@ -1,0 +1,152 @@
+@@ 1
+<span class="eyebrow">Week 4 · Day 3</span>
+@@ 2
+Gauss-Newton on a Lie group: perturb, linearize, retract
+@@ 3
+After today you can linearize a measurement that depends on a pose with respect to a small perturbation in the Lie algebra, and run Gauss-Newton with the update T ← T Exp(ξ) so that the estimate stays a valid pose.
+@@ 4
+About 60 min · Read §2.1.3, pp. 57–59 (3 pages) · Needs Week 2 Day 4 and Week 4 Day 2
+@@ 5
+Read first: §2.1.3, pp. 57–59
+@@ 6
+Equations (2.8)–(2.9) on p. 57: the camera example, and which way the transform \(\mathbf{T}^c_w\) maps.
+@@ 7
+Equations (2.10)–(2.12): the perturbation is multiplied on the right, and then approximated to first order. Read footnote 1 as well.
+@@ 8
+Equations (2.14)–(2.16) on p. 58: the Jacobian \(\mathbf{H}_i\) appears as a product of two pieces.
+@@ 9
+Equation (2.19) on p. 59, and the words "tangent" and "retracting" in the last paragraph of the section.
+@@ 10
+Keep the pose as a matrix, but let the unknown of each Gauss-Newton iteration be a small vector \(\boldsymbol{\xi}\) in the Lie algebra. Linearize in \(\boldsymbol{\xi}\) around \(\boldsymbol{\xi}=\mathbf{0}\), solve an ordinary unconstrained least-squares problem, then push the answer back onto the group with \(\mathbf{T} \leftarrow \mathbf{T}\,\Exp(\boldsymbol{\xi})\). The estimate never leaves \(\SE(3)\).
+@@ 11
+1. The running example: where is the camera?
+@@ 12
+A camera sees landmarks whose world positions \(\boldsymbol{\ell}^w_i\) are known. The camera model \(\mathbf{h}_i\) takes a homogeneous point in the <em>camera</em> frame and returns its pixel coordinates \(\mathbf{z}_i\in\R^2\). The point first has to be brought into the camera frame, so the measurement model is <span class="src">§2.1.3 · p. 57, eq. (2.8)</span>
+@@ 13
+Read the indices as on Day 1: \(\mathbf{T}^c_w\) converts world coordinates into camera coordinates. Finding the pose that best explains all pixel measurements is the <strong>perspective-n-point (PnP)</strong> problem: <span class="src">§2.1.3 · p. 57, eq. (2.9)</span>
+@@ 14
+This is the nonlinear least-squares problem of <a href="#d8">Week 2 · Day 2</a> with one difference: the unknown is a member of \(\SE(3)\), not a vector. The Gauss-Newton recipe of <a href="#d10">Week 2 · Day 4</a>, "linearize, solve, add the step", cannot add a step to \(\mathbf{T}\). To keep the formulas short, write \(\mathbf{T}^0\) for the current guess (the book writes \(\mathbf{T}^{c^0}_w\)) and \(\tilde{\boldsymbol{\ell}}_i\) for \(\tilde{\boldsymbol{\ell}}^w_i\).
+@@ 15
+2. Perturb the pose through its Lie algebra
+@@ 16
+Describe every pose near the guess as the guess times a small motion: <span class="src">§2.1.3 · p. 57, eqs. (2.10)–(2.11)</span>
+@@ 17
+The symbol \(\oplus\) is shorthand for "multiply on the right by Exp of". Two things make this the right substitute for \(\mathbf{x}^0 + \boldsymbol{\Delta}\). First, closure: \(\mathbf{T}^0\) and \(\Exp(\boldsymbol{\xi})\) are both in \(\SE(3)\), so their product is too, for <em>any</em> \(\boldsymbol{\xi}\). Second, \(\boldsymbol{\xi}\) has exactly six entries, one per degree of freedom, so there is nothing to constrain.
+@@ 18
+For a small \(\boldsymbol{\xi}\), keep only the first two terms of the series \(\Exp(\boldsymbol{\xi}) = \mathbf{I} + \boldsymbol{\xi}^\wedge + \tfrac12(\boldsymbol{\xi}^\wedge)^2 + \dots\): <span class="src">§2.1.3 · p. 57, eq. (2.12)</span>
+@@ 19
+How good is that? In the plane with \(\theta = 0.1\) rad, \(\Exp(\theta)\) has entries \(\cos 0.1 = 0.995\) and \(\sin 0.1 = 0.0998\), while \(\mathbf{I} + \theta^\wedge\) has \(1\) and \(0.1\). The error is about \(\theta^2/2 = 0.005\): second order, which is what a linearization is allowed to drop.
+@@ 20 attr
+A curved line stands for the manifold of valid poses. At the point T0 on it, a straight tangent line touches the curve. A step xi is taken along the tangent line, which leaves the curve. An arrow labelled retract brings the end of the step back down onto the curve at the point T0 Exp(xi).
+@@ 21
+manifold: all valid poses
+@@ 22
+tangent space at T⁰
+@@ 23
+step ξ in the tangent space
+@@ 24
+retract
+@@ 25
+T⁰ Exp(ξ), on the manifold
+@@ 26
+One iteration. The least-squares step is computed in the flat tangent space at the current guess. Taken literally it would leave the manifold, so Exp bends it back on. Then the tangent space is moved to the new point and the process repeats.
+@@ 27
+3. Linearize the measurement in ξ
+@@ 28
+Insert the first-order pose into the model: \(\mathbf{z}_i \approx \mathbf{h}_i\big(\mathbf{T}^0(\mathbf{I}+\boldsymbol{\xi}^\wedge)\tilde{\boldsymbol{\ell}}_i\big) + \boldsymbol{\eta}_i\), equation (2.13). The book then rewrites it so that \(\boldsymbol{\xi}\) stands alone on the right of a matrix: <span class="src">§2.1.3 · p. 58, eqs. (2.14)–(2.15)</span>
+@@ 29
+Filling the gap: from (2.13) to (2.14)
+@@ 30
+The step rests on one identity, \(\boldsymbol{\xi}^\wedge\tilde{\boldsymbol{\ell}} = \tilde{\boldsymbol{\ell}}^{\odot}\boldsymbol{\xi}\). Multiply the left side out with yesterday's definition of \(\boldsymbol{\xi}^\wedge\):
+@@ 31
+The third step swaps a cross product: \(\boldsymbol{\theta}^\wedge\boldsymbol{\ell} = \boldsymbol{\theta}\times\boldsymbol{\ell} = -\boldsymbol{\ell}\times\boldsymbol{\theta} = -\boldsymbol{\ell}^\wedge\boldsymbol{\theta}\). The result is a 4 × 6 matrix times \(\boldsymbol{\xi}\). In words: a small motion \(\boldsymbol{\xi}\) moves the point by \(\boldsymbol{\rho}\) (the translation) plus \(\boldsymbol{\theta}\times\boldsymbol{\ell}\) (the rotation swings it about the origin).
+@@ 32
+The pose is now linear in \(\boldsymbol{\xi}\), but the camera function is still nonlinear. A first-order Taylor expansion of \(\mathbf{h}_i\) around the point \(\mathbf{T}^0\tilde{\boldsymbol{\ell}}_i\) finishes the job: <span class="src">§2.1.3 · p. 58, eq. (2.16)</span>
+@@ 33
+\(\mathbf{H}_i\) is a chain rule: (how pixels move when the point moves in the camera frame) × (how the point moves in the camera frame when the pose is perturbed). The sizes are 2 × 4, then 4 × 4 times 4 × 6, giving a 2 × 6 Jacobian: two pixel coordinates against six degrees of freedom. Equation (2.17) splits the same Jacobian into four smaller factors, each a reusable building block. That is how libraries and automatic differentiation assemble it.
+@@ 34
+Filling the gap: a complete example in the plane
+@@ 35
+In 2D everything fits on a line. With \(\boldsymbol{\xi} = (\rho_1,\rho_2,\theta)\) and \(\mathbf{S}\) from Day 2, \(\boldsymbol{\xi}^\wedge\tilde{\boldsymbol{\ell}} = (\boldsymbol{\rho} + \theta\,\mathbf{S}\boldsymbol{\ell},\ 0)\), so the top rows of \(\tilde{\boldsymbol{\ell}}^{\odot}\) are \(\begin{bmatrix}\mathbf{I} & \mathbf{S}\boldsymbol{\ell}\end{bmatrix}\) with \(\mathbf{S}\boldsymbol{\ell} = (-\ell_2, \ell_1)\). Take a one-dimensional camera that looks along its x-axis and reports \(u = h(\mathbf{p}) = p_2/p_1\) for a point \(\mathbf{p}\) in its frame. Then
+@@ 36
+Numbers: \(\mathbf{T}^0 = \mathbf{I}\) and \(\boldsymbol{\ell} = (4,1)\). Then \(\mathbf{p} = (4,1)\), \(u = 0.25\), and
+@@ 37
+Check the last entry another way. \(u\) is the tangent of the bearing angle \(\alpha\), and turning by \(\theta\) adds \(\theta\) to \(\alpha\). So \(\partial u/\partial\theta = 1 + \tan^2\alpha = 1 + 0.25^2 = 1.0625\). It agrees.
+@@ 38
+4. Solve for ξ, then retract
+@@ 39
+With the linearization, the term of measurement \(i\) in the cost becomes <span class="src">§2.1.3 · p. 58, eq. (2.18)</span>
+@@ 40
+which has the form "residual minus Jacobian times unknown" of the linear least-squares problems in <a href="#d9">Week 2 · Day 3</a>. The only unknown is the plain vector \(\boldsymbol{\xi}\). Sum over the measurements and solve the normal equations. Then return to the perturbation that defined \(\boldsymbol{\xi}\): <span class="src">§2.1.3 · p. 59, eq. (2.19)</span>
+@@ 41
+The update uses the full exponential, not the first-order form, so the new \(\mathbf{T}^0\) is exactly in \(\SE(3)\). Then \(\boldsymbol{\xi}\) is reset to zero and the loop repeats:
+@@ 42
+Try it: a planar version of PnP, with the one-dimensional camera of the example above and five known landmarks. Press "Gauss-Newton step" a few times.
+@@ 43
+Notice that from the default start (heading off by 25°, position off by 1.0) the cost falls from about 175,700 to 0.5 in four steps, and the predicted marks in the image line up with the measured ones. The small errors that remain (0.05 in position, 0.7° in heading) come from the measurement noise, not from the method.
+@@ 44
+5. Names and variations
+@@ 45
+The book steps back and names what just happened. <span class="src">§2.1.3 · p. 59</span> Working in the Lie algebra constrains each step to be <strong>tangent</strong> to the manifold. Mapping the step back with (2.19) is a <strong>retraction</strong>. The whole scheme is an instance of <strong>Riemannian optimization</strong>, which also works on manifolds that are not Lie groups and with retractions other than the exponential.
+@@ 46
+Variation
+@@ 47
+What changes
+@@ 48
+Perturb on the left, \(\mathbf{T} = \Exp(\boldsymbol{\xi})\,\mathbf{T}^0\)
+@@ 49
+A valid choice too (footnote 1, p. 57). The Jacobian is different, and the update must then also be on the left.
+@@ 50
+The measurement is itself a pose \(\mathbf{Z}_i\)
+@@ 51
+Form the error in the Lie algebra, \(\Log(\mathbf{T}\mathbf{Z}_i^{-1})\), a 6-vector, and linearize that. Equation (2.20), p. 59.
+@@ 52
+No analytic Jacobian
+@@ 53
+Compute \(\mathbf{H}_i\) numerically or by automatic differentiation (p. 59). Numerically, column \(j\) is \(\big[\mathbf{h}(\mathbf{T}^0\Exp(\epsilon\,\mathbf{e}_j)\tilde{\boldsymbol{\ell}}) - \mathbf{h}(\mathbf{T}^0\tilde{\boldsymbol{\ell}})\big]/\epsilon\) for a small \(\epsilon\), with \(\mathbf{e}_j\) the \(j\)-th unit vector.
+@@ 54
+Landmarks unknown as well (SLAM)
+@@ 55
+They are ordinary vectors and keep the additive update. Each variable type gets its own update rule.
+@@ 56
+<strong>"ξ is the pose."</strong> \(\boldsymbol{\xi}\) is only the correction of the current iteration. It starts at zero every time, and \(\mathbf{T}^0\) carries the estimate.
+@@ 57
+<strong>"The update can use \(\mathbf{T}^0(\mathbf{I}+\boldsymbol{\xi}^\wedge)\), since ξ is small."</strong> That matrix is not in the group. The first-order form is for deriving \(\mathbf{H}_i\). The update uses Exp.
+@@ 58
+<strong>"H is the derivative with respect to the entries of T."</strong> It is the derivative with respect to the six entries of \(\boldsymbol{\xi}\), evaluated at \(\boldsymbol{\xi}=\mathbf{0}\).
+@@ 59
+<strong>"Left or right does not matter."</strong> Both work, but a Jacobian derived for one side with an update on the other gives wrong steps.
+@@ 60
+Q1. In the 3D camera example, what is the size of the Jacobian \(\mathbf{H}_i\) of one pixel measurement?
+@@ 61
+Two pixel coordinates, six entries in \(\boldsymbol{\xi}\). The product is (2 × 4)(4 × 4)(4 × 6) = 2 × 6.
+@@ 62
+Q2. A point is at \(\boldsymbol{\ell} = (1,0,0)\). The perturbation is a pure rotation, \(\boldsymbol{\rho} = \mathbf{0}\), \(\boldsymbol{\theta} = (0,0,0.1)\). What are the top three entries of \(\tilde{\boldsymbol{\ell}}^{\odot}\boldsymbol{\xi}\), the first-order displacement of the point?
+@@ 63
+\(\boldsymbol{\rho} - \boldsymbol{\ell}^\wedge\boldsymbol{\theta} = \boldsymbol{\theta}\times\boldsymbol{\ell} = (0,0,0.1)\times(1,0,0) = (0,0.1,0)\). A small turn about z moves a point on the x-axis in the y direction.
+@@ 64
+Q3. Gauss-Newton has solved for \(\boldsymbol{\xi}^*\). Which update does the book prescribe?
+@@ 65
+Equation (2.19). It is the same right-perturbation that defined \(\boldsymbol{\xi}\) in (2.10), with the full exponential, so the result stays in \(\SE(3)\). The other three produce matrices outside the group.
+@@ 66
+Q4. Planar example, camera \(u = p_2/p_1\), current guess \(\mathbf{T}^0 = \mathbf{I}\), landmark \(\boldsymbol{\ell} = (2,0)\). What is \(\mathbf{H}\)?
+@@ 67
+\(\partial h/\partial\mathbf{p} = [-p_2/p_1^2,\ 1/p_1] = [0,\ 0.5]\) and \(\mathbf{S}\boldsymbol{\ell} = (0, 2)\), so \(\mathbf{H} = [0,\ 0.5]\begin{bmatrix}1 & 0 & 0\\ 0 & 1 & 2\end{bmatrix} = [0,\ 0.5,\ 1]\). Moving the point forward does not change \(u\), moving it sideways changes \(u\) by half as much, and turning changes \(u\) one for one.
+@@ 68
+Near a guess \(\mathbf{T}^0\), write every pose as \(\mathbf{T}^0\oplus\boldsymbol{\xi} = \mathbf{T}^0\Exp(\boldsymbol{\xi})\) with an unconstrained \(\boldsymbol{\xi}\in\R^6\).
+@@ 69
+To first order \(\mathbf{T}\approx\mathbf{T}^0(\mathbf{I}+\boldsymbol{\xi}^\wedge)\), and \(\boldsymbol{\xi}^\wedge\tilde{\boldsymbol{\ell}} = \tilde{\boldsymbol{\ell}}^{\odot}\boldsymbol{\xi}\) puts \(\boldsymbol{\xi}\) where a Jacobian needs it.
+@@ 70
+\(\mathbf{H}_i = \dfrac{\partial\mathbf{h}_i}{\partial\boldsymbol{\ell}}\,\mathbf{T}^0\tilde{\boldsymbol{\ell}}_i^{\odot}\): a chain rule, 2 × 6 for a camera in 3D.
+@@ 71
+Solve the usual normal equations for \(\boldsymbol{\xi}^*\), update with \(\mathbf{T}^0\leftarrow\mathbf{T}^0\Exp(\boldsymbol{\xi}^*)\), reset \(\boldsymbol{\xi}\) to zero, repeat.
+@@ 72
+In manifold language: step in the tangent space, then retract onto the manifold.
+@@ 73
+<em>SLAM Handbook</em>, §2.1.3 "Lie Group Optimization", pp. 57–59, equations (2.8)–(2.20).
+@@ 74
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (the ⊙ operator for homogeneous points, pose perturbations, Gauss-Newton on SE(3)).
+@@ 75
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (the ⊕ operator, left and right perturbations).
+@@ 76
+The planar camera example and its numbers are worked out here from the definitions above.

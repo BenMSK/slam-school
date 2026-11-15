@@ -1,0 +1,332 @@
+@@ w24
+aria:"Absolute position error against frame number for frame-to-frame odometry and for tracking against a persistent map"
+==
+aria:"frame-to-frame odometry와 persistent map에 대한 tracking 각각의, frame 번호에 따른 절대 위치 오차"
+@@ w24
+label:"frame (the camera returns to the start every 100 frames)"
+==
+label:"frame (카메라는 100 frame마다 시작점으로 돌아옴)"
+@@ w24
+label:"position error"
+==
+label:"위치 오차"
+@@ w24
+name:"frame-to-frame odometry (nothing kept)"
+==
+name:"frame-to-frame odometry (아무것도 보관 안 함)"
+@@ w24
+name:"tracking against the persistent map"
+==
+name:"persistent map에 대한 tracking"
+@@ w24
+stat("Mean error, frames 300–399",
+==
+stat("평균 오차, frame 300–399",
+@@ w24
+stat("Map complete at frame",
+==
+stat("map 완성 시점 frame",
+@@ w24
+"21 landmarks stored"
+==
+"landmark 21개 저장"
+@@ w24
+h("div",{class:"vt"},"Incremental estimation against a closed loop")
+==
+h("div",{class:"vt"},"Incremental estimation 대 closed loop")
+@@ w24
+"A camera sweeps a corridor four times. Both estimators get exactly the same noisy landmark measurements."
+==
+"카메라가 복도를 네 번 훑습니다. 두 estimator는 noise가 섞인 똑같은 landmark 측정값을 받습니다."
+@@ w24
+range("Measurement noise",
+==
+range("측정 noise",
+@@ w24
+button("New noise",
+==
+button("새 noise",
+@@ w24
+d:"Dennard: voltage shrinks with size"
+==
+d:"Dennard: 크기와 함께 전압 감소"
+@@ w24
+v:"voltage stuck, clock still rising"
+==
+v:"전압 고정, clock은 계속 상승"
+@@ w24
+f:"voltage stuck, clock frozen"
+==
+f:"전압 고정, clock도 고정"
+@@ w24
+aria:"Power density against the number of transistor generations for three scaling regimes, on a base-2 logarithmic axis"
+==
+aria:"세 가지 scaling 방식에서 트랜지스터 세대 수에 따른 전력 밀도, 밑이 2인 log 축"
+@@ w24
+label:"generations (each doubles transistor density)"
+==
+label:"세대 (세대마다 트랜지스터 밀도 2배)"
+@@ w24
+stat("Transistors per mm²",
+==
+stat("mm²당 트랜지스터",
+@@ w24
+stat("Clock frequency",
+==
+stat("Clock 주파수",
+@@ w24
+stat("Power per transistor",
+==
+stat("트랜지스터당 전력",
+@@ w24
+stat("Power per mm²",
+==
+stat("mm²당 전력",
+@@ w24
+"heat to remove grows":"unchanged"
+==
+"빼내야 할 열 증가":"변화 없음"
+@@ w24
+h("div",{class:"vt"},"Shrinking transistors: where the power goes")
+==
+h("div",{class:"vt"},"작아지는 트랜지스터: 전력은 어디로 가는가")
+@@ w24
+"Switching power per transistor is C·V²·f. The chart shows power per mm² (log scale), relative to generation 0."
+==
+"트랜지스터당 스위칭 전력은 C·V²·f입니다. 그래프는 0세대를 기준으로 한 mm²당 전력입니다 (log scale)."
+@@ w24
+range("Generations",
+==
+range("세대",
+@@ w24
+select("Regime ",
+==
+select("방식 ",
+@@ w24
+"aria-label":"Left: an 8 by 8 grid of pixels, each showing its current estimate of the image shift. Right: the spread of the estimates against the number of message-passing rounds, on a logarithmic axis."
+==
+"aria-label":"왼쪽: 8 × 8 픽셀 grid. 각 픽셀은 이미지 shift에 대한 현재 추정값을 보여 줍니다. 오른쪽: message-passing round 수에 따른 추정값의 퍼짐, log 축."
+@@ w24
+"rounds of message passing"
+==
+"message passing round 수"
+@@ w24
+"spread = largest − smallest estimate"
+==
+"퍼짐 = 최대 − 최소 추정값"
+@@ w24
+stat("Global answer (mean of all 64)",
+==
+stat("Global 답 (64개 전체 평균)",
+@@ w24
+"what a central sum gives"
+==
+"중앙에서 합하면 얻는 값"
+@@ w24
+stat("Spread after "+it+" rounds",
+==
+stat(it+" round 후 퍼짐",
+@@ w24
+stat("Rounds until all within 0.05",
+==
+stat("모두 0.05 이내까지 round",
+@@ w24
+need<0?"more than "+T:""+need
+==
+need<0?T+" 초과":""+need
+@@ w24
+stat("Longest shortest path",
+==
+stat("가장 긴 최단 경로",
+@@ w24
+w24diam(nb)+" hops"
+==
+w24diam(nb)+" hop"
+@@ w24
+K?"with "+K+" long links":"grid only"
+==
+K?"긴 link "+K+"개 포함":"grid만"
+@@ w24
+h("div",{class:"vt"},"A global estimate from local messages")
+==
+h("div",{class:"vt"},"local message로 얻는 global 추정값")
+@@ w24
+"Each of 64 pixels starts with its own local estimate of one global number, the image shift. The estimates run low on the left and high on the right. Every round, each pixel averages with its neighbours."
+==
+"픽셀 64개가 각자 하나의 global 숫자, 즉 이미지 shift에 대한 자기만의 local 추정값으로 시작합니다. 추정값은 왼쪽이 낮고 오른쪽이 높습니다. 매 round마다 각 픽셀은 이웃과 평균을 냅니다."
+@@ w24
+range("Rounds",
+==
+range("Round 수",
+@@ w24
+range("Long-range links",
+==
+range("긴 link 수",
+@@ w24
+"grid links only"
+==
+"grid link만"
+@@ w24
+"with the long links"
+==
+"긴 link 포함"
+@@ w24
+"aria-label":"Top: position of nine poses with the belief of Gaussian belief propagation as a dot with a one-sigma bar, next to the exact solution. Bottom: largest error of the belief means against iteration, on a logarithmic axis."
+==
+"aria-label":"위: pose 아홉 개의 위치. Gaussian belief propagation의 belief를 1σ 막대가 달린 점으로 정확한 해 옆에 그립니다. 아래: iteration에 따른 belief 평균의 최대 오차, log 축."
+@@ w24
+"position (m)"
+==
+"위치 (m)"
+@@ w24
+"largest |mean − reference| over the nine poses, by iteration"
+==
+"iteration별, pose 아홉 개 중 최대 |평균 − 기준|"
+@@ w24
+have+" of 9 poses have a belief"
+==
+"pose 9개 중 "+have+"개에 belief 있음"
+@@ w24
+stat("Largest mean error",
+==
+stat("최대 평균 오차",
+@@ w24
+"below 1e-6"
+==
+"1e-6 미만"
+@@ w24
+"against the Huber estimate":"against the exact solution"
+==
+"Huber 추정값 기준":"정확한 해 기준"
+@@ w24
+stat("Std. dev. of x4: GBP / exact",
+==
+stat("x4 표준편차: GBP / 정확한 해",
+@@ w24
+"metres")
+==
+"미터")
+@@ w24
+stat("x8 mean: GBP / reference",
+==
+stat("x8 평균: GBP / 기준",
+@@ w24
+"true value 0"
+==
+"실제값 0"
+@@ w24
+play.textContent="Play"
+==
+play.textContent="재생"
+@@ w24
+play.textContent="Pause"
+==
+play.textContent="일시정지"
+@@ w24
+button("Play",
+==
+button("재생",
+@@ w24
+h("div",{class:"vt"},"Gaussian belief propagation on a pose chain")
+==
+h("div",{class:"vt"},"pose chain 위의 Gaussian belief propagation")
+@@ w24
+"A robot drives 4 m down a corridor and back: nine poses, a prior on x0, eight odometry factors (σ = 0.3 m), and a loop closure x8 − x0 (σ = 0.1 m). One iteration is one update per factor."
+==
+"로봇이 복도를 따라 4 m 갔다가 돌아옵니다: pose 아홉 개, x0의 prior, odometry factor 여덟 개 (σ = 0.3 m), loop closure x8 − x0 (σ = 0.1 m). iteration 한 번은 factor마다 update 한 번입니다."
+@@ w24
+["s","synchronous: all factors at once"]
+==
+["s","synchronous: 모든 factor 동시에"]
+@@ w24
+["r","random: one factor at a time"]
+==
+["r","random: 한 번에 factor 하나"]
+@@ w24
+button("Step",
+==
+button("한 step",
+@@ w24
+button("Reset",
+==
+button("초기화",
+@@ w24
+w24tog("Robust (Huber) factors",
+==
+w24tog("Robust (Huber) factor",
+@@ w24
+"GBP belief, mean ± 1σ"
+==
+"GBP belief, 평균 ± 1σ"
+@@ w24
+"reference solution, mean ± 1σ"
+==
+"기준 해, 평균 ± 1σ"
+@@ w24
+"true positions"
+==
+"실제 위치"
+@@ w24
+"aria-label":"Scatter plot of 40 synthetic system configurations: power on a logarithmic horizontal axis, drift error on the vertical axis, with the Pareto front highlighted and a movable power budget"
+==
+"aria-label":"합성 시스템 구성 40개의 산점도: 가로축은 log scale의 전력, 세로축은 drift 오차. Pareto front가 강조되어 있고 전력 예산을 움직일 수 있습니다"
+@@ w24
+"power (log scale)"
+==
+"전력 (log scale)"
+@@ w24
+"drift, % of distance travelled"
+==
+"drift, 이동 거리의 %"
+@@ w24
+stat("Configurations",
+==
+stat("구성",
+@@ w24
+front.length+" on the Pareto front"
+==
+"Pareto front 위에 "+front.length+"개"
+@@ w24
+stat("Power budget",
+==
+stat("전력 예산",
+@@ w24
+stat("Best choice within budget",
+==
+stat("예산 안의 최선",
+@@ w24
+"% drift":"none fits"
+==
+"% drift":"맞는 것 없음"
+@@ w24
+"uses "+best.p.toFixed(2)+" W":"raise the budget"
+==
+best.p.toFixed(2)+" W 사용":"예산을 올리세요"
+@@ w24
+stat("Dominated, never worth picking",
+==
+stat("Dominate당함, 고를 이유 없음",
+@@ w24
+h("div",{class:"vt"},"Picking a system from a Pareto front")
+==
+h("div",{class:"vt"},"Pareto front에서 시스템 고르기")
+@@ w24
+"Forty made-up configurations of one SLAM system, each scored on two metrics. Lower and further left is better."
+==
+"한 SLAM 시스템의 가상 구성 40개를 두 지표로 채점했습니다. 아래쪽, 왼쪽일수록 좋습니다."
+@@ w24
+range("Power budget",
+==
+range("전력 예산",
+@@ w24
+"Pareto front: not beaten on both metrics by anything"
+==
+"Pareto front: 두 지표 모두에서 지는 상대가 없음"
+@@ w24
+["var(--line2)","dominated"]
+==
+["var(--line2)","dominate당함"]
+@@ w24
+"over budget"
+==
+"예산 초과"

@@ -1,0 +1,164 @@
+@@ 1
+<span class="eyebrow">Week 20 · Review</span>
+@@ 2
+Week 20 review: maps built by rendering
+@@ 3
+After today you can render a pixel by hand from densities or from Gaussians, project a Gaussian covariance into the image, and weigh NeRF-style and splat maps against the needs of SLAM.
+@@ 4
+Chapter 14 treats the map as whatever set of parameters an image can be rendered from by a differentiable procedure. Render, compare with the camera's image, and push the gradient of the difference back into the parameters, which may include the camera pose. NeRF stores density and colour as a field and renders by marching along each pixel's ray: a pixel is a sum of sample colours weighted by transmittance times opacity. How the field is stored (one MLP, a grid, points) decides its speed, its size, whether it fills holes, whether it can grow, and whether it forgets. 3D Gaussian splatting keeps the same blending sum but gets its opacities from explicit Gaussian primitives projected onto the image, which renders far faster and gives SLAM primitives it can add and move. Both are slow to optimize and, as trackers, still less accurate than classical sparse methods.
+@@ 5
+Radiance field and camera ray
+@@ 6
+§14.2.1 · p. 402 · <a href="#d116">Day 2</a>
+@@ 7
+Transmittance
+@@ 8
+p. 402 · Day 2
+@@ 9
+Volume rendering integral
+@@ 10
+(14.1) · p. 402 · Day 2
+@@ 11
+Quadrature
+@@ 12
+(14.2) · pp. 402–403 · Day 2
+@@ 13
+Weights and expected depth
+@@ 14
+Day 2 (depth in words on p. 403)
+@@ 15
+(14.3) · p. 403 · Day 2
+@@ 16
+Linear interpolation on a grid
+@@ 17
+\(f = (1 - s)f_i + s f_{i+1}\); trilinear: products of three such weights over 8 corners
+@@ 18
+<a href="#d117">Day 3</a>
+@@ 19
+Gaussian covariance
+@@ 20
+(14.4) · p. 409 · <a href="#d118">Day 4</a>
+@@ 21
+Projected covariance
+@@ 22
+(14.5) · p. 410 · Day 4
+@@ 23
+Splat blending
+@@ 24
+(14.6), (14.7) · p. 410 · Day 4
+@@ 25
+3DGS loss
+@@ 26
+(14.8) · p. 410 · Day 4
+@@ 27
+Q1. What does volume rendering give an optimizer that rendering a hard surface does not?
+@@ 28
+Faster rendering
+@@ 29
+A non-zero gradient at points on the ray where no surface has formed yet
+@@ 30
+Exact depth for every pixel
+@@ 31
+Freedom from needing camera poses
+@@ 32
+Every sample on the ray contributes to the pixel through its opacity, so the loss can ask for matter at an empty point. A hard surface gives zero gradient with respect to its position except at outlines.
+@@ 33
+Q2. A ray segment has density σ = 1 and length δ = 0.2. What is its opacity?
+@@ 34
+α = 1 − e^(−0.2) = 0.181. For small σδ this is close to σδ = 0.2, but never larger.
+@@ 35
+Q3. Three samples on a ray have opacities 0.2, 0.5, 1.0, nearest first. What are their weights?
+@@ 36
+w₁ = 0.2. T₂ = 0.8, so w₂ = 0.8 × 0.5 = 0.4. T₃ = 0.8 × 0.5 = 0.4, so w₃ = 0.4 × 1.0 = 0.4. They sum to 1 because the last sample is opaque.
+@@ 37
+Q4. Which two properties does Table 14.1 rate "Good" for a single MLP?
+@@ 38
+Inference speed and dynamic allocation
+@@ 39
+Dynamic allocation and resistance to forgetting
+@@ 40
+Compression and scene completion
+@@ 41
+Inference speed and compression
+@@ 42
+An MLP is compact and smooth, so it compresses and fills small holes. It is rated "Limited" on speed, dynamic allocation, and forgetting.
+@@ 43
+Q5. A field is stored on a 3D grid and read by trilinear interpolation. A gradient step on the loss of one sample point changes how many stored values?
+@@ 44
+All of them
+@@ 45
+The interpolated value depends only on the eight corners of the cell that contains the sample, so only those have a non-zero derivative. This locality is why grids forget less than a global function.
+@@ 46
+Q6. A Gaussian on the optical axis is moved from depth 2 to depth 6 without changing Σ. What happens to the standard deviation of its footprint?
+@@ 47
+It becomes one third
+@@ 48
+It becomes one ninth
+@@ 49
+It does not change
+@@ 50
+It triples
+@@ 51
+On the axis J = [1/z, 0], so σ′ = σₓ/z. Three times the depth gives one third of the width. The variance, σ′², falls to one ninth.
+@@ 52
+Q7. At one pixel, Gaussians A and B both have α = 0.5, with A in front. Then B is moved in front of A, with both α unchanged. What is A's weight now?
+@@ 53
+Behind B, A receives only the transmittance 1 − 0.5 = 0.5, so its weight is 0.5 × 0.5 = 0.25. In front it was 0.5. Depth order matters.
+@@ 54
+Q8. What does the book name as the main obstacle to using NeRF- or 3DGS-based SLAM on a real-time robot?
+@@ 55
+Rendering an image from a splat map is too slow
+@@ 56
+The optimization is slow: most methods struggle to exceed a few frames per second even on modern GPUs
+@@ 57
+Gaussians cannot be initialized without LiDAR
+@@ 58
+The maps cannot store semantics
+@@ 59
+3DGS renders in real time. The cost is in the many gradient steps per frame, which is why compact representations, higher-order optimizers, and feed-forward prediction are proposed.
+@@ 60
+A ray is sampled at four points with equal spacing \(\delta = 0.5\). The densities are \(\sigma = (0,\ 1,\ 0,\ 4)\), the sample positions are \(t = (0.5,\ 1.0,\ 1.5,\ 2.0)\), and the grey levels at samples 2 and 4 are \(1.0\) and \(0.2\). Compute every \(\alpha_i\), \(T_i\), and \(w_i\), the pixel value over a black background, the light that passes all four samples, and the expected depth.
+@@ 61
+\(w_2 = 0.3935\), \(w_4 = 0.6065 \times 0.8647 = 0.5244\), the others are 0. Check: \(0.3935 + 0.5244 + 0.0821 = 1\).
+@@ 62
+Pixel: \(0.3935 \times 1.0 + 0.5244 \times 0.2 = 0.498\). Expected depth: \(0.3935 \times 1.0 + 0.5244 \times 2.0 = 1.44\).
+@@ 63
+(a) Show that \(w_i = T_i - T_{i+1}\). (b) Deduce that \(\sum_{i=1}^{N} w_i = 1 - T_{N+1}\). (c) A ray crosses fog of constant density \(\sigma = 0.4\) over a length of 5, cut into \(N\) equal segments. Show that the total weight does not depend on \(N\), and compute it.
+@@ 64
+(a) By definition \(T_{i+1} = T_i(1 - \alpha_i)\), so \(T_i - T_{i+1} = T_i\alpha_i = w_i\).
+@@ 65
+(b) The sum telescopes: \((T_1 - T_2) + (T_2 - T_3) + \dots + (T_N - T_{N+1}) = T_1 - T_{N+1} = 1 - T_{N+1}\).
+@@ 66
+(c) \(T_{N+1} = \exp(-\sum_j \sigma\delta_j) = \exp(-0.4 \times 5) = e^{-2} = 0.135\), whatever the number of segments, because the lengths always add up to 5. The total weight is \(1 - 0.135 = 0.865\). This is the reason opacity is defined as \(1 - e^{-\sigma\delta}\) and not as \(\sigma\delta\): the result must not depend on how finely a uniform region is cut.
+@@ 67
+A 2D world with the camera at the origin looking along \(z\) and the image line at \(z = 1\). Gaussian A is at \((x, z) = (0.5, 2)\) with \(\boldsymbol{\Sigma}_A = \diag(0.09, 0.01)\), opacity 0.9, grey level 1.0. Gaussian B is at \((0, 4)\) with \(\boldsymbol{\Sigma}_B = \diag(0.64, 0.04)\), opacity 0.8, grey level 0. The background has grey level 0.5. Find each footprint's centre and standard deviation, then the value of the pixel at \(u = 0.25\).
+@@ 68
+A: \(\mu'_A = 0.5/2 = 0.25\). \(\mathbf{J} = [\,1/z \;\; -x/z^2\,] = [\,0.5 \;\; -0.125\,]\). \(\sigma'^2_A = 0.25 \times 0.09 + 0.0156 \times 0.01 = 0.0227\), so \(\sigma'_A = 0.151\).
+@@ 69
+B: \(\mu'_B = 0\). \(\mathbf{J} = [\,0.25 \;\; 0\,]\). \(\sigma'^2_B = 0.0625 \times 0.64 = 0.04\), so \(\sigma'_B = 0.2\).
+@@ 70
+At \(u = 0.25\): the pixel is at A's centre, so \(\alpha_A = 0.9\). For B, \(G = \exp(-0.25^2 / (2 \times 0.04)) = e^{-0.781} = 0.458\), so \(\alpha_B = 0.8 \times 0.458 = 0.366\).
+@@ 71
+A is nearer, so it is blended first. Weights: A \(0.9\); B \(0.1 \times 0.366 = 0.037\); background \(0.1 \times 0.634 = 0.063\). Pixel: \(0.9 \times 1.0 + 0.037 \times 0 + 0.063 \times 0.5 = 0.932\).
+@@ 72
+Tracking as least squares. In the same 2D world the camera's sideways position \(c\) is unknown. The centre of a Gaussian at \((1, 2)\) is observed at \(u_1 = 0.35\), and the centre of a Gaussian at \((-1, 4)\) at \(u_2 = -0.33\). (a) Write the predicted centres as functions of \(c\) and the residuals at \(c = 0\). (b) Take one Gauss-Newton step from \(c = 0\) (<a href="#d10">Week 2 · Day 4</a>). (c) Which Gaussian influences the answer more, and why?
+@@ 73
+(a) \(\mu'_1(c) = (1 - c)/2\) and \(\mu'_2(c) = (-1 - c)/4\). At \(c = 0\) they are \(0.5\) and \(-0.25\), so the residuals (predicted minus observed) are \(r_1 = 0.15\) and \(r_2 = 0.08\).
+@@ 74
+(b) The Jacobians are \(J_1 = -1/2\) and \(J_2 = -1/4\). Gauss-Newton solves \((J_1^2 + J_2^2)\,\Delta = -(J_1 r_1 + J_2 r_2)\): \(0.3125\,\Delta = 0.075 + 0.02 = 0.095\), so \(\Delta = 0.304\) and \(c = 0.304\). The predictions are linear in \(c\), so this single step is the exact least-squares answer. The residuals fall to \(-0.002\) and \(0.004\).
+@@ 75
+(c) Gaussian 1. Alone it would give \(c = 0.30\), and Gaussian 2 alone \(c = 0.32\); the answer \(0.304\) sits close to the first. Its Jacobian is twice as large because it is half as far away, so it carries four times the weight in \(J_1^2 + J_2^2\). Nearby structure moves more in the image when the camera translates, and therefore constrains the translation more.
+@@ 76
+Describe the differentiable rendering loop and say which quantities can sit among its parameters.
+@@ 77
+Compute opacities, transmittances, weights, a pixel value, and an expected depth for a short list of samples.
+@@ 78
+Explain the five rows of Table 14.1 and why a global function forgets.
+@@ 79
+Project a Gaussian's covariance with \(\mathbf{J}\mathbf{W}\boldsymbol{\Sigma}\mathbf{W}\T\mathbf{J}\T\) and blend sorted Gaussians at a pixel.
+@@ 80
+Name the static-world assumption among the open problems of §14.4. Next week's chapter is about scenes that move and deform.
+@@ 81
+<em>SLAM Handbook</em>, Chapter 14 "Map Representations with Differentiable Volume Rendering", pp. 397–416.
+@@ 82
+Mildenhall et al., <em>NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis</em>, 2020; Max, <em>Optical Models for Direct Volume Rendering</em>, 1995; Zwicker, Pfister, van Baar, Gross, <em>EWA Volume Splatting</em>, 2001 (the derivations added on Days 2 and 4).

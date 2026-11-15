@@ -1,0 +1,188 @@
+@@ 1
+<span class="eyebrow">10주차 · Day 1</span>
+@@ 2
+certifiable solver 안의 landmark와 range 측정
+@@ 3
+오늘이 끝나면 landmark를 회전이 없는 pose로 취급해 SE-Sync에 추가하고, 단위 벡터 하나를 더해 range 측정을 2차 항으로 바꿀 수 있습니다.
+@@ 4
+약 60분 · §6.1.3–6.1.4.1, pp. 165–169 읽기 (5쪽) · 9주차 Day 3–5 필요
+@@ 5
+먼저 읽기: §6.1.3과 §6.1.4.1, pp. 165–169
+@@ 6
+Problem 6.1과 비교해 Problem 6.5 (p. 166)에 새로 생긴 항 하나, 그리고 나머지 유도는 "그대로 쓸 수 있다"고 말하는 문장.
+@@ 7
+p. 167의 Figure 6.4(b)와 (c)가 landmark를 늘릴 때의 실행 시간과 exactness에 대해 말하는 것.
+@@ 8
+range-aided SLAM이 QCQP가 되지 못하게 막는 p. 168의 항 하나, 그리고 이를 해결하는 재정식화 (6.33).
+@@ 9
+range-aided relaxation이 exact하지 <em>않은</em> 경우를 다루는 p. 169의 문단.
+@@ 10
+9주차의 SE-Sync 레시피(문제를 QCQP로 쓰고, SDP로 relax하고, 그 SDP를 Riemannian Staircase로 풀고, certificate를 확인한다)는 QCQP 형태로 옮길 수 있는 모든 문제에 통합니다. landmark 측정은 이미 그 형태입니다: landmark는 회전이 없는 pose입니다. range 측정은 그렇지 않지만, range마다 보조 단위 벡터를 하나씩 추가하면 그 형태가 됩니다.
+@@ 11
+1. landmark: 회전이 없는 pose
+@@ 12
+9주차는 모든 측정이 relative pose인 pose-graph optimization (PGO)의 certifiable solver로 끝났습니다. 이제 \(n\)개의 pose에 위치를 모르는 landmark \(\ell\)개 \(\mathbf{m}_{n+1},\dots,\mathbf{m}_{n+\ell}\in\R^d\)를 추가합니다. pose \(i\)에 있는 로봇은 landmark \(k\)의 위치를 자기 frame에서 측정합니다(range-and-bearing 측정). 모델은 식 (6.8)에서 relative pose의 이동 부분과 같습니다: <span class="src">§6.1.3 · p. 165</span>
+@@ 13
+여기서 \(\bar{\mathbf{m}}_{ik}\)는 실제 상대 위치이고, \(\mu_{ik}\)는 측정의 <strong>precision</strong>(분산의 역수)입니다. noise는 <strong>isotropic</strong>(등방성)입니다: 모든 방향에서 같습니다. 그래프에는 두 번째 종류의 vertex와 두 번째 종류의 edge가 생깁니다.
+@@ 14 attr
+odometry edge(실선)로 한 줄로 이어진 pose vertex 네 개와, 그 위에서 점선 landmark 측정 edge로 pose와 연결된 landmark vertex 두 개가 있는 그래프. landmark는 위치만 가지고, pose는 회전과 위치를 가집니다.
+@@ 15
+=
+@@ 16
+=
+@@ 17
+=
+@@ 18
+=
+@@ 19
+=
+@@ 20
+=
+@@ 21
+실선: relative pose, weight κ와 τ
+@@ 22
+점선: landmark 위치, weight μ
+@@ 23
+pose(원)는 회전과 이동을 가집니다. landmark(사각형)는 위치만 가집니다. 책은 실선 edge 집합을 \(\vec{\mathcal{E}}_r\), 점선 edge 집합을 \(\vec{\mathcal{E}}_m\)이라고 부릅니다.
+@@ 24
+이 모델들로 maximum likelihood를 세우면 Problem 6.5가 됩니다: <span class="src">§6.1.3 · p. 166</span>
+@@ 25
+빈틈 채우기: landmark 항은 어디서 오는가
+@@ 26
+측정은 로봇 frame에 있으므로 자연스러운 residual은 \(\tilde{\mathbf{m}}_{ik}-\mathbf{R}_i\T(\mathbf{m}_k-\mathbf{t}_i)\)입니다. \(\mathbf{R}_i\T\)를 앞으로 빼냅니다:
+@@ 27
+회전은 벡터의 길이를 바꾸지 않으므로(\(\norm{\mathbf{R}\T\mathbf{v}}_2=\norm{\mathbf{v}}_2\)) 제곱 residual은 \(\norm{\mathbf{m}_k-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{m}}_{ik}}_2^2\)와 같습니다. (6.28)의 Gaussian에 음의 로그를 취하면 이 값의 \(\tfrac{\mu_{ik}}{2}\)배에 상수를 더한 것이 되고, 공통 인자 \(\tfrac12\)을 빼면 (6.29)의 마지막 합이 됩니다. 이 단계에는 isotropic noise가 필요합니다. 그것이 없으면 무엇이 깨지는지는 내일 봅니다.
+@@ 28
+이동과 비슷한 두 항을 비교해 봅시다. \(\mathbf{t}_j\)를 \(\mathbf{m}_k\)로, \(\tilde{\mathbf{t}}_{ij}\)를 \(\tilde{\mathbf{m}}_{ik}\)로, \(\tau_{ij}\)를 \(\mu_{ik}\)로 바꾸면 pose 항이 landmark 항이 됩니다. landmark는 아무도 회전을 측정하지 않는 pose와 똑같이 행동합니다. 그래서 책은 §6.1.2를 전부 재사용하고 행렬 두 개만 키웁니다: weight 행렬은 \(\boldsymbol{\Omega}=\operatorname{BlockDiag}(\boldsymbol{\Omega}_\tau,\boldsymbol{\Omega}_\mu)\)가 되고, 측정 행렬 \(\tilde{\mathbf{D}}\)에는 landmark edge마다 \(-\tilde{\mathbf{m}}_{kj}\T\)를 담은 행이 하나씩 추가됩니다(식 (6.30)). 회전 측정만으로 만드는 connection Laplacian \(\mathbf{L}(\tilde G^\rho)\)는 바뀌지 않습니다. <span class="src">§6.1.3 · p. 166</span>
+@@ 29
+2. 위치를 풀어서 제거할 수 있는 이유
+@@ 30
+SE-Sync의 첫 수(<a href="#d51">9주차 · Day 3</a>)는 이동을 소거해 회전만 남은 문제를 얻는 것이었습니다. 이제 같은 수로 landmark도 제거합니다.
+@@ 31
+빈틈 채우기: 회전을 고정하면 위치는 그래프 위의 linear least-squares 문제
+@@ 32
+모든 \(\mathbf{R}_i\)를 고정합니다. 그러면 \(\mathbf{c}_e=\mathbf{R}_i\tilde{\mathbf{t}}_{ij}\)(또는 \(\mathbf{R}_i\tilde{\mathbf{m}}_{ik}\))는 각 edge \(e\)마다 알려진 벡터이고, \(\mathbf{p}\)가 pose든 landmark든 임의의 위치를 나타낸다고 하면 (6.29)의 위치 부분은
+@@ 33
+미지의 위치에 대해 <em>선형</em>인 함수들의 제곱합입니다. gradient를 0으로 놓으면 선형 방정식이 나오고, 그 행렬은 Box 6.1 (p. 157)의 weighted graph Laplacian입니다. 위치가 세 개이고 \(p_0=0\)은 고정, weight는 모두 1, 측정은 \(p_1-p_0=1.0\), \(p_2-p_1=1.0\), \(p_2-p_0=2.3\)인 1차원 예:
+@@ 34
+이 행렬은 삼각형 그래프의 Laplacian에서 고정된 node의 행과 열을 지운 것입니다. loop를 따라 생긴 0.3의 불일치가 똑같이 나뉩니다: 세 residual은 \(0.1,\ 0.1,\ -0.1\)입니다.
+@@ 35
+일반적으로 최적 위치는 우변의 선형 함수이고, 우변은 회전에 대해 선형입니다. 이것이 (6.16)과 그 landmark 버전 (6.31)이 말하는 내용입니다: \(\begin{bmatrix}\mathbf{t}^{*\mathsf T} & \mathbf{m}^{*\mathsf T}\end{bmatrix}\T=-\operatorname{vec}\!\big(\mathbf{R}^*\tilde{\mathbf{V}}\T\mathbf{L}(W^\tau)^{\dagger}\big)\). dagger가 pseudo-inverse인 이유는 전체 Laplacian이 singular하기 때문입니다: 모든 위치를 같은 벡터만큼 옮겨도 아무것도 바뀌지 않습니다. 2차 cost에 \(\mathbf{R}\)의 선형 함수를 대입하면 \(\mathbf{R}\)에 대해 2차인 cost가 남으므로, 축소된 문제는 새 \(\tilde{\mathbf{Q}}\)를 가진 \(\min \tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\) 그대로이고, Shor's relaxation을 전처럼 적용할 수 있습니다.
+@@ 36
+3. 많은 landmark: 계산 비용과 exactness
+@@ 37
+보통 map에는 pose보다 landmark가 훨씬 많습니다. 두 가지 사실 덕분에 이 방법은 실용적입니다. <span class="src">§6.1.3 · pp. 166–167</span>
+@@ 38
+<strong>계산 비용.</strong> landmark가 많으면 느린 단계는 \(\tilde{\mathbf{Q}}\)를 만드는 일입니다. <strong>Schur complement</strong> 기법이 이 단계를 landmark 수에 선형으로 만들고, SE-Sync의 다른 부분은 느려지지 않습니다(Figure 6.4(b)).
+@@ 39
+<strong>Exactness.</strong> landmark가 많을수록, 그리고 pose–landmark edge가 많을수록 relaxation이 exact하게 유지되는 noise 수준의 한계가 올라갑니다(Figure 6.4(c)).
+@@ 40
+빈틈 채우기: landmark 소거가 싼 이유
+@@ 41
+책은 이 기법의 이름만 말하고 보여 주지는 않습니다. 구조적인 이유는 <a href="#d15">3주차 · Day 3</a>에서 bundle adjustment로 만난 것과 같습니다. 위치를 pose 먼저, landmark 나중 순서로 놓고 weighted Laplacian을 블록으로 나눕니다:
+@@ 42
+Laplacian의 비대각 원소는 edge가 있는 곳에서만 0이 아닙니다. 두 landmark를 잇는 측정은 없으므로 \(\mathbf{L}_{mm}\)은 <em>대각</em> 행렬입니다: \(k\)번째 원소는 landmark \(k\)에 붙은 edge들의 weight \(\mu_{ik}\)의 합입니다. 대각 행렬의 역행렬은 landmark마다 나눗셈 한 번이므로, 작업량은 landmark 수에 비례해 늘어납니다.
+@@ 43
+4. range 측정: 하나 남는 제곱근
+@@ 44
+ultra-wideband 무선 장치 같은 일부 센서는 두 대상 사이의 거리 \(\tilde r_{ij}\)만 알려 주고 방향은 알려 주지 않습니다. Problem 6.6은 이런 항을 분산의 역수 \(\gamma_{ij}\)로 weight를 주어 추가합니다: <span class="src">§6.1.4.1 · p. 168</span>
+@@ 45
+range 항 하나를 전개합니다:
+@@ 46
+첫 항과 마지막 항은 문제없습니다. 가운데 항에는 제곱되지 <em>않은</em> norm이 들어 있는데, 이는 2차식의 제곱근이라 다항식이 아닙니다. 따라서 (6.32)는 QCQP가 아니고, Shor's relaxation이 작용할 대상이 없습니다. (책 p. 168에는 가운데 항이 플러스 부호로 인쇄되어 있지만, 부호는 논증에 영향을 주지 않습니다.)
+@@ 47
+직접 해 보기: 가장 단순한 range-only 문제로, 미지의 위치 하나와 beacon 세 개가 있습니다. 시작점을 그대로 두고 타일 세 개를 읽어 보세요. 그다음 시작점을 beacon들 위쪽으로 끌어 보세요. 그다음 beacon 2개로 바꿔 보세요.
+@@ 48
+눈여겨볼 점: 기본 시작점에서 Gauss-Newton은 beacon들 아래의 (6.06, 1.09) 근처에서 cost 0.131로 멈춥니다. 실제 위치 (6, 4.8)의 cost는 0인데도 그렇습니다. beacon 줄 아래의 낮은 지점은 실제 위치의 거울상이며, local solver는 더 나은 점이 있다는 것을 알 수 없습니다. beacon이 2개이면 거울상 점도 cost가 0입니다: 이때는 데이터가 정말로 모호하므로 어떤 solver도 이를 해결할 수 없습니다.
+@@ 49
+빈틈 채우기: 단위 벡터 기법이 답을 바꾸지 않는 이유
+@@ 50
+재정식화 (6.33)은 각 range 항을 새 미지 단위 벡터 \(\mathbf{b}_{ij}\)를 쓴 \(\gamma_{ij}\norm{\mathbf{t}_j-\mathbf{t}_i-\tilde r_{ij}\mathbf{b}_{ij}}_2^2\)로 바꿉니다. 주장: 임의의 벡터 \(\mathbf{v}\)와 임의의 \(r\ge 0\)에 대해
+@@ 51
+증명. \(\norm{\mathbf{b}}=1\)을 써서 전개하면 \(\norm{\mathbf{v}-r\mathbf{b}}^2=\norm{\mathbf{v}}^2-2r\,\mathbf{v}\T\mathbf{b}+r^2\)입니다. \(\mathbf{b}\)에 의존하는 것은 가운데 항뿐이고, 이 항은 \(\mathbf{v}\T\mathbf{b}\)가 가장 클 때 가장 작습니다. Cauchy-Schwarz 부등식에 따르면 \(\mathbf{v}\T\mathbf{b}\le\norm{\mathbf{v}}\)이고, 등호는 \(\mathbf{b}=\mathbf{v}/\norm{\mathbf{v}}\)일 때 성립합니다. 대입하면 \(\norm{\mathbf{v}}^2-2r\norm{\mathbf{v}}+r^2=(\norm{\mathbf{v}}-r)^2\)입니다.
+@@ 52
+예: \(\mathbf{v}=(3,4)\), \(r=4\). 그러면 \(\norm{\mathbf{v}}=5\), 최적의 \(\mathbf{b}=(0.6,0.8)\)이고, \(\mathbf{v}-r\mathbf{b}=(0.6,0.8)\)의 길이 제곱은 \(1=(5-4)^2\)입니다.
+@@ 53
+따라서 (6.33)을 먼저 \(\mathbf{b}_{ij}\)에 대해 최소화하면 (6.32)가 다시 나옵니다: 두 문제의 최적 pose는 같습니다. 위젯에서 보라색 선분은 최적 \(\mathbf{b}\)에 대한 \(\tilde r\,\mathbf{b}\)이고, 굵은 분홍색 선분은 남는 부분입니다.
+@@ 54
+새 문제는 QCQP<em>입니다</em>. range 항은 이제 미지수 \(\mathbf{t}_i,\mathbf{t}_j,\mathbf{b}_{ij}\)에 대해 2차이고, 새 constraint \(\mathbf{b}_{ij}\T\mathbf{b}_{ij}=1\)도 2차입니다. 말로 하면, 센서가 측정하지 않은 bearing까지 solver가 추정하는 것이고, 이로써 range가 1절과 같은 range-and-bearing 측정으로 바뀝니다. Shor's relaxation에 Riemannian Staircase를 더하면 range-aided SLAM을 위한 certifiable solver인 <strong>CORA</strong>가 됩니다. <span class="src">§6.1.4.1 · pp. 168–169</span>
+@@ 55
+추가 미지수
+@@ 56
+=
+@@ 57
+relaxation이 exact한가?
+@@ 58
+=
+@@ 59
+noise가 임계값보다 작으면 예 (Theorem 6.1)
+@@ 60
+=
+@@ 61
+landmark 위치
+@@ 62
+실험에서는 예. landmark 수와 연결성에 따라 커지는 noise 수준까지
+@@ 63
+=
+@@ 64
+range마다 단위 벡터 하나
+@@ 65
+(6.33) 이후에만
+@@ 66
+일반적으로는 아니오. 실제로는 대개 예이지만, 여러 로봇이 range만으로 묶인 경우에는 보통 아니오
+@@ 67
+마지막 행이 중요합니다. range-aided SLAM에서는 bounded noise 아래에서도 relaxation이 일반적으로(generically) exact하지 않습니다. CORA의 바탕이 된 연구는 로봇이 여러 대일 때 로봇들을 잇는 relative <em>pose</em> 측정이 어느 정도 있지 않으면 보통 exact하지 않다는 것을 발견했습니다. 더 일반적으로, 측정 그래프가 얼마나 잘 연결되어 있는지가 exactness에 큰 영향을 줍니다. <span class="src">§6.1.4.1 · p. 169</span> 같은 그래프 연결성이 Day 4에 다시 등장하는데, 거기서는 정확도를 좌우합니다.
+@@ 68
+<strong>"벡터 b를 추가하면 답이 바뀐다."</strong> 바뀌는 것은 미지수 목록이지 최적 pose가 아닙니다. 각 \(\mathbf{b}_{ij}\)에 대해 최소화하면 원래의 range 항이 정확히 다시 나옵니다.
+@@ 69
+<strong>"certified optimum은 실제 위치다."</strong> certificate가 말하는 것은 더 낮은 cost를 가진 점이 없다는 것뿐입니다. beacon이 2개이면 두 거울상 점이 모두 최적이고, noise가 있으면 최적해는 실제값이 아닙니다. 실제값에서 얼마나 멀 수 있는지가 Day 3–5의 주제입니다.
+@@ 70
+<strong>"landmark는 회전 미지수를 추가한다."</strong> landmark는 위치만 추가합니다. 그래서 connection Laplacian이 바뀌지 않습니다.
+@@ 71
+Q1. SE-Sync가 landmark를 "회전이 없는 pose"로 취급할 수 있는 이유는 무엇입니까?
+@@ 72
+landmark는 항상 정확히 하나의 pose에서만 관측됩니다
+@@ 73
+landmark noise가 odometry noise보다 작습니다
+@@ 74
+측정 항의 대수적 형태가 relative pose의 이동 항과 같고, 회전 항이 붙어 있지 않습니다
+@@ 75
+landmark 위치를 미리 알고 있습니다
+@@ 76
+(6.29)에서 t_j를 m_k로, τ를 μ로 바꾸면 두 항은 같은 식입니다. landmark의 방향은 아무것도 측정하지 않으므로 회전 항이 없습니다.
+@@ 77
+Q2. 두 위치의 차이가 v = t_j − t_i = (6, 8)이고 측정된 range가 7입니다. 단위 벡터 b에 대한 ‖v − 7b‖²의 최솟값은 얼마입니까?
+@@ 78
+‖v‖ = 10이고, 최솟값은 (‖v‖ − r)² = (10 − 7)² = 9이며, b = (0.6, 0.8)에서 얻어집니다.
+@@ 79
+Q3. range-aided cost (6.32)가 QCQP가 되지 못하게 하는 부분은 무엇입니까?
+@@ 80
+각 R_i가 회전이라는 constraint
+@@ 81
+제곱 norm ‖t_j − t_i‖²
+@@ 82
+상수 r̃²
+@@ 83
+제곱되지 않은 norm을 포함하는 교차항 −2 r̃ ‖t_j − t_i‖
+@@ 84
+제곱되지 않은 norm은 2차식의 제곱근이므로 다항식이 아닙니다. 회전 constraint는 2차이며 9주차에서 이미 다루었습니다.
+@@ 85
+Q4. 2절의 1차원 예에서 세 번째 측정을 p₂ − p₀ = 2.6으로 바꿉니다(나머지 둘은 1.0 그대로). 최적 p₂는 얼마입니까?
+@@ 86
+방정식은 2p₁ − p₂ = 0과 −p₁ + 2p₂ = 3.6이 되므로 p₁ = 1.2, p₂ = 2.4입니다. loop의 불일치 0.6이 크기 0.2인 residual 세 개로 나뉩니다.
+@@ 87
+isotropic noise를 가진 landmark 측정은 항 \(\mu_{ik}\norm{\mathbf{m}_k-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{m}}_{ik}}^2\)를 주며, 이는 상대 이동 항과 같은 형태입니다. landmark는 회전이 없는 pose입니다.
+@@ 88
+회전을 고정하면 모든 위치는 graph Laplacian을 행렬로 갖는 linear least-squares 문제의 해이므로 소거할 수 있고, SE-Sync의 회전만 남은 QCQP가 남습니다.
+@@ 89
+landmark는 Laplacian 블록이 대각이라 소거 비용이 싸고, landmark가 많을수록 더 높은 noise에서도 relaxation이 exact합니다.
+@@ 90
+range 항은 2차가 아닙니다. \(\norm{\mathbf{b}_{ij}}=1\)인 단위 벡터 \(\mathbf{b}_{ij}\)를 추가하면 최적해를 바꾸지 않고 2차로 만들 수 있고, 그 QCQP를 relax하면 CORA가 됩니다.
+@@ 91
+range-aided relaxation이 항상 exact하지는 않습니다. 그래프 연결성이 결정합니다.
+@@ 92
+<em>SLAM Handbook</em>, §6.1.3 "Landmark-based SLAM"과 §6.1.4.1 "A Fast Certifiable Algorithm for Range-Aided SLAM", pp. 165–169; Box 6.1, pp. 157–158.
+@@ 93
+Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004 (Schur complement; least squares와 normal equations).
+@@ 94
+4절의 단위 벡터 항등식은 Cauchy-Schwarz 부등식을 바로 적용한 것이며, 예제의 숫자는 이 코스에서 직접 만든 것입니다.

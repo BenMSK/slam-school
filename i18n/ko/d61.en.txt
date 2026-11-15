@@ -1,0 +1,218 @@
+@@ 1
+<span class="eyebrow">Week 11 · Day 1</span>
+@@ 2
+Part II begins: sensors, front-end modules, and how SLAM is scored
+@@ 3
+After today you can name the modules every SLAM front-end has, say which kind of factor each sensor adds to the graph, and compute the two standard trajectory error metrics.
+@@ 4
+About 60 min · Read Prelude II, pp. 185–192 (8 pages) · Needs Week 1 Day 1 and Week 2 Day 1
+@@ 5
+Read first: Prelude to Part II, pp. 185–192
+@@ 6
+The two modules that "most SLAM front-ends rely on", and the third, optional kind of measurement (p. 185, then §II.1.1–II.1.3 on pp. 186–187).
+@@ 7
+The two sub-problems inside loop closure (p. 186) and the two properties a place-recognition method needs (p. 187).
+@@ 8
+Figure II.1 on p. 188: find one unary factor and one factor that joins nodes far apart in time.
+@@ 9
+The two types of calibration (p. 190) and the three things that get evaluated (pp. 191–192).
+@@ 10
+Part I built the back-end: a factor graph and the machinery to optimize it. Part II is about the front-end: how each sensor turns its raw data into factors. Whatever the sensor, the factors come in three kinds: <strong>odometry</strong> between consecutive states, <strong>loop closures</strong> between states far apart, and <strong>unary factors</strong> on single states.
+@@ 11
+1. Where Part II sits
+@@ 12
+For ten weeks the measurements were given. A relative pose or a landmark observation simply appeared, with a covariance, and the question was what to do with it. Part II asks where those measurements come from. The front-end handles the sensor-specific work: pre-processing, time synchronization, noise filtering, and measurement modeling. <span class="src">Prelude II · p. 185</span>
+@@ 13
+The chapters are ordered by sensor, and each follows the same pattern: odometry, then place recognition, then a full system. The book recommends starting with visual SLAM because it defines the vocabulary the other chapters reuse. <span class="src">§II.4 · p. 192</span>
+@@ 14
+Cameras (visual SLAM)
+@@ 15
+Weeks 11–12
+@@ 16
+Week 13
+@@ 17
+Week 14
+@@ 18
+Event cameras
+@@ 19
+Week 15
+@@ 20
+Inertial measurement units (IMUs)
+@@ 21
+Weeks 16–17
+@@ 22
+Leg odometry (robot kinematics)
+@@ 23
+Week 18
+@@ 24
+2. Three kinds of factor
+@@ 25
+Recall from <a href="#d7">Week 2 · Day 1</a> that a factor graph has variable nodes (the unknown states) and factors (the measurements that constrain them). A factor touching two variables is <strong>binary</strong>; a factor touching one is <strong>unary</strong>.
+@@ 26 attr
+A factor graph with five state nodes p1 to p5 in a row. Odometry factors join each consecutive pair. A loop-closure factor arcs from p1 to p5. A prior hangs below p1, a GPS unary factor hangs below p3, and one landmark node below is joined to p4 and p5 by observation factors.
+@@ 27
+loop closure (binary, far apart in time)
+@@ 28
+(binary)
+@@ 29
+GPS (unary)
+@@ 30
+landmark
+@@ 31
+Every sensor in Part II contributes factors of one of these shapes. Compare with Figure II.1 (p. 188), where each factor is labelled with the sensor that produced it.
+@@ 32
+<strong>Odometry</strong> estimates the relative transformation between two consecutive nodes, usually a relative pose with six degrees of freedom (6-DOF: three for rotation, three for translation). There are three ways to get it. <span class="src">§II.1.1 · p. 186</span>
+@@ 33
+<strong>By matching</strong> two consecutive sensor frames: pixel to pixel, point to point, or feature to feature. Most visual and LiDAR systems do this.
+@@ 34
+<strong>By integrating velocity.</strong> Radar measures radial velocity, from which the sensor's own velocity follows; a legged robot gets its motion from joint encoders, contact sensors, and its kinematics.
+@@ 35
+<strong>By preintegration</strong> of inertial measurements: many IMU samples between two nodes are summarized as a single factor (Week 16).
+@@ 36
+The module takes the name of its main sensor: visual odometry, LiDAR odometry, visual-inertial odometry, leg odometry.
+@@ 37
+<strong>Loop closure</strong> solves two problems in a row. <span class="src">§II.1.2 · pp. 186–187</span>
+@@ 38
+<strong>Detection</strong>, also called <strong>place recognition</strong>. The current measurement is a <strong>query</strong>; earlier places are stored in a <strong>database</strong> as raw data or as compact <strong>descriptors</strong> (short vectors that summarize a place). The task is retrieval: find the stored place most similar to the query.
+@@ 39
+<strong>Relative pose estimation.</strong> A candidate match only says "these two places look the same". The back-end needs a number, so a fine registration between the two measurements produces a relative transformation: a binary factor between the query node and the matched node.
+@@ 40
+Detection needs two properties. <strong>Discernibility</strong>: it must tell apart places that look alike but are different. Confusing them is called <strong>perceptual aliasing</strong>, and it creates a false loop closure. <strong>Scalability</strong>: the database grows for as long as the robot runs, and the search must stay fast. <span class="src">§II.1.2 · p. 187</span>
+@@ 41
+<strong>Unary factors and priors</strong> constrain one node. GPS on the ground, a depth sensor under water, and a radar's instantaneous velocity are examples. A prior can pin the first node to the origin or state that the robot stood still at certain nodes. <span class="src">§II.1.3 · p. 187</span>
+@@ 42
+Odometry says "since a moment ago I moved this much". A loop closure says "I have been here before, and I am standing this far from where I stood then". A unary factor says "something outside tells me where I am right now". The back-end does not care which sensor said it.
+@@ 43
+3. Choosing sensors, and combining them
+@@ 44
+The four exteroceptive sensors of Part II (sensors that observe the outside world) trade off as follows. <span class="src">§II.2.1 · pp. 188–189</span>
+@@ 45
+Strengths
+@@ 46
+Limits
+@@ 47
+RGB camera
+@@ 48
+Cheap, small; captures appearance and semantic content
+@@ 49
+Needs light; suffers from glare, reflections, motion blur, shadows, fog, smoke; no direct depth
+@@ 50
+Measures distance directly; accurate 2D/3D geometry; works in the dark
+@@ 51
+Cost, size, power, memory; large point clouds; degraded by heavy rain, fog, snow
+@@ 52
+Robust in extreme conditions; Doppler gives velocity
+@@ 53
+Noisy and very sparse; lower accuracy than LiDAR; heavy signal processing
+@@ 54
+Microsecond time resolution, no motion blur, high dynamic range, low power
+@@ 55
+Noise; no fine texture and no absolute intensity
+@@ 56
+Because the weaknesses differ, systems combine sensors. The IMU is the most common partner: it is everywhere and has low size, weight, and power, and it bridges the gaps between camera, LiDAR, or radar frames. Camera plus LiDAR pairs semantics with direct range. Radar's velocity measurements detect moving objects at once. The robot's own kinematics is one more source. In factor-graph terms fusion is easy to state: each sensor adds its own factors to the same graph, and the optimizer weighs them by their covariances. <span class="src">§II.2.2 · pp. 189–190</span>
+@@ 57
+4. Calibration and time synchronization
+@@ 58
+<strong>Intrinsic calibration</strong> finds the parameters of one sensor's own model, such as a camera's focal length and distortion coefficients. <strong>Extrinsic calibration</strong> finds the rigid transformation between two sensors, so that their data can be expressed in one frame. Both are usually done before deployment with a calibration target. Targetless methods use the surroundings instead, and the calibration parameters can also be added as extra variables to the SLAM factor graph and refined while the robot runs. <span class="src">§II.2.3 · pp. 190–191</span>
+@@ 59
+Sensors also sample at different rates and instants, and the robot moves in between. When hardware synchronization is not available, measurements are interpolated to a common time, often with the help of a fast sensor like an IMU. <span class="src">§II.2.3 · p. 191</span>
+@@ 60
+Filling the gap: how much does a timestamp error cost?
+@@ 61
+The book says synchronization "must be carefully managed" without numbers. Suppose a measurement is stamped \(\delta t\) too late. The back-end attaches it to the pose the robot had \(\delta t\) later. If the robot moves at speed \(v\) and turns at rate \(\omega\), the pose it is attached to is wrong by about
+@@ 62
+With \(v = 10\) m/s and \(\delta t = 20\) ms, \(\delta p = 0.2\) m. With \(\omega = 90^\circ\)/s, \(\delta\theta = 1.8^\circ\), and a point 20 m away then appears displaced sideways by \(20\tan 1.8^\circ \approx 0.63\) m. Rotation is the dangerous part, for the same reason heading errors dominated drift in <a href="#d1">Week 1 · Day 1</a>: an angle error is multiplied by distance.
+@@ 63
+5. How SLAM is scored
+@@ 64
+Evaluation is done per module: odometry, place recognition, mapping. The most common score is trajectory accuracy against a <strong>ground-truth</strong> trajectory from a much better instrument, which is expensive to obtain and indoors may reduce to a few surveyed points. Place recognition is scored like a classifier, with precision and recall. Maps are the hardest to score: a reference map needs something like a terrestrial laser scanner, and memory use and fine structure count as well as global accuracy. <span class="src">§II.3 · pp. 191–192</span>
+@@ 65
+Filling the gap: ATE and RPE
+@@ 66
+The book points to the literature for trajectory metrics. Two are used almost everywhere. Let \(\mathbf{P}_i\) be the estimated poses and \(\mathbf{Q}_i\) the ground-truth poses, with positions \(\mathbf{p}_i\) and \(\mathbf{q}_i\), for \(i = 1,\dots,n\).
+@@ 67
+<strong>Absolute trajectory error (ATE).</strong> The two trajectories live in different frames (the estimate starts at its own origin), so first find the rigid transformation \((\mathbf{R},\mathbf{t})\) that best lays the estimate over the ground truth, then take the root-mean-square position difference:
+@@ 68
+The alignment has a closed-form solution (you will derive it in Week 13). For a monocular camera, which cannot observe scale, a scale factor is estimated too.
+@@ 69
+<strong>Relative pose error (RPE).</strong> Compare motions instead of positions. Over an interval of \(\Delta\) poses, the estimated motion is \(\mathbf{P}_i^{-1}\mathbf{P}_{i+\Delta}\) and the true motion is \(\mathbf{Q}_i^{-1}\mathbf{Q}_{i+\Delta}\). Their mismatch is the pose
+@@ 70
+where \(\operatorname{trans}(\cdot)\) takes the translation part and \(m = n - \Delta\). The rotation part of \(\mathbf{E}_i\) gives a rotational RPE in the same way. No alignment is needed, because a relative motion does not depend on the frame.
+@@ 71
+ATE measures global consistency, which is what loop closures buy. RPE measures drift per unit of travel, which is what an odometry module should be judged on.
+@@ 72
+Try it: the estimate has small random noise and one sudden 10° heading error at step 10. Set the one-off error to 0° and back. Then raise the interval Δ.
+@@ 73
+Notice that at the default settings RPE over one step is about 0.03 m, because 59 of the 60 steps are almost perfect, while ATE is about 0.6 m: one bad step bends everything after it. Removing the one-off error drops ATE to about 0.24 m. With Δ = 10 the same trajectory has an RPE of about 0.5 m, so an RPE value means nothing without its interval.
+@@ 74
+For place recognition, count the proposed matches that are right (true positives, TP), proposed but wrong (false positives, FP), and real revisits that were missed (false negatives, FN). Then
+@@ 75
+Example: 50 proposals, 45 correct, 90 real revisits. Precision is \(45/50 = 0.9\), recall is \(45/90 = 0.5\), and \(F_1 = 0.9/1.4 \approx 0.64\). A detector has a threshold; sweeping it traces the precision-recall curve, and the area under that curve (AUC) summarizes it in one number. <span class="src">§II.3 · p. 191</span>
+@@ 76
+<strong>"Place recognition gives the loop-closure factor."</strong> It gives a candidate pair. The factor comes from the second step, registering the two measurements to get a relative pose.
+@@ 77
+<strong>"A low RPE means the map is globally right."</strong> RPE over short intervals is blind to slow drift. A trajectory can have excellent RPE and be many meters off at the end.
+@@ 78
+<strong>"Fusion means averaging sensor outputs."</strong> In a factor graph each sensor contributes its own factors with its own noise model, and one optimization uses all of them.
+@@ 79
+Q1. Which of these enters the factor graph as a unary factor?
+@@ 80
+Visual odometry between two consecutive frames
+@@ 81
+An IMU preintegration factor
+@@ 82
+A GPS position fix
+@@ 83
+A LiDAR loop closure
+@@ 84
+A GPS fix constrains the position of a single node. The other three relate two nodes, so they are binary factors.
+@@ 85
+Q2. A place-recognition module proposes 40 loop closures. 30 are correct. The robot actually revisited 60 places. What are precision and recall?
+@@ 86
+Precision 0.75, recall 0.50
+@@ 87
+Precision 0.50, recall 0.75
+@@ 88
+Precision 0.75, recall 0.67
+@@ 89
+Precision 0.67, recall 0.50
+@@ 90
+Precision = 30/40 = 0.75 (how many proposals are right). Recall = 30/60 = 0.50 (how many real revisits were found).
+@@ 91
+Q3. A visual odometry system without loop closure is very accurate from frame to frame. It runs along a 2 km path. What do you expect?
+@@ 92
+Both ATE and RPE are small
+@@ 93
+RPE is large, ATE is small
+@@ 94
+Both are large
+@@ 95
+RPE over short intervals is small, ATE is large
+@@ 96
+Small per-step errors keep RPE small, but they accumulate without bound, and ATE measures the accumulated error. Only loop closures or absolute measurements bound it.
+@@ 97
+Q4. A camera's timestamps are 10 ms late while the robot turns at 100°/s. Roughly how far sideways does a point 10 m away appear displaced?
+@@ 98
+1.7 cm
+@@ 99
+17 cm
+@@ 100
+Nothing: a time offset only matters when the robot translates
+@@ 101
+The heading error is 100°/s × 0.01 s = 1°, and 10 m × tan 1° ≈ 0.17 m.
+@@ 102
+Part II is the front-end, one chapter per sensor: cameras, LiDAR, radar, event cameras, IMUs, legs.
+@@ 103
+Odometry gives binary factors between consecutive nodes, by matching, velocity integration, or preintegration. It drifts.
+@@ 104
+Loop closure = place recognition (retrieve a candidate) + relative pose estimation (produce the factor). It needs discernibility and scalability.
+@@ 105
+Unary factors and priors constrain single nodes. Calibration (intrinsic, extrinsic) and time synchronization decide whether fused factors are consistent.
+@@ 106
+ATE scores global consistency after alignment; RPE scores drift over a stated interval; place recognition is scored by precision and recall.
+@@ 107
+<em>SLAM Handbook</em>, Prelude to Part II, §II.1–II.4, pp. 185–192.
+@@ 108
+ATE and RPE definitions follow Sturm, Engelhard, Endres, Burgard, Cremers, <em>A Benchmark for the Evaluation of RGB-D SLAM Systems</em>, 2012, and Zhang and Scaramuzza, <em>A Tutorial on Quantitative Trajectory Evaluation for Visual(-Inertial) Odometry</em>, 2018.
+@@ 109
+Precision, recall, and F1 are the standard definitions from information retrieval.

@@ -1,0 +1,190 @@
+@@ 1
+<span class="eyebrow">Week 16 · Day 5</span>
+@@ 2
+Bias updates, the IMU factor, and better integration
+@@ 3
+After today you can correct preintegrated measurements for a changed bias estimate without re-integrating, write the residuals of the IMU factor and the bias factor, and say what the rectangle rule costs in accuracy.
+@@ 4
+About 60 min · Read §11.2.2.3 to §11.2.3, pp. 314–319 (5 pages) · Needs Week 16 Day 4 and Week 2 Day 2
+@@ 5
+Read first: §11.2.2.3, §11.2.2.4, §11.2.3, pp. 314–319
+@@ 6
+Start at "Incorporating Bias Updates" at the bottom of p. 314 and stop where §11.3 begins on p. 319. Look for:
+@@ 7
+In (11.30) on p. 315: which update is a multiplication and which are additions, and the sentence saying the Jacobians "remain constant".
+@@ 8
+In (11.31): match each residual to a line of yesterday's (11.23).
+@@ 9
+The bias model (11.32)–(11.34) on pp. 315–316, and how the discrete covariance scales with \(\Delta t_{ij}\).
+@@ 10
+The RMSE values in the titles of Figures 11.2 and 11.3 (pp. 317–318). Rank the four methods.
+@@ 11
+On p. 319, equations (11.35)–(11.36): why rotation is harder to integrate than acceleration.
+@@ 12
+Yesterday's increments were free of the pose and velocity at keyframe \(i\) but still depended on the bias estimate. A first-order correction, with Jacobians accumulated during the one integration, removes that last reason to re-integrate. The corrected increments then enter the factor graph as one 9-dimensional residual per pair of keyframes, joined by a small factor that says the bias changes slowly.
+@@ 13
+1. When the bias estimate changes
+@@ 14
+The increments \(\Delta\tilde{\mathbf{R}}_{ij}, \Delta\tilde{\mathbf{v}}_{ij}, \Delta\tilde{\mathbf{p}}_{ij}\) were computed by subtracting a bias estimate \(\bar{\mathbf{b}}_i = \{\bar{\mathbf{b}}^g_i, \bar{\mathbf{b}}^a_i\}\) from every sample. The biases are unknowns of the optimization, so the solver will revise them: \(\mathbf{b} \leftarrow \bar{\mathbf{b}} + \delta\mathbf{b}\). Re-integrating would bring back the cost preintegration was meant to remove. The book instead expands to first order in \(\delta\mathbf{b}\): <span class="src">§11.2.2.3 · pp. 314–315</span>
+@@ 15
+The vectors are corrected by adding. The rotation is corrected by multiplying with a small rotation on the right, because rotations do not form a vector space (<a href="#d21">Week 4 · Day 3</a>). The five Jacobians are evaluated at \(\bar{\mathbf{b}}_i\), computed once during preintegration, and then stay constant. The book gives no formulas for them and refers to the original paper. <span class="src">§11.2.2.3 · p. 315</span>
+@@ 16
+Filling the gap: what the Jacobians look like
+@@ 17
+<strong>Accelerometer bias.</strong> Look at the recipe \(\Delta\tilde{\mathbf{v}}_{ij} = \sum_k\Delta\tilde{\mathbf{R}}_{ik}(\tilde{\mathbf{a}}_k - \mathbf{b}^a)\Delta t\). It is linear in \(\mathbf{b}^a\), so the derivative can be read off and the correction is exact:
+@@ 18
+If the body does not rotate these are \(-\Delta t_{ij}\mathbf{I}\) and \(-\tfrac12\Delta t_{ij}^2\mathbf{I}\): a bias of \(\delta b\) removes \(\delta b\,\Delta t_{ij}\) of velocity and \(\tfrac12\delta b\,\Delta t_{ij}^2\) of position, as for any constant acceleration.
+@@ 19
+<strong>Gyroscope bias, in the plane.</strong> The angle increment is \(\Delta\tilde\theta_{ij} = \sum_k(\tilde\omega_k - b^g)\Delta t\), so \(\partial\Delta\theta_{ij}/\partial b^g = -\Delta t_{ij}\), again exact. But a changed gyroscope bias also changes every \(\Delta\tilde{\mathbf{R}}_{ik}\) that rotates an accelerometer sample. Since \(\tfrac{d}{d\theta}\mathbf{R}(\theta) = \mathbf{J}\mathbf{R}(\theta)\) with \(\mathbf{J}\) the 90° rotation,
+@@ 20
+This one is a true first-order approximation, since \(\mathbf{R}(\theta)\) is not linear in \(\theta\). The neglected part is proportional to \((\delta b^g)^2\).
+@@ 21
+<strong>In 3-D</strong> (Forster et al.) the structure is the same: \(\partial\Delta\bar{\mathbf{R}}_{ij}/\partial\mathbf{b}^g = -\sum_k\Delta\tilde{\mathbf{R}}_{k+1\,j}\T\mathbf{J}^k_r\Delta t\), which is (11.28) with the bias error playing the role of a noise that is the same in every sample, and \(\partial\Delta\bar{\mathbf{v}}_{ij}/\partial\mathbf{b}^g = -\sum_k\Delta\bar{\mathbf{R}}_{ik}(\tilde{\mathbf{a}}_k - \bar{\mathbf{b}}^a)^\wedge\,\tfrac{\partial\Delta\bar{\mathbf{R}}_{ik}}{\partial\mathbf{b}^g}\Delta t\). All are running sums, updated with each incoming sample.
+@@ 22
+Try it: the one-second increments of Day 4 were integrated with bias estimate zero. Move the gyroscope bias update and compare three ways of responding.
+@@ 23
+Notice that for a 1°/s update, ignoring it leaves Δp wrong by 31.5 mm, while the first-order correction is within 0.14 mm of a full re-integration and reads no IMU samples. The remaining error grows like the square of the update: at 5°/s it is 3.4 mm, against 157 mm uncorrected. Set the gyroscope update to zero and move the accelerometer slider: the corrected error stays at 0.00 mm, because the increments are exactly linear in the accelerometer bias.
+@@ 24
+2. The preintegrated IMU factor
+@@ 25
+Yesterday's model (11.23) says "computed increment = function of states, plus Gaussian noise with covariance \(\boldsymbol{\Sigma}_{ij}\)". As in <a href="#d8">Week 2 · Day 2</a>, the residual is the difference between the two sides, with the bias-corrected increments of (11.30) in place of the raw ones: <span class="src">§11.2.2.4 · p. 315</span>
+@@ 26
+Stacked, they form \(\mathbf{r}_{\mathcal{I}_{ij}} \in \R^9\), and the factor adds \(\norm{\mathbf{r}_{\mathcal{I}_{ij}}}^2_{\boldsymbol{\Sigma}_{ij}} = \mathbf{r}\T\boldsymbol{\Sigma}_{ij}^{-1}\mathbf{r}\) to the least-squares objective. The rotation residual is the rotation vector of "measured increment inverse times predicted increment": zero when the states reproduce the measurement. The other two are plain differences. The factor touches the rotation, position, and velocity at both keyframes and the bias at \(i\).
+@@ 27
+A planar number: Day 4's widget stored \(\Delta\tilde\theta_{ij} = 19.90^\circ\) with \(\sigma = 0.115^\circ\). If the current states say the robot turned \(\theta_j - \theta_i = 20.50^\circ\), the residual is 0.60°, which is 5.2σ, and it adds \(5.2^2 \approx 27\) to the cost. The optimizer will pull the two orientations toward a 19.9° difference, or shift the gyroscope bias to explain the gap.
+@@ 28 attr
+Factor graph for two keyframes. The top row has two state nodes holding rotation, position and velocity at keyframes i and j, joined by a preintegrated IMU factor. The bottom row has two bias nodes joined by a bias random-walk factor. The IMU factor is also connected to the bias node at i.
+@@ 29
+R, p, v at keyframe i
+@@ 30
+R, p, v at keyframe j
+@@ 31
+IMU factor (11.31)
+@@ 32
+bias factor (11.34)
+@@ 33
+gyro and accel bias at i
+@@ 34
+gyro and accel bias at j
+@@ 35
+What one keyframe interval adds to the graph. Each keyframe carries 15 unknowns: 3 for rotation, 3 for position, 3 for velocity, and 3 for each bias. Camera or LiDAR factors, not drawn, attach to the top nodes.
+@@ 36
+3. A model for the bias itself
+@@ 37
+Inside one interval the bias was treated as constant (11.15). Across intervals it is allowed to move, slowly. The book models it as integrated white noise: <span class="src">§11.2.2.4 · pp. 315–316</span>
+@@ 38
+where the discrete noises have covariances \(\boldsymbol{\Sigma}^{bgd} = \Delta t_{ij}\operatorname{Cov}(\boldsymbol{\eta}^{bg})\) and \(\boldsymbol{\Sigma}^{bad} = \Delta t_{ij}\operatorname{Cov}(\boldsymbol{\eta}^{ba})\). This is the random walk of <a href="#d92">Day 2</a>: the variance of the change grows in proportion to the elapsed time. Compare with the sample noise, whose covariance is <em>divided</em> by \(\Delta t\). The corresponding factor penalizes bias changes between consecutive keyframes:
+@@ 39
+Example: a gyroscope bias random walk of \(2\times10^{-5}\) rad/s²/√Hz and keyframes 0.25 s apart give a standard deviation of \(2\times10^{-5}\times\sqrt{0.25} = 1\times10^{-5}\) rad/s for the change between keyframes. A proposed jump of \(10^{-4}\) rad/s would be a 10σ event and cost 100. Without this factor each keyframe's bias could absorb any disagreement between IMU and camera. With it, the bias has to be a slowly varying curve, which is what makes it estimable.
+@@ 40
+4. Better integration
+@@ 41
+Everything so far used the scheme (11.12), which holds each sample constant until the next one arrives: the <strong>rectangle rule</strong>, or Euler method. §11.2.3 looks at what this costs and at alternatives. <span class="src">§11.2.3.1 · p. 316</span> The book's Figures 11.2 and 11.3 integrate one example acceleration signal over 2 s in four ways and report the errors:
+@@ 42
+Method
+@@ 43
+Signal assumed between samples
+@@ 44
+RMSE velocity
+@@ 45
+RMSE position
+@@ 46
+Euler, low sampling rate (Fig. 11.2, top)
+@@ 47
+constant
+@@ 48
+Euler, higher sampling rate (Fig. 11.2, bottom)
+@@ 49
+Piecewise-linear (Fig. 11.3, top)
+@@ 50
+straight line: a constant-jerk motion model
+@@ 51
+Gaussian process regression (Fig. 11.3, bottom)
+@@ 52
+a smooth curve, no motion model
+@@ 53
+<span class="src">§11.2.3 · pp. 317–318</span> Raising the sampling rate helps, but the rate is a property of the hardware. The other route is a better model of the signal between samples. Try it on a signal of our own:
+@@ 54
+Notice that at 10 Hz the rectangle rule is off by 10.5 mm RMS in position and the piecewise-linear rule by 1.4 mm. Double the rate to 20 Hz: the first halves (5.5 mm), the second drops four-fold (0.33 mm).
+@@ 55
+Filling the gap: first order against second order
+@@ 56
+Over one step the rectangle rule replaces \(a(t)\) by \(a(t_k)\). By Taylor expansion the true integral is \(a(t_k)\Delta t + \tfrac12\dot a(t_k)\Delta t^2 + \dots\), so each step is wrong by about \(\tfrac12\dot a\,\Delta t^2\). There are \(T/\Delta t\) steps, so the accumulated error is of order \(\Delta t\): halve the step, halve the error. The trapezoid rule, which is what integrating a piecewise-linear signal amounts to, cancels that term and leaves a per-step error of order \(\Delta t^3\), hence an accumulated error of order \(\Delta t^2\): halve the step, quarter the error.
+@@ 57
+The methods the book surveys, in brief: <span class="src">§11.2.3 · pp. 316–319</span>
+@@ 58
+<strong>Upsampling.</strong> Fit a Gaussian process (<a href="#d27">Week 5 · Day 3</a>) to the samples and query it at a higher rate, then integrate with the rectangle rule as before.
+@@ 59
+<strong>Closed-form integration under a motion assumption.</strong> Standard preintegration assumes the acceleration is constant in the world frame during a step. Assuming it constant in the body frame ("local" acceleration) matches real motion better; the book quotes about 5% better visual-inertial odometry accuracy on the EuRoC dataset.
+@@ 60
+<strong>Continuous acceleration.</strong> Represent the rotation-corrected samples \(\hat{\mathbf{a}}_k = \Delta\mathbf{R}_{ik}\tilde{\mathbf{a}}_k\) by a continuous function and integrate it analytically: piecewise-linear gives the trapezoid rule, and a Gaussian process with a squared-exponential kernel can be integrated exactly because integration is a linear operation.
+@@ 61
+<strong>Continuous rotation.</strong> The hard part. The exact solution of \(\dot{\mathbf{R}} = \mathbf{R}\boldsymbol{\omega}^\wedge\) is an infinite product of small rotations (11.35), with no general closed form because rotations do not commute. One approach works on the rotation vector \(\mathbf{r}(t)\), with \(\mathbf{R} = \Exp(\mathbf{r})\), whose dynamics are \(\dot{\mathbf{r}} = \mathbf{J}_r(\mathbf{r})^{-1}\boldsymbol{\omega}^b_b\) (11.36), and fits a Gaussian process to \(\dot{\mathbf{r}}\) using the gyroscope readings. The book reports accuracy gains of at least an order of magnitude over the standard discrete scheme. <span class="src">§11.2.3.3 · p. 319</span>
+@@ 62
+Rotation errors matter more than they look, for the reason found on Day 3. Go back to <a href="#d93">the dead-reckoning widget</a>, set every bias and noise slider to zero, and switch the gyroscope output to "instantaneous sample": the error after 20 s jumps from 6 cm to 2.8 m. Nothing is wrong with the sensor. The rectangle rule on the pitch rate leaves a tilt error of about a tenth of a degree while the vehicle is on the hills, and gravity does the rest.
+@@ 63
+<strong>"After a bias update the preintegration must be redone."</strong> For small updates the stored Jacobians correct it to first order. A full re-integration is only worth its cost once the bias has moved so far from \(\bar{\mathbf{b}}_i\) that the neglected second-order term matters.
+@@ 64
+<strong>"The bias covariance shrinks with longer intervals, like averaging."</strong> It grows: \(\boldsymbol{\Sigma}^{bgd} = \Delta t_{ij}\operatorname{Cov}(\boldsymbol{\eta}^{bg})\). A random walk wanders further given more time.
+@@ 65
+<strong>"The IMU factor constrains absolute position."</strong> It constrains how the state at \(j\) relates to the state at \(i\). Absolute position and yaw must come from elsewhere, which is next week's topic.
+@@ 66
+Q1. In (11.30) the velocity and position increments are corrected by adding a term, but the rotation increment by multiplying with Exp(·). Why?
+@@ 67
+The gyroscope bias is larger than the accelerometer bias
+@@ 68
+Multiplication is cheaper than addition for matrices
+@@ 69
+Rotations are not a vector space; a small change is applied by composing with a small rotation
+@@ 70
+The rotation increment does not depend on the bias
+@@ 71
+Adding a matrix to a rotation matrix does not give a rotation. On SO(3) a perturbation is a small rotation multiplied on, here on the right, as in Week 4.
+@@ 72
+Q2. Planar case. With bias estimate zero, the preintegrated angle over Δt_ij = 1 s is 20.0°. The gyroscope bias estimate is updated to +0.5°/s. The corrected angle increment is
+@@ 73
+The Jacobian is −Δt_ij = −1 s, so the correction is −1 × 0.5 = −0.5°. A positive bias means the gyroscope over-reported the rate.
+@@ 74
+Q3. The time between two keyframes doubles. The standard deviation that the bias factor (11.34) allows for the bias change
+@@ 75
+grows by √2
+@@ 76
+doubles
+@@ 77
+halves
+@@ 78
+is unchanged
+@@ 79
+The covariance is Δt_ij times the continuous one, so it doubles, and the standard deviation grows by √2.
+@@ 80
+Q4. The sampling rate of a smooth acceleration signal is raised four-fold. By roughly what factor does the error of piecewise-linear (trapezoid) integration fall?
+@@ 81
+The trapezoid rule is second order: error proportional to Δt². A step four times smaller gives an error 16 times smaller. The rectangle rule would improve only four-fold.
+@@ 82
+Q5. Which unknowns does the preintegrated IMU factor (11.31) between keyframes i and j involve?
+@@ 83
+Only the poses at i and j
+@@ 84
+Rotation, position, and velocity at i and at j, and the bias at i
+@@ 85
+One state for every IMU sample between i and j
+@@ 86
+Only the biases at i and j
+@@ 87
+The residuals contain R, p, v at both ends and, through δb, the bias at i. The bias at j enters through the separate bias factor (11.34).
+@@ 88
+A changed bias estimate is absorbed by a first-order update of the increments, equation (11.30), using Jacobians accumulated during preintegration. No samples are re-read.
+@@ 89
+The update is exact in the accelerometer bias and approximate, with an error quadratic in the update, in the gyroscope bias.
+@@ 90
+The IMU factor is the 9-dimensional residual (11.31) weighted by \(\boldsymbol{\Sigma}_{ij}\), linking rotation, position, velocity at two keyframes and the bias at the first.
+@@ 91
+The bias is a random walk between keyframes, with covariance proportional to \(\Delta t_{ij}\), equations (11.32)–(11.34).
+@@ 92
+Standard preintegration uses the rectangle rule. Piecewise-linear and Gaussian-process models of the signal integrate more accurately, and rotation is the hard part.
+@@ 93
+<em>SLAM Handbook</em>, §11.2.2.3 "Incorporating Bias Updates", §11.2.2.4 "Preintegrated IMU Factors and Bias Models", §11.2.3 "Advanced Preintegration Techniques", pp. 314–319.
+@@ 94
+Forster, Carlone, Dellaert, Scaramuzza, <em>On-Manifold Preintegration for Real-Time Visual-Inertial Odometry</em>, IEEE Transactions on Robotics, 2017 (the bias Jacobians).
+@@ 95
+Süli and Mayers, <em>An Introduction to Numerical Analysis</em>, 2003 (error orders of the rectangle and trapezoid rules).

@@ -1,0 +1,320 @@
+@@ w01
+"Top view of a robot driving a square loop: the true path, the path from odometry alone, and the path after a loop closure"
+==
+"정사각형 loop를 도는 로봇을 위에서 본 모습: 실제 경로, odometry만으로 얻은 경로, loop closure 후의 경로"
+@@ w01
+"start",{"text-anchor":"end"
+==
+"시작",{"text-anchor":"end"
+@@ w01
+stat("Gap between start and end",
+==
+stat("시작과 끝 사이 간격",
+@@ w01
++" steps"
+==
++" step"
+@@ w01
+"odometry only"
+==
+"odometry만"
+@@ w01
+stat("Mean position error",
+==
+stat("평균 위치 오차",
+@@ w01
+"after the loop closure"
+==
+"loop closure 후"
+@@ w01
+"press Close the loop"
+==
+"loop 닫기를 누르세요"
+@@ w01
+"true path"
+==
+"실제 경로"
+@@ w01
+"after loop closure"
+==
+"loop closure 후"
+@@ w01
+"gap a loop closure would measure"
+==
+"loop closure가 측정할 간격"
+@@ w01
+"Close the loop"
+==
+"loop 닫기"
+@@ w01
+"Loop closed ✓"
+==
+"loop 닫힘 ✓"
+@@ w01
+h("div",{class:"vt"},"Drift around a square")
+==
+h("div",{class:"vt"},"정사각형을 도는 drift")
+@@ w01
+"40 odometry steps of one unit each, with a 90° turn at each corner. The same noise is used for every curve until you press New noise."
+==
+"길이 1인 odometry step 40개, 모서리마다 90° 회전. 새 noise를 누르기 전까지는 모든 곡선에 같은 noise를 씁니다."
+@@ w01
+range("Heading noise per step",
+==
+range("step당 heading noise",
+@@ w01
+range("Distance noise per step",
+==
+range("step당 거리 noise",
+@@ w01
+button("New noise",
+==
+button("새 noise",
+@@ w01
+"Three bell curves over the robot's position: the prior, the likelihood of the measurement, and the narrower posterior that lies between them"
+==
+"로봇 위치에 대한 종 모양 곡선 세 개: prior, 측정값의 likelihood, 그리고 둘 사이에 놓인 더 좁은 posterior"
+@@ w01
+"the measurement alone"
+==
+"측정값만"
+@@ w01
+"prior and measurement"
+==
+"prior와 측정값"
+@@ w01
+stat("Posterior standard deviation",
+==
+stat("Posterior 표준편차",
+@@ w01
+", measurement "
+==
+", 측정값 "
+@@ w01
+stat("Weight on the measurement",
+==
+stat("측정값의 가중치",
+@@ w01
+"MAP = prior mean + weight × (z − prior mean)"
+==
+"MAP = prior 평균 + 가중치 × (z − prior 평균)"
+@@ w01
+"A robot's position x along a corridor. The prior comes from odometry, the measurement z from a range sensor. The posterior is computed with Bayes' rule."
+==
+"복도를 따라가는 로봇의 위치 x. prior는 odometry에서, 측정값 z는 range 센서에서 옵니다. posterior는 Bayes' rule로 계산합니다."
+@@ w01
+range("Prior mean",
+==
+range("Prior 평균",
+@@ w01
+range("Measurement z",
+==
+range("측정값 z",
+@@ w01
+range("Measurement σ",
+==
+range("측정 σ",
+@@ w01
+"Two elongated one-sigma uncertainty ellipses, A and B, with draggable centres, and the smaller ellipse of the fused estimate"
+==
+"중심을 드래그할 수 있는 길쭉한 1-sigma 불확실성 타원 A와 B, 그리고 융합 추정값의 더 작은 타원"
+@@ w01
+"   ← information of the fused estimate"
+==
+"   ← 융합 추정값의 information"
+@@ w01
+stat("Fused mean",
+==
+stat("융합 평균",
+@@ w01
+stat("Fused ellipse half-axes",
+==
+stat("융합 타원 반축",
+@@ w01
+"1-sigma. A and B: "
+==
+"1-sigma. A와 B는 각각 "
+@@ w01
++" each")
+==
++"")
+@@ w01
+stat("Fused ellipse area",
+==
+stat("융합 타원 넓이",
+@@ w01
+"% of A's"
+==
+"% (A 대비)"
+@@ w01
+"smaller means more certain"
+==
+"작을수록 더 확실함"
+@@ w01
+h("div",{class:"vt"},"Fusing two estimates of one point")
+==
+h("div",{class:"vt"},"한 점에 대한 두 추정값의 융합")
+@@ w01
+"A and B are two independent Gaussian estimates of the same landmark position. Each is sure across its ellipse and unsure along it. Drag A or B; turn the ellipses with the sliders."
+==
+"A와 B는 같은 landmark 위치에 대한 두 독립 Gaussian 추정값입니다. 각각 타원의 짧은 방향으로는 확실하고 긴 방향으로는 불확실합니다. A나 B를 드래그하고, 슬라이더로 타원을 돌려 보세요."
+@@ w01
+range("Direction of A's long axis",
+==
+range("A 장축의 방향",
+@@ w01
+range("Direction of B's long axis",
+==
+range("B 장축의 방향",
+@@ w01
+button("Reset positions",
+==
+button("위치 초기화",
+@@ w01
+"estimate A"]
+==
+"추정값 A"]
+@@ w01
+"estimate B"]
+==
+"추정값 B"]
+@@ w01
+"fused estimate"]
+==
+"융합 추정값"]
+@@ w01
+"Six draggable data points with two fitted lines: the weighted least-squares line and the equal-weight line, and the vertical residual of each point"
+==
+"드래그할 수 있는 데이터 점 6개와 fit한 직선 2개(weighted least-squares 직선, 동일 가중 직선), 그리고 각 점의 세로 방향 residual"
+@@ w01
+"no unique line"
+==
+"유일한 직선 없음"
+@@ w01
+stat("Weighted fit",
+==
+stat("가중 fit",
+@@ w01
+"amber point has σ = "
+==
+"주황 점 σ = "
+@@ w01
+", the others σ = 1"
+==
+", 나머지 σ = 1"
+@@ w01
+stat("Equal-weight fit",
+==
+stat("동일 가중 fit",
+@@ w01
+"every σ = 1"
+==
+"모든 σ = 1"
+@@ w01
+stat("Weighted cost",
+==
+stat("가중 cost",
+@@ w01
+"sum of (residual ÷ σ)²"
+==
+"(residual ÷ σ)²의 합"
+@@ w01
+stat("Amber point's residual",
+==
+stat("주황 점의 residual",
+@@ w01
+"= "+(rk/sg).toFixed(2)+" of its own σ"
+==
+"= 자기 σ의 "+(rk/sg).toFixed(2)+"배"
+@@ w01
+h("div",{class:"vt"},"Weighted line fit")
+==
+h("div",{class:"vt"},"가중 직선 fit")
+@@ w01
+"Fits y = x₁ + x₂·t to six measurements by solving the weighted normal equations. Drag any point. The slider sets how much noise you believe the amber measurement has."
+==
+"가중 normal equations를 풀어 측정값 6개에 y = x₁ + x₂·t를 맞춥니다. 아무 점이나 드래그해 보세요. 슬라이더는 주황색 측정값에 noise가 얼마나 있다고 믿는지를 정합니다."
+@@ w01
+range("σ of the amber point",
+==
+range("주황 점의 σ",
+@@ w01
+button("Reset points",
+==
+button("점 초기화",
+@@ w01
+"weighted least squares"]
+==
+"가중 least squares"]
+@@ w01
+"equal weights"]
+==
+"동일 가중치"]
+@@ w01
+"residuals"]
+==
+"residual"]
+@@ w01
+"amber point and its residual"]
+==
+"주황 점과 그 residual"]
+@@ w01
+"100% (failed)"
+==
+"100% (실패)"
+@@ w01
+"failed: AᵀA is not positive definite"
+==
+"실패: AᵀA가 positive definite가 아님"
+@@ w01
+"Relative error of the solution against the condition number of A, for the normal equations and for QR, in single precision"
+==
+"단정밀도에서 normal equations와 QR로 구한 해의 상대 오차를 A의 condition number에 대해 그린 그래프"
+@@ w01
+label:"relative error"
+==
+label:"상대 오차"
+@@ w01
+"1 + ε² in single precision = "
+==
+"단정밀도에서 1 + ε² = "
+@@ w01
+"   ← the ε² is gone"
+==
+"   ← ε²가 사라짐"
+@@ w01
+stat("Condition number of A",
+==
+stat("A의 condition number",
+@@ w01
+"κ(A), with ε = "
+==
+"κ(A), ε = "
+@@ w01
+stat("Condition number of AᵀA",
+==
+stat("AᵀA의 condition number",
+@@ w01
+"= κ(A)², what the normal equations see"
+==
+"= κ(A)², normal equations가 보는 값"
+@@ w01
+stat("Error, normal equations",
+==
+stat("오차, normal equations",
+@@ w01
+"relative to the exact answer"
+==
+"정확한 답 대비"
+@@ w01
+stat("Error, QR",
+==
+stat("오차, QR",
+@@ w01
+h("div",{class:"vt"},"Squaring the condition number")
+==
+h("div",{class:"vt"},"condition number의 제곱")
+@@ w01
+"Two poses, one odometry measurement x₂ − x₁ = 1, and a GPS fix on each pose (0.4 and 1.1). The same least-squares problem is solved in single precision (about 7 digits) two ways and compared with the double-precision answer."
+==
+"pose 2개, odometry 측정 x₂ − x₁ = 1 하나, 그리고 각 pose에 GPS fix (0.4와 1.1). 같은 least-squares 문제를 단정밀도(약 7자리)에서 두 가지 방법으로 풀고 배정밀도 답과 비교합니다."

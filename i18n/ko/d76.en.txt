@@ -1,0 +1,214 @@
+@@ 1
+<span class="eyebrow">Week 13 · Day 4</span>
+@@ 2
+LiDAR place recognition: describing a whole scan
+@@ 3
+After today you can state the place recognition problem, build a ring-and-sector descriptor of a scan, compare two descriptors under rotation by a column shift, and explain invariance, awareness, and structural aliasing.
+@@ 4
+About 60 min · Read §8.3, pp. 236–240 (4 pages) · Needs Week 11 Day 5
+@@ 5
+Read first: §8.3, pp. 236–240
+@@ 6
+The two difficulties specific to LiDAR: sparse data and structural aliasing (p. 237, Figure 8.6 on p. 236).
+@@ 7
+The definitions of query and database (p. 237), and the three sources of variation between them (p. 238).
+@@ 8
+The difference between invariance and awareness, and the two reasons awareness is worth having (p. 238).
+@@ 9
+The two coarse representations behind global descriptors: bird's-eye view and range image (p. 239).
+@@ 10
+Odometry drifts, so a robot cannot use its own pose estimate to decide that it is back where it was. It has to recognize the place from the scan alone. <strong>Place recognition</strong> compresses each scan into a <strong>descriptor</strong> and looks for similar descriptors among those stored earlier. A good descriptor does not care how the robot was turned when it took the scan, and a better one also tells you by how much it was turned, because the next step, ICP, needs a starting guess.
+@@ 11
+1. A retrieval problem
+@@ 12
+The task is to detect loop-closure candidates. The <strong>query</strong> is the current scan. The <strong>database</strong> is the set of place descriptors collected so far. The goal is to retrieve the database entries that are similar to the query. <span class="src">§8.3.1 · p. 237</span> The same machinery serves multi-session SLAM and global localization in a prior map. <span class="src">§8.3 · p. 236</span>
+@@ 13 attr
+Pipeline: the query scan is turned into a descriptor, the descriptor is compared with the stored descriptors of the database, the best match gives a candidate place and a heading guess, and ICP verification turns the candidate into a loop-closure constraint.
+@@ 14
+Query scan
+@@ 15
+Search the
+@@ 16
+database
+@@ 17
+Candidate
+@@ 18
++ heading guess
+@@ 19
+ICP and
+@@ 20
+checks
+@@ 21
+descriptors of earlier scans
+@@ 22
+loop-closure
+@@ 23
+constraint
+@@ 24
+Place recognition proposes; fine registration and verification (tomorrow) decide.
+@@ 25
+The query and the stored scan of the same place never look identical. The sensor may differ, time has passed (objects moved, structures changed), and above all the robot's pose differs: a shift or a turn changes how the same surroundings appear in the sensor frame. A method has to be robust to all three at once. <span class="src">§8.3.1 · pp. 237–238</span>
+@@ 26
+2. What makes LiDAR different from a camera
+@@ 27
+LiDAR gives consistent metric 3D structure and is far less affected by lighting than a camera. It brings two difficulties of its own. <span class="src">§8.3 · pp. 236–237</span>
+@@ 28
+What it means
+@@ 29
+How methods respond
+@@ 30
+Sparse data
+@@ 31
+Points are not on a regular grid, their density depends on the sensor and falls with range (Day 1), and resolution is far below an image's
+@@ 32
+Avoid per-point keypoint descriptors; describe segments or the whole scan with one <strong>global descriptor</strong>
+@@ 33
+<strong>Structural aliasing</strong>
+@@ 34
+Different places with the same geometry look the same: the corridors on two floors, two similar road junctions (Figure 8.6)
+@@ 35
+Describe a place by a set of objects or segments (SegMap, InstaLoc); add a camera
+@@ 36
+A camera could tell the two corridors apart by a poster on the wall. A single LiDAR scan cannot, and a global descriptor such as Scan Context typically fails there. <span class="src">§8.3 · p. 237</span>
+@@ 37
+3. A global descriptor you can compute by hand
+@@ 38
+Global descriptors summarize the coarse pattern of the entire scan. One family starts from a <strong>bird's-eye view (BEV)</strong>: look at the cloud from above and lay a coarse grid over it, either polar or a sparse regular grid. Scan Context uses the polar version and aligns two descriptors in yaw to become independent of heading. <span class="src">§8.3.2.2 · p. 239</span> The book stops at this description, so here is the construction.
+@@ 39
+Filling the gap: the polar descriptor and its distance
+@@ 40
+Divide the ground plane around the sensor into \(N_r\) <strong>rings</strong> (by distance) and \(N_s\) <strong>sectors</strong> (by azimuth). A point at range \(r\) and azimuth \(\alpha\) falls into ring \(\lfloor N_r\, r / L_{\max} \rfloor\) and sector \(\lfloor N_s\, \alpha / 2\pi \rfloor\). Store one number per bin in an \(N_r \times N_s\) matrix \(\mathbf{I}\): in Scan Context, the maximum height of the points in the bin, or zero for an empty bin. The original paper uses 20 rings, 60 sectors, and \(L_{\max} = 80\) m.
+@@ 41
+<strong>Rotation becomes a shift.</strong> If the robot stands at the same spot but is turned by \(\psi\), every point's azimuth changes by \(-\psi\) and its range stays the same. Rows are unaffected; columns move sideways by \(\psi/(360^\circ/N_s)\) positions, wrapping around.
+@@ 42
+<strong>Distance.</strong> Compare column \(j\) of the query, \(\mathbf{c}^q_j\), with column \(j\) of the candidate, \(\mathbf{c}^c_j\), by the cosine distance, average over the columns, and take the best over all column shifts \(n\) of the candidate:
+@@ 43
+The minimizing shift \(n^\ast\) is a by-product with a meaning: the heading difference is \(n^\ast \times 360^\circ/N_s\).
+@@ 44
+<strong>Tiny example</strong>, 2 rings by 4 sectors (each sector is 90°). Stored and query descriptors:
+@@ 45
+With no shift, the four column pairs have cosines \(6/(2\sqrt{10}) = 0.949\), \(0\), \(3/(3\sqrt2) = 0.707\), and \(4/\sqrt{20} = 0.894\), so \(d = \tfrac14(0.051 + 1 + 0.293 + 0.106) = 0.36\). Shift the stored columns right by one and they equal the query's exactly: \(d = 0\). So \(D = 0\) at \(n^\ast = 1\): same place, heading differs by one sector, 90°.
+@@ 46
+Try it: the stored scan and the query are taken at almost the same spot in the room, with the query turned. The toy stores the number of points in each bin (a 2D scan has no height). Change the heading, then increase the position offset.
+@@ 47
+Notice that with the query turned by 90° and 0.3 m away, the distance curve has one clear minimum at a shift of 18 columns, which gives a heading change of 90°, and that the third grid then lines up with the first. The distance there is 0.15, against 0.67 for a scan taken 4 m away. Push the offset to 1.5 m: the distance to the same place rises to 0.53 and the heading estimate becomes wrong. The column shift handles rotation, not translation.
+@@ 48
+Unroll the view around you into a strip, like a panorama photo. Turning on the spot does not change the panorama; it only changes where the strip was cut. To compare two panoramas of the same place, slide one along the other until they agree. How far you had to slide is how much you had turned.
+@@ 49
+Trying every shift against every database entry is slow. Scan Context first searches with a short vector of one number per ring, which does not change under rotation because a row summary ignores the order of the columns, and runs the shift comparison only on the nearest few candidates.
+@@ 50
+4. Invariance and awareness
+@@ 51
+The book separates two levels of robustness to the pose difference between query and database. <span class="src">§8.3.1 · p. 238</span>
+@@ 52
+In the polar descriptor
+@@ 53
+<strong>Invariance</strong>
+@@ 54
+The method finds the right candidate although the pose differs, but cannot say what the difference is
+@@ 55
+The per-ring vector: identical for any heading, silent about the heading
+@@ 56
+<strong>Awareness</strong>
+@@ 57
+The method also estimates the pose difference
+@@ 58
+The best column shift: a heading estimate with a resolution of one sector
+@@ 59
+Awareness is worth the effort for two reasons. It hands the fine registration a starting guess, and Day 2 showed what ICP does without one. And aiming at awareness tends to improve invariance too, for example by estimating heading changes or the degree of overlap between two scans. <span class="src">§8.3.1 · p. 238</span>
+@@ 60
+5. The families of methods
+@@ 61
+Note from the book
+@@ 62
+Local descriptors
+@@ 63
+A descriptor per keypoint, as in visual place recognition; or histograms of local keypoints
+@@ 64
+Descriptors made for dense RGB-D clouds struggle with sparse outdoor LiDAR, and lack the context of the whole scan (pp. 238–239)
+@@ 65
+Global, bird's-eye view
+@@ 66
+A coarse top-down image, polar or a sparse grid (Scan Context++, RING++)
+@@ 67
+Scan Context aligns in yaw; RING++ proves invariance and awareness using the Radon transform (p. 239)
+@@ 68
+Global, range image
+@@ 69
+The scan as a dense image of ranges, processed with CNNs or vision transformers (OverlapNet, FRAME)
+@@ 70
+Suits dense multi-beam sensors and reuses computer-vision tools (p. 239)
+@@ 71
+Segmentation-based
+@@ 72
+A place as a set of objects or segments (SegMap, InstaLoc)
+@@ 73
+More distinctive, less prone to aliasing than one descriptor per scan (p. 239)
+@@ 74
+Local plus global
+@@ 75
+Keep local geometry and overall structure together (BTC)
+@@ 76
+Global descriptors assume a consistent viewing direction, as for vehicles on roads; this relaxes that (pp. 239–240)
+@@ 77
+Learned on raw points
+@@ 78
+Networks extract point-wise features without hand-made rules
+@@ 79
+Training for place discrimination and relative pose together improved registration (p. 240)
+@@ 80
+LiDAR and visual place recognition play the same role and are judged by the same metrics, and they tend to fail in different places. Robots that carry both sensors often use both. <span class="src">§8.3.3 · p. 240</span>
+@@ 81
+<strong>"The robot can find loop closures by checking which old poses are near its current pose estimate."</strong> After a long loop the estimate may be off by more than the distance between distinct places. Place recognition must work from appearance. A pose prior can narrow the search only while the drift is small.
+@@ 82
+<strong>"A rotation-invariant descriptor is also translation-invariant."</strong> A polar grid is centred on the sensor. Moving the sensor sideways changes ranges and azimuths together and reshuffles the bins, as the widget shows.
+@@ 83
+<strong>"A descriptor match is a loop closure."</strong> It is a candidate. Two identical corridors match perfectly. The candidate still has to survive registration and verification.
+@@ 84
+Q1. A polar descriptor has 60 sectors. The best match with a stored descriptor is found at a shift of 9 columns. By how much do the two headings differ?
+@@ 85
+Each sector spans 360°/60 = 6°, and 9 × 6° = 54°.
+@@ 86
+Q2. A method retrieves the correct place whatever the robot's heading, but outputs nothing about the heading. In the book's terms it has
+@@ 87
+awareness but not invariance
+@@ 88
+both invariance and awareness
+@@ 89
+invariance but not awareness
+@@ 90
+neither
+@@ 91
+Invariance: the candidate is found despite the pose difference. Awareness would additionally estimate that difference, which is what gives ICP its starting guess.
+@@ 92
+Q3. A robot maps an office building. Its place recognition keeps matching the corridor on floor 3 to the corridor on floor 2. What is this, and what helps?
+@@ 93
+Motion distortion; deskew the scans
+@@ 94
+Sparse data; use a sensor with more beams
+@@ 95
+Lack of rotation invariance; shift the columns
+@@ 96
+Structural aliasing; describe places by segments or objects, or use a camera
+@@ 97
+The geometry of the two corridors is the same, so one descriptor per scan cannot separate them. Object- or segment-level descriptions, or visual texture, can.
+@@ 98
+Q4. Two descriptor columns are a = (1, 0, 2) and b = (2, 0, 4). What is their cosine distance, 1 − a·b/(|a||b|)?
+@@ 99
+b = 2a, so the vectors are parallel: a·b = 10, |a||b| = √5 × √20 = 10, and the distance is 1 − 1 = 0. Cosine distance compares the pattern of a column, not its overall size.
+@@ 100
+Place recognition retrieves, for a query scan, similar entries from a database of descriptors of visited places. It produces loop-closure candidates.
+@@ 101
+LiDAR data is sparse and unstructured, which favours global descriptors, and geometry repeats, which causes structural aliasing.
+@@ 102
+A polar bird's-eye-view descriptor turns a heading change into a column shift. The best shift gives both a distance and a heading estimate.
+@@ 103
+Invariance finds the place despite the pose difference; awareness also estimates the difference and gives registration its starting guess.
+@@ 104
+Families: local, global (BEV or range image), segment-based, local plus global, and learned on raw points. LiDAR and cameras complement each other.
+@@ 105
+<em>SLAM Handbook</em>, §8.3 "LiDAR Place Recognition", pp. 236–240; Figure 8.6.
+@@ 106
+Kim and Kim, <em>Scan Context: Egocentric spatial descriptor for place recognition within 3D point cloud map</em>, 2018 (the ring-and-sector construction, the column-shift distance, the ring key, and the 20 × 60 × 80 m configuration).
+@@ 107
+The widget's descriptor stores point counts instead of maximum heights because its scans are 2D; the comparison is the same.

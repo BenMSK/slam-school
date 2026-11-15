@@ -1,0 +1,240 @@
+@@ 1
+<span class="eyebrow">Week 11 · Day 4</span>
+@@ 2
+Keypoints: detect, describe, match
+@@ 3
+After today you can say what makes an image patch a good keypoint, compute the Harris and Shi-Tomasi corner scores from a second-moment matrix, and match binary descriptors by Hamming distance.
+@@ 4
+About 60 min · Read §7.3.2, pp. 200–204 (5 pages) · Needs Week 11 Day 3
+@@ 5
+Read first: §7.3.2, pp. 200–204
+@@ 6
+The definitions of a keypoint detector and a keypoint descriptor, and the three groups of desirable properties in bold (pp. 200–201).
+@@ 7
+How the Harris detector decides that a patch is a corner, and what Shi-Tomasi does differently (p. 201).
+@@ 8
+The three stages of SIFT, and the two ingredients ORB combines (p. 202).
+@@ 9
+What "describe-and-detect" reverses in D2-Net (pp. 203–204).
+@@ 10
+Feature-based SLAM replaces each image by a few hundred points that it can find again in other images. A <strong>detector</strong> chooses locations where the image changes in every direction, so the location is well defined. A <strong>descriptor</strong> summarizes the neighbourhood as a vector, so that the same point can be recognized later. Thirty years of methods trade speed against invariance to scale, rotation, and lighting.
+@@ 11
+1. What a keypoint must do
+@@ 12
+<strong>Keypoints</strong> (or <strong>features</strong>) are salient image regions that are distinctive and can be re-detected from other viewpoints, in other runs, and under other conditions. A <strong>keypoint detector</strong> finds them. A <strong>keypoint descriptor</strong> encodes the local appearance around each one in a compact vector. <span class="src">§7.3.2 · p. 200</span> The desirable properties are: <span class="src">§7.3.2 · p. 201</span>
+@@ 13
+<strong>Scale and rotation invariance</strong>: the same point is found, and described the same way, when the camera moves closer or rolls.
+@@ 14
+<strong>Repeatability and distinctiveness</strong>: it is found again, and it is not confused with other points.
+@@ 15
+<strong>Efficiency</strong>: all of this fits in the time between two frames.
+@@ 16
+Matching quality is measured with the precision and recall of <a href="#d61">Day 1</a>. If two images share 100 true correspondences and a matcher returns 80 pairs of which 60 are right, precision is \(60/80 = 0.75\) and recall is \(60/100 = 0.6\). The wrong 20 are the outliers that <a href="#d32">Week 6 · Day 2</a> (RANSAC) and the robust kernels of <a href="#d34">Week 6 · Day 4</a> exist for. Strong lighting changes, textureless surfaces, and moving objects all make detection and matching worse. <span class="src">§7.3.2 · p. 201</span>
+@@ 17
+2. Corners and the second-moment matrix
+@@ 18
+The Harris detector classifies a patch as a keypoint when both eigenvalues of its second-moment matrix are large, meaning the intensity varies strongly in two orthogonal directions. Shi-Tomasi uses the smaller eigenvalue directly; Harris uses a "cornerness" function that avoids computing eigenvalues. <span class="src">§7.3.2.1 · p. 201</span> The book does not define the matrix, so here it is.
+@@ 19
+Filling the gap: where the second-moment matrix comes from
+@@ 20
+Ask: if I slide a small window \(W\) by \(\boldsymbol{\Delta} = (\Delta u, \Delta v)\), how much does its content change? Measure the change by the sum of squared differences,
+@@ 21
+For a small shift, a first-order Taylor expansion gives \(I(u+\Delta u, v+\Delta v) \approx I(u,v) + I_u\,\Delta u + I_v\,\Delta v\), where \(I_u, I_v\) are the image gradients (differences between neighbouring pixels). Substituting,
+@@ 22
+\(\mathbf{M}\) is the <strong>second-moment matrix</strong> (also called the structure tensor). It is symmetric and positive semidefinite, with eigenvalues \(\lambda_1 \ge \lambda_2 \ge 0\). For a shift of unit length, \(E\) lies between \(\lambda_2\) (the direction of least change) and \(\lambda_1\) (the direction of most change). Three cases follow.
+@@ 23
+Eigenvalues
+@@ 24
+Patch
+@@ 25
+Both small
+@@ 26
+Flat
+@@ 27
+No shift changes the patch: it cannot be localized at all
+@@ 28
+\(\lambda_1\) large, \(\lambda_2\) small
+@@ 29
+Edge
+@@ 30
+Sliding along the edge changes nothing: position is known across the edge only
+@@ 31
+Both large
+@@ 32
+Corner
+@@ 33
+Every shift changes the patch: position is well defined
+@@ 34
+<strong>Shi-Tomasi</strong> scores a patch by \(\lambda_2\). <strong>Harris</strong> uses
+@@ 35
+with \(k\) a small constant, commonly 0.04 to 0.06. \(R\) is large and positive for corners, negative for edges, and near zero for flat patches, and it needs only the entries of \(\mathbf{M}\), no square root.
+@@ 36
+<strong>Numbers.</strong> For \(\mathbf{M} = \begin{bmatrix} 10 & 2 \\ 2 & 8 \end{bmatrix}\): the eigenvalues of a symmetric \(2\times2\) matrix \(\begin{bmatrix} a & b \\ b & d \end{bmatrix}\) are \(\tfrac{a+d}{2} \pm \sqrt{\big(\tfrac{a-d}{2}\big)^2 + b^2}\), here \(9 \pm \sqrt{5}\), so \(\lambda_1 = 11.24\), \(\lambda_2 = 6.76\). Both are large: a corner. Harris with \(k = 0.04\): \(R = 76 - 0.04\cdot 18^2 = 63.0\). For \(\mathbf{M} = \begin{bmatrix} 10 & 0 \\ 0 & 0.1 \end{bmatrix}\): \(R = 1 - 0.04\cdot 10.1^2 = -3.08\). Negative: an edge.
+@@ 37
+Try it: press Flat, Edge, and Corner, then rotate the shape, then lower the contrast.
+@@ 38
+Notice that at the corner both eigenvalues are large (0.34 and 0.23 at the default settings), on the edge only one is (0.63 and 0.00, and Harris R is negative), and inside the shape both vanish. The right panel shows that \(\lambda_2\) is large only near the four corners. Rotating the shape changes the entries of \(\mathbf{M}\) but not the verdict. Halving the contrast divides the eigenvalues by four, and below a contrast of about 0.3 the fixed threshold no longer finds the corners: lighting changes are hard for hand-set thresholds.
+@@ 39
+Look at a long straight fence through a small hole. If the fence slides sideways along its own direction you cannot tell. That is an edge, and the effect is called the aperture problem. Now put a fence post corner in the hole: any motion is visible. A good keypoint is a place where the hole pins down both directions.
+@@ 40
+One weakness remains. The window has a fixed size, so the same physical corner seen from twice as far fills the window differently. Harris is not scale invariant, and that is what SIFT and SURF set out to fix. <span class="src">§7.3.2.1 · p. 201</span>
+@@ 41
+3. The classical line
+@@ 42
+Figure 7.2 (p. 201) places the methods on a timeline. In order: <span class="src">§7.3.2.1 · pp. 201–202</span>
+@@ 43
+Method (year in Fig. 7.2)
+@@ 44
+Detects / describes
+@@ 45
+Invariant to
+@@ 46
+Harris (1988)
+@@ 47
+Detector
+@@ 48
+Both eigenvalues of the second-moment matrix large
+@@ 49
+Not scale
+@@ 50
+SIFT (2004)
+@@ 51
+Both
+@@ 52
+Extrema of a difference-of-Gaussians pyramid; orientation from the dominant gradient; 128-dimensional histogram of gradient orientations
+@@ 53
+Scale, rotation; partly illumination
+@@ 54
+FAST (2006)
+@@ 55
+Compare the pixels on a circle around the candidate with its center; reject early
+@@ 56
+SURF (2008)
+@@ 57
+Approximate SIFT with integral images and box filters
+@@ 58
+Scale, rotation
+@@ 59
+BRIEF (2010)
+@@ 60
+A string of bits, each the result of comparing two pixel intensities
+@@ 61
+Neither scale nor rotation
+@@ 62
+ORB (2011)
+@@ 63
+FAST + BRIEF, plus an image pyramid (scale) and the intensity centroid (rotation)
+@@ 64
+BRISK (2011)
+@@ 65
+FAST or Harris corners on a scale-space pyramid; binary descriptor aligned to a dominant direction
+@@ 66
+SIFT set the standard for precision and recall but is expensive. The binary methods are what made real-time visual SLAM practical: ORB and BRISK give up a little distinctiveness for a large gain in speed. When computation is not a constraint, SIFT and SURF may still be preferable for their robustness to lighting and perspective changes. <span class="src">§7.3.2.1 · p. 202</span>
+@@ 67
+The <strong>image pyramid</strong> is how scale invariance is usually obtained: detect on the image and on copies shrunk by a constant factor, so a corner that is too big for the window at full resolution fits it a few levels up. SIFT's 128 numbers come from a \(4\times4\) grid of cells around the keypoint with an 8-bin histogram of gradient directions in each (\(4\cdot4\cdot8 = 128\)).
+@@ 68
+4. Binary descriptors and matching
+@@ 69
+A BRIEF-style descriptor is a bit string: bit \(i\) is 1 if pixel \(a_i\) of the patch is brighter than pixel \(b_i\), for a fixed list of pixel pairs. Two descriptors are compared by the <strong>Hamming distance</strong>, the number of bit positions in which they differ. <span class="src">§7.3.2.1 · p. 202</span>
+@@ 70
+Filling the gap: computing and using the Hamming distance
+@@ 71
+Take the bitwise exclusive-or (XOR) of the two strings and count the ones:
+@@ 72
+Processors do both steps in single instructions on 64 bits at a time, which is why binary descriptors match so fast. A SIFT comparison instead needs a 128-term sum of squared differences.
+@@ 73
+<strong>How small is "close"?</strong> ORB descriptors have 256 bits. As a rough model, treat the bits of two unrelated patches as independent coin flips. Each bit then differs with probability \(\tfrac12\), so the distance is binomial with mean \(256\cdot\tfrac12 = 128\) and standard deviation \(\sqrt{256\cdot\tfrac14} = 8\). A pair at distance 40 is eleven standard deviations below what chance produces. Real bits are correlated, so the separation is less clean, but this is why a threshold well below 128 works.
+@@ 74
+<strong>Matching.</strong> For each descriptor in image 1, find its nearest neighbour in image 2. A common safeguard is the <strong>ratio test</strong>: accept the match only if the nearest distance is clearly smaller than the second-nearest, for example below 0.8 times it. Query 11001010 against candidates 11001110 (distance 1), 01101010 (distance 2), and 00110101 (distance 8): the best is at 1, the runner-up at 2, the ratio is 0.5, so the match is accepted. If the runner-up were also at 1 the point would be ambiguous, typical of repeated texture, and dropped.
+@@ 75
+5. Learned keypoints
+@@ 76
+From the late 2010s, convolutional neural networks (CNNs) trained on large datasets took over, with the largest gains under extreme illumination change. <span class="src">§7.3.2.2 · pp. 203–204</span>
+@@ 77
+What is new
+@@ 78
+LIFT (2016)
+@@ 79
+Detection, orientation, and description in one trainable pipeline working on image patches; trained in the order descriptor, orientation, detector
+@@ 80
+SuperPoint (2018)
+@@ 81
+One forward pass over the whole image yields keypoints and descriptors; self-supervised with homographic adaptation, which generates pseudo-ground-truth keypoints
+@@ 82
+HF-Net (2019)
+@@ 83
+One network outputs keypoints, local descriptors, and a global image descriptor: retrieve similar images first, then match locally
+@@ 84
+D2-Net (2019)
+@@ 85
+Describe-and-detect: compute dense feature maps first, then take keypoints as their local maxima; robust, but heavier than sparse methods
+@@ 86
+The pattern to keep is the pair "local descriptor for matching points, global descriptor for retrieving images". The global one is what place recognition (Day 1, and §7.3.6 on Day 5) runs on. Figure 7.2 also marks SuperGlue (2020) and MASt3R (2024) as recent developments.
+@@ 87
+<strong>"A strong edge is a good keypoint."</strong> Its position along the edge is undetermined. One large eigenvalue is not enough; that is why Shi-Tomasi looks at the smaller one.
+@@ 88
+<strong>"Detector and descriptor are the same thing."</strong> FAST only detects, BRIEF only describes, and ORB is the combination. They can be mixed.
+@@ 89
+<strong>"Matched keypoints are correct correspondences."</strong> Matching by appearance always produces some wrong pairs. Geometry (Day 5) and robust estimation (Week 6) remove them.
+@@ 90
+Q1. A patch has second-moment matrix \(\mathbf{M} = \begin{bmatrix} 9 & 0 \\ 0 & 0.01 \end{bmatrix}\). What is it?
+@@ 91
+A corner
+@@ 92
+An edge
+@@ 93
+A flat region
+@@ 94
+Cannot be decided from M
+@@ 95
+The eigenvalues are 9 and 0.01: strong change in one direction, almost none in the other. That is an edge.
+@@ 96
+Q2. Compute the Harris response for \(\mathbf{M} = \begin{bmatrix} 5 & 1 \\ 1 & 5 \end{bmatrix}\) with \(k = 0.04\).
+@@ 97
+det M = 25 − 1 = 24 and tr M = 10, so R = 24 − 0.04·100 = 20. The eigenvalues are 6 and 4, both large: a corner.
+@@ 98
+Q3. What is the Hamming distance between 11110000 and 10100101?
+@@ 99
+XOR gives 01010101, which has four ones.
+@@ 100
+Q4. The lights dim so that every image gradient is halved. What happens to the eigenvalues of the second-moment matrix?
+@@ 101
+They are unchanged
+@@ 102
+They are halved
+@@ 103
+They are divided by four
+@@ 104
+They are divided by sixteen
+@@ 105
+M sums products of two gradients, so halving the gradients scales M, and its eigenvalues, by one quarter. A fixed threshold on the score then misses corners it found before.
+@@ 106
+Q5. What does ORB add to the combination of FAST detection and BRIEF description?
+@@ 107
+A 128-dimensional gradient histogram
+@@ 108
+Scale invariance from an image pyramid and rotation invariance from the intensity centroid
+@@ 109
+A neural network trained with homographic adaptation
+@@ 110
+Integral images and box filters
+@@ 111
+FAST and BRIEF alone are neither scale nor rotation invariant. ORB detects on a pyramid and orients each patch by its intensity centroid. The histogram is SIFT, the box filters are SURF, the network is SuperPoint.
+@@ 112
+A detector picks repeatable locations; a descriptor makes them recognizable. Wanted: invariance, repeatability, distinctiveness, efficiency.
+@@ 113
+The second-moment matrix \(\mathbf{M}\) measures how a patch changes under a small shift. Corner: both eigenvalues large. Shi-Tomasi: \(\lambda_2\). Harris: \(\det\mathbf{M} - k(\tr\mathbf{M})^2\).
+@@ 114
+SIFT is the robust, expensive reference; FAST, BRIEF, ORB, and BRISK trade some distinctiveness for real-time speed.
+@@ 115
+Binary descriptors are compared with the Hamming distance (XOR, then count bits); a ratio test removes ambiguous matches.
+@@ 116
+Learned methods (LIFT, SuperPoint, HF-Net, D2-Net) cope better with extreme appearance change, at higher computational cost.
+@@ 117
+<em>SLAM Handbook</em>, Chapter 7, §7.3.2 "Keypoints", pp. 200–204, including Figure 7.2.
+@@ 118
+Second-moment matrix derivation and corner scores: Harris and Stephens, <em>A Combined Corner and Edge Detector</em>, 1988; Shi and Tomasi, <em>Good Features to Track</em>, 1994; Szeliski, <em>Computer Vision: Algorithms and Applications</em>, 2010.
+@@ 119
+SIFT descriptor layout and the ratio test: Lowe, <em>Distinctive Image Features from Scale-Invariant Keypoints</em>, 2004.
+@@ 120
+The coin-flip estimate of Hamming distances between unrelated descriptors is a binomial calculation, stated here as an idealization.

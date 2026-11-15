@@ -1,0 +1,208 @@
+@@ 1
+<span class="eyebrow">17주차 · Day 3</span>
+@@ 2
+observability matrix와 네 개의 unobservable 방향
+@@ 3
+오늘이 끝나면 aided inertial system의 observability matrix를 만들고, 그 null vector 네 개를 검증하고, global 위치와 yaw는 추정할 수 없지만 roll, pitch, scale은 추정할 수 있는 이유를 설명할 수 있습니다.
+@@ 4
+약 60분 · §11.3.2, pp. 324–325 읽기 (2쪽) · 17주차 Day 1과 Day 2 필요
+@@ 5
+먼저 읽기: §11.3.2, pp. 324–325
+@@ 6
+p. 325의 §11.3.3 앞에서 멈추세요. 읽으면서 찾아볼 것:
+@@ 7
+observability matrix (11.50)의 블록 행 하나가 무엇으로 이루어지는지 (p. 324).
+@@ 8
+AINS에 unobservable 방향이 몇 개인지, 그리고 그것이 물리적으로 무엇인지 말하는 문장 (p. 324).
+@@ 9
+(11.51)에서 \(\mathbf{I}_3\)이 들어 있는 두 행. 로봇 위치와 점 feature에 해당합니다 (p. 324).
+@@ 10
+이 unobservability가 "병적인 것이 아니다"라고 말하는 p. 325의 문단, 그리고 IMU 없는 SLAM에 관한 각주 9.
+@@ 11
+모든 카메라 frame의 measurement Jacobian을 쌓되, 각각을 transition matrix로 첫 frame까지 거슬러 옮기면 observability matrix \(\mathbf{M}\)을 얻습니다. 위치를 모르는 landmark로 보조한 IMU에서는 \(\mathbf{M}\)의 nullspace 차원이 언제나 4입니다. 해 전체를 세 방향 중 어느 쪽으로 옮기든, gravity 벡터를 축으로 돌리든, 어떤 측정도 바뀌지 않습니다. 그 밖의 모든 것은 roll, pitch, metric scale까지 포함해 일반적으로 observable합니다.
+@@ 12
+1. \(\mathbf{M}\) 만들기
+@@ 13
+Day 2에서 frame \(k\)의 측정 오차는 \(\tilde{\mathbf{z}}_k \simeq \mathbf{H}_{x_k}\tilde{\mathbf{x}}_k\)에 noise를 더한 것이었습니다. 여기서 \(\mathbf{H}_{x_k}\)는 그 frame에서 보인 모든 feature의 Jacobian을 쌓은 것입니다. Day 1은 noise가 없을 때 초기 오차가 전파되는 식을 주었습니다: \(\tilde{\mathbf{x}}_k = \boldsymbol{\Phi}_{(k,1)}\tilde{\mathbf{x}}_1\). 하나를 다른 하나에 대입하고 frame에 걸쳐 쌓으면 식 (11.50)이 됩니다: <span class="src">§11.3.2 · p. 324</span>
+@@ 14
+<a href="#d97">Day 1</a>의 행렬과 같되, 두 가지가 다릅니다. \(\mathbf{H}\)와 \(\boldsymbol{\Phi}\)가 이제 frame마다 바뀌고, 둘 다 linearization point에 의존합니다. 책이 \(\mathbf{M}(\hat{\mathbf{x}})\)로 쓰는 이유입니다. <strong>unobservable subspace</strong>(관측 불가능 부분공간) \(\mathcal{U}\)는 \(\mathbf{M}\)의 nullspace, 즉 \(\mathbf{M}\mathbf{u} = \mathbf{0}\)인 모든 \(\mathbf{u}\)입니다. (책은 nullspace가 "비어 있으면" 시스템이 완전히 observable하다고 말합니다. 엄밀히 말해 nullspace에는 언제나 \(\mathbf{0}\)이 들어 있으므로, 그 밖에는 아무것도 없다는 뜻입니다.)
+@@ 15
+빈틈 채우기: \(\mathbf{M}\)과 information matrix는 nullspace가 같다
+@@ 16
+책은 \(\mathbf{M}\)이 Fisher information matrix와 "밀접하게 관련되어 있다"고 말합니다. 그 관계는 이렇습니다. 측정 noise의 covariance가 \(\boldsymbol{\Sigma}\)이면, 쌓은 모델 \(\tilde{\mathbf{z}} = \mathbf{M}\tilde{\mathbf{x}}_1 + \boldsymbol{\eta}\)는 선형 Gaussian 모델이고, \(\tilde{\mathbf{x}}_1\)에 대한 information matrix는 다음과 같습니다 (<a href="#d57">10주차 · Day 3</a>)
+@@ 17
+\(\mathbf{M}\mathbf{u} = \mathbf{0}\)이면 당연히 \(\boldsymbol{\mathcal{I}}\mathbf{u} = \mathbf{0}\)입니다. 거꾸로 \(\boldsymbol{\mathcal{I}}\mathbf{u} = \mathbf{0}\)이면
+@@ 18
+이는 \(\boldsymbol{\Sigma}^{-1/2}\)가 가역이기 때문입니다. 따라서 unobservable 방향은 정확히 information matrix에서 eigenvalue가 0인 eigenvector입니다. 이 방향으로는 분산의 Cramér-Rao bound가 무한대입니다. 여기서 대수 없이 쓸 수 있는 방법도 나옵니다. \(\mathbf{M}\)을 수치로 계산하고, \(\mathbf{M}\T\mathbf{M}\)의 eigenvalue를 구해서, 0의 개수를 세면 됩니다. 아래 실습이 바로 그렇게 합니다.
+@@ 19
+2. 네 null vector
+@@ 20
+책은 점 하나, 직선 하나, 평면 하나가 있는 state의 nullspace를 식 (11.51)로 제시합니다. 아래는 (11.37)의 state 순서로 쓴 IMU state와 점 feature의 행입니다. 직선과 평면의 행도 같은 논리를 따릅니다. <span class="src">§11.3.2 · pp. 324–325</span>
+@@ 21
+error state의 블록
+@@ 22
+\(\mathbf{u}_1\) (열 하나)
+@@ 23
+\(\mathbf{u}_{2:4}\) (열 셋)
+@@ 24
+회전 \(\tilde{\boldsymbol{\theta}}\)
+@@ 25
+=
+@@ 26
+속도 \(\tilde{\mathbf{v}}\)
+@@ 27
+=
+@@ 28
+위치 \(\tilde{\mathbf{p}}\)
+@@ 29
+점 feature \(\tilde{\mathbf{p}}_f\)
+@@ 30
+아래첨자 1은 "첫 frame에서"라는 뜻이고, \(\mathbf{R}^{c_1}_w\mathbf{g}^w\)는 그 시각의 sensor frame에서 표현한 gravity 벡터입니다.
+@@ 31
+<strong>\(\mathbf{u}_{2:4}\)는 이동입니다.</strong> 세 열은 각각 같은 단위 벡터를 로봇 위치와 모든 feature에 더하고, 그 밖에는 아무것도 건드리지 않습니다.
+@@ 32
+<strong>\(\mathbf{u}_1\)은 gravity 축 둘레의 회전입니다.</strong> world를 축 \(\mathbf{g}\) 둘레로 작은 각 \(\varepsilon\)만큼 돌립니다(회전 벡터 \(\varepsilon\mathbf{g}\)). 그러면 world의 벡터 \(\mathbf{a}\)는 \(\mathbf{a} + \varepsilon\,\mathbf{g}\times\mathbf{a} = \mathbf{a} - \varepsilon\,\mathbf{a}\times\mathbf{g}\)가 됩니다. \(\mathbf{a} = \mathbf{v}_1, \mathbf{p}_1, \mathbf{p}_f\)에 대해 이것이 원소 \(-\mathbf{a}\times\mathbf{g}\)입니다. body orientation도 같은 회전을 받는데, body 좌표로 쓰면 \(\mathbf{R}^{c_1}_w\mathbf{g}^w\)입니다. bias는 body frame에 있으므로 바뀌지 않습니다. gravity 축 둘레의 회전은 <strong>yaw</strong>의 변화입니다.
+@@ 33 attr
+두 패널. 왼쪽은 위에서 본 모습: 로봇과 landmark가 gravity 축을 중심으로 함께 돌아가며, 이 축은 화면 안쪽을 향합니다. 돌린 뒤에도 body에서 본 gravity 벡터는 똑같습니다. 오른쪽은 옆에서 본 모습: gravity는 계속 아래를 향하는데 body가 기울어지므로, body에서 본 gravity의 방향이 바뀝니다.
+@@ 34
+Yaw: gravity 축으로 전체 회전
+@@ 35
+⊗ g는 화면 안쪽: 변하지 않음
+@@ 36
+Tilt: gravity에 대해 전체를 기울임
+@@ 37
+g는 그대로라 body가 회전을 느낌
+@@ 38
+왼쪽: 위에서 보면, 해(실선)와 그것을 gravity 축 둘레로 돌린 사본(점선)은 같은 카메라 ray와 같은 accelerometer 측정값을 냅니다. 오른쪽: 옆에서 보면, 기울인 사본은 body frame에서 gravity의 방향을 바꾸고, accelerometer가 그것을 보고합니다.
+@@ 39
+빈틈 채우기: 이 벡터들이 nullspace에 있는지 확인하기
+@@ 40
+책은 증명을 참고문헌으로 미룹니다. 점 feature라면 짧은 논증 두 개로 충분합니다.
+@@ 41
+<strong>첫 frame에서, Day 2의 Jacobian으로.</strong> \(\mathbf{H}_f = [(\hat{\mathbf{p}}^c_f)^{\wedge},\ \mathbf{0},\ \mathbf{0},\ \mathbf{0},\ -\hat{\mathbf{R}}\T,\ \hat{\mathbf{R}}\T]\)입니다. 이동 \(\mathbf{t}\)에 대해서는 \(-\hat{\mathbf{R}}\T\mathbf{t} + \hat{\mathbf{R}}\T\mathbf{t} = \mathbf{0}\)입니다. \(\mathbf{u}_1\)에 대해서는 \(\mathbf{g}^c = \hat{\mathbf{R}}\T\mathbf{g}\)로 쓰고, 회전을 외적 안으로 옮길 수 있다는 사실 \(\hat{\mathbf{R}}\T(\mathbf{a}\times\mathbf{b}) = (\hat{\mathbf{R}}\T\mathbf{a})\times(\hat{\mathbf{R}}\T\mathbf{b})\)를 씁니다:
+@@ 42
+\(\mathbf{H}_r\)과 \(\mathbf{H}_b\)가 무엇이든, 0 벡터에 곱해질 뿐입니다.
+@@ 43
+<strong>나중의 모든 frame에서, Jacobian 없이.</strong> \(\mathbf{Q}\)를 gravity 축 둘레의 회전이라고 하면 \(\mathbf{Q}\mathbf{g} = \mathbf{g}\)입니다. 회전시킨 초기 state \(\mathbf{Q}\mathbf{R}_1, \mathbf{Q}\mathbf{v}_1, \mathbf{Q}\mathbf{p}_1\)에서, 같은 IMU 측정값과 bias로 적분 (11.12)를 시작합니다. 한 step을 진행하면
+@@ 44
+위치와 회전도 마찬가지입니다. 마지막 등호에 \(\mathbf{Q}\mathbf{g} = \mathbf{g}\)가 필요합니다. 따라서 예측 trajectory 전체가 원래 trajectory를 \(\mathbf{Q}\)로 돌린 것이 됩니다. landmark도 돌리면 sensor frame에서 본 모든 feature가 그대로입니다: \((\mathbf{Q}\mathbf{R})\T(\mathbf{Q}\mathbf{p}_f - \mathbf{Q}\mathbf{p}) = \mathbf{R}\T(\mathbf{p}_f - \mathbf{p})\). 크기에 상관없이 어떤 회전이든, 모든 시각의 모든 측정이 똑같습니다. 각도 0에서 이 회전의 도함수가 \(\mathbf{u}_1\)이므로 \(\mathbf{M}\mathbf{u}_1 = \mathbf{0}\)입니다. 다른 축 둘레의 회전이라면 \(\mathbf{Q}\mathbf{g} \ne \mathbf{g}\)이므로 논증이 첫 step에서 무너집니다. 그래서 roll과 pitch는 <em>observable합니다</em>.
+@@ 45
+3. 직접 계산하기: observability 실습
+@@ 46
+이 실습은 브라우저에서 계산할 수 있을 만큼 작은 2-D visual-inertial 시스템입니다. 로봇은 gyroscope 하나, 2축 accelerometer, 그리고 landmark 세 개까지의 bearing(선택하면 range도)을 재는 카메라를 싣고 있으며, 4초 동안 아홉 번 측정합니다. 미지수는 초기 heading, gyro bias, 속도, accelerometer bias, 위치, landmark 위치로, 책의 순서대로 숫자 14개입니다. 위젯은 IMU 측정값을 고정한 채 모든 카메라 측정값을 이 14개 숫자로 미분합니다. 그 도함수가 \(\mathbf{M}\)입니다. 그다음 \(\mathbf{M}\T\mathbf{M}\)의 eigenvalue를 구합니다.
+@@ 47
+평면은 공간보다 여유가 적으므로 개수가 줄어듭니다:
+@@ 48
+일반적으로 unobservable
+@@ 49
+3-D (책)
+@@ 50
+실습, 위 시점
+@@ 51
+실습, 옆 시점
+@@ 52
+global 위치
+@@ 53
+gravity 축 둘레 회전 (yaw)
+@@ 54
+1 (gravity가 평면에 수직)
+@@ 55
+0 (평면 안에 머무는 그런 회전이 없음)
+@@ 56
+합계
+@@ 57
+직접 해 보기: 먼저 막대그래프와 표를 읽으세요. 그다음 "변화의 크기"를 움직이며 마지막 타일을 지켜보세요. 그다음 "적용할 변화"를 scale로 바꾸세요. 마지막으로 시점을 옆으로 바꾸세요.
+@@ 58
+눈여겨볼 점: 위 시점에서는 14개 eigenvalue 중 세 개가 0이고, 표가 그 정체를 알려 줍니다: x 방향 이동, y 방향 이동, yaw. 분홍 사본은 해를 17° 돌린 것인데, 카메라 측정값은 0° 바뀝니다. 카메라가 monocular인데도 scale은 observable합니다(information 0.688). scale 변화 × 1.25를 적용하면 bearing이 약 8° 움직입니다. 옆 시점에서는 0이 두 개만 남고, 이제 회전이 센서에 보입니다. 회전이 body를 gravity에 대해 기울이기 때문입니다.
+@@ 59
+4. Unobservable하지만 무해하다: gauge freedom
+@@ 60
+책은 이 네 방향이 결함이 아니라고 강조합니다. 어떤 측정도 global frame을 참조하지 않습니다. IMU는 body에 대한 상대 운동을 재고, 카메라는 body에 대한 landmark를 재며, landmark는 한 번도 측량된 적이 없습니다. 유일한 예외가 gravity입니다. accelerometer가 gravity를 감지하고, 그것이 roll과 pitch를 붙잡아 둡니다. 따라서 위치와 yaw는 세계에 관한 미지의 사실이 아니라, 우리가 정하기 나름인 world frame의 선택입니다. <span class="src">§11.3.2 · p. 325</span>
+@@ 61
+이것이 <a href="#d70">12주차 · Day 4</a>의 bundle adjustment에서 만난 <strong>gauge freedom</strong>입니다. 데이터를 똑같이 잘 설명하는 해의 집합입니다. observability 분석은 그 집합을 찾아냅니다. gauge를 고정하면 그중 하나가 선택됩니다. 예를 들어 첫 위치를 원점, yaw를 0으로 선언하거나, 첫 state에 prior factor를 추가합니다. 이것은 정보가 아니라 규약을 더하는 일입니다. 이동 거리나 회전한 각도 같은 상대량은 어떤 gauge에서든 똑같이 나옵니다.
+@@ 62
+unobservable 방향
+@@ 63
+개수
+@@ 64
+vision만, 카메라 하나
+@@ 65
+위치, roll, pitch, yaw, scale
+@@ 66
+IMU 없는 landmark SLAM
+@@ 67
+위치와 3-D 회전 전체
+@@ 68
+6 이상
+@@ 69
+각주 9, p. 325
+@@ 70
+카메라나 LiDAR로 보조한 IMU
+@@ 71
+위치, yaw
+@@ 72
+같은 구성 + GPS 같은 절대 센서
+@@ 73
+표를 위에서 아래로 읽으면 IMU가 vision에 무엇을 더하는지 보입니다. gravity 덕분에 roll과 pitch가, metric 단위의 가속도 덕분에 scale이 observable해집니다. 남은 넷을 풀려면 무언가 절대적인 것을 재는 센서가 필요합니다.
+@@ 74
+책은 이 절을 경고로 끝맺습니다. 어떤 운동에서는 nullspace가 넷보다 <em>커지고</em>, 그 추가 방향은 frame의 선택이 아닙니다. 그것이 Day 4의 주제입니다.
+@@ 75
+창문 없는 트럭 안의 회전판 위에 로봇과 모든 landmark가 서 있다고 상상해 보세요. 트럭을 다른 곳으로 몰고 가거나 회전판을 수직축 둘레로 돌려도, 판 위에서 재는 것은 아무것도 바뀌지 않습니다. 판을 기울이면 추를 매단 실이 곧바로 알려 줍니다. 이동과 yaw는 센서가 느낄 수 없는 회전판의 움직임입니다.
+@@ 76
+<strong>"unobservable 방향이 네 개라는 것은 state 변수 네 개를 모른다는 뜻이다."</strong> 각 방향은 로봇과 모든 landmark를 함께 움직이는 조합입니다. 어느 한 변수의 탓이 아닙니다.
+@@ 77
+<strong>"yaw가 unobservable하므로 VIO는 heading을 추적할 수 없다."</strong> heading의 변화는 gyroscope와 landmark를 통해 observable합니다. 출발 frame의 heading만 자유롭습니다.
+@@ 78
+<strong>"landmark를 늘리면 해결된다."</strong> 위치를 모르는 landmark는 하나마다 미지수를 셋 더하고, gauge와 함께 움직입니다. nullspace는 여전히 4차원입니다. 위치를 <em>아는</em> landmark라면 도움이 됩니다.
+@@ 79
+Q1. visual-inertial 시스템이 일반적인 운동을 하면서 위치를 모르는 점 landmark 50개를 추적합니다. \(\mathbf{M}\)의 nullspace 차원은 얼마입니까?
+@@ 80
+global 위치에 셋, yaw에 하나입니다. 위치를 모르는 landmark가 몇 개든 상관없습니다.
+@@ 81
+Q2. feature가 \(\mathbf{p}^w_f = (2, 0, 1)\)에 있고 gravity는 \(\mathbf{g}^w = (0, 0, -9.81)\)입니다. \(\mathbf{u}_1\)의 feature 블록 \(-\mathbf{p}^w_f\times\mathbf{g}^w\)는 무엇입니까?
+@@ 82
+\(\mathbf{p}\times\mathbf{g} = (p_y g_z - p_z g_y,\ p_z g_x - p_x g_z,\ p_x g_y - p_y g_x) = (0,\ 0 - 2\cdot(-9.81),\ 0) = (0, 19.62, 0)\)이고, 블록은 그 음수입니다. \(x\)축 위의 점은 \(-y\) 방향으로 움직입니다. 아래를 향한 축 둘레의 회전입니다. 점의 높이는 아무 역할도 하지 않습니다.
+@@ 83
+Q3. 수치로 계산한 \(\mathbf{M}\)이 27행 14열이고, \(\mathbf{M}\T\mathbf{M}\)의 0이 아닌 eigenvalue가 11개입니다. 독립인 unobservable 방향은 몇 개입니까?
+@@ 84
+rank가 11이고 미지수가 14개이므로 nullspace의 차원은 \(14 - 11 = 3\)입니다. 행 수가 rank를 넘기만 하면 행 수는 상관없습니다.
+@@ 85
+Q4. 해 전체를 gravity 축 둘레로 돌리면 보이지 않는데, 수평축 둘레로 돌리면 왜 보입니까?
+@@ 86
+gyroscope가 수평 회전 속도만 잰다
+@@ 87
+gravity 축 둘레의 회전만 gravity 벡터를 그대로 두므로, 같은 accelerometer 측정값이 여전히 맞는다
+@@ 88
+카메라는 수직축 둘레의 회전을 감지할 수 없다
+@@ 89
+yaw bias가 roll, pitch bias보다 크다
+@@ 90
+적분에는 world frame의 \(\mathbf{g}\Delta t\)가 들어 있습니다. 해를 \(\mathbf{Q}\)로 돌려도 측정값이 재현되려면 \(\mathbf{Q}\mathbf{g} = \mathbf{g}\)여야 합니다.
+@@ 91
+Q5. 카메라와 IMU로는 observable하지만 카메라만으로는 그렇지 않은 쌍은 무엇입니까?
+@@ 92
+global 위치와 yaw
+@@ 93
+yaw와 scale
+@@ 94
+roll과 pitch, 그리고 scale
+@@ 95
+global 위치와 scale
+@@ 96
+vision만으로는 7개 방향이 자유롭고, IMU를 더하면 4개(위치와 yaw)가 남습니다. IMU가 없애는 세 개는 roll, pitch, scale입니다.
+@@ 97
+\(\mathbf{M}\)은 \(\mathbf{H}_{x_k}\boldsymbol{\Phi}_{(k,1)}\)을 쌓은 것입니다. 첫 frame의 오차가 frame \(k\)의 측정에 어떻게 나타나는지를 보여 줍니다.
+@@ 98
+그 nullspace는 information matrix \(\mathbf{M}\T\boldsymbol{\Sigma}^{-1}\mathbf{M}\)의 nullspace와 같습니다. 0인 eigenvalue가 unobservable 방향입니다.
+@@ 99
+위치를 모르는 landmark가 있는 AINS에는 이런 방향이 넷 있습니다: 이동 셋(\(\mathbf{u}_{2:4}\))과 gravity 축 둘레의 회전(\(\mathbf{u}_1\)).
+@@ 100
+gravity 축 둘레의 회전은 \(\mathbf{g}\)를 그대로 두기 때문에 보이지 않습니다. roll과 pitch는 body frame에서 본 \(\mathbf{g}\)를 바꾸므로 observable합니다.
+@@ 101
+이 넷은 gauge freedom입니다. world frame의 선택이며, 규약이나 절대 센서로 고정합니다.
+@@ 102
+<em>SLAM Handbook</em>, §11.3.2 "Observability Analysis", pp. 324–325, 식 (11.50)–(11.51)과 각주 9; vision만 쓰는 시스템의 개수 7은 §7.8, p. 221.
+@@ 103
+두 nullspace가 같다는 사실과 information matrix의 역할은 Bar-Shalom, Li, Kirubarajan, <em>Estimation with Applications to Tracking and Navigation</em>, 2001을 따릅니다.
+@@ 104
+null vector 검증은 식 (11.12)와 (11.43)에서 출발한 이 코스 자체의 유도입니다.

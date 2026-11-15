@@ -1,0 +1,184 @@
+@@ 1
+<span class="eyebrow">4주차 · Day 2</span>
+@@ 2
+Matrix Lie group: wedge, Exp, Log
+@@ 3
+오늘이 끝나면 exponential map으로 tangent vector를 회전이나 pose로 바꾸고, logarithm으로 되돌아가고, 멱급수에서 SO(2), SO(3), SE(2)의 closed form을 유도할 수 있습니다.
+@@ 4
+약 60분 · §2.1.2, pp. 55–56 읽기 (2쪽) · 4주차 Day 1 필요
+@@ 5
+먼저 읽기: §2.1.2, pp. 55–56
+@@ 6
+closure 성질, 그리고 책이 가장 중요하다고 말하는 Lie algebra에 관한 두 사실 (i)과 (ii) (p. 55).
+@@ 7
+식 (2.4)와 (2.5): 수 하나 \(\theta\)를 rotation matrix로 바꾸는 무한 급수.
+@@ 8
+p. 56의 Figure 2.2: 세 공간과 여섯 화살표. Exp와 Log는 어느 두 화살표를 잇는 지름길입니까?
+@@ 9
+식 (2.7b): \(\boldsymbol{\xi}\) 안에서 \(\boldsymbol{\rho}\)와 \(\boldsymbol{\theta}\)의 순서, 그리고 \(d = 2\)와 \(d = 3\)일 때 각각의 크기.
+@@ 10
+모든 회전이나 pose는 identity에서 출발해 일정한 속도로 단위 시간 동안 움직이면 도달할 수 있습니다. 그 속도는 평평한 vector space인 <strong>Lie algebra</strong>에 있고, matrix exponential이 그 움직임을 실행합니다. 그래서 자유도와 같은 개수의 원소를 가진 평범한 벡터는 언제나 올바른 group 원소를 만들어 내며, 지켜야 할 제약 조건이 없습니다.
+@@ 11
+1. 이 집합들이 group인 이유
+@@ 12
+책은 한 가지 성질을 짚습니다: <strong>closure</strong>(닫힘). 두 원소의 곱은 다시 원소입니다, \(\mathbf{R}^c_a = \mathbf{R}^c_b\mathbf{R}^b_a \in \SO(d)\). <span class="src">§2.1.2 · p. 55</span> 어제의 제약 조건으로 확인할 수 있습니다: \((\mathbf{R}_1\mathbf{R}_2)\T(\mathbf{R}_1\mathbf{R}_2) = \mathbf{R}_2\T\mathbf{R}_1\T\mathbf{R}_1\mathbf{R}_2 = \mathbf{I}\)이고 \(\det(\mathbf{R}_1\mathbf{R}_2) = 1\cdot 1\)입니다. <strong>group</strong>(군)에는 identity(\(\mathbf{I}\)), 모든 원소의 역원(\(\mathbf{R}\T\), 또는 Day 1의 \(\mathbf{T}^{-1}\)), 결합법칙(모든 행렬 곱에서 성립)도 필요합니다. <strong>matrix Lie group</strong>은 매끄러운 manifold이기도 한 행렬들의 group입니다.
+@@ 13
+group이 약속하지 <em>않는</em> 것이 하나 있습니다: 순서가 상관없다는 것입니다. 평면 회전은 교환 가능하지만, 3D 회전과 pose는 그렇지 않습니다: 일반적으로 \(\mathbf{T}_1\mathbf{T}_2 \ne \mathbf{T}_2\mathbf{T}_1\)입니다. 1미터 직진한 뒤 왼쪽으로 돌 때와, 왼쪽으로 돈 뒤 1미터 직진할 때는 서로 다른 곳에 도착합니다. 이 점은 5절에서 중요해집니다.
+@@ 14
+2. Lie algebra와 wedge 연산자
+@@ 15
+Lie group의 <strong>Lie algebra</strong>는 identity에서의 tangent space입니다. Lie algebra는 vector space이고, 그 차원은 group의 자유도와 같습니다. <span class="src">§2.1.2 · p. 55</span> 회전의 Lie algebra는 \(\so(d)\), pose의 Lie algebra는 \(\se(d)\)로 씁니다.
+@@ 16
+빈틈 채우기: SO(d)의 tangent space가 skew-symmetric 행렬인 이유
+@@ 17
+\(s=0\)에서 identity를 지나는 매끄러운 회전 경로 \(\mathbf{R}(s)\)를 아무거나 잡습니다. 경로 위의 모든 점은 \(\mathbf{R}(s)\T\mathbf{R}(s) = \mathbf{I}\)를 만족합니다. \(s\)로 미분하고, \(\mathbf{R} = \mathbf{I}\)인 \(s = 0\)을 대입합니다:
+@@ 18
+따라서 identity를 지나는 모든 속도는 \(\boldsymbol{\Omega}\T = -\boldsymbol{\Omega}\)인 행렬 \(\boldsymbol{\Omega}\), 곧 <strong>skew-symmetric</strong>(반대칭) 행렬입니다. 대각은 0이고 아래 삼각형은 위 삼각형에 마이너스를 붙인 것이므로, 2 × 2 행렬에는 자유로운 원소가 하나, 3 × 3에는 셋이 남습니다. 이 개수가 \(\SO(2)\)와 \(\SO(3)\)의 자유도입니다.
+@@ 19
+<strong>wedge</strong> 연산자 \((\cdot)^\wedge\)는 평범한 벡터로 skew-symmetric 행렬을 채우고, <strong>vee</strong> \((\cdot)^\vee\)는 벡터를 다시 읽어 냅니다: <span class="src">§2.1.2 · pp. 55–56, eqs. (2.5), (2.6b)</span>
+@@ 20
+3D에서 wedge 행렬은 외적을 수행합니다: \(\boldsymbol{\theta}^\wedge\mathbf{v} = \boldsymbol{\theta}\times\mathbf{v}\). <span class="src">Notation · p. xv</span> 예를 들어 \(\boldsymbol{\theta} = (0,0,1)\)과 \(\mathbf{v} = (1,0,0)\)이면 \(\boldsymbol{\theta}^\wedge\mathbf{v} = (0,1,0)\)입니다: 물체가 z축을 중심으로 돌 때 x축 끝점의 속도입니다.
+@@ 21
+연산자
+@@ 22
+출발 → 도착
+@@ 23
+=
+@@ 24
+=
+@@ 25
+벡터를 행렬로 묶음 (선형)
+@@ 26
+=
+@@ 27
+=
+@@ 28
+다시 풀어냄, wedge의 역
+@@ 29
+=
+@@ 30
+=
+@@ 31
+=
+@@ 32
+=
+@@ 33
+=
+@@ 34
+지름길: 벡터에서 곧바로 group으로
+@@ 35
+=
+@@ 36
+지름길: group에서 곧바로 벡터로
+@@ 37
+이 표는 Figure 2.2를 말로 옮긴 것입니다. 내일부터 책은 거의 대문자로 쓴 지름길만 씁니다. <span class="src">§2.1.2 · p. 56, Fig. 2.2</span>
+@@ 38
+3. SO(2)에서 계산해 보는 exponential map
+@@ 39
+Lie algebra에서 group으로 가는 map은 <strong>matrix exponential</strong>(행렬 지수)이며, 스칼라 지수 함수와 같은 급수로 정의됩니다: <span class="src">§2.1.2 · p. 55, eq. (2.4)</span>
+@@ 40
+왜 지수 함수일까요? 일정한 각속도로 도는 물체는 \(\dot{\mathbf{R}}(t) = \boldsymbol{\omega}^\wedge\mathbf{R}(t)\)를 따릅니다 (책은 나중에 이것을 식 (2.32)로 씁니다). 이것은 \(\dot{x} = a x\)의 행렬 버전이고, 그 해는 \(x(t) = e^{at}x(0)\)입니다. \(\mathbf{R}(0)=\mathbf{I}\)에서 출발하면 해는 \(\mathbf{R}(t) = \exp(\boldsymbol{\omega}^\wedge t)\)입니다. \(\Exp(\boldsymbol{\theta})\)는 각속도 \(\boldsymbol{\theta}\)로 단위 시간 동안 움직인 뒤의 위치입니다.
+@@ 41
+빈틈 채우기: 급수 (2.4)의 합 구하기
+@@ 42
+\(\theta^\wedge = \theta\,\mathbf{S}\)로 쓰고, 여기서 \(\mathbf{S} = \begin{bmatrix} 0 & -1 \\ 1 & 0 \end{bmatrix}\)입니다. 곱해 보면 \(\mathbf{S}^2 = -\mathbf{I}\)입니다. 그래서 \(\mathbf{S}\)는 허수 단위처럼 동작하고, 거듭제곱이 순환합니다: \(\mathbf{S}^3 = -\mathbf{S}\), \(\mathbf{S}^4 = \mathbf{I}\), 이런 식입니다. 급수를 짝수 차수와 홀수 차수로 나눕니다:
+@@ 43
+두 괄호는 코사인과 사인의 Taylor 급수입니다. 이것은 Euler 공식 \(e^{i\theta} = \cos\theta + i\sin\theta\)를 행렬로 쓴 것입니다. 여기서는 되돌아가기도 쉽습니다: \(\theta = \Log(\mathbf{R}) = \operatorname{atan2}(R_{21}, R_{11})\).
+@@ 44
+4. SO(3)의 Rodrigues' formula
+@@ 45
+\(\SO(3)\)에 대해 책은 급수 (2.6a)를 제시하고, closed form이 있다고 말하며 Barfoot의 책을 가리킵니다. <span class="src">§2.1.2 · p. 56</span> 유도는 평면에서와 같은 요령입니다.
+@@ 46
+빈틈 채우기: 급수에서 Rodrigues' formula로
+@@ 47
+벡터를 각도와 단위 축으로 나눕니다: \(\boldsymbol{\theta} = \phi\,\mathbf{a}\), \(\phi = \norm{\boldsymbol{\theta}}\), \(\norm{\mathbf{a}} = 1\). \(\mathbf{A} = \mathbf{a}^\wedge\)로 둡니다. \(\mathbf{A}\)에 관한 두 사실:
+@@ 48
+(첫째는 단위 벡터 \(\mathbf{a}\)에 대한 이중 외적 \(\mathbf{a}\times(\mathbf{a}\times\mathbf{v}) = \mathbf{a}(\mathbf{a}\T\mathbf{v}) - \mathbf{v}\)입니다.) \(\mathbf{A}^3 = -\mathbf{A}\)이므로 거듭제곱이 다시 순환합니다: \(\mathbf{A}^4 = -\mathbf{A}^2\), \(\mathbf{A}^5 = \mathbf{A}\), 이런 식입니다. 급수 \(\sum \phi^n\mathbf{A}^n/n!\)를 등장하는 세 행렬로 모읍니다:
+@@ 49
+이것이 <strong>Rodrigues' formula</strong>입니다. 예: z축에 대한 1/4 회전, \(\mathbf{a} = (0,0,1)\), \(\phi = 90^\circ\). 그러면 \(\mathbf{a}^\wedge\mathbf{a}^\wedge = \diag(-1,-1,0)\)이고
+@@ 50
+즉 z축은 그대로 두고 평면에서 90° 돌리는 회전입니다. logarithm을 구하려면 공식의 trace와 skew 부분을 봅니다: \(\tr(\mathbf{R}) = 1 + 2\cos\phi\)가 각도를, \(\mathbf{R} - \mathbf{R}\T = 2\sin\phi\;\mathbf{a}^\wedge\)가 축을 줍니다.
+@@ 51
+따라서 \(\boldsymbol{\theta}\in\R^3\)는 어제 표에 나온 rotation vector입니다: 방향이 축이고 길이가 각도입니다. \(\phi\)와 \(\phi + 2\pi\)가 같은 행렬을 준다는 점에 주의합니다. Exp는 모든 회전에 도달하지만 많은 벡터가 같은 회전으로 가므로, Log는 그중 하나를 골라야 합니다 (보통 각도가 \([0, \pi]\)에 있는 것).
+@@ 52
+5. Pose: SE(d)에서의 Exp
+@@ 53
+pose의 tangent vector는 이동 부분 \(\boldsymbol{\rho}\)를 회전 부분 \(\boldsymbol{\theta}\) 위에 쌓은 것입니다: <span class="src">§2.1.2 · p. 56, eq. (2.7)</span>
+@@ 54
+평면에서는 \(\boldsymbol{\rho}\in\R^2\), \(\theta\in\R\), \(\boldsymbol{\xi}\in\R^3\)입니다. 3D에서는 두 부분 모두 \(\R^3\)에 있고 \(\boldsymbol{\xi}\in\R^6\)입니다. 책의 순서는 이동이 먼저입니다. 회전을 먼저 두는 교재도 있으니, 공식을 옮겨 쓰기 전에 확인하십시오.
+@@ 55
+빈틈 채우기: Exp(ξ)의 이동은 ρ가 아니다
+@@ 56
+\(\boldsymbol{\xi}^\wedge\)를 자기 자신과 곱해 봅니다. 맨 아래 행이 0이라 패턴이 단순합니다:
+@@ 57
+회전 블록은 예상대로 회전의 exponential입니다. 이동은 \(\boldsymbol{\rho}\)가 아니라 \(\mathbf{V}\boldsymbol{\rho}\)입니다. (같은 급수가 Day 5에서 식 (2.35)의 Jacobian \(\mathbf{J}(\boldsymbol{\theta})\)로 다시 나옵니다.) 평면에서는 \(\mathbf{S}^2 = -\mathbf{I}\) 요령으로 합을 구할 수 있습니다:
+@@ 58
+예: \(\boldsymbol{\xi} = (\rho_1,\rho_2,\theta) = (\tfrac{\pi}{2}, 0, \tfrac{\pi}{2})\). 두 계수가 모두 \(2/\pi\)이므로 \(\mathbf{V}\boldsymbol{\rho} = \tfrac{2}{\pi}\cdot\tfrac{\pi}{2}\,(1,0) + \tfrac{2}{\pi}\cdot\tfrac{\pi}{2}\,(0,1) = (1,1)\)입니다. pose는 \((1,1)\)에 있고 90° 돌아가 있습니다.
+@@ 59
+의미: \(\boldsymbol{\rho}\)는 로봇 <em>자신의</em> frame에서 본 속도이고, 로봇이 움직이는 동안 그 frame이 돌아갑니다. 속력 \(\pi/2\)로 직진하면서 각속도 \(\pi/2\)로 단위 시간 동안 돌면 반지름 1인 사분원을 그리며 \((1,1)\)에서 끝납니다. 경로 길이는 \(\pi/2\)이지만 끝점까지의 거리는 \(\sqrt{2}\)뿐입니다.
+@@ 60
+직접 해 보기: 위젯은 이 예에서 시작합니다. 슬라이더를 움직인 다음 "이동 후 회전 보기"를 누릅니다.
+@@ 61
+눈여겨볼 점: 파란 경로는 주황색 중심을 도는 원호이고 (θ = 0이면 직선), Log는 넣은 벡터를 그대로 돌려줍니다. 기본값 ξ = (1.57, 0, 90°)에서 Exp(ξ)는 (1.00, 1.00)에 있지만, ρ만큼 이동한 뒤 θ만큼 회전하면 (1.57, 0.00)에서 끝나며 둘 사이 거리는 1.15입니다.
+@@ 62
+이 마지막 비교는 \(\mathbf{a} = (\boldsymbol{\rho}, 0)\), \(\mathbf{b} = (\mathbf{0},\theta)\)일 때 \(\Exp(\mathbf{a})\Exp(\mathbf{b})\)와 \(\Exp(\mathbf{a}+\mathbf{b})\)를 비교한 것입니다. 수에서는 \(e^{a}e^{b} = e^{a+b}\)입니다. 행렬에서 이 규칙이 성립하려면 \(\mathbf{a}^\wedge\mathbf{b}^\wedge = \mathbf{b}^\wedge\mathbf{a}^\wedge\)여야 하는데, pose와 3D 회전에서는 이것이 성립하지 않습니다:
+@@ 63
+\(\mathbf{a}\)와 \(\mathbf{b}\)가 작으면 두 변은 1차까지 일치하고, Day 5에서 보정 항을 다룹니다.
+@@ 64
+tangent vector는 운전 명령이에요: "앞으로 이만큼, 옆으로 이만큼, 회전은 이만큼, 1초 동안 그대로 유지". Exp는 그 명령을 실행하면 일어나는 일이에요. Log는 도착한 곳을 보고, 어떤 일정한 명령이 거기로 데려다줬을지 알려 줘요.
+@@ 65
+<strong>"ξ의 앞쪽 원소들이 위치다."</strong> 그것은 \(\boldsymbol{\rho}\)입니다. 위치는 \(\mathbf{V}\boldsymbol{\rho}\)이며, 둘은 회전이 없을 때만 같습니다.
+@@ 66
+<strong>"행렬의 exp는 원소마다 지수를 취한다는 뜻이다."</strong> 행렬 전체에 대한 멱급수입니다.
+@@ 67
+<strong>"Exp(a) Exp(b) = Exp(a + b)."</strong> 두 wedge 행렬이 교환 가능할 때만 성립합니다. 예를 들어 두 평면 회전이나, 같은 축에 대한 두 3D 회전입니다.
+@@ 68
+<strong>"Log는 유일하다."</strong> 한 바퀴만큼 차이 나는 각도는 같은 group 원소를 줍니다. Log는 그중 대표 하나를 돌려줍니다.
+@@ 69
+Q1. \(\boldsymbol{\theta} = (1, 2, 3)\)일 때, \(\boldsymbol{\theta}^\wedge\)의 1행 3열 원소는 무엇입니까?
+@@ 70
+(2.6b)에서 \(\boldsymbol{\theta}^\wedge\)의 첫 행은 \((0, -\theta_3, \theta_2)\)이므로, 그 원소는 \(\theta_2 = 2\)입니다.
+@@ 71
+Q2. 평면 로봇이 identity에서 출발해 \(\boldsymbol{\xi} = (\rho_1,\rho_2,\theta) = (\pi, 0, \pi)\)를 따라 움직입니다. 마지막에 로봇은 어디에 있습니까?
+@@ 72
+(π, 0)에서 뒤를 향함
+@@ 73
+(0, π)에서 뒤를 향함
+@@ 74
+(2, 0)에서 앞을 향함
+@@ 75
+(0, 2)에서 뒤를 향함
+@@ 76
+\(\theta=\pi\)이면 \(\sin\theta/\theta = 0\), \((1-\cos\theta)/\theta = 2/\pi\)이므로 \(\mathbf{V}\boldsymbol{\rho} = \tfrac{2}{\pi}\mathbf{S}(\pi,0) = (0,2)\)입니다. 로봇은 반지름 1인 반원(길이 π)을 달려, 자기 왼쪽으로 2만큼 떨어진 곳에서 180° 돌아간 채 끝납니다. 위젯을 (3.14, 0, 180°)로 맞추면 볼 수 있습니다.
+@@ 77
+Q3. 3D rotation matrix의 trace가 2입니다. 회전 각도는 무엇입니까?
+@@ 78
+Rodrigues' formula에서 \(\tr(\mathbf{R}) = 1 + 2\cos\phi\)입니다. 따라서 \(\cos\phi = 0.5\)이고 \(\phi = 60^\circ\)입니다.
+@@ 79
+Q4. \(\Exp(\mathbf{a})\Exp(\mathbf{b}) = \Exp(\mathbf{a}+\mathbf{b})\)가 정확히 성립하는 때는 언제입니까?
+@@ 80
+언제나, 보통의 수처럼
+@@ 81
+어떤 Lie group에서도 결코 성립하지 않음
+@@ 82
+행렬 \(\mathbf{a}^\wedge\)와 \(\mathbf{b}^\wedge\)가 교환 가능할 때 (SO(2)에서는 항상 그러함)
+@@ 83
+\(\mathbf{a}\)와 \(\mathbf{b}\)의 길이가 같을 때
+@@ 84
+스칼라에서 \(e^ae^b = e^{a+b}\)의 증명은 곱의 순서를 바꾸는데, 이는 교환 가능한 행렬에서만 허용됩니다. \(\so(2)\)는 전부 한 행렬 \(\mathbf{S}\)의 상수배이므로 평면 회전 각도는 그냥 더해집니다. \(\SO(3)\)와 \(\SE(d)\)에서는 회전축이 같을 때 같은 특별한 경우에만 이 규칙이 성립합니다.
+@@ 85
+\(\SO(d)\)와 \(\SE(d)\)는 matrix Lie group입니다: 곱과 역원에 대해 닫혀 있고, 매끄러운 manifold입니다.
+@@ 86
+Lie algebra는 identity에서의 tangent space입니다. 회전의 경우 skew-symmetric 행렬들입니다. wedge와 vee는 Lie algebra와 \(\R^n\) 사이를 오갑니다.
+@@ 87
+\(\Exp\)는 wedge의 matrix exponential입니다. 합을 구하면 평면에서는 \(\cos\theta\,\mathbf{I}+\sin\theta\,\mathbf{S}\), 3D에서는 Rodrigues' formula가 됩니다.
+@@ 88
+pose의 경우 \(\boldsymbol{\xi} = (\boldsymbol{\rho},\boldsymbol{\theta})\)이고, \(\Exp(\boldsymbol{\xi})\)의 회전은 \(\Exp(\boldsymbol{\theta})\), 이동은 \(\mathbf{V}\boldsymbol{\rho}\)입니다: 원호를 따르는 움직임입니다.
+@@ 89
+wedge 행렬이 교환 가능하지 않으면 \(\Exp(\mathbf{a})\Exp(\mathbf{b}) \ne \Exp(\mathbf{a}+\mathbf{b})\)입니다.
+@@ 90
+<em>SLAM Handbook</em>, §2.1.2 "Matrix Lie Groups", pp. 55–56, 식 (2.4)–(2.7)과 Figure 2.2; Notation 표, p. xv.
+@@ 91
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (skew-symmetric tangent space, 급수에서 얻는 Rodrigues' formula, SE(3)의 exponential map과 ρ에 곱해지는 행렬).
+@@ 92
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (대문자 Exp와 Log, SO(2)와 SE(2)의 closed form).

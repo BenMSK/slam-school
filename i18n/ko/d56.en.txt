@@ -1,0 +1,214 @@
+@@ 1
+<span class="eyebrow">Week 10 · Day 2</span>
+@@ 2
+Anisotropic noise, outliers, and the moment relaxation
+@@ 3
+After today you can explain why anisotropic noise and robust losses turn SLAM into a polynomial problem of degree 3 or 4, build the moment matrix that relaxes it, and say why the resulting SDP is hard to solve.
+@@ 4
+About 60 min · Read §6.1.4.2, pp. 169–173 (5 pages) · Needs Week 9 Day 2 and Week 6 Day 4
+@@ 5
+Read first: §6.1.4.2, pp. 169–173
+@@ 6
+Footnote 6 on p. 170: the one line that turns the anisotropic cost back into a quadratic when the noise is isotropic.
+@@ 7
+The degree of the objective in (6.36) on p. 171, and which new variables cause it.
+@@ 8
+The monomial vector (6.38) and the moment matrix (6.39) on p. 172. Find one monomial that appears in two different cells.
+@@ 9
+The two reasons on p. 173 why the Riemannian Staircase stops working.
+@@ 10
+Shor's relaxation lifts a vector \(\mathbf{x}\) to the matrix \(\mathbf{x}\mathbf{x}\T\), which holds every product of two unknowns, so it can express any quadratic. If the cost has degree 3 or 4, lift a longer vector that also contains the products themselves. This is the <strong>moment relaxation</strong>. It is again an SDP and again gives a certificate, but the SDP is larger and degenerate, so the fast solver of Week 9 no longer applies.
+@@ 11
+1. Anisotropic noise makes the cost quartic
+@@ 12
+Real sensors are rarely equally uncertain in all directions. A stereo camera, for example, locates a landmark much less precisely along the viewing direction than across it. The landmark model becomes \(\tilde{\mathbf{m}}_{ik}=\mathbf{R}_i\T(\mathbf{m}_k-\mathbf{t}_i)+\boldsymbol{\epsilon}_{ik}\) with \(\boldsymbol{\epsilon}_{ik}\sim\N(\mathbf{0},\mathbf{W}_{ik})\), where the covariance \(\mathbf{W}_{ik}\) is <strong>anisotropic</strong>: not a multiple of the identity. Problem 6.7 replaces the landmark term of yesterday's (6.29) by <span class="src">§6.1.4.2 · pp. 169–170</span>
+@@ 13
+Read the subscripted norm as a <strong>Mahalanobis norm</strong>: the residual weighted by the inverse covariance, \(\mathbf{e}\T\mathbf{W}_{ik}^{-1}\mathbf{e}\) (<a href="#d4">Week 1 · Day 4</a>). That is how footnote 6 uses it: \(\mathbf{W}_{ik}=\mu_{ik}^{-1}\mathbf{I}\) gives \(\mu_{ik}\norm{\mathbf{e}}^2\).
+@@ 14
+Filling the gap: counting the degree
+@@ 15
+Write \(\mathbf{u}=\mathbf{m}_k-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{m}}_{ik}\). Each entry of \(\mathbf{u}\) has degree 1 in the unknowns \((\mathbf{R}_i,\mathbf{t}_i,\mathbf{m}_k)\). As yesterday, the residual is \(\mathbf{e}=\mathbf{R}_i\T\mathbf{u}\), so
+@@ 16
+If \(\mathbf{W}^{-1}=\mu\mathbf{I}\), the middle factor is \(\mu\,\mathbf{R}_i\mathbf{R}_i\T=\mu\mathbf{I}\), the rotation cancels, and the term is \(\mu\norm{\mathbf{u}}^2\) of degree 2. That is yesterday's problem. Otherwise it does not cancel. In 2-D with \(\mathbf{R}=\begin{bmatrix} c & -s \\ s & c \end{bmatrix}\) and \(\mathbf{W}^{-1}=\diag(1,4)\):
+@@ 17
+The entries \(3s^2\), \(3cs\), \(3c^2\) are quadratic in the unknowns \(c,s\) and stay in the cost. With \(\diag(4,4)\) the same product is \(4\mathbf{I}\).
+@@ 18
+A cost of degree 4 is called <strong>quartic</strong>. It is not a QCQP, so Shor's relaxation does not apply directly. <span class="src">§6.1.4.2 · p. 170</span>
+@@ 19
+2. Outliers make it cubic
+@@ 20
+Week 6 dealt with outliers by wrapping each suspect residual in a robust loss \(\rho\). Problem 6.8 does this for the landmark terms, \(\rho\big(\sqrt{\mu_{ik}}\norm{\mathbf{m}_k-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{m}}_{ik}}_2\big)\). With the truncated quadratic loss and the Black-Rangarajan duality (<a href="#d34">Week 6 · Day 4</a>), each such term becomes <span class="src">§6.1.4.2 · pp. 170–171</span>
+@@ 21
+where \(\beta\) is the largest residual an inlier may have and \(w_{ik}\) is a new unknown per measurement.
+@@ 22
+Filling the gap: why (6.36) is the truncated quadratic
+@@ 23
+Write \(a=\mu_{ik}\norm{\cdot}^2\ge 0\). For fixed poses the term \(w\,a+(1-w)\beta^2=\beta^2+w\,(a-\beta^2)\) is a straight line in \(w\), so its minimum over \([0,1]\) is at an end point: \(w=1\) (cost \(a\)) if \(a\lt\beta^2\), and \(w=0\) (cost \(\beta^2\)) otherwise. The minimum is \(\min(a,\beta^2)\), the truncated quadratic. So \(w=1\) labels the measurement an inlier and \(w=0\) an outlier. With numbers: \(\beta^2=4\) and \(a=1.5\) give \(w=1\), cost 1.5; \(a=9\) gives \(w=0\), cost 4.
+@@ 24
+Degree: \(w\) (degree 1) times a squared residual (degree 2) is degree 3. The constraint \(0\le w\le 1\) can be written as two polynomial inequalities of degree 1, or as the single quadratic inequality \(w(1-w)\ge 0\).
+@@ 25
+Degree of the objective
+@@ 26
+Constraints
+@@ 27
+Class
+@@ 28
+PGO, landmarks, range-aided after (6.33)
+@@ 29
+quadratic equalities
+@@ 30
+QCQP
+@@ 31
+Truncated-quadratic loss, (6.36)
+@@ 32
+quadratic at most, some inequalities
+@@ 33
+POP
+@@ 34
+Anisotropic noise, (6.34)
+@@ 35
+3. Polynomial optimization and the moment matrix
+@@ 36
+A <strong>polynomial optimization problem (POP)</strong> minimizes a polynomial \(p(\mathbf{x})\) subject to polynomial equalities \(h_i(\mathbf{x})=0\) and inequalities \(g_i(\mathbf{x})\le 0\). QCQPs are the special case of degree 2. POPs are hard in general; the reason to write SLAM this way is that a standard recipe, the <strong>moment relaxation</strong> (also called Lasserre's relaxation), turns any POP into an SDP. <span class="src">§6.1.4.2 · p. 171</span>
+@@ 37
+The recipe, for two unknowns \(\mathbf{x}=[x_1;x_2]\) and degree up to 4: collect every monomial of degree up to \(r=2\) in a vector, and take its outer product. <span class="src">§6.1.4.2 · p. 172</span>
+@@ 38
+\(\mathbf{X}_4\) is the <strong>moment matrix</strong>. Its entries are all monomials of degree up to 4, so any polynomial of degree up to 4 is a <em>linear</em> function \(\tr(\mathbf{C}\mathbf{X}_4)\) of it. The POP becomes "minimize \(\tr(\mathbf{C}\mathbf{X})\) subject to \(\tr(\mathbf{H}_i\mathbf{X})=0\) and \(\mathbf{X}=[\mathbf{x}]_2[\mathbf{x}]_2\T\)" (6.40). Exactly as in Shor's relaxation (<a href="#d50">Week 9 · Day 2</a>), the last condition is the same as \(\mathbf{X}\succeq 0\) with \(\rank(\mathbf{X})=1\); drop the rank condition and an SDP is left. The number \(r\) is the <strong>order</strong> of the relaxation.
+@@ 39
+One thing is new. Some monomials sit in more than one cell: \(x_1x_2\) is both entry \((1,5)\), as \(1\cdot x_1x_2\), and entry \((2,3)\), as \(x_1\cdot x_2\). For a true outer product these cells are equal automatically. Once the rank condition is dropped they are not, so the relaxation must state \(X_{15}=X_{23}\) explicitly. Such equalities are <strong>redundant constraints</strong>: they add nothing to the original problem but tighten the relaxation. A second family comes from the constraints: if \(h_i(\mathbf{x})=0\) then also \(x_1h_i(\mathbf{x})=0\) and \(x_2h_i(\mathbf{x})=0\). <span class="src">§6.1.4.2 · p. 172</span>
+@@ 40
+Filling the gap: how many redundant equalities?
+@@ 41
+There are \(\binom{n+r}{r}\) monomials of degree up to \(r\) in \(n\) variables: \(\binom{4}{2}=6\) here, which is the size of \([\mathbf{x}]_2\). A symmetric \(6\times 6\) matrix has \(6\cdot 7/2=21\) free entries, but only \(\binom{2+4}{4}=15\) distinct monomials of degree up to 4 exist. So \(21-15=6\) equalities are needed: one each for \(x_1^2\), \(x_1x_2\), \(x_2^2\), \(x_1^2x_2\), \(x_1x_2^2\), \(x_1^2x_2^2\). For example \(x_1^2x_2^2\) is entry \((4,6)\) and entry \((5,5)\).
+@@ 42
+The matrix grows fast. Shor's relaxation of a problem with \(n=1000\) unknowns uses a matrix of side 1001. The order-2 moment matrix has side \(\binom{1002}{2}=501{,}501\). This is why the book mentions sparse monomial bases, which keep only some of the monomials.
+@@ 43
+4. A relaxation small enough to check by hand
+@@ 44
+Take one unknown and \(p(x)=x^4-ax^2+bx\), a curve with two wells when \(a\gt 0\). The monomial vector is \([x]_2=[1;x;x^2]\) and the relaxed moment matrix is
+@@ 45
+where \(y_k\) stands in for \(x^k\). Writing \(y_2\) in both the corner and the centre is the redundant constraint \(Y_{13}=Y_{22}\). Every real \(x\) gives a feasible \(\mathbf{Y}\) (set \(y_k=x^k\)) with objective \(p(x)\), so \(d^*\le p^*\), where \(p^*\) is the global minimum.
+@@ 46
+Filling the gap: a lower bound you can verify
+@@ 47
+Suppose you find numbers \(\gamma,\lambda\) such that this matrix is positive semidefinite:
+@@ 48
+Multiply out \([1\ \ x\ \ x^2]\,\mathbf{Q}\,[1\ \ x\ \ x^2]\T=-\gamma+bx+(2\lambda-a-2\lambda)x^2+x^4=p(x)-\gamma\). A positive semidefinite \(\mathbf{Q}\) makes the left side non-negative, so \(p(x)\ge\gamma\) for every \(x\): \(\gamma\) is a certified lower bound. The same computation with \(\mathbf{Y}\) in place of the outer product gives \(\tr(\mathbf{Q}\mathbf{Y})=y_4-ay_2+by_1-\gamma\ge 0\), so \(\gamma\le d^*\) too. The free number \(\lambda\) exists only because \(x^2\) sits in two cells; it is the Lagrange multiplier of the redundant constraint.
+@@ 49
+By hand for \(a=2\), \(b=0\): choose \(\lambda=1\), \(\gamma=-1\). Then \(\mathbf{Q}=\mathbf{v}\mathbf{v}\T\) with \(\mathbf{v}=[1;0;-1]\), which is positive semidefinite, and indeed \(x^4-2x^2+1=(x^2-1)^2\ge 0\). So \(p(x)\ge -1\), and \(p(\pm 1)=-1\) shows the bound is attained.
+@@ 50
+Finding the best \(\gamma\) is the dual of the SDP above (<a href="#d52">Week 9 · Day 4</a>). For a polynomial in one variable the best \(\gamma\) always equals \(p^*\), because a non-negative polynomial in one variable is a sum of squares.
+@@ 51
+Try it: with the default settings, read the gap. Then move "Start x" to −1.5.
+@@ 52
+Notice: from the start 1.5, gradient descent stops in the right-hand well at x = 1.131 with p = −1.070. The relaxation's bound is −3.514, so the gap is 2.444 and the point is not certified. From −1.5, descent reaches x = −1.301 where p = −3.514: the gap is zero and the point is certified optimal, without searching anywhere else. The bound does not depend on the start.
+@@ 53
+The output line shows a second thing you met in Week 9: at the optimum \(\mathbf{Q}\) has a zero eigenvalue, and its null vector is \([1;x^*;x^{*2}]\), from which the global minimizer can be read off.
+@@ 54
+5. The hierarchy, and the catch
+@@ 55 attr
+Two pipelines. Top: a QCQP of degree 2 goes through Shor's relaxation to a non-degenerate SDP that the Riemannian Staircase solves fast. Bottom: a polynomial problem of degree 3 or 4 goes through the moment relaxation to an SDP with redundant constraints, which needs special solvers that are slower.
+@@ 56
+Week 9 and yesterday
+@@ 57
+degree 2
+@@ 58
+Shor
+@@ 59
+lift x to x xᵀ
+@@ 60
+SDP
+@@ 61
+non-degenerate
+@@ 62
+Staircase
+@@ 63
+fast
+@@ 64
+Today
+@@ 65
+degree 3 or 4
+@@ 66
+Moment
+@@ 67
+lift monomials
+@@ 68
+redundant, larger
+@@ 69
+Special solvers
+@@ 70
+slower
+@@ 71
+Both pipelines end in a certificate. Only the top one ends in a solver as fast as local optimization.
+@@ 72
+Repeating the construction with monomials up to degree \(r=3,4,\dots\) gives a <strong>hierarchy</strong> of larger and tighter SDPs. Under mild assumptions the relaxation becomes exact at some finite order. For SLAM with anisotropic noise or outliers, experiments find it exact already at low order, even with a sparse monomial basis. <span class="src">§6.1.4.2 · p. 172</span>
+@@ 73
+The catch is the solver. An SDP with redundant constraints is <strong>degenerate</strong>, and that breaks the Riemannian Staircase in two ways: the constraint qualification conditions its convergence proof needs typically fail, and the dual problem has infinitely many solutions. Solvers built for moment relaxations exist but are still slow next to local solvers. <span class="src">§6.1.4.2 · pp. 172–173</span>
+@@ 74
+Intuition: why redundancy hurts a solver
+@@ 75
+A <strong>constraint qualification</strong> is a regularity condition on the constraints; the most common one asks that their gradients at the solution be linearly independent. Redundant constraints are implied by the others, which is the kind of dependence that violates such conditions. And when constraints are dependent, the Lagrange multipliers that certify optimality are not unique: weight can be moved from one constraint to an equivalent one. Algorithms that track "the" multiplier then have no single target.
+@@ 76
+<strong>"Redundant constraints can be dropped."</strong> They are redundant for the original problem only. In the relaxation they are what ties the cells of the moment matrix together; without them the bound gets worse.
+@@ 77
+<strong>"A higher order is always the answer."</strong> It is tighter, but the matrix side grows like \(\binom{n+r}{r}\). Practical work lowers the size instead (sparse bases).
+@@ 78
+<strong>"The weights w must be 0 or 1 by constraint."</strong> (6.36) only asks \(w\in[0,1]\). The optimum lands on 0 or 1 by itself because the cost is linear in \(w\).
+@@ 79
+Q1. Why is the anisotropic landmark term (6.34) of degree 4 while the isotropic one is of degree 2?
+@@ 80
+Anisotropic noise adds extra landmarks
+@@ 81
+The weight matrix does not commute with the rotation, so R W⁻¹ Rᵀ stays in the cost and contributes degree 2
+@@ 82
+The Mahalanobis norm takes a square root
+@@ 83
+The rotation constraints become quartic
+@@ 84
+The term is uᵀ(R W⁻¹ Rᵀ)u with u of degree 1. For W⁻¹ = μI the middle factor collapses to μI; otherwise it is quadratic in R, for a total of 4.
+@@ 85
+Q2. In (6.36) with β² = 4, a measurement has weighted squared residual μ‖·‖² = 6.25 at the current poses. Which w minimizes its term, and what is the cost?
+@@ 86
+w = 1, cost 6.25
+@@ 87
+w = 0.64, cost 5.44
+@@ 88
+w = 0, cost 6.25
+@@ 89
+w = 0, cost 4
+@@ 90
+The term is 4 + w(6.25 − 4), increasing in w, so w = 0 and the cost is β² = 4: the measurement is treated as an outlier.
+@@ 91
+Q3. For three unknowns and order r = 2, how large is the moment matrix?
+@@ 92
+The monomials of degree up to 2 in 3 variables: 1, three of degree 1, six of degree 2. That is C(3+2, 2) = 10.
+@@ 93
+Q4. A local solver returns a point with cost 12.0 and the moment relaxation returns the bound 11.2. What can you conclude?
+@@ 94
+The point is the global minimum
+@@ 95
+The point is certainly a bad local minimum
+@@ 96
+The global minimum lies between 11.2 and 12.0, so the point is at most 0.8 above it
+@@ 97
+The relaxation has failed and tells you nothing
+@@ 98
+d* ≤ p* ≤ cost of any feasible point. The gap 0.8 bounds the suboptimality. It may be that the point is optimal and the relaxation is not exact; the numbers alone cannot tell.
+@@ 99
+Anisotropic noise leaves \(\mathbf{R}\mathbf{W}^{-1}\mathbf{R}\T\) in the cost: degree 4. A truncated-quadratic loss adds a weight \(w\) per measurement: degree 3. Both are POPs, not QCQPs.
+@@ 100
+The moment relaxation lifts the vector of monomials up to degree \(r\) to its outer product, drops the rank-1 condition, and adds redundant constraints that tie repeated monomials together.
+@@ 101
+It gives a lower bound \(d^*\le p^*\), and \(\text{cost}-d^*=0\) certifies a global minimum, exactly as in Week 9.
+@@ 102
+Higher orders are tighter and much larger. In SLAM a low order is often already exact.
+@@ 103
+The catch: these SDPs are degenerate, the Riemannian Staircase does not apply, and the available solvers are slow.
+@@ 104
+<em>SLAM Handbook</em>, §6.1.4.2 "Certifiable Algorithms Beyond Shor's Relaxation: Anisotropic Noise and Outliers", pp. 169–173.
+@@ 105
+Lasserre, <em>Moments, Positive Polynomials and Their Applications</em>, 2010 (moment matrices, the hierarchy, monomial counts).
+@@ 106
+Blekherman, Parrilo, Thomas (eds.), <em>Semidefinite Optimization and Convex Algebraic Geometry</em>, 2013 (sums of squares; non-negative univariate polynomials are sums of squares).
+@@ 107
+Nocedal and Wright, <em>Numerical Optimization</em>, 2006 (constraint qualifications and uniqueness of multipliers).

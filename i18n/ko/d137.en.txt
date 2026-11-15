@@ -1,0 +1,216 @@
+@@ 1
+<span class="eyebrow">Week 23 · Day 5</span>
+@@ 2
+Do robots still need maps? Language models, maps, and robot foundation models
+@@ 3
+After today you can describe two ways to connect a language model to a map, report what the book says about replacing maps with large models, and explain how a vision-language-action policy differs from a mapping pipeline.
+@@ 4
+About 60 min · Read §17.4, pp. 514–520 (7 pages) · Needs Week 23 Day 4
+@@ 5
+Read first: §17.4, pp. 514–520
+@@ 6
+The two ways to integrate an LLM with a map, "map prompting" and "map API" (pp. 514–515).
+@@ 7
+The two experiments with long-context VLMs, and the italic sentence that states the book's position (p. 515).
+@@ 8
+The form of robot data, \(\mathcal{D} = \{\mathbf{z}_t, \mathbf{u}_t\}_{t=1}^{T}\), and what a VLA model outputs (pp. 517–518).
+@@ 9
+The last paragraph of the chapter (p. 520).
+@@ 10
+Two efforts pull in opposite directions. One connects language models <em>to</em> maps, so that their knowledge is tied to a real place. The other trains very large models on images or robot data in the hope of doing <em>without</em> an explicit map. This section is a snapshot of fast-moving work. Everything below is what the book reports as of its April 2026 edition; expect the details to date.
+@@ 11
+1. Handing a map to a language model
+@@ 12
+An LLM knows a great deal about the world but nothing about <em>this</em> room. <strong>Grounding</strong> means tying its reasoning to the physical scene. The book highlights two ways to do it with a map. <span class="src">§17.4.1 · pp. 514–515</span>
+@@ 13
+Our illustration; the function names are the book's examples (p. 515), the contents are made up.
+@@ 14
+Map prompting
+@@ 15
+Map API
+@@ 16
+What the LLM receives
+@@ 17
+The whole map as structured text (JSON or YAML), which a scene graph with captions already nearly is
+@@ 18
+A few function signatures, then the results of the calls it makes
+@@ 19
+What answers a call
+@@ 20
+Nothing: the LLM reads
+@@ 21
+The query mechanisms of Day 3, for example \(\argmax_o \langle \mathbf{f}_o, \mathbf{f}_T \rangle\)
+@@ 22
+Limits the book states
+@@ 23
+Cannot convey detailed geometry; needs a sparse, text-compatible map; how well LLMs use coordinates in text is unclear
+@@ 24
+The LLM sees only what it asks for
+@@ 25
+A system that passes a VLM-built map as text to an LLM is an instance of what the book calls a <strong>Socratic model</strong>: pretrained models composed as modules. With a map API, map calls can be interleaved with LLM calls and robot commands. This is the pattern of <strong>tool calling</strong>, in which an LLM is free to call external functions and use their outputs while it generates an answer. The book's example, NLMap, has an LLM break a user request into proposed objects and check that each exists, and where, by querying an open-vocabulary map. <span class="src">§17.4.1 · p. 515</span>
+@@ 26
+2. Could a large model replace the map?
+@@ 27
+The book returns here to a question from its first pages: is an explicit map needed at all? <span class="src">§17.4.2 · p. 515</span>
+@@ 28
+Evidence the book cites
+@@ 29
+What was done
+@@ 30
+What was found
+@@ 31
+OpenEQA (embodied question answering)
+@@ 32
+Compared ways of combining VLMs and scene graphs
+@@ 33
+Prompting GPT-4V directly with 50 frames beat an explicit scene-graph prompt on that benchmark
+@@ 34
+Mobility VLA (navigation)
+@@ 35
+Gave a VLM a full office tour of 948 frames and asked for the goal image matching a user request
+@@ 36
+Worked when the goal image was handed to a map-based navigation pipeline. A map-free variant, with the VLM outputting actions directly, was ineffective
+@@ 37
+Geometry-aware VLMs
+@@ 38
+Models enhanced with awareness of geometry and physics, which most VLMs lack out of the box
+@@ 39
+Impressive 3D reasoning from a single image, but still a gap to the embodied intelligence shown with SLAM in the pipeline
+@@ 40
+So one benchmark favours raw frames, and one robot still needed a map to move. The book's reading, at present: whether an LLM- or VLM-based agent needs an explicit map appears to depend largely on the <strong>spatial and temporal horizons</strong> of its tasks, and the question is open. <span class="src">§17.4.2 · pp. 515–516</span> It adds that it is unclear how far long-context VLMs have a coherent understanding of the spatial structure behind the images.
+@@ 41
+Fifty photos of a flat are enough to answer "what colour is the sofa?" Walking from a meeting room to the front door of an office you toured an hour ago is a different kind of problem: many steps, each depending on where the last one left you. The first has a short horizon, the second a long one.
+@@ 42
+3. A foundation model for robots needs robot data
+@@ 43
+Text and images had the internet. The book's example of the recipe working in a new domain is DUSt3R for 3D vision (<a href="#d113">Week 19 · Day 5</a>). A <strong>robotics foundation model</strong> would be a base generalist policy: one model performing many skills on many robot bodies, representing the world only implicitly. Its training data are trajectories of sensor–action pairs \(\mathcal{D} = \{\mathbf{z}_t, \mathbf{u}_t\}_{t=1}^{T}\), which must be collected on robots or in simulation. <span class="src">§17.4.3 · pp. 516–517</span>
+@@ 44
+Size the book gives
+@@ 45
+RT1 (Robotics Transformer)
+@@ 46
+130k trajectories, a fleet of 13 robots, 700 tasks, collected over 17 months
+@@ 47
+BridgeData V2
+@@ 48
+Over 50k demonstrations of 13 skills in 24 environments
+@@ 49
+DROID
+@@ 50
+A multi-institution dataset of diverse robot interaction, mainly for manipulation policies
+@@ 51
+Open-X-Embodiment
+@@ 52
+The above and others combined: over 1M episodes, 22 robot embodiments, 527 skills, 34 laboratories
+@@ 53
+Compare the scale with Day 2: CLIP was trained on 400M image–caption pairs. Much of the effort therefore goes into making demonstration cheap: teleoperation with a VR headset (DROID), ALOHA's paired low-cost manipulators that mirror a human's motion, and the handheld gripper of the Universal Manipulation Interface, which matches a robot gripper and its eye-in-hand sensor. <span class="src">§17.4.3 · p. 517</span> These datasets mainly teach <em>skills</em> such as grasping; longer tasks are meant to come from longer demonstrations or by chaining short ones.
+@@ 54
+4. Policies that act without an explicit map
+@@ 55
+The simplest learner is <strong>behaviour cloning</strong>: supervised learning of the mapping from observation to action. The book calls it brittle, because the demonstrations contain little sub-optimal data and small deviations take the model out of distribution. <span class="src">§17.4.3 · p. 517</span>
+@@ 56
+Filling the gap: why small errors compound
+@@ 57
+Suppose the cloned policy errs with probability \(\epsilon\) per step while it is in states like those in the demonstrations. An expert never shows how to recover from a mistake, so in the worst case one error puts the robot in unfamiliar states where it keeps erring for the rest of a \(T\)-step episode. A first error at step \(t\) then costs \(T - t + 1\) bad steps, and the expected number of bad steps is at most
+@@ 58
+If errors did not compound it would be \(\epsilon T\). With \(\epsilon = 0.01\) and \(T = 100\): 1 bad step against a worst case of about 50. The bound grows with the <em>square</em> of the horizon, which is the same horizon the book pointed to in section 2. An explicit map and planner behave differently: after a slip the robot relocalizes and replans.
+@@ 59
+Examples the book names
+@@ 60
+Vision-language-action (VLA)
+@@ 61
+A transformer like those of Day 2, whose output tokens are read directly as control actions
+@@ 62
+GATO, PaLM-E, RT1, RT2, RT1-X and RT2-X (trained on Open-X-Embodiment), OpenVLA, π0
+@@ 63
+Action chunking
+@@ 64
+Output a sequence of actions, not one; the book says this has proved important for generalization
+@@ 65
+ACT, designed for ALOHA
+@@ 66
+Diffusion policy
+@@ 67
+A generative model learns to undo a gradual noising process; here it denoises random noise into actions, conditioned on what the robot sees
+@@ 68
+Diffusion Policy; Octo feeds a transformer's output to a diffusion action head
+@@ 69
+Reinforcement learning
+@@ 70
+Learn from rewards. The datasets above contain none, so it suits simulation and fine-tuning of the other policies
+@@ 71
+(none named)
+@@ 72
+<span class="src">§17.4.3 · pp. 517–519</span> One number gives a sense of cost: the book reports that OpenVLA, built from open-source vision and language components, was fine-tuned for 15 days on a cluster of 64 A100 GPUs. <span class="src">§17.4.3 · p. 518</span> The book also observes that as these models grow, their ability to encode some representation of the environment implicitly seems to improve, which may change where an explicit map is still needed. <span class="src">§17.4.3 · p. 519</span>
+@@ 73
+5. Where the chapter lands
+@@ 74
+The book does not pick a winner. Scaling robot datasets and models, combined with internet-scale VLMs and LLMs, could conceivably make explicit maps obsolete. Against that, it cites evidence that transformers struggle with compositional or chain-of-thought reasoning, which is why neural memory mechanisms with a notion of state (it names structured state space models) are re-emerging, with limits still unclear. It judges it equally likely, or more so, that generalization to compositional tasks in large, complex environments will come from explicit structure learned through a process such as SLAM. And it suggests the two are complementary: perceiving, representing, and understanding the world comes before acting, and an explicit world model should only help. <span class="src">§17.4.4 · pp. 519–520</span>
+@@ 75
+<strong>"The book says VLMs have made maps unnecessary."</strong> It reports one benchmark where frames beat a scene-graph prompt and one robot where the map-free variant failed, and concludes that it depends on the task's horizons.
+@@ 76
+<strong>"A VLA model contains no representation of the world."</strong> It has no <em>explicit</em> one that you can inspect or query. Whatever it knows is implicit in its weights and context.
+@@ 77
+<strong>"These model lists are the state of the art."</strong> The book itself says the section is not exhaustive and that new models appear very frequently.
+@@ 78
+Q1. A user asks, "How far is the mug from the sink, in metres?" The map is a dense metric map with object features. Which integration fits, according to §17.4.1?
+@@ 79
+Map prompting, because all maps can be written as JSON
+@@ 80
+A map API call such as distance("mug", "sink"), because text prompts fail to convey detailed geometry
+@@ 81
+Neither: LLMs cannot use maps
+@@ 82
+Fine-tune the LLM on the map
+@@ 83
+Map prompting is restricted to sparse, text-compatible maps and conveys geometry poorly. A map API leaves the geometry in the map and returns only the answer.
+@@ 84
+Q2. What does the Mobility VLA result, as the book reports it, suggest?
+@@ 85
+A VLM given 948 frames can output navigation actions directly
+@@ 86
+VLMs cannot find a goal image in a long tour
+@@ 87
+Maps are needed only for question answering
+@@ 88
+The VLM could pick the goal, but getting there still relied on a map-based navigation pipeline
+@@ 89
+The VLM chose the goal image from the tour. The map-free variant, in which it output actions directly, was found ineffective.
+@@ 90
+Q3. A cloned policy errs with probability 0.02 per step on a 50-step task. Using the worst-case argument, about how many bad steps should you expect, against how many if errors did not compound?
+@@ 91
+About 25, against 1
+@@ 92
+About 1, against 1
+@@ 93
+About 50, against 25
+@@ 94
+About 2.5, against 1
+@@ 95
+Worst case εT²/2 = 0.02 × 2500 / 2 = 25. Without compounding, εT = 0.02 × 50 = 1.
+@@ 96
+Q4. What makes a model a vision-language-action model in the book's description?
+@@ 97
+It builds a 3D scene graph before acting
+@@ 98
+It is trained only by reinforcement learning
+@@ 99
+Its transformer's output tokens are interpreted directly as control actions
+@@ 100
+It calls a map API for every action
+@@ 101
+A VLA keeps the structure of the language and vision-language models of Day 2 and changes what the output tokens mean: robot actions.
+@@ 102
+An LLM can be grounded by putting a text map in its prompt, or by letting it call functions on a map that stays outside.
+@@ 103
+As of the book's April 2026 edition, large VLMs answer some questions from raw frames, but the robot example still needed a map to navigate. The need depends on spatial and temporal horizons.
+@@ 104
+Robot foundation models learn policies from sensor–action trajectories, which are far scarcer than internet text and images.
+@@ 105
+Behaviour cloning compounds errors; VLA models, action chunking, diffusion policies, and reinforcement learning are the current families.
+@@ 106
+The book's closing view: explicit world modelling through SLAM and generalist policies are complementary.
+@@ 107
+<em>SLAM Handbook</em>, §17.4 "Further Readings &amp; Recent Trends" (§17.4.1–17.4.4), pp. 514–520. All statements about named models, datasets, and results are as given there.
+@@ 108
+The compounding-error argument follows Ross and Bagnell, <em>Efficient Reductions for Imitation Learning</em>, 2010.

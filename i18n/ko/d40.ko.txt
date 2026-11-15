@@ -1,0 +1,206 @@
+@@ 1
+<span class="eyebrow">7주차 · Day 4</span>
+@@ 2
+Lie group 위의 미분
+@@ 3
+오늘이 끝나면 plus·minus 연산자로 Lie group 사이 함수의 Jacobian을 정의하고, inversion, composition, group action의 Jacobian을 유도하고, 이들을 chain rule로 연결하고, manifold 위에서 gradient step을 밟을 수 있습니다.
+@@ 4
+약 60분 · §4.3, pp. 109–113 읽기 (5쪽) · 4주차 Day 3, Day 5 필요
+@@ 5
+먼저 읽기: §4.3, pp. 109–113
+@@ 6
+p. 109의 식 (4.21)과 (4.22): ⊕와 ⊖의 right 버전과 left 버전, 그리고 각 perturbation이 어느 frame에 있는지.
+@@ 7
+p. 110의 식 (4.23): 입력도 출력도 벡터가 아닐 때 Jacobian의 정의.
+@@ 8
+p. 112의 세 closed form, 식 (4.32)–(4.34). 모두 최종 답 한 단계 앞에서 끝나며, 오늘 그것을 마무리합니다.
+@@ 9
+p. 111의 Example 4.4와 p. 113의 Example 4.5: Jacobian을 어떻게 쓰는지.
+@@ 10
+pose는 뺄 수 없으므로 일반적인 미분의 정의가 적용되지 않습니다. "+"를 ⊕(exponential map으로 perturb)로, "−"를 ⊖(logarithm으로 비교)로 바꾸면 정의가 다시 작동합니다. 결과는 입력에서의 작은 tangent vector를 출력에서의 작은 tangent vector로 보내는 평범한 행렬이며, 평범한 chain rule을 따릅니다. 덕분에 AutoDiff, unrolling, implicit differentiation을 SLAM 변수에 적용할 수 있습니다.
+@@ 11
+1. group 위의 plus와 minus
+@@ 12
+<a href="#d20">4주차 · Day 2</a>의 내용을 떠올려 봅시다. Lie group \(\mathcal{M}\)은 매끄러운 manifold입니다. 각 원소 \(\boldsymbol{\chi}\)에는 미적분이 통하는 벡터 공간인 tangent space가 있고, \(\Exp\)는 tangent vector \(\boldsymbol{\tau}\in\R^n\)을 group element로 보내며 \(\Log\)는 그 반대로 보냅니다(식 (4.20)). <span class="src">§4.3.1 · p. 109</span> 이 장은 group element를 \(\boldsymbol{\chi}\)로, composition을 \(\circ\)로 씁니다.
+@@ 13
+두 group element 사이의 작은 변화를 재려면 \(\Exp\)나 \(\Log\) 하나와 composition 하나를 결합합니다. composition은 교환 법칙이 성립하지 않으므로 두 가지 버전이 있습니다: <span class="src">§4.3.1 · pp. 109–110</span>
+@@ 14
+이것이 식 (4.21)과 (4.22)입니다. right perturbation \(\boldsymbol{\tau}\)는 \(\boldsymbol{\chi}_1\)에서의 <strong>local frame</strong>(국소 좌표계)으로 표현되고, left perturbation \(\boldsymbol{\varepsilon}\)은 <strong>global frame</strong>(전역 좌표계)으로 표현됩니다.
+@@ 15 attr
+group SO(2)를 나타내는 원. 원 위의 점 chi에서 곧은 tangent line이 원에 접합니다. 화살표 tau가 tangent line 위에 놓여 있습니다. 점 chi plus tau는 tau를 원에 감아서 도달한 원 위의 점입니다. 그림 옆에는 right plus 연산자와 right minus 연산자의 정의가 있습니다.
+@@ 16
+χ의 tangent space
+@@ 17
+group (여기서는 원으로 그린 SO(2))
+@@ 18
+=
+@@ 19
+=
+@@ 20
+=
+@@ 21
+=
+@@ 22
+=
+@@ 23
+=
+@@ 24
+⊕는 tangent vector를 group 위로 감고, ⊖는 두 group element의 차이를 tangent space로 다시 펼칩니다. 둘이 함께 +와 −의 역할을 대신합니다.
+@@ 25
+<strong>SE(2)의 예.</strong> 위치 \((2, 0)\), heading 90°인 평면 pose와, tangent vector "한 단위 전진, 회전 없음" \((1, 0, 0)\)(책처럼 이동 성분을 먼저 씀)을 생각합시다. right-⊕는 이 벡터를 로봇 자신의 frame에서 적용합니다. 로봇은 heading 방향으로 움직여 \((2, 1)\)에 갑니다. left-⊕는 같은 벡터를 world frame에서 적용합니다. pose가 world x축을 따라 \((3, 0)\)으로 옮겨집니다. 숫자는 같아도 의미가 다릅니다.
+@@ 26
+2. group 사이 함수의 Jacobian
+@@ 27
+\(f:\mathcal{M}\to\mathcal{N}\)에 대해 책은 right 연산자로 다음과 같이 정의합니다. <span class="src">§4.3.1 · p. 110</span>
+@@ 28
+이것이 <strong>right Jacobian</strong> \(\mathbf{J}_R\)입니다. \(\boldsymbol{\chi}\)에서의 tangent space를 \(f(\boldsymbol{\chi})\)에서의 tangent space로 보내며, 둘 다 local입니다. 대신 left 연산자를 쓰면 <strong>left Jacobian</strong> \(\mathbf{J}_L\), 곧 식 (4.25)가 나오고, 이것은 global tangent space 사이를 잇습니다.
+@@ 29
+빈틈 채우기: "벡터로 나눈다"는 것의 뜻
+@@ 30
+\(\boldsymbol{\tau}\)로 나눌 수는 없습니다. 이 표기는 약식입니다. 평범한 벡터 함수 \(g(\boldsymbol{\tau}) = \Log\big(f(\boldsymbol{\chi})^{-1}\circ f(\boldsymbol{\chi}\circ\Exp(\boldsymbol{\tau}))\big)\)를 정의합니다. 이 함수는 벡터를 받아 벡터를 돌려주며 \(g(\mathbf{0}) = \mathbf{0}\)입니다. Jacobian은 0에서 이 함수의 평범한 편미분 행렬이며, 이것이 식 (4.24)입니다:
+@@ 31
+기억할 것은 둘째 형태입니다. 입력을 \(\boldsymbol{\tau}\)만큼 perturb하면 출력은 \(\mathbf{J}_R\boldsymbol{\tau}\)만큼 perturb됩니다. \(\mathbf{J}_R\)의 \(j\)번째 열은 입력을 \(j\)번째 tangent 방향으로 살짝 밀었을 때 출력에 일어나는 일입니다. 아래 위젯은 정확히 이 방법으로, \(10^{-5}\)만큼 밀어서 Jacobian을 계산합니다.
+@@ 32
+확인: 두 group이 모두 덧셈을 갖춘 평범한 벡터 공간이면 \(\Exp\)와 \(\Log\)는 항등 사상이고, ⊕는 +, ⊖는 −이며, (4.23)은 일반적인 미분입니다.
+@@ 33
+두 Jacobian은 같은 정보를 담습니다. left perturbation은 adjoint로 오른쪽으로 옮길 수 있습니다(<a href="#d23">4주차 · Day 5</a>): \(\Exp(\boldsymbol{\varepsilon})\circ\boldsymbol{\chi} = \boldsymbol{\chi}\circ\Exp(\Ad_{\boldsymbol{\chi}}^{-1}\boldsymbol{\varepsilon})\). 입력과 출력에서 모두 이렇게 하면 \(\mathbf{J}_L = \Ad_{f(\boldsymbol{\chi})}\,\mathbf{J}_R\,\Ad_{\boldsymbol{\chi}}^{-1}\)가 됩니다.
+@@ 34
+3. Closed form: inversion, composition, chain rule
+@@ 35
+기본 연산에 대해서는 극한을 한 번 계산해 두고 재사용할 수 있습니다. 이 블록들이 있으면 더 긴 식의 미분은 chain rule에서 나옵니다. 이 Jacobian에 대해서도 chain rule은 평범한 Jacobian과 똑같이 성립합니다: <span class="src">§4.3.2 · pp. 111–112</span>
+@@ 36
+책의 유도 (4.32)와 (4.33)은 \((\boldsymbol{\chi}_1^{-1}\boldsymbol{\tau}^\wedge\boldsymbol{\chi}_1)^\vee/\boldsymbol{\tau}\) 같은 식에서 멈춥니다. 4주차의 사실 하나로 이것을 마무리할 수 있습니다.
+@@ 37
+빈틈 채우기: 세 극한 마무리하기
+@@ 38
+<strong>adjoint</strong> \(\Ad_{\boldsymbol{\chi}}\)는 \(\Ad_{\boldsymbol{\chi}}\boldsymbol{\tau} = (\boldsymbol{\chi}\,\boldsymbol{\tau}^\wedge\boldsymbol{\chi}^{-1})^\vee\)로 정의되는 행렬입니다. 이것은 exponential을 group element 너머로 옮겨 줍니다:
+@@ 39
+<strong>Inversion</strong>, \(f(\boldsymbol{\chi}) = \boldsymbol{\chi}^{-1}\). (4.23)에 넣고 \((\boldsymbol{\chi}\Exp(\boldsymbol{\tau}))^{-1} = \Exp(-\boldsymbol{\tau})\boldsymbol{\chi}^{-1}\)를 쓰면:
+@@ 40
+이것은 \(\boldsymbol{\tau}\)에 대해 선형이므로 Jacobian은 앞에 붙은 행렬입니다: \(\dfrac{\partial\boldsymbol{\chi}^{-1}}{\partial\boldsymbol{\chi}} = -\Ad_{\boldsymbol{\chi}}\). 이것으로 (4.32)가 완성됩니다.
+@@ 41
+<strong>Composition, 첫째 인자</strong>, \(f(\boldsymbol{\chi}) = \boldsymbol{\chi}\circ\boldsymbol{\chi}_1\):
+@@ 42
+이것으로 (4.33)이 완성됩니다. <strong>Composition, 둘째 인자</strong>: \(\Log\big((\boldsymbol{\chi}\boldsymbol{\chi}_1)^{-1}\boldsymbol{\chi}\boldsymbol{\chi}_1\Exp(\boldsymbol{\tau})\big) = \Log(\Exp(\boldsymbol{\tau})) = \boldsymbol{\tau}\)이므로 Jacobian은 \(\mathbf{I}\), 곧 식 (4.34)입니다.
+@@ 43
+<strong>Chain rule 확인.</strong> \(h(\boldsymbol{\chi}) = (\boldsymbol{\chi}\circ\boldsymbol{\chi}_1)^{-1}\)에 대해 (4.31)은 \(-\Ad_{\boldsymbol{\chi}\boldsymbol{\chi}_1}\cdot\Ad_{\boldsymbol{\chi}_1^{-1}} = -\Ad_{\boldsymbol{\chi}}\Ad_{\boldsymbol{\chi}_1}\Ad_{\boldsymbol{\chi}_1}^{-1} = -\Ad_{\boldsymbol{\chi}}\)를 줍니다. 직접 계산하면 \(h = \boldsymbol{\chi}_1^{-1}\circ\boldsymbol{\chi}^{-1}\)는 둘째 인자가 \(\boldsymbol{\chi}^{-1}\)인 composition이므로 Jacobian은 \(\mathbf{I}\cdot(-\Ad_{\boldsymbol{\chi}})\)입니다. 두 경로가 일치합니다.
+@@ 44
+=
+@@ 45
+말로 하면
+@@ 46
+χ에 대한 χ⁻¹
+@@ 47
+=
+@@ 48
+inversion은 perturbation의 부호를 뒤집고, 그것을 χ의 오른쪽에서 χ⁻¹의 오른쪽으로 옮김
+@@ 49
+χ에 대한 χ ∘ χ₁
+@@ 50
+=
+@@ 51
+perturbation이 곱의 가운데에 있어 χ₁ 너머로 옮겨야 함
+@@ 52
+χ₁에 대한 χ ∘ χ₁
+@@ 53
+항등 행렬
+@@ 54
+마지막 인자의 right perturbation은 이미 곱의 right perturbation임
+@@ 55
+직접 해 보기: SE(2) 위의 평면 2-link arm입니다. 미분할 대상을 고른 다음 link와 perturbation을 바꿔 보세요.
+@@ 56
+눈여겨볼 점: finite-difference Jacobian과 closed form은 모든 설정에서 소수점 아래 약 10자리까지 일치합니다. 기본값에서 Jacobian의 셋째 열 (0.964, 1.149, 1)은 첫째 joint를 회전시키면 end-effector가 돌아갈 뿐 아니라 옆으로도 움직인다는 뜻입니다. 이것이 lever arm이며, link를 짧게 하면 줄어듭니다. "χ₁에 대한" 경우에는 어떤 link에서도 Jacobian이 항등 행렬입니다. composition과 inversion에서는 τ가 커도 예측 J·τ가 실제 변화와 같습니다. 이 map들은 tangent vector에 대해 정확히 선형이기 때문입니다(위의 유도에는 "작다"는 조건이 한 번도 필요하지 않았습니다). 넷째 옵션인 §4의 group action은 다릅니다. τ가 커질수록 선형 예측(주황색)이 실제 변위(분홍색)에서 벗어납니다.
+@@ 57
+Example 4.5는 SO(3)에서의 같은 상황입니다. joint 회전 두 개와 end-effector의 orientation \(\mathbf{R} = \mathbf{R}_1\circ\mathbf{R}_2\). <span class="src">Example 4.5 · p. 113</span> 회전에서는 \(\Ad_{\mathbf{R}} = \mathbf{R}\)이므로
+@@ 58
+첫째 joint의 작은 회전은 둘째 joint를 거쳐 다시 표현된 채 end-effector에 도달하고, 둘째 joint의 작은 회전은 그대로 도달합니다.
+@@ 59
+4. Exp와 group action의 Jacobian
+@@ 60
+pp. 112–113에는 블록이 두 개 더 나옵니다. 첫째는 exponential map 자체의 미분으로, perturbation 종류를 나타내는 왼쪽 위첨자를 붙여 씁니다: <span class="src">§4.3.2 · p. 112</span>
+@@ 61
+이것이 (4.35)와 (4.36)입니다. "입력을 perturb하면 출력이 perturb된다"는 형태로 쓰면 \(\Exp(\boldsymbol{\tau}+\delta\boldsymbol{\tau}) \approx \Exp(\boldsymbol{\tau})\circ\Exp(\mathbf{J}_r(\boldsymbol{\tau})\,\delta\boldsymbol{\tau})\), \(\Exp(\boldsymbol{\tau}+\delta\boldsymbol{\tau}) \approx \Exp(\mathbf{J}_l(\boldsymbol{\tau})\,\delta\boldsymbol{\tau})\circ\Exp(\boldsymbol{\tau})\)입니다. 이들이 답하는 질문은 이것입니다. <em>좌표</em> \(\boldsymbol{\tau}\)를 조금 바꾸면 group element는 local 또는 global로 재었을 때 어떻게 움직이는가? 둘 다 \(\boldsymbol{\tau}=\mathbf{0}\)에서 \(\mathbf{I}\)이고, SO(2) 같은 가환 group에서는 어디서나 \(\mathbf{I}\)입니다. SO(3)에 대한 closed form은 <a href="#d23">4주차 · Day 5</a>에서 다뤘습니다.
+@@ 62
+둘째는 <strong>group action</strong>(군 작용)입니다. 점에 회전을 적용하는 것처럼 group element를 벡터에 적용하는 것입니다. 식 (4.37)은 group element에 대한 Jacobian과 벡터에 대한 Jacobian을 정의합니다. <span class="src">§4.3.2 · p. 113</span>
+@@ 63
+빈틈 채우기: 회전된 점에 대한 action Jacobian
+@@ 64
+\(\mathbf{R}\in\SO(3)\), \(\mathbf{v}\in\R^3\)일 때 \(f(\mathbf{R},\mathbf{v}) = \mathbf{R}\mathbf{v}\)를 생각합시다. 출력이 벡터이므로 출력의 ⊖는 단순한 뺄셈입니다. \(\mathbf{R}\)을 오른쪽에서 perturb하고, 작은 \(\boldsymbol{\tau}\)에 대해 \(\Exp(\boldsymbol{\tau}) \approx \mathbf{I} + \boldsymbol{\tau}^\wedge\)를 씁니다. 여기서 \(\boldsymbol{\tau}^\wedge\mathbf{v} = \boldsymbol{\tau}\times\mathbf{v} = -\mathbf{v}^\wedge\boldsymbol{\tau}\)입니다:
+@@ 65
+둘째는 action이 \(\mathbf{v}\)에 대해 선형이므로 바로 나옵니다. 이 두 행렬은 bundle adjustment의 모든 reprojection-error Jacobian의 핵심입니다.
+@@ 66
+위젯의 넷째 옵션은 평면 버전입니다. pose \(\boldsymbol{\chi} = (\mathbf{R}, \mathbf{t})\in\SE(2)\)가 점에 작용하며 \(\boldsymbol{\chi}\cdot\mathbf{p} = \mathbf{R}\mathbf{p} + \mathbf{t}\)입니다. 같은 단계를 거치면 \(\mathbf{p}^{\perp} = (-p_2, p_1)\T\)일 때 \(2\times3\) Jacobian \(\mathbf{R}\,[\,\mathbf{I}\;\;\mathbf{p}^{\perp}\,]\)이 나옵니다. composition과 달리 action은 \(\boldsymbol{\tau}\)에 대해 정확히 선형이 아닙니다. 유한한 회전은 점을 호를 따라 움직이고, Jacobian은 그 호의 접선을 예측합니다.
+@@ 67
+5. Jacobian 사용하기: manifold 위의 gradient step
+@@ 68
+Example 4.4는 IMU와 카메라에서 얻은 noise 섞인 orientation 측정값 두 개를 융합합니다. 최소화할 식은 다음과 같고 <span class="src">Example 4.4 · p. 111</span>
+@@ 69
+이를 \(\mathbf{R}\in\SO(3)\)에 대해 최소화합니다. gradient (4.29)는 두 residual \(\mathbf{r} = \Log(\mathbf{R}_{\text{meas}}^{-1}\mathbf{R})\)에 대한 \(2\,\mathbf{J}\T\mathbf{r}\)의 합이며, \(\mathbf{J} = \partial\mathbf{r}/\partial\mathbf{R}\)은 right Jacobian입니다. 업데이트는 tangent space에서 움직인 뒤 group으로 되돌립니다:
+@@ 70
+step을 오른쪽에 적용하는 이유는 right Jacobian이 \(\mathbf{R}_k\)에서의 local tangent space에서 gradient를 만들기 때문입니다. chain rule에 따라 \(\mathbf{J}\)는 \(\Log\)의 Jacobian에 composition의 둘째 인자에 대한 Jacobian(\(\mathbf{I}\))을 곱한 것입니다. \(\Log\)의 Jacobian은 \(\mathbf{J}_r^{-1}(\mathbf{r})\)이며, residual이 작으면 \(\mathbf{I}\)에 가깝습니다.
+@@ 71
+<strong>SO(2)에서의 같은 예.</strong> 여기서 회전의 \(\Log\)는 그 각도이고 모든 Jacobian은 1입니다. IMU가 10°, 카메라가 30°라고 합시다(모든 것이 각도에 대해 선형이므로 여기서는 도 단위를 써도 됩니다). 그러면 \(f(\theta) = (\theta-10)^2 + (\theta-30)^2\), \(\nabla f = 2(\theta-10) + 2(\theta-30)\)입니다. \(\alpha = 0.1\)로 \(\theta_0 = 0\)에서 시작하면:
+@@ 72
+θ (도)
+@@ 73
+다음 θ = θ − 0.1·∇f
+@@ 74
+답인 20°까지의 거리는 step마다 \(1 - 4\alpha = 0.6\)배로 줄어듭니다. SO(3)에서도 3차원 벡터와 위의 Jacobian으로 같은 계산을 합니다.
+@@ 75
+같은 tangent-space 벡터가 불확실성도 나릅니다. \(\boldsymbol{\tau} = \boldsymbol{\chi}\ominus\boldsymbol{\chi}_1\)이라 하면 \(\boldsymbol{\chi}_1\) 주위의 무작위 group element의 covariance는 \(\boldsymbol{\Sigma}_{\boldsymbol{\chi}} \triangleq \E[\boldsymbol{\tau}\boldsymbol{\tau}\T]\), 곧 식 (4.26)이며, \(\boldsymbol{\chi}_1\)에서의 tangent space에 있습니다. <span class="src">§4.3.1 · pp. 110–111</span> <a href="#d22">4주차 · Day 4</a>에서 이미 보았습니다. 1차 근사로, Jacobian이 \(\mathbf{J}\)인 함수 \(f\)는 이를 \(\mathbf{J}\boldsymbol{\Sigma}_{\boldsymbol{\chi}}\mathbf{J}\T\)로 보냅니다.
+@@ 76
+<strong>"SE(3)의 Jacobian은 4 × 4 행렬, 또는 12 × 12다."</strong> 6 × 6입니다. 크기는 group을 표현하는 행렬의 크기가 아니라 tangent space의 차원으로 정해집니다.
+@@ 77
+<strong>"Right Jacobian과 left Jacobian은 바꿔 써도 된다."</strong> 둘은 adjoint만큼 다릅니다. right Jacobian으로 얻은 gradient는 (4.30)처럼 right-⊕로 적용해야 합니다.
+@@ 78
+<strong>"함수의 J_R과 group의 J_r은 같은 것이다."</strong> (4.24)의 \(\mathbf{J}_R\)은 어떤 함수 \(f\)의 Jacobian입니다. (4.35)의 \(\mathbf{J}_r(\boldsymbol{\tau})\)는 \(\Exp\)라는 특정 함수의 Jacobian입니다.
+@@ 79
+<strong>"χ⁻¹의 미분은 −x처럼 −I다."</strong> 가환 group에서만 그렇습니다. 일반적으로는 \(-\Ad_{\boldsymbol{\chi}}\)입니다.
+@@ 80
+Q1. Example 4.5에서 R₂가 z축에 대한 90° 회전이라 합시다. 첫째 joint R₁을 오른쪽에서 τ = (0.01, 0, 0)만큼 perturb합니다. end-effector R₁ ∘ R₂는 자기 frame에서 어떤 perturbation을 겪습니까?
+@@ 81
+Jacobian은 R₂ᵀ입니다. R₂의 열은 (0,1,0), (−1,0,0), (0,0,1)이므로 R₂ᵀ·(0.01, 0, 0) = (0, −0.01, 0)입니다. 예전 x축이 새 frame의 음의 y축입니다.
+@@ 82
+Q2. f(χ) = χ ∘ χ₁ ∘ χ₂의 χ에 대한 right Jacobian은 무엇입니까?
+@@ 83
+Ad of χ₁⁻¹뿐
+@@ 84
+=
+@@ 85
+χ₁ ∘ χ₂를 고정된 원소 하나로 보고 (4.33)을 적용합니다. chain rule로 보면 이는 Ad of χ₂⁻¹ 곱하기 Ad of χ₁⁻¹과 같습니다.
+@@ 86
+Q3. SO(2)에서 IMU가 0°, 카메라가 40°를 읽습니다. θ = 10°에서 시작해 α = 0.25로 (4.30)을 한 step 적용합니다. 어디에 도달합니까?
+@@ 87
+∇f = 2(10 − 0) + 2(10 − 40) = −40. θ ← 10 − 0.25·(−40) = 20°로, 두 측정값의 평균입니다. α = 1/4이면 인자 1 − 4α가 0이므로 한 step으로 충분합니다.
+@@ 88
+Q4. ∂(χ ∘ χ₁)/∂χ₁은 항등 행렬인데 ∂(χ ∘ χ₁)/∂χ는 왜 그렇지 않습니까?
+@@ 89
+χ₁이 상수이기 때문
+@@ 90
+둘째 인자는 항상 회전이기 때문
+@@ 91
+χ₁의 right perturbation은 이미 곱의 오른쪽 끝에 있지만, χ의 perturbation은 χ₁ 너머로 옮겨야 하기 때문
+@@ 92
+χ₁에는 left Jacobian을 썼기 때문
+@@ 93
+χ ∘ (χ₁ ∘ Exp(τ)) = (χ ∘ χ₁) ∘ Exp(τ): 출력이 정확히 τ만큼 perturb됩니다. 첫째 인자의 경우 χ ∘ Exp(τ) ∘ χ₁ = (χ ∘ χ₁) ∘ Exp(Ad of χ₁⁻¹ 곱하기 τ)입니다.
+@@ 94
+Q5. 평면 pose가 (2, 0)에 있고 heading은 90°입니다. tangent vector (1, 0, 0), 곧 한 단위 전진하고 회전은 없는 벡터를 right-⊕로 적용합니다. pose는 이제 어디에 있습니까?
+@@ 95
+right-⊕는 증분을 로봇 자신의 frame에서 적용하며, 이 frame의 전진 축은 world y 방향을 향합니다. (3, 0)은 left-⊕가 줄 답입니다.
+@@ 96
+⊕와 ⊖는 group 위에서 +와 −를 대신합니다. right 버전은 local frame을, left 버전은 global frame을 씁니다(식 (4.21)–(4.22)).
+@@ 97
+Jacobian (4.23)은 \(f(\boldsymbol{\chi}\oplus\boldsymbol{\tau}) \approx f(\boldsymbol{\chi})\oplus\mathbf{J}\boldsymbol{\tau}\)를 만족하는 행렬입니다. 크기는 tangent space로 정해집니다.
+@@ 98
+Inversion: \(-\Ad_{\boldsymbol{\chi}}\). Composition: 첫째 인자에 대해 \(\Ad_{\boldsymbol{\chi}_1^{-1}}\), 둘째 인자에 대해 \(\mathbf{I}\). 점의 회전: \(-\mathbf{R}\mathbf{v}^\wedge\)와 \(\mathbf{R}\).
+@@ 99
+chain rule (4.31)이 이 블록들을 결합하며, AutoDiff는 이렇게 pose를 거쳐 미분합니다.
+@@ 100
+manifold 위의 gradient step은 tangent space에서 움직인 뒤 \(\Exp\)로 되돌립니다(식 (4.30)).
+@@ 101
+<em>SLAM Handbook</em>, §4.3 "Differentiation on Manifold", pp. 109–113; 식 (4.19)–(4.39); Example 4.4, 4.5.
+@@ 102
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (Jacobian의 ⊕/⊖ 정의, inversion·composition·Exp·Log·group action의 완성된 Jacobian, left Jacobian과 right Jacobian의 관계).
+@@ 103
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (adjoint, SO(3)와 SE(3)의 Jacobian). SE(2) arm과 SO(2) 숫자는 이 앱이 직접 만든 예입니다.

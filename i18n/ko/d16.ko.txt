@@ -1,0 +1,208 @@
+@@ 1
+<span class="eyebrow">3주차 · Day 4</span>
+@@ 2
+Bayes tree, 그리고 새 측정이 그 일부만 건드리는 이유
+@@ 3
+오늘이 끝나면 소거된 factor graph의 conditional들을 Bayes tree로 묶고, 각 clique의 frontal 변수와 separator 변수를 짚고, 새 factor가 들어오면 어느 clique를 다시 계산해야 하는지 예측할 수 있습니다.
+@@ 4
+약 60분 · §1.7부터 §1.7.2까지, pp. 46–49 읽기 (4쪽) · 3주차 Day 3 필요
+@@ 5
+먼저 읽기: §1.7, §1.7.1, §1.7.2, pp. 46–49
+@@ 6
+p. 46: 행렬 분해를 업데이트하는 것만으로는 SLAM에 충분하지 않은 이유.
+@@ 7
+p. 46의 "chordal" 정의, 그리고 책이 toy Bayes net에서 짚는 cycle (p. 47).
+@@ 8
+p. 47의 Figure 1.13: 세 clique, 그리고 \(\mathbf{R}\)의 어떤 행이 어떤 색인지.
+@@ 9
+p. 48 마지막 문단에 나오는 Bayes tree의 두 가지 성질.
+@@ 10
+p. 49의 Figure 1.14: \(\mathbf{p}_1\)과 \(\mathbf{p}_3\) 사이에 factor를 추가할 때 손대지 않고 남는 clique.
+@@ 11
+elimination으로 얻은 Bayes net의 conditional들은 clique로 묶을 수 있고, 그 clique들은 트리를 이룹니다. elimination 동안 정보는 leaf에서 root 쪽으로만 흐릅니다. 따라서 새 factor는 그 변수를 담은 clique와 그 위의 clique만 바꿀 수 있습니다. 트리의 그 부분을 떼어 내 다시 소거하고, 손대지 않은 서브트리는 다시 매달면 됩니다.
+@@ 12
+1. 문제: 끝없이 들어오는 측정
+@@ 13
+로봇은 측정이 들어올 때마다 새 추정값을 원합니다. 매번 \(\boldsymbol{\Lambda}\)를 처음부터 다시 분해하면, 새 측정 하나가 바꾸는 것은 아주 적은데도 trajectory가 길어질수록 비용이 점점 커집니다. <em>선형</em> 문제라면 기존 분해를 업데이트하는 고전적인 방법이 있습니다(내일 하나를 봅니다). 하지만 SLAM은 비선형입니다. 추정값이 움직이면 오래된 factor를 다시 linearize해야 하고 \(\mathbf{A}\)의 오래된 행이 바뀌는데, 전부 다시 분해하지 않고 이를 처리하는 방법은 분명하지 않습니다. 책의 답은 \(\mathbf{R}\)을 행렬로 생각하지 말고, 국소적으로 편집할 수 있는 graphical model인 <strong>Bayes tree</strong>로 저장하는 것입니다. <span class="src">§1.7 · p. 46</span>
+@@ 14
+2. elimination이 만드는 chordal Bayes net, 그리고 트리를 이루는 chordal 그래프의 clique
+@@ 15
+node가 셋보다 많은 모든 cycle에 <strong>chord</strong>, 즉 cycle에서 이웃하지 않은 두 node를 잇는 edge가 있으면, 그 그래프를 <strong>chordal</strong>(또는 triangulated)이라고 합니다. 화살표 방향을 무시하면, elimination 알고리즘이 만드는 Bayes net은 항상 chordal입니다. <span class="src">§1.7.1 · p. 46</span>
+@@ 16
+빈틈 채우기: elimination이 항상 chordal 그래프를 만드는 이유
+@@ 17
+Bayes net의 아무 cycle이나 하나 잡고, 그 위에서 가장 먼저 소거된 변수를 \(v\)라고 합니다. cycle 위의 두 이웃 \(u\)와 \(w\)는 나중에 소거되었으므로, edge \(v\)–\(u\)와 \(v\)–\(w\)는 둘 다 \(v\)의 separator에 있었다는 뜻입니다. 어제 본 규칙에 따르면 \(v\)를 소거하면 separator의 모든 원소가 이어지므로, 그때부터 \(u\)와 \(w\)는 factor를 공유하고, 둘 중 먼저 소거되는 쪽의 separator에 다른 쪽이 들어갑니다. 따라서 Bayes net에는 edge \(u\)–\(w\)가 있습니다. cycle의 node가 셋보다 많으면 \(u\)와 \(w\)는 cycle에서 이웃하지 않으므로 이 edge가 chord입니다.
+@@ 18
+같은 논증으로, 각 변수와 그 separator를 합친 것이 <strong>clique</strong>, 즉 모든 쌍이 서로 이어진 변수 집합임을 알 수 있습니다.
+@@ 19
+toy Bayes net(Figure 1.10의 마지막 패널)에는 cycle \(\mathbf{p}_1\)–\(\mathbf{p}_2\)–\(\boldsymbol{\ell}_1\)이 있으므로, 변수 하나하나를 node로 보면 트리가 아닙니다. <span class="src">§1.7.1 · p. 47</span> 하지만 가장 큰 clique는 \(\{\boldsymbol{\ell}_1, \mathbf{p}_1, \mathbf{p}_2\}\), \(\{\mathbf{p}_2, \mathbf{p}_3\}\), \(\{\boldsymbol{\ell}_2, \mathbf{p}_3\}\)이고, 이 셋은 트리처럼 겹칩니다. 첫째와 셋째는 각각 가운데 clique와 변수 하나씩을 공유하고, 서로는 아무것도 공유하지 않습니다. chordal 그래프에서는 항상 이렇게 됩니다. 책은 이를 증명 없이 말합니다. 방향이 없는 버전은 clique tree 또는 junction tree라고 부릅니다.
+@@ 20
+3. Bayes tree
+@@ 21
+<strong>Bayes tree</strong>는 chordal Bayes net의 clique \(\mathbf{c}_k\)를 node로 하는 방향 트리입니다. 각 clique에 대해: <span class="src">§1.7.1 · p. 47</span>
+@@ 22
+<strong>separator</strong> \(\mathbf{s}_k = \mathbf{c}_k \cap \boldsymbol{\varpi}_k\)는 clique가 부모 clique \(\boldsymbol{\varpi}_k\)와 공유하는 부분입니다.
+@@ 23
+<strong>frontal variables</strong> \(\mathbf{f}_k = \mathbf{c}_k \setminus \mathbf{s}_k\)는 나머지 변수입니다.
+@@ 24
+node는 conditional \(p(\mathbf{f}_k \mid \mathbf{s}_k)\) 하나를 저장하고, clique는 \(\mathbf{f}_k : \mathbf{s}_k\)로 씁니다.
+@@ 25
+joint density는 clique들에 대한 곱입니다(식 (1.55)): \(p(\mathbf{x}) = \prod_k p(\mathbf{f}_k \mid \mathbf{s}_k)\). root는 separator가 비어 있고 prior \(p(\mathbf{f}_r)\)를 저장합니다. 모든 변수는 정확히 한 clique에서 frontal입니다.
+@@ 26 attr
+toy 예제의 Bayes tree. root clique는 p2와 p3을 담고, p3이 주어졌을 때 p2의 p와 p3의 p의 곱, 즉 R의 4행과 5행을 저장합니다. 왼쪽 자식은 separator가 p2인 clique l1, p1로, p1과 p2가 주어졌을 때 l1의 p와 p2가 주어졌을 때 p1의 p의 곱, 즉 R의 1행과 3행을 저장합니다. 오른쪽 자식은 separator가 p3인 clique l2로, p3이 주어졌을 때 l2의 p, 즉 R의 2행을 저장합니다.
+@@ 27
+root · R의 4, 5행
+@@ 28
+R의 1, 3행
+@@ 29
+R의 2행
+@@ 30
+p₂ 공유
+@@ 31
+p₃ 공유
+@@ 32
+각 clique의 내용을 풀어 쓴 Figure 1.13의 toy Bayes tree. 세 상자를 곱하면 식 (1.44)의 conditional 다섯 개가 나옵니다. 이 트리는 행렬 R의 행들을 그룹으로 나눈 것입니다.
+@@ 33
+빈틈 채우기: Bayes net에서 트리 만들기
+@@ 34
+책은 clique를 "식별할 수 있다"고만 말합니다. iSAM2 논문의 절차는 conditional을 elimination 순서의 <em>역순</em>으로 방문합니다. \(p(\mathbf{x}_j \mid \mathbf{s}_j)\)에 대해: \(\mathbf{s}_j\)가 비어 있으면 root clique를 새로 시작합니다. 그렇지 않으면 \(\mathbf{s}_j\)에서 가장 먼저 소거된 변수가 frontal인 clique를 찾습니다. 그 clique의 변수가 정확히 \(\mathbf{s}_j\)이면 \(\mathbf{x}_j\)를 그 clique에 frontal 변수로 하나 더 넣습니다. 그렇지 않으면 그 clique의 자식으로 새 clique \(\mathbf{x}_j : \mathbf{s}_j\)를 시작합니다. toy 예제에서는:
+@@ 35
+=
+@@ 36
+찾은 clique
+@@ 37
+separator와 변수가 같은가?
+@@ 38
+처리 후 트리
+@@ 39
+없음, separator가 비어 있음
+@@ 40
+=
+@@ 41
+=
+@@ 42
+예, 합류
+@@ 43
+=
+@@ 44
+=
+@@ 45
+아니오, 새 자식
+@@ 46
+p₁ : p₂ 추가
+@@ 47
+ℓ₂ : p₃ 추가
+@@ 48
+p₁ : p₂, 즉 {p₁, p₂}
+@@ 49
+그 clique가 ℓ₁, p₁ : p₂가 됨
+@@ 50
+각 clique는 \(\mathbf{R}\)의 작은 dense 조각입니다. frontal 변수들의 행으로 이루어지며, nonzero는 그 clique의 열에만 있습니다. 책은 Bayes tree를 square-root information matrix를 위한 "깊은 의미를 지닌 sparse 저장 방식"이라고 부릅니다. <span class="src">§1.7.2 · p. 48</span> 서로 다른 가지의 행은 공통 조상에 속한 열에서만 겹칩니다. Figure 1.13(c)에서 두 자식 clique의 행은 root의 열에서만 만납니다.
+@@ 51
+4. 업데이트: root까지의 경로만
+@@ 52
+트리가 만들어지는 방식에 관한 두 가지 사실로 모든 것이 설명됩니다. <span class="src">§1.7.2 · p. 48</span>
+@@ 53
+<strong>정보는 위로만 흐릅니다.</strong> clique는 자신의 factor와 자식들이 올려 보낸 새 factor \(\tau\)로 계산됩니다. 부모에서 계산한 것은 자식에서 절대 쓰이지 않습니다.
+@@ 54
+<strong>factor는 그 변수들 가운데 가장 먼저 소거되는 변수에서 들어갑니다</strong>. 즉 그 변수가 frontal인 clique에서 들어갑니다.
+@@ 55
+따라서 새 factor \(\phi(\mathbf{x}_j, \mathbf{x}_{j'})\)는 \(\mathbf{x}_j\)와 \(\mathbf{x}_{j'}\)가 frontal인 clique와, 그 위로 root까지의 모든 clique를 바꿉니다. 이 경로 아래나 옆에 매달린 서브트리는 바뀌지 않은 factor로 계산된 것입니다. 업데이트는 트리를 편집하는 일입니다:
+@@ 56
+Figure 1.14는 \(\mathbf{p}_1\)과 \(\mathbf{p}_3\) 사이에 factor를 추가합니다. \(\mathbf{p}_1\)은 왼쪽 clique에서, \(\mathbf{p}_3\)은 root에서 frontal이므로 이 둘을 떼어 냅니다. 둘은 각각 \((\boldsymbol{\ell}_1, \mathbf{p}_1, \mathbf{p}_2)\) 위의 factor와 \((\mathbf{p}_2, \mathbf{p}_3)\) 위의 factor가 됩니다. \(f(\mathbf{p}_1, \mathbf{p}_3)\)를 추가하고 \(\boldsymbol{\ell}_1, \mathbf{p}_1, \mathbf{p}_2, \mathbf{p}_3\) 순서로 소거합니다:
+@@ 57
+\(\boldsymbol{\ell}_1\): 이전과 같이 separator는 \(\{\mathbf{p}_1, \mathbf{p}_2\}\).
+@@ 58
+\(\mathbf{p}_1\): factor가 \(\tau(\mathbf{p}_1, \mathbf{p}_2)\)와 새 \(f(\mathbf{p}_1, \mathbf{p}_3)\)이므로, 이제 separator는 \(\{\mathbf{p}_2\}\)만이 아니라 \(\{\mathbf{p}_2, \mathbf{p}_3\}\)입니다.
+@@ 59
+\(\mathbf{p}_2\): separator는 \(\{\mathbf{p}_3\}\). 그다음 \(\mathbf{p}_3\)은 separator가 없습니다.
+@@ 60
+이 네 conditional에 트리 만들기 절차를 적용하면 root \(\mathbf{p}_1, \mathbf{p}_2, \mathbf{p}_3\)과 그 자식 \(\boldsymbol{\ell}_1 : \mathbf{p}_1, \mathbf{p}_2\)가 나옵니다. clique \(\boldsymbol{\ell}_2 : \mathbf{p}_3\)은 바뀌지 않은 채 root 아래에 다시 매달립니다. <span class="src">§1.7.2 · p. 49</span>
+@@ 61
+새 factor가 \(\mathbf{p}_3\)을 포함하는데도 \(\boldsymbol{\ell}_2 : \mathbf{p}_3\)이 그대로인 이유는 무엇일까요? \(\mathbf{p}_3\)은 이 clique의 separator일 뿐이기 때문입니다. 이 clique는 "\(\mathbf{p}_3\)을 알 때 \(\boldsymbol{\ell}_2\)를 어디에 둘지"를 저장하고, 그 규칙은 \(\phi_5\)와 \(\phi_9\)만으로 만들어졌습니다. 새 측정은 \(\mathbf{p}_3\)에 대한 우리의 믿음을 바꾸는데, 그 믿음은 root에 저장되어 있습니다. back-substitution을 다시 하면 \(\boldsymbol{\ell}_2\)의 <em>값</em>은 여전히 움직이지만, 그 conditional은 바뀌지 않습니다.
+@@ 62
+직접 해 보기: 오른쪽 트리는 왼쪽의 step들로 만들어졌습니다. "다음 pose 추가"를 누르고 어떤 clique가 분홍색으로 바뀌는지 보십시오. 로봇이 출발점으로 돌아오는 step 11까지 계속해 보십시오.
+@@ 63
+눈여겨볼 점: 평범한 step은 trajectory가 이미 얼마나 길든 root 근처의 변수 3개나 4개만 다시 계산합니다. step 11은 트리 맨 아래에 있는 x1으로의 loop closure를 추가하므로, root까지의 경로가 트리 전체가 되어 변수 14개를 모두 다시 계산합니다. step 12는 landmark l1을 다시 보며 거의 같은 비용이 듭니다. step 13과 14는 다시 쌉니다. 전체 실행 동안 incremental 업데이트는 변수 67개를 다시 소거하는데, 매 step 전부 다시 분해하면 135개입니다.
+@@ 64
+Figure 1.15는 같은 효과를 더 큰 규모로 보여 줍니다. 시뮬레이션한 Manhattan world 시퀀스의 step 400에서 Bayes tree의 작은 부분만 다시 계산됩니다. <span class="src">§1.7.2 · pp. 49–50</span>
+@@ 65
+<strong>"root는 로봇이 출발한 곳이다."</strong> root에는 <em>마지막에</em> 소거된 변수가 들어 있습니다. 좋은 incremental ordering은 가장 최근의 pose를 그곳에 둡니다. 다음 factor들이 그곳으로 들어오기 때문입니다.
+@@ 66
+<strong>"Bayes tree는 다른, 근사된 모델이다."</strong> Bayes tree는 Bayes net과 같은 density, 같은 \(\mathbf{R}\)을 clique별로 묶은 것입니다.
+@@ 67
+<strong>"두 변수 사이의 factor는 clique 두 개를 바꾼다."</strong> 두 변수의 clique와, 그 둘의 모든 조상을 바꿉니다. 변수 하나가 트리 깊숙이 있으면 트리의 대부분이 될 수도 있습니다.
+@@ 68
+Q1. ℓ₁, p₁ : p₂로 쓰는 clique에서 frontal 변수는 무엇입니까?
+@@ 69
+p₂만
+@@ 70
+셋 모두
+@@ 71
+ℓ₁과 p₁
+@@ 72
+ℓ₁만
+@@ 73
+frontal 변수는 콜론 앞에, separator는 콜론 뒤에 씁니다. 이 clique는 p(ℓ₁, p₁ | p₂)를 저장합니다.
+@@ 74
+Q2. cycle a – b – c – d – a에 다른 edge가 없습니다. 이 그래프는 chordal입니까?
+@@ 75
+아니오: node 네 개짜리 cycle에는 chord a – c나 b – d가 필요함
+@@ 76
+예: 모든 cycle은 chordal임
+@@ 77
+예: 삼각형이 없음
+@@ 78
+edge에 방향이 있을 때만
+@@ 79
+chordal이란 길이가 3보다 긴 모든 cycle에 chord가 있다는 뜻입니다. elimination을 하면 chord가 하나 생깁니다. 어느 node를 먼저 소거하든 그 두 이웃이 이어지기 때문입니다.
+@@ 80
+Q3. toy Bayes tree에 ℓ₂ 하나에만 걸린 두 번째 prior factor가 들어옵니다. 어떤 clique를 다시 계산해야 합니까?
+@@ 81
+ℓ₂ : p₃만
+@@ 82
+root만
+@@ 83
+ℓ₂ : p₃과 root
+@@ 84
+이 factor는 ℓ₂가 frontal인 곳으로 들어가고, 그 clique가 위로 올려 보내는 새 factor가 부모인 root를 바꿉니다. clique ℓ₁, p₁ : p₂는 ℓ₂에서 root로 가는 어떤 경로에도 없습니다.
+@@ 85
+Q4. ordering ℓ₁, ℓ₂, p₁, p₂, p₃에서 R의 어느 행이 root clique에 속합니까?
+@@ 86
+1행과 2행
+@@ 87
+4행과 5행
+@@ 88
+5행만
+@@ 89
+3, 4, 5행
+@@ 90
+root의 frontal 변수는 마지막에 소거된 두 변수 p₂와 p₃이므로, root의 conditional은 마지막 두 행입니다. 3행인 p(p₁ | p₂)는 왼쪽 자식으로 갔습니다.
+@@ 91
+Q5. root로 가는 경로 위에 있지 않은 서브트리를 그대로 다시 쓸 수 있는 이유는 무엇입니까?
+@@ 92
+그 변수들이 공간적으로 멀리 있기 때문
+@@ 93
+그 추정값이 바뀔 수 없기 때문
+@@ 94
+그 conditional은 아래쪽 factor만으로 계산되었고, 그 factor는 하나도 바뀌지 않았기 때문
+@@ 95
+separator 변수를 포함하지 않기 때문
+@@ 96
+elimination 동안 정보는 위로 흐르므로, clique는 자신의 factor와 자손에만 의존합니다. 그래도 back-substitution을 하면 separator를 통해 그 변수들의 추정값은 바뀔 수 있습니다.
+@@ 97
+batch로 다시 분해하면 계산이 낭비되고, 단순한 incremental 행렬 업데이트는 relinearization을 다루지 못합니다. Bayes tree는 편집할 수 있게 저장한 \(\mathbf{R}\)입니다.
+@@ 98
+elimination은 chordal Bayes net을 만듭니다. 그 clique들은 트리를 이룹니다.
+@@ 99
+각 clique \(\mathbf{f}_k : \mathbf{s}_k\)는 \(p(\mathbf{f}_k \mid \mathbf{s}_k)\)를 저장합니다. separator는 부모와 공유하는 부분입니다. \(p(\mathbf{x}) = \prod_k p(\mathbf{f}_k \mid \mathbf{s}_k)\).
+@@ 100
+정보는 leaf에서 root로 흐르고, factor는 자기 변수 가운데 가장 먼저 소거되는 변수에서 들어갑니다.
+@@ 101
+새 factor는 그 변수들의 clique와 그 조상에만 영향을 줍니다. 그것들을 떼어 내고, factor를 추가하고, 다시 소거하고, 떨어져 나온 서브트리를 다시 붙입니다.
+@@ 102
+<em>SLAM Handbook</em>, §1.7 "Incremental SLAM", §1.7.1 "The Bayes Tree", §1.7.2 "Updating the Bayes Tree", pp. 46–50, 식 (1.54)–(1.55), Figure 1.13–1.15.
+@@ 103
+Kaess, Johannsson, Roberts, Ila, Leonard, Dellaert, <em>iSAM2: Incremental smoothing and mapping using the Bayes tree</em>, 2012 (chordal Bayes net에서 트리를 만드는 절차).
+@@ 104
+Koller, Friedman, <em>Probabilistic Graphical Models</em>, 2009 (chordal 그래프와 clique tree).

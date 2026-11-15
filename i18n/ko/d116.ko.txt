@@ -1,0 +1,172 @@
+@@ 1
+<span class="eyebrow">20주차 · Day 2</span>
+@@ 2
+NeRF: ray 위의 density를 픽셀로 바꾸기
+@@ 3
+오늘이 끝나면 연속 적분에서 이산 volume rendering 공식을 유도하고, ray를 따라 샘플링한 density로부터 픽셀의 색, opacity, expected depth를 계산할 수 있습니다.
+@@ 4
+약 60분 · §14.2 도입부와 §14.2.1, pp. 401–403 읽기 (3쪽) · 20주차 Day 1 필요
+@@ 5
+먼저 읽기: §14.2 도입부와 §14.2.1, pp. 401–403
+@@ 6
+NeRF 함수 \(f_\Theta\)의 입력과 출력, 그리고 p. 402 식 (14.1)의 적분 안에 있는 세 인자.
+@@ 7
+(14.1) 바로 아래 줄에 있는 accumulated transmittance \(T(t)\)의 정의.
+@@ 8
+p. 403 맨 위의 식 (14.2)와 \(\delta_i\), \(\alpha_i\)의 정의. \(\delta_i\)를 정의하는 문장에는 오식이 있습니다: 이 값은 이웃한 샘플 사이의 거리, 즉 \(\delta_i = t_{i+1} - t_i\)입니다.
+@@ 9
+loss (14.3), 그리고 depth에 관한 §14.2.1의 마지막 문장.
+@@ 10
+NeRF는 scene을 두 field로 기술합니다: 각 점에 물질이 얼마나 있는지 말하는 density와, 색입니다. 픽셀은 ray를 따라 있는 색들의 평균이며, 각 색에는 ray가 거기까지 도달해 거기서 멈출 확률이 weight로 붙습니다. 샘플로 쓰면 그 weight는 \(w_i = T_i\,\alpha_i\)입니다: 앞쪽 샘플들을 통과하고 남은 빛에, 샘플 \(i\)가 막는 비율을 곱한 것입니다. 모든 단계가 density와 색의 매끄러운 함수이므로 픽셀은 미분 가능합니다.
+@@ 11
+1. Radiance field와 카메라 ray
+@@ 12
+<strong>radiance field</strong>는 다음 함수입니다.
+@@ 13
+여기서 \(\Theta\)는 MLP weight, \(\mathbf{x} = (x, y, z)\)는 3D 위치, \(\mathbf{d} = (\theta, \phi)\)는 보는 방향, \(\mathbf{c} = (r, g, b)\)는 색, \(\sigma \ge 0\)은 <strong>volume density</strong>입니다. <span class="src">§14.2.1 · p. 402</span> 색은 보는 방향에 따라 달라질 수 있으며, 그래서 반짝이는 표면이 양쪽에서 다르게 보일 수 있습니다. density는 위치에만 의존합니다.
+@@ 14
+각 픽셀은 <strong>camera ray</strong> \(\mathbf{r}(t) = \mathbf{o} + t\,\mathbf{d}\)를 정의합니다: 카메라 중심 \(\mathbf{o}\)에서 출발해 방향 \(\mathbf{d}\)로 거리 \(t\)만큼 이동합니다. 가까운 경계 \(t_n\)과 먼 경계 \(t_f\) 사이 부분만 rendering됩니다. ray 하나를 따라가면 field는 \(t\)의 평범한 함수 두 개가 됩니다: \(\sigma(t)\)와 \(\mathbf{c}(t)\).
+@@ 15
+\(\sigma\)는 무슨 뜻일까요? 멈춤 비율(stopping rate)로 읽으면 됩니다: 아주 짧은 step \(ds\) 동안 ray가 막힐 확률이 \(\sigma\,ds\)입니다. 단위는 길이의 역수이고, 1보다 훨씬 클 수 있습니다. 공기는 \(\sigma = 0\)입니다. 벽은 \(\sigma\)가 아주 큰 얇은 영역입니다.
+@@ 16
+2. Transmittance와 rendering 적분
+@@ 17
+<strong>accumulated transmittance</strong>(누적 투과율) \(T(t)\)는 ray가 \(t_n\)에서 \(t\)까지 멈추지 않고 이동할 확률입니다. 책은 이를 정의만 합니다. 여기서는 어디서 나오는지 보겠습니다.
+@@ 18
+빈틈 채우기: transmittance는 왜 지수 함수인가
+@@ 19
+\(t + dt\)까지 살아남으려면, ray는 \(t\)까지 살아남은 뒤 다음 step에서 멈추지 않아야 합니다:
+@@ 20
+\(T\)로 나누면 \(\frac{d}{dt}\ln T = -\sigma(t)\)입니다. \(T = 1\)인 \(t_n\)부터 적분하면:
+@@ 21
+예: density가 미터당 \(\sigma = 0.5\)로 일정하고 두께가 2 m인 안개. 적분은 \(0.5 \times 2 = 1\)이므로 \(T = e^{-1} = 0.368\)입니다. 빛의 약 37%가 통과하고 63%는 안개에 막힙니다.
+@@ 22
+이제 픽셀입니다. ray가 \(t\)에 도달하고 다음 \(dt\) 안에서 멈출 확률은 \(T(t)\,\sigma(t)\,dt\)입니다. \(t\)에서 멈추면 픽셀은 그 지점의 색을 받습니다. 기대 색은 멈출 수 있는 모든 곳에 대한 합입니다:
+@@ 23
+<span class="src">§14.2.1 · p. 402</span> 위의 안개가 전체에 걸쳐 한 가지 색 \(\mathbf{c}_f\)를 가진다면 \(C = \mathbf{c}_f \int_0^2 e^{-0.5t}\,0.5\,dt = (1 - e^{-1})\,\mathbf{c}_f = 0.632\,\mathbf{c}_f\)입니다. 이 적분은 \(t_f\) 너머에 있는 것을 모두 검은색으로 취급합니다.
+@@ 24
+3. 적분에서 합으로
+@@ 25
+컴퓨터는 \(\sigma\)를 모든 곳에서 계산할 수 없습니다. NeRF는 \([t_n, t_f]\)를 \(N\)개의 같은 구간으로 나누고, 각 구간 안에서 샘플 위치를 무작위로 하나 뽑아 거기서 MLP에 query합니다. <span class="src">§14.2.1 · p. 402</span> 결과가 식 (14.2)입니다:
+@@ 26 attr
+왼쪽에서 오른쪽으로 그린 카메라 ray가 샘플 위치 t1부터 t4에서 길이 delta인 구간들로 잘려 있습니다. 구간 1에는 옅은 안개, 구간 3에는 촘촘한 벽이 있고, 나머지는 비어 있습니다. 아래에서 transmittance는 1.00에서 시작해 구간 1을 지나며 0.82로 떨어지고, 빈 구간 2에서는 그대로이며, 구간 3을 지나며 0.04로 떨어집니다.
+@@ 27
+비어 있음
+@@ 28
+남은 빛, T
+@@ 29
+이 quadrature는 한 샘플에서 다음 샘플까지 density와 색이 일정하다고 봅니다. 숫자는 아래 예제의 값이며, 모든 δ는 1입니다.
+@@ 30
+빈틈 채우기: (14.1)에서 식 (14.2) 유도하기
+@@ 31
+각 구간 \([t_i, t_{i+1}]\)에서 \(\sigma\)와 \(\mathbf{c}\)가 일정하다고 가정합니다. 값은 \(\sigma_i, \mathbf{c}_i\)이고 길이는 \(\delta_i = t_{i+1} - t_i\)입니다. 적분 (14.1)을 구간마다 한 조각씩 나눕니다.
+@@ 32
+<strong>1단계: 구간 \(i\) 시작점의 transmittance.</strong> 구간별로 일정한 \(\sigma\)의 적분은 합이므로, \(T_i = T(t_i) = \exp\bigl(-\sum_{j \lt i} \sigma_j\delta_j\bigr)\)입니다.
+@@ 33
+<strong>2단계: 구간 \(i\) 내부의 transmittance.</strong> 구간 안으로 \(s\)만큼 들어간 지점에서 \(T(t_i + s) = T_i\,e^{-\sigma_i s}\)입니다.
+@@ 34
+<strong>3단계: 구간에 대해 적분하기.</strong>
+@@ 35
+구간들에 대해 합하면 (14.2)가 됩니다. 양 \(\alpha_i\)는 구간 \(i\)의 <strong>opacity</strong>(불투명도)입니다: 들어온 빛 중 그 구간이 막는 비율입니다. 쓸모 있는 결과 두 가지:
+@@ 36
+\(e^{-\sigma_j\delta_j} = 1 - \alpha_j\)이므로 transmittance는 곱입니다: \(T_i = \prod_{j \lt i} (1 - \alpha_j)\). 이 형태는 Day 4에 다시 나옵니다.
+@@ 37
+<strong>weight</strong> \(w_i = T_i\alpha_i\)는 \(T_i - T_{i+1}\), 즉 구간 \(i\)에서 잃은 빛과 같습니다. 그래서 weight를 모두 더하면 중간 항이 서로 소거됩니다: \(\sum_{i=1}^{N} w_i = 1 - T_{N+1}\). 아무것도 통과하지 못할 때만 합이 1입니다.
+@@ 38
+샘플 세 개, 모든 \(\delta_i = 1\), 색 대신 밝기를 쓰는 예제:
+@@ 39
+샘플 \(i\)
+@@ 40
+위치 \(t_i\)
+@@ 41
+=
+@@ 42
+=
+@@ 43
+=
+@@ 44
+=
+@@ 45
+밝기 \(c_i\)
+@@ 46
+1 (안개)
+@@ 47
+2 (공기)
+@@ 48
+3 (벽)
+@@ 49
+픽셀은 \(\hat{C} = 0.181 \times 0.9 + 0.778 \times 0.2 = 0.319\)입니다. 모든 것을 통과하는 빛은 \(T_4 = 0.819 \times (1 - 0.950) = 0.041\)이고, 당연히 \(0.181 + 0.778 + 0.041 = 1\)입니다.
+@@ 50
+직접 해 보기: 위젯은 분홍 안개와 파란 벽을 지나는 ray에 대해 이 계산을 합니다. "샘플 수 N"을 8로 낮췄다가 다시 올린 뒤, 무작위 샘플 위치를 켜 보십시오.
+@@ 51
+눈여겨볼 점: 샘플이 16개일 때 픽셀은 안개 0.39, 벽 0.56, 배경 0.04로, 정확한 값 0.39, 0.59, 0.02에 가깝습니다. N = 8에서는 가장 가까운 두 샘플이 벽을 사이에 두고 양쪽에 떨어지기 때문에 벽이 거의 사라지지만 (weight 0.08), 넓은 안개는 여전히 정확히 측정됩니다. 얇고 촘촘한 구조는 샘플이 그 위에 떨어져야만 보이며, 이것이 학습 중에 샘플 위치를 무작위로 정하는 이유 중 하나입니다.
+@@ 52
+4. Loss, depth, 그리고 gradient의 모습
+@@ 53
+학습은 rendering된 픽셀을 실제 이미지의 픽셀과 비교합니다. \(R\)을 rendering하는 ray의 batch, \(C_{gt}(\mathbf{r})\)을 ray \(\mathbf{r}\)이 속한 픽셀의 실제 색이라 하면, loss는 제곱한 <strong>photometric error</strong>(광도 오차)입니다.
+@@ 54
+<span class="src">§14.2.1 · p. 403</span> SLAM을 위해 책은 depth도 같은 alpha blending으로 자주 rendering하여 depth 센서나 예측된 depth와 비교한다고 덧붙입니다. 식으로 쓰면, 색을 평균하는 weight로 거리도 평균할 수 있습니다:
+@@ 55
+위 예제에서 \(\hat{D} = 0.181 \times 1 + 0.778 \times 3 = 2.52\)이며, 안개가 앞으로 끌어당기기 때문에 벽보다 조금 앞에 있습니다.
+@@ 56
+빈틈 채우기: density 하나에 대한 픽셀의 미분
+@@ 57
+색은 쉽습니다: \(\partial\hat{C}/\partial\mathbf{c}_i = w_i\). density \(\sigma_k\)는 두 곳에 나타납니다: 자기 opacity 안에서 \(\partial\alpha_k/\partial\sigma_k = \delta_k(1 - \alpha_k)\), 그리고 뒤에 있는 모든 샘플의 transmittance 안에서 \(i \gt k\)에 대해 \(\partial T_i/\partial\sigma_k = -\delta_k T_i\). 두 효과를 더하고 \(T_k(1 - \alpha_k) = T_{k+1}\)을 쓰면:
+@@ 58
+말로 하면: 샘플 \(k\)에 물질을 더하면, 지금 그곳을 지나는 빛에 비례해 자기 색을 더하고, 그 뒤의 모든 것을 어둡게 합니다. 예제의 빈 샘플 2에 대해: \(1 \times (0.819 \times 0.5 - 0.778 \times 0.2) = 0.254\). 0이 아니며, 이것이 Day 1에서 "표면을 찾기 전의 gradient"라고 부른 성질입니다.
+@@ 59
+안개 낀 창문 너머로 벽을 본다고 생각해 보세요. 보이는 것의 일부는 안개, 일부는 그 뒤의 벽이고, 아주 조금은 벽 너머의 무언가일 수도 있어요. 픽셀은 그 섞인 결과예요. 이 계산법은 눈에서 바깥쪽으로 한 걸음씩 나아가면서, 걸음마다 두 가지를 물어요: 빛이 아직 얼마나 남아서 가고 있는지, 그리고 이번 걸음이 그중 얼마를 붙잡는지요.
+@@ 60
+<strong>"αᵢ는 density다."</strong> opacity는 density뿐 <em>아니라</em> 구간 길이에도 의존합니다: \(\alpha_i = 1 - e^{-\sigma_i\delta_i}\). 같은 안개를 더 짧은 step으로 샘플링하면 step당 α는 작아지고 전체 효과는 같습니다.
+@@ 61
+<strong>"σ는 확률이다."</strong> σ는 단위 길이당 비율입니다. \(\sigma = 12\)도 괜찮습니다. 0과 1 사이에 있는 양은 α와 T입니다.
+@@ 62
+<strong>"Tᵢ에는 샘플 i가 포함된다."</strong> (14.2)의 합은 \(i - 1\)에서 멈춥니다: \(T_i\)는 샘플 \(i\)에 도달하는 양입니다.
+@@ 63
+<strong>"weight의 합은 항상 1이다."</strong> 합은 \(1 - T_{N+1}\)입니다. 옅은 안개만 지나는 ray는 weight의 합이 1보다 훨씬 작습니다.
+@@ 64
+더 깊이 (선택): NeRF 논문의 두 가지 아이디어
+@@ 65
+책은 positional encoding을 한 구절로만 언급합니다 (p. 400). 원래 NeRF 논문에서는 각 입력 좌표 \(p\)를 MLP에 넣기 전에 목록 \(\bigl(\sin(2^0\pi p), \cos(2^0\pi p), \dots, \sin(2^{L-1}\pi p), \cos(2^{L-1}\pi p)\bigr)\)으로 바꿉니다. 평범한 MLP는 매끄러운 함수를 만드는 경향이 있는데, 빠르게 변하는 입력 덕분에 날카로운 디테일을 표현할 수 있습니다.
+@@ 66
+같은 논문은 weight를 한 번 더 씁니다. 정규화하면 \(w_i\)는 ray가 어디서 멈추는지에 대한 확률 분포가 되므로, 여기서 두 번째 샘플 묶음을 뽑을 수 있고, 이 샘플들은 첫 묶음이 물질을 찾은 곳에 몰립니다. 위젯은 이것이 왜 도움이 되는지 보여 줍니다: 얇은 벽에는 고르게 퍼진 샘플이 아니라 그 근처의 샘플이 필요합니다.
+@@ 67
+Q1. 한 구간의 density가 σ = 2이고 길이가 δ = 0.5입니다. opacity α는 얼마입니까?
+@@ 68
+α = 1 − exp(−σδ) = 1 − e⁻¹ = 0.632. 0.368은 통과하는 비율이고, 1.0은 σδ 그 자체인데, 이는 σδ가 작을 때만 좋은 근사입니다.
+@@ 69
+Q2. ray 위의 두 샘플의 opacity가 α₁ = 0.5, α₂ = 0.8입니다. 두 번째 샘플의 weight는 얼마입니까?
+@@ 70
+w₂ = T₂α₂ = (1 − 0.5) × 0.8 = 0.4. 첫 샘플의 weight는 0.5이고, 빛의 0.5 × 0.2 = 0.1이 두 샘플을 모두 통과합니다.
+@@ 71
+Q3. 그 두 샘플이 t = 2와 t = 4에 있습니다 (weight 0.5와 0.4). alpha blending이 주는 expected depth는 얼마입니까?
+@@ 72
+D = 0.5 × 2 + 0.4 × 4 = 2.6. 전체 weight 0.9로 나누면 2.89가 되지만, 이 공식은 weight를 있는 그대로 써서 섞습니다.
+@@ 73
+Q4. density σ, 길이 δ로 일정한 구간 하나를 density σ, 길이 δ/2인 두 절반으로 나눕니다. 두 절반을 모두 통과하는 빛은 원래 구간을 통과한 빛과 비교해 어떻습니까?
+@@ 74
+절반만 통과
+@@ 75
+두 배가 통과
+@@ 76
+정확히 같음
+@@ 77
+색에 따라 다름
+@@ 78
+각 절반은 exp(−σδ/2)를 통과시키고, 그 곱은 exp(−σδ)로 전과 같습니다. 그래서 α에 δ가 들어가야 합니다: rendering 결과가 균일한 영역을 얼마나 잘게 샘플링하느냐에 의존해서는 안 됩니다.
+@@ 79
+NeRF는 위치와 보는 방향을 색과 density로 보내는 함수이며, 카메라 ray \(\mathbf{r}(t) = \mathbf{o} + t\mathbf{d}\)를 따라 query합니다.
+@@ 80
+Transmittance \(T(t) = \exp(-\int\sigma)\)는 \(t\)에 도달할 확률입니다. 픽셀은 \(\int T\sigma\mathbf{c}\,dt\), 식 (14.1)입니다.
+@@ 81
+구간별로 일정한 샘플을 쓰면 이는 \(\hat{C} = \sum_i T_i\alpha_i\mathbf{c}_i\)가 되며, 여기서 \(\alpha_i = 1 - e^{-\sigma_i\delta_i}\), \(T_i = \prod_{j \lt i}(1 - \alpha_j)\)입니다. 식 (14.2).
+@@ 82
+weight \(w_i = T_i\alpha_i\)는 depth도 rendering하며, 합은 \(1 - T_{N+1}\)입니다.
+@@ 83
+loss (14.3)은 rendering된 픽셀과 실제 픽셀의 차이를 제곱한 것이며, 그 gradient는 빈 샘플을 포함해 ray 위의 모든 density에 닿습니다.
+@@ 84
+<em>SLAM Handbook</em>, §14.2 도입부와 §14.2.1 "Method Overview", pp. 401–403, 식 (14.1)–(14.3), Figure 14.5.
+@@ 85
+Mildenhall, Srinivasan, Tancik, Barron, Ramamoorthi, Ng, <em>NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis</em>, 2020 (density를 멈춤 비율로 읽는 해석, positional encoding, weight에서 샘플링하기).
+@@ 86
+Max, <em>Optical Models for Direct Volume Rendering</em>, 1995 (transmittance와 구간별 상수 quadrature의 유도).

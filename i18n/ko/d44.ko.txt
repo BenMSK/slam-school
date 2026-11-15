@@ -1,0 +1,194 @@
+@@ 1
+<span class="eyebrow">8주차 · Day 2</span>
+@@ 2
+Signed distance field와 TSDF
+@@ 3
+오늘이 끝나면 beam 하나에서 projective signed distance를 계산하고, 여러 값을 가중 평균으로 TSDF voxel 하나에 융합하고, zero crossing에서 표면의 위치를 찾을 수 있습니다.
+@@ 4
+약 60분 · §5.2.2–5.2.3, pp. 124–126 읽기 (3쪽) · 8주차 Day 1 필요
+@@ 5
+먼저 읽기: §5.2.2와 §5.2.3, pp. 124–126
+@@ 6
+implicit surface의 부호 규약, 그리고 Figure 5.6이 원판을 예로 이를 보여 주는 방식 (p. 125).
+@@ 7
+두 가지 거리인 Euclidean 거리(ESDF)와 projective 거리, 그리고 측정값에서 표면을 추정할 때 둘째를 쓰는 이유 (pp. 125–126).
+@@ 8
+truncation band가 무엇이고 왜 필요한지 (p. 126).
+@@ 9
+§5.2.3에 나오는 occupancy와 distance field의 두 가지 차이: 직접성과 매끄러움 (p. 126).
+@@ 10
+"이 cell은 점유되어 있나?"라고 묻는 대신 "이 점은 가장 가까운 표면에서 얼마나 떨어져 있고, 어느 쪽에 있나?"라고 묻습니다. 그러면 표면은 답이 0인 점들의 집합입니다. range beam은 끝점 근처의 모든 voxel에 대해 그 거리의 값싼 근삿값을 주고, 여러 beam의 근삿값을 평균하면 매끄러운 field가 생깁니다. 이 field의 zero crossing은 voxel 크기보다 더 정밀하게 표면 위치를 알려 줍니다.
+@@ 11
+1. 함수의 zero set으로 나타낸 표면
+@@ 12
+<strong>implicit surface</strong>(음함수 곡면)는 위치의 함수 \(f(\mathbf{p})\)로, 표면 위에서 정확히 0이고, 물체 안에서는 음수, 밖에서는 양수입니다. <span class="src">§5.2.2 · pp. 124–125</span> 표면을 점 하나하나 나열하는 일은 없습니다. 표면은 \(f\)의 부호가 바뀌는 모든 곳입니다.
+@@ 13
+예: Figure 5.6처럼 원점에 중심을 둔 반지름 0.75의 원판은 다음과 같이 나타낼 수 있습니다.
+@@ 14
+\((1, 0)\)에서 \(f = +0.25\): 밖입니다. \((0.3, 0.4)\)에서 \(f = 0.5 - 0.75 = -0.25\): 안입니다. \((0.45, 0.6)\)에서 \(f = 0.75 - 0.75 = 0\): 표면 위입니다. 점이 장애물 안에 있는지 검사하는 일은 함수 계산 한 번과 부호 확인으로 끝나고, 정해야 할 해상도도 없습니다. <span class="src">§5.2.2 · p. 125</span>
+@@ 15
+2. Euclidean signed distance
+@@ 16
+같은 zero set을 가진 함수는 많습니다. 가장 쓸모 있는 것은 <strong>Euclidean signed distance function (ESDF)</strong>입니다. 그 크기는 가장 가까운 표면 점까지의 거리이고, 부호는 안인지 밖인지를 말해 줍니다. <span class="src">§5.2.2 · p. 125</span> 위의 원판 함수가 바로 그런 함수입니다. \((1, 0)\)에서 이 함수는 "표면에서 0.25"라고 말하는데, 실제로 그렇습니다.
+@@ 17
+그래서 충돌 검사가 값쌉니다. \(\mathbf{p}\)에 중심을 둔 반지름 \(\rho\)의 둥근 로봇은 \(f(\mathbf{p}) \gt \rho\)일 때, 그리고 그때에만 아무것에도 닿지 않습니다. 그리고 gradient \(\nabla f\)는 여유 거리를 늘리려면 어느 쪽으로 움직여야 하는지 planner에게 알려 줍니다.
+@@ 18
+빈틈 채우기: distance field의 gradient 길이는 1
+@@ 19
+책은 "질 좋은 근접 gradient(high-quality proximity gradients)"를 말합니다. 질이 좋은 이유는 <strong>Eikonal property</strong>입니다. distance function \(d\)가 미분 가능한 곳이면 어디서나 \(\norm{\nabla d} = 1\)입니다. 물체 밖의 unsigned distance에 대해 짧은 두 단계로 그 이유를 보이겠습니다.
+@@ 20
+<em>1단계: \(d\)는 1미터당 1미터보다 빨리 변할 수 없다.</em> 두 점 \(\mathbf{p}\)와 \(\mathbf{q}\)를 잡습니다. \(\mathbf{p}\)에서 표면에 이르는 한 가지 방법은 \(\mathbf{q}\)까지 걸어간 다음 \(\mathbf{q}\)에 가장 가까운 표면 점으로 가는 것이므로 \(d(\mathbf{p}) \le \norm{\mathbf{p} - \mathbf{q}} + d(\mathbf{q})\)입니다. 역할을 바꾸면 \(|d(\mathbf{p}) - d(\mathbf{q})| \le \norm{\mathbf{p} - \mathbf{q}}\)이고, 따라서 \(\norm{\nabla d} \le 1\)입니다.
+@@ 21
+<em>2단계: 한 방향으로는 정확히 그 비율로 변한다.</em> \(\mathbf{s}\)를 \(\mathbf{p}\)에 가장 가까운 표면 점이라 하고, 그쪽으로 곧장 거리 \(\varepsilon\)만큼 걸어갑니다. 새 점은 \(\mathbf{s}\)에서 \(d(\mathbf{p}) - \varepsilon\)만큼 떨어져 있고, 1단계에 따라 표면에 그보다 가까울 수는 없습니다. 따라서 \(d\)는 정확히 \(\varepsilon\)만큼 줄어듭니다. \(\mathbf{s}\)에서 \(\mathbf{p}\)로 향하는 단위 벡터 \(\mathbf{u}\)를 따른 기울기가 1입니다.
+@@ 22
+길이가 1 이하이면서 \(\mathbf{u}\) 방향 기울기가 1인 gradient는 \(\mathbf{u}\) 자신이어야 합니다: \(\nabla d = \mathbf{u}\), 곧 가장 가까운 표면 점에서 곧장 멀어지는 쪽을 가리키는 단위 벡터입니다. 원판으로 확인해 봅시다. \(\nabla f = (x, y)/\sqrt{x^2 + y^2}\)는 중심을 뺀 모든 곳에서 길이가 1이고, 중심에서는 가장 가까운 표면 점이 하나로 정해지지 않습니다. 표면 위에서 \(\nabla f\)는 표면의 normal입니다.
+@@ 23
+ESDF를 계산하려면 map의 모든 점마다 가장 가까운 표면 점이 필요합니다. 표면을 알고 있다면 Fast Marching 같은 알고리즘이 이를 효율적으로 해냅니다. 표면을 아직 측정값에서 추정하는 중이라면 이 계산은 너무 비싸고 너무 불안정합니다. <span class="src">§5.2.2 · p. 125</span>
+@@ 24
+3. beam 하나가 주는 것: projective distance
+@@ 25
+센서 원점 \(\mathbf{o}\)에서 나와 range \(r\)을 돌려준 beam은 표면이 <em>그 beam을 따라</em> 어디에 있는지 알려 줍니다. beam 위의 query 점 \(\mathbf{q}\)에 대해 <strong>projective signed distance</strong>는 \(\mathbf{q}\)에서 beam 끝점까지 beam을 따라 잰 거리입니다: <span class="src">§5.2.2 · pp. 125–126</span>
+@@ 26
+표면 앞에서는 양수, hit 지점에서 0, 그 뒤에서는 음수입니다. 뺄셈 한 번이면 되고, 가장 가까운 점을 찾을 필요가 없습니다.
+@@ 27 attr
+센서에서 나온 beam이 벽 normal과 각 alpha를 이루며 벽에 닿습니다. beam 위의 점 q에 대해 projective distance는 beam을 따라 hit 지점까지 잰 거리이며, 벽까지 곧장 잰 Euclidean 거리보다 깁니다.
+@@ 28
+물체
+@@ 29
+벽 normal
+@@ 30
+센서 o
+@@ 31
+projective distance (beam 방향)
+@@ 32
+Euclidean 거리
+@@ 33
+평평한 벽에 normal과 각 α를 이루며 닿는 beam에서는 Euclidean 거리 = projective distance × cos α입니다. 두 거리는 같은 곳에서 0이 됩니다.
+@@ 34
+projective distance는 크기가 실제 거리보다 작은 일이 없습니다. beam의 끝점 자체가 표면 점이므로, 가장 가까운 표면 점은 그만큼 가깝거나 더 가까울 수밖에 없습니다. 평평한 벽에 normal과 각 \(\alpha\)를 이루며 닿는 경우 그 비율은 \(1/\cos\alpha\)이고, \(\alpha = 60^\circ\)이면 projective distance는 실제 거리의 두 배입니다. 살아남는 것은 값이 0인 위치입니다. 주변의 거리는 과대추정이지만, 추정한 표면은 정확합니다. <span class="src">§5.2.2 · p. 126</span>
+@@ 35
+4. 잘라 내고 평균하기: TSDF
+@@ 36
+표면에서 멀리 떨어진 곳에서는 과대추정이 크고 쓸모가 없으며, 표면 뒤에 대해서는 beam이 아무것도 모릅니다. 그래서 projective distance를 표면 주변의 반폭 \(\tau\)인 <strong>truncation band</strong>(절단 구간) 안으로 잘라 냅니다. 잘라 낸 field가 <strong>Truncated Signed Distance Function (TSDF)</strong>입니다. <span class="src">§5.2.2 · p. 126</span> 흔한 관례이자 이 레슨에서 쓰는 관례는 이렇습니다. band 앞쪽의 voxel은 "비어 있음"만 뜻하는 \(+\tau\)를 받고, hit보다 \(\tau\) 넘게 뒤에 있는 voxel은 아무것도 받지 않습니다.
+@@ 37 attr
+beam 하나를 따라 저장되는 값. 표면보다 훨씬 앞의 free space에서는 값이 plus tau로 잘립니다. truncation band 안에서는 직선으로 줄어들어 측정된 표면에서 0을 지나 minus tau까지 내려갑니다. 표면보다 더 뒤에서는 아무것도 갱신되지 않습니다.
+@@ 38
+측정된 표면
+@@ 39
+free space, +τ로 잘림
+@@ 40
+갱신 안 함
+@@ 41
+=
+@@ 42
+beam 방향 거리 →
+@@ 43
+beam 하나가 그 beam을 따라 놓인 voxel들에 기여하는 값. hit 주변의 band만 거리 정보를 담고, 그 앞의 값은 "비어 있음"만 뜻합니다.
+@@ 44
+각 voxel은 값 \(D\)와 가중치 \(W\)를 저장하며, 둘 다 0에서 시작합니다. 가중치 \(w\)를 가진 새 측정값 \(d\)(voxel 중심에서 잰, 잘라 낸 projective distance)가 들어올 때마다, Curless와 Levoy가 제안하고 KinectFusion이 로보틱스에 널리 퍼뜨린 갱신은 가중 running average입니다: <span class="src">§5.2.2 · p. 126</span>
+@@ 45
+빈틈 채우기: 왜 평균인가, 그리고 왜 측정값을 하나씩 처리할 수 있는가
+@@ 46
+voxel 하나가 가중치 \(w_1, \dots, w_n\)과 함께 \(d_1, \dots, d_n\)을 받았다고 합시다. weighted least squares의 의미에서 이 값들에 가장 잘 맞는 값 하나는 \(J(D) = \sum_i w_i (D - d_i)^2\)를 최소화합니다. 도함수를 0으로 두면
+@@ 47
+\(w_i = 1/\sigma_i^2\)이면 이것은 Gaussian noise 아래의 maximum-likelihood 추정값입니다(<a href="#d4">1주차 · Day 4</a>). 이제 \(W_{n-1} = \sum_{i \lt n} w_i\)라고 씁니다. 이전 평균은 \(W_{n-1} D_{n-1} = \sum_{i \lt n} w_i d_i\)를 만족하므로
+@@ 48
+이것이 위의 갱신입니다. 두 숫자 \(D\)와 \(W\)가 과거에서 필요한 모든 것을 담고 있으니, Day 1의 log-odds와 같은 절약입니다. 평균에는 noise를 줄이는 효과도 있습니다. 표준편차 \(\sigma\)인 독립 측정값 \(n\)개를 평균하면 표준편차가 \(\sigma/\sqrt{n}\)인 측정값 하나가 됩니다. 5 cm의 range noise는 scan 25번 뒤에 1 cm가 됩니다.
+@@ 49
+풀어 본 예, \(w = 1\). voxel이 \(d = 0.12, 0.08, 0.13\) m를 받습니다. 첫 값 뒤에는 \(D = 0.12\), \(W = 1\)입니다. 둘째 값 뒤에는 \(D = (1 \times 0.12 + 0.08)/2 = 0.10\)입니다. 셋째 값 뒤에는 \(D = (2 \times 0.10 + 0.13)/3 = 0.11\), \(W = 3\)입니다.
+@@ 50
+표면은 값의 부호가 서로 반대인 이웃한 두 voxel 사이에 있습니다. 그곳에서 field는 거의 선형이므로 linear interpolation으로 위치를 정합니다. 위치 \(x_a\)의 voxel이 \(D_a \gt 0\)이고 그다음 \(x_b\)의 voxel이 \(D_b \lt 0\)이면
+@@ 51
+2.0 m와 2.1 m의 voxel이 \(+0.06\)과 \(-0.04\)를 가지면 \(x^{*} = 2.0 + 0.1 \times 0.06/0.10 = 2.06\) m입니다. voxel 간격은 10 cm인데도 표면 위치는 cm 단위까지 정해집니다.
+@@ 52
+직접 해 보기: 어제와 같은 방을 더 촘촘한 격자에서 보는데, 이번에는 TSDF를 저장합니다. 오차 타일 두 개를 읽고, "자동 투어"를 누른 뒤 다시 읽어 보세요. 그다음 가운데의 얇은 벽을 보세요.
+@@ 53
+눈여겨볼 점: scan 하나 뒤의 zero crossing은 원래 끝점보다 나을 것이 없습니다(3.6 cm 대 2.6 cm). 아직 아무것도 평균하지 않았기 때문입니다. 투어의 scan 50번이 끝나면 대표 오차는 약 1 cm로, 12.5 cm cell의 10분의 1이고 5 cm range noise보다 한참 작습니다. probe cell은 실제 거리가 0.19 m인 곳에서 0.40 m를 읽는데, 3절에서 본 과대추정입니다. 얇은 벽은 실패 사례입니다. 양쪽에서 보이므로 약 세 배 두껍게 나옵니다. τ를 cell 하나보다 작은 0.10 m로 놓으면 scan 하나 뒤의 윤곽선이 빈틈투성이가 됩니다.
+@@ 54
+5. occupancy인가, 거리인가?
+@@ 55
+둘 다 volumetric입니다. 관측된 공간의 모든 곳에서 어떤 양을 추정합니다. 차이는 무엇을 쉽게 만드느냐에 있습니다. <span class="src">§5.2.3 · p. 126</span>
+@@ 56
+occupancy map
+@@ 57
+distance field (TSDF)
+@@ 58
+beam이 그 양을 얼마나 직접 주는가?
+@@ 59
+직접 줍니다: beam은 비어 있음, 점유, 정보 없음 중 하나를 말합니다. heuristic이 거의 필요 없습니다.
+@@ 60
+간접적으로 줍니다: 실제 거리는 beam 하나로 잴 수 없으므로 대리 값(projective, truncated)을 씁니다.
+@@ 61
+저장된 field는 얼마나 매끄러운가?
+@@ 62
+예/아니오 성질을 모델링하므로 표면에서 값이 뜁니다.
+@@ 63
+매끄럽고 미분 가능합니다: gradient를 얻고, interpolation으로 voxel보다 작은 단위의 정확도를 얻습니다.
+@@ 64
+얇은 장애물
+@@ 65
+보존됩니다.
+@@ 66
+쉽게 사라집니다.
+@@ 67
+마지막 행은 표면 뒤의 음수 값까지 추정하는 대가입니다. 얇은 물체를 양쪽에서 보면, 한 시점에서 바로 뒤에 있는 voxel이 다른 시점에서는 바로 앞에 있습니다. 양수와 음수가 평균되어 zero crossing이 움직이거나 사라질 수 있습니다. <span class="src">§5.4.4.1 · p. 138</span> 위젯에서 얇은 벽의 윤곽선을 밀어낸 것이 바로 이것입니다.
+@@ 68
+<strong>"TSDF는 가장 가까운 표면까지의 거리를 저장한다."</strong> TSDF가 저장하는 것은 beam을 따라 잰, 잘라 낸 거리들의 평균입니다. 거의 정면에서 본 표면 근처에서만 실제 거리에 가깝고, 다른 곳에서는 과대추정합니다. 실제 여유 거리가 필요한 planner는 TSDF로부터 ESDF를 만들어야 합니다.
+@@ 69
+<strong>"truncation band는 넓을수록 항상 안전하다."</strong> band가 넓으면 과대추정을 더 많이 융합하고, band보다 얇은 물체를 지워 버립니다. voxel보다 좁은 band는 구멍을 남깁니다. 표면 양쪽의 voxel이 더 이상 둘 다 갱신되지 않기 때문입니다.
+@@ 70
+<strong>"음수 값은 센서가 물체 안을 보았다는 뜻이다."</strong> 그곳까지 가는 beam은 없습니다. 음수 쪽은 hit 지점에서 외삽한 것이며, 그래서 band 안에서만 믿습니다.
+@@ 71
+Q1. 원점에 중심을 둔 반지름 2 m의 원판은 f(x, y) = √(x² + y²) − 2입니다. 점 (1.2, 0.5)에 대해 f는 무엇을 말합니까?
+@@ 72
+밖, 표면에서 0.7 m
+@@ 73
+안, 표면에서 0.7 m
+@@ 74
+안, 표면에서 1.3 m
+@@ 75
+표면 위
+@@ 76
+√(1.44 + 0.25) = 1.3이므로 f = 1.3 − 2 = −0.7입니다. 음수는 안쪽이라는 뜻이고, 크기는 표면까지의 거리입니다.
+@@ 77
+Q2. beam이 r = 4.00 m를 돌려주고 τ = 0.20 m입니다. voxel 중심이 beam 위, 센서에서 3.70 m 떨어진 곳에 있습니다. 이 beam은 그 voxel에 무엇을 기여합니까?
+@@ 78
+아무것도 없음, voxel을 건너뜀
+@@ 79
+projective distance는 4.00 − 3.70 = +0.30 m이고, 이는 +τ = 0.20 m로 잘립니다. 4.50 m에 있는 voxel이라면 −0.50 m로 표면 뒤 τ보다 깊으므로 건너뜁니다.
+@@ 80
+Q3. voxel이 W = 3으로 D = 0.10 m를 가지고 있습니다. 새 측정값 d = 0.02 m가 가중치 1로 들어옵니다. 새 D는 얼마입니까?
+@@ 81
+(3 × 0.10 + 1 × 0.02) / 4 = 0.08 m이고, W는 4가 됩니다. 이전 값은 이미 측정값 세 개를 요약하고 있으므로 세 번 셉니다. 0.06은 W가 1일 때만 답이 됩니다.
+@@ 82
+Q4. 이웃한 두 voxel 중심이 5 cm 떨어져 있고 D = +0.03 m와 D = −0.02 m를 가집니다. 표면은 어디에 있습니까?
+@@ 83
+양수 voxel에서 2 cm
+@@ 84
+양수 voxel에서 2.5 cm
+@@ 85
+양수 voxel에서 3 cm
+@@ 86
+음수 voxel 위치
+@@ 87
+거리의 비율은 0.03 / (0.03 + 0.02) = 0.6이고, 0.6 × 5 cm = 3 cm입니다. 표면은 값이 0에 더 가까운 voxel 쪽에 더 가깝습니다.
+@@ 88
+Q5. beam이 벽의 normal과 60°를 이루며 평평한 벽에 닿습니다. beam 위의 어떤 점에서 projective distance가 0.40 m입니다. 그 점은 벽에서 얼마나 떨어져 있습니까?
+@@ 89
+Euclidean 거리 = projective distance × cos α = 0.40 × 0.5 = 0.20 m. projective distance는 과대추정하며, 여기서는 두 배입니다.
+@@ 90
+implicit surface는 안에서 음수, 밖에서 양수인 함수의 zero set입니다.
+@@ 91
+Euclidean signed distance의 gradient는 길이가 1이고 가장 가까운 표면 점에서 멀어지는 쪽을 가리킵니다. 조회 한 번으로 충돌을 검사할 수 있고, 쓸모 있는 gradient를 줍니다.
+@@ 92
+beam 하나는 projective distance \(r - \norm{\mathbf{q} - \mathbf{o}}\)를 줍니다. 값싸고 과대추정이지만, 0이 되는 위치는 맞습니다.
+@@ 93
+TSDF는 이를 band \(\pm\tau\) 안으로 잘라 내고 \(D \leftarrow (WD + wd)/(W + w)\)로 융합하는데, 이는 weighted least squares의 점진적 형태입니다.
+@@ 94
+occupancy는 직접적이고 얇은 장애물을 보존합니다. distance field는 매끄럽고 미분 가능하며 voxel 크기보다 정확하지만, 얇은 물체를 지울 수 있습니다.
+@@ 95
+<em>SLAM Handbook</em>, §5.2.2 "Implicit Surface and Distance Fields"와 §5.2.3 "Occupancy Maps or Distance Fields?", pp. 124–126; 얇은 물체의 실패는 §5.4.4.1, p. 138에 설명되어 있습니다.
+@@ 96
+Curless, Levoy, <em>A Volumetric Method for Building Complex Models from Range Images</em>, 1996 (가중 running average).
+@@ 97
+Osher, Fedkiw, <em>Level Set Methods and Dynamic Implicit Surfaces</em>, 2003 (signed distance function과 성질 \(\norm{\nabla d} = 1\)).

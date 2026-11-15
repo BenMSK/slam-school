@@ -1,0 +1,192 @@
+@@ 1
+<span class="eyebrow">1주차 · Day 1</span>
+@@ 2
+SLAM의 정의와 SLAM 시스템의 구성
+@@ 3
+오늘이 끝나면 SLAM 문제를 정의하고, SLAM 시스템을 front-end와 back-end로 나누고, loop closure가 drift를 멈추는 이유를 설명할 수 있습니다.
+@@ 4
+약 60분 · §I.1–I.2, pp. 3–8 읽기 (6쪽) · 선수 지식 없음
+@@ 5
+먼저 읽기: Prelude §I.1–I.2, pp. 3–8
+@@ 6
+읽으면서 찾아볼 것 세 가지:
+@@ 7
+map을 이미 알 때, 또는 pose를 이미 알 때 SLAM이 바뀌는 두 가지 특수한 경우 (p. 3).
+@@ 8
+Example I.1 (visual)과 Example I.2 (LiDAR)에서 front-end가 back-end에 넘겨주는 것 (pp. 7–8).
+@@ 9
+loop closure가 왜 중요한지 말하는 p. 8의 문단.
+@@ 10
+SLAM은 로봇이 어디에 있었는지와 세상이 어떻게 생겼는지, 두 가지를 동시에 추정합니다. 하나를 계산하려면 다른 하나가 필요하기 때문입니다. 이 책의 모든 시스템은 이를 두 단계로 처리합니다. <strong>front-end</strong>는 raw 센서 데이터를 소수의 기하학적 제약으로 바꾸고, <strong>back-end</strong>는 그 제약을 모두 가장 잘 만족하는 trajectory와 map을 찾습니다.
+@@ 11
+1. 하나의 문제, 두 개의 미지수
+@@ 12
+처음 와 보는 곳에 놓인 로봇에게는 장애물, 물체, landmark가 어디 있는지 담은 <strong>map</strong>(지도)과, 그 map 안에서 자기 자신의 <strong>pose</strong>(위치와 방향)가 필요합니다. <strong>Simultaneous localization and mapping (SLAM)</strong>은 map을 만들면서 동시에 그 map에 대한 pose를 추정하는 문제입니다. <span class="src">§I.1 · p. 3</span>
+@@ 13
+어려움은 순환에 있습니다. 새 관측을 map에 놓으려면 그 관측을 할 때 로봇이 어디 있었는지 알아야 합니다. 로봇이 어디 있는지 알려면 보이는 것을 map과 비교해야 합니다. 누군가 둘 중 하나를 알려 준다면 문제는 더 쉬운 문제로 줄어듭니다:
+@@ 14
+이미 아는 것
+@@ 15
+추정해야 하는 것
+@@ 16
+문제 이름
+@@ 17
+map
+@@ 18
+pose
+@@ 19
+pose (예: motion capture나 differential GPS로 얻음)
+@@ 20
+=
+@@ 21
+둘 다 모름
+@@ 22
+둘 다
+@@ 23
+=
+@@ 24
+실제로는 "둘 다 모름"이 보통입니다. motion capture와 differential GPS는 비싸고 좁은 영역만 다루며, 일반 GPS는 미터 단위로만 정확하고 실내에서는 작동하지 않습니다. prior map은 없거나, 오래됐거나, 너무 거친 경우가 많습니다. <span class="src">§I.1 · pp. 4–5</span> 그래서 핸드북은 localization만이 아니라 SLAM을 핵심 능력으로 다룹니다.
+@@ 25
+2. inverse problem으로서의 SLAM
+@@ 26
+센서는 pose나 map을 직접 알려 주지 않습니다. pose와 map에 <em>따라 달라지는</em> 숫자를 알려 줍니다. 픽셀 좌표, range, 각속도 같은 것입니다. 미지수(모든 pose와 모든 map 파라미터)를 하나의 긴 벡터 \(\mathbf{x}\)로 쓰고, 각 측정값을 다음과 같이 씁니다.
+@@ 27
+여기서 \(h_i\)는 주어진 \(\mathbf{x}\)에 대해 센서가 읽어야 할 값을 예측하는 <strong>measurement model</strong>(측정 모델)이고, \(\boldsymbol{\eta}_i\)는 noise입니다. \(\mathbf{x}\)에서 \(\mathbf{z}\)로 가는 것은 쉽습니다. 기하학일 뿐입니다. SLAM은 그 반대를 묻습니다. 모든 \(\mathbf{z}_i\)가 주어졌을 때, 이를 만들어 냈을 법한 \(\mathbf{x}\)를 찾는 것입니다. 책은 이것을 <strong>inverse problem</strong>(역문제)이라고 부릅니다. <span class="src">§I.2 · p. 5</span> 이 식은 2주차에 제대로 쓰게 되며, 거기서 least-squares 문제가 됩니다.
+@@ 28
+문제를 세우는 방법은 두 가지입니다. <strong>Indirect methods</strong>(간접법)는 먼저 raw 데이터를 모델링하기 쉬운 소수의 양, 예를 들어 이미지의 keypoint로 압축하고 그것만 모델링합니다. <strong>Direct methods</strong>(직접법)는 모든 픽셀의 밝기처럼 raw 데이터 자체를 모델링합니다. indirect method는 계산이 싸고 수학이 단순합니다. direct method는 모든 정보를 쓰므로 더 정확할 수 있지만, 계산이 무겁고 최적화 문제가 더 어렵습니다. <span class="src">§I.2 · pp. 5–6</span>
+@@ 29
+3. Front-end와 back-end
+@@ 30
+indirect method는 SLAM 시스템을 둘로 나눕니다. <span class="src">§I.2 · pp. 6–7</span>
+@@ 31 attr
+블록 다이어그램. raw 측정값이 front-end로 들어가고, front-end는 센서 처리와 place recognition을 합니다. front-end는 pseudo-measurement와 loop-closure 제약을 back-end로 보내고, back-end는 추정한 pose와 map을 출력합니다.
+@@ 32
+센서 처리
+@@ 33
+=
+@@ 34
+전에 와 본 곳인가?
+@@ 35
+=
+@@ 36
+=
+@@ 37
+최적화
+@@ 38
+raw 센서 데이터
+@@ 39
+이미지, scan, IMU
+@@ 40
+=
+@@ 41
+=
+@@ 42
+=
+@@ 43
+=
+@@ 44
+=
+@@ 45
+front-end는 센서에 따라 달라집니다. back-end는 어느 센서에나 같은 추정 기법이며, 그래서 책의 Part I은 이를 한 번만 가르치면 됩니다.
+@@ 46
+<strong>front-end</strong>는 raw 데이터를 간결한 <strong>pseudo-measurement</strong>(의사 측정값)로 가공하고, 로봇이 아는 장소로 돌아온 순간을 감지하며, 대략적인 initial guess를 제공합니다. <strong>back-end</strong>는 그 pseudo-measurement를 받아 pose와 map을 풉니다. 책의 두 대표 예제는 두 가지 표준 문제 형태를 보여 줍니다.
+@@ 47
+Front-end 출력
+@@ 48
+Back-end 추정 대상
+@@ 49
+Back-end 문제
+@@ 50
+Landmark 기반 (Example I.1, visual SLAM)
+@@ 51
+3D landmark 관측: 이미지 사이에서 매칭된 keypoint
+@@ 52
+pose와 landmark 위치
+@@ 53
+=
+@@ 54
+=
+@@ 55
+상대 pose: 연속한 scan 사이의 odometry, 재방문 사이의 loop closure
+@@ 56
+pose만
+@@ 57
+=
+@@ 58
+경계를 어디에 긋느냐는 절충의 문제입니다. back-end에 상대 pose만 넘기면 빠르지만, raw 관측을 이미 버렸으므로 같은 데이터에 bundle adjustment를 한 것보다 답이 조금 덜 정확합니다. <span class="src">§I.2 · p. 8</span>
+@@ 59
+front-end는 보는 쪽이에요. "앞으로 1미터쯤 움직였어", "저 모퉁이는 10분 전에 본 그 모퉁이야" 같은 말을 해요. back-end는 생각하는 쪽이에요. 이런 말들은 절대 완벽하게 맞아떨어지지 않는데, back-end는 그 말들을 모두 모아서 로봇이 어디로 갔는지에 대해 가장 덜 모순되는 하나의 이야기를 찾아요.
+@@ 60
+4. Drift, 그리고 loop closure가 중요한 이유
+@@ 61
+<strong>Odometry</strong>(주행 거리 측정)는 가까운 두 순간 사이에 로봇이 어떻게 움직였는지에 대한 추정값입니다. odometry step을 이어 붙이면 trajectory가 되지만, step마다 작은 오차가 있고 그 오차가 쌓입니다. 쌓인 오차를 <strong>drift</strong>(누적 오차)라고 합니다. <strong>loop closure</strong>는 로봇이 전에 방문한 장소를 알아볼 때 얻는 측정값으로, 현재 pose를 훨씬 이전의 pose와 묶어 줍니다. <span class="src">§I.2 · p. 8</span>
+@@ 62
+직접 해 보기: 로봇이 40 step짜리 정사각형을 돌고, 정확히 출발점에서 끝나야 합니다. heading noise를 올린 다음 "loop 닫기"를 눌러 보세요.
+@@ 63
+눈여겨볼 점 두 가지: heading noise는 거리 noise보다 훨씬 큰 간격을 만듭니다. 그리고 loop를 닫으면 마지막 pose만이 아니라 경로 전체의 오차가 줄어듭니다.
+@@ 64
+빈틈 채우기: drift가 커지는 속도
+@@ 65
+책은 drift가 커질 "수밖에 없다"고 말하지만 얼마나 빨리 커지는지는 말하지 않습니다. 한 줄짜리 모델로 알 수 있습니다. 각 step에서 로봇이 \(u_k\)만큼 움직이고 odometry는 \(u_k + \epsilon_k\)를 보고하며, 오차들은 서로 독립이고 분산이 \(\sigma^2\)라고 합시다. \(n\) step 후의 위치 오차는 합 \(\epsilon_1 + \dots + \epsilon_n\)이고, 독립인 오차의 분산은 더해집니다.
+@@ 66
+따라서 순수한 거리 오차는 \(\sqrt{n}\)처럼 커집니다. 느리지만 한없이 커집니다. heading 오차는 더 나쁩니다. heading이 작은 각도 \(\theta\)만큼 틀어지면 그 뒤의 모든 것이 옆으로 밀리고, 거리 \(L\)을 더 달리고 나면 위치가 약 \(L\,\theta\)만큼 어긋납니다. 그래서 heading 오차에는 주행 거리가 곱해지며, 위젯에서 본 것이 바로 이것입니다. step당 1°의 heading noise가 3%의 거리 noise보다 훨씬 중요합니다.
+@@ 67
+loop closure는 odometry만으로는 결코 얻을 수 없는 식 하나를 더합니다. "pose 40은 pose 0과 같다". 그러면 back-end는 모든 odometry step과 이 새 식이 최대한 잘 만족되도록 모든 pose를 조금씩 조정합니다. 모든 step을 똑같이 신뢰하는 위젯에서는 끝의 간격이 40 step에 고르게 나뉩니다.
+@@ 68
+<strong>"SLAM은 localization과 mapping을 차례로 실행하는 것이다."</strong> 둘은 함께 풉니다. pose의 오차는 그 pose에서 본 map 점들을 오염시키고, 오염된 map은 다시 이후의 pose를 잘못 이끕니다.
+@@ 69
+<strong>"loop closure는 그것이 일어난 pose만 고친다."</strong> loop closure는 두 pose 사이의 제약이며, back-end는 두 pose 사이의 loop 전체에 오차를 다시 나눠 줍니다.
+@@ 70
+<strong>"Landmark 기반 SLAM에는 loop closure가 없다."</strong> 암묵적으로 있습니다. 예전 landmark를 다시 보는 것이 곧 loop closure입니다. <span class="src">§I.2 · p. 8</span>
+@@ 71
+Q1. 창고 로봇이 정확한 평면도를 받았고, 자기가 어디 있는지 알아내야 합니다. 이것은 어떤 문제입니까?
+@@ 72
+=
+@@ 73
+map이 알려져 있으면 pose만 미지수이므로 localization입니다. SLAM은 둘 다 모를 때 필요합니다.
+@@ 74
+Q2. LiDAR pose-graph 시스템에서 back-end는 front-end로부터 무엇을 받습니까?
+@@ 75
+raw point cloud
+@@ 76
+3D landmark 위치
+@@ 77
+픽셀 밝기 값
+@@ 78
+odometry와 loop closure에서 얻은 상대 pose
+@@ 79
+Scan matching은 scan 쌍을 상대 pose 측정값으로 바꿉니다. back-end는 그것만으로 trajectory를 최적화합니다 (pose-graph optimization).
+@@ 80
+Q3. 각 odometry step에 표준편차 2 cm인 독립적인 위치 오차가 있습니다. 100 step 후의 전형적인 오차는 대략 얼마입니까?
+@@ 81
+=
+@@ 82
+몇 cm 이내에 머문다
+@@ 83
+분산이 더해지므로 표준편차는 step 수의 제곱근처럼 커집니다: 2 cm × √100 = 20 cm.
+@@ 84
+Q4. 같은 데이터에서 pose-graph optimization이 보통 bundle adjustment보다 조금 덜 정확한 이유는 무엇입니까?
+@@ 85
+loop closure를 쓸 수 없다
+@@ 86
+로봇의 방향을 무시한다
+@@ 87
+raw 관측을 상대 pose로 요약하면 측정값의 모델링이 근사가 된다
+@@ 88
+direct method를 쓴다
+@@ 89
+상대 pose는 원래 관측을 추상화한 것입니다. back-end는 더 빠르지만 raw 측정값을 더 이상 보지 못하므로 작은 모델링 오차가 남습니다.
+@@ 90
+SLAM은 로봇의 trajectory와 map을 함께 추정합니다. 하나를 계산하려면 다른 하나가 필요하기 때문입니다.
+@@ 91
+SLAM은 inverse problem입니다. 측정값은 pose와 map의 함수에 noise를 더한 것이고, 우리는 pose와 map을 풉니다.
+@@ 92
+front-end는 raw 데이터를 pseudo-measurement(landmark 관측, odometry, loop closure)로 바꿉니다. back-end는 최적화합니다.
+@@ 93
+Landmark 기반 모델은 bundle adjustment로 이어집니다. Pose-graph 모델은 pose-graph optimization으로 이어집니다.
+@@ 94
+odometry는 한없이 drift합니다. loop closure가 오차를 묶어 두고 map을 globally consistent하게 유지합니다.
+@@ 95
+<em>SLAM Handbook</em>, Prelude to Part I, §I.1 "What is SLAM?"과 §I.2 "Anatomy of a Modern SLAM System", pp. 3–8.
+@@ 96
+"빈틈 채우기"의 drift 모델은 표준적인 random-walk 논증입니다 (독립인 오차의 분산은 더해진다).

@@ -1,0 +1,164 @@
+@@ 1
+<span class="eyebrow">Week 16 · Review</span>
+@@ 2
+Week 16 review: from raw IMU samples to one factor per keyframe pair
+@@ 3
+After today you can go from the IMU measurement model to a preintegrated factor by hand on a small example, and estimate how fast uncorrected inertial errors grow.
+@@ 4
+An IMU reports the body's rotation rate and its specific force (acceleration minus gravity) in body axes, each with a slowly drifting bias and white noise. Standing still, the specific force points up, which fixes roll and pitch but not yaw. Integrating the readings gives rotation, velocity, and position, but errors grow quickly: quadratically for an accelerometer bias and cubically for a gyroscope bias, because a tilt error leaks gravity into horizontal acceleration. To use the IMU in a factor graph without a state per sample, the integration between two keyframes is rearranged into increments that do not depend on the starting state or on gravity. They are integrated once, corrected to first order when the bias estimate moves, and enter the graph as one 9-dimensional factor plus a bias random-walk factor.
+@@ 5
+Accelerometer model
+@@ 6
+(11.1), p. 306 · <a href="#d91">Day 1</a>
+@@ 7
+Gyroscope model
+@@ 8
+(11.2), p. 306 · Day 1
+@@ 9
+Static alignment
+@@ 10
+(11.6), p. 307 · <a href="#d92">Day 2</a>
+@@ 11
+Discrete noise
+@@ 12
+sample: \(\operatorname{Cov}(\boldsymbol{\eta}^{d}) = \tfrac{1}{\Delta t}\operatorname{Cov}(\boldsymbol{\eta})\); bias step: \(\boldsymbol{\Sigma}^{bd} = \Delta t_{ij}\operatorname{Cov}(\boldsymbol{\eta}^{b})\)
+@@ 13
+p. 309, p. 316 · Day 2
+@@ 14
+One integration step
+@@ 15
+(11.12), p. 309 · <a href="#d93">Day 3</a>
+@@ 16
+Drift from biases
+@@ 17
+\(\delta p \approx \tfrac12 b_a t^2\) and \(\delta p \approx \tfrac16 g\,b_g t^3\)
+@@ 18
+Day 3 (not in the book)
+@@ 19
+Increments
+@@ 20
+(11.14), p. 311 · <a href="#d94">Day 4</a>
+@@ 21
+Their recipes
+@@ 22
+(11.21)–(11.22), pp. 312–313 · Day 4
+@@ 23
+Bias update
+@@ 24
+\(\Delta\tilde{\mathbf{v}}_{ij}(\mathbf{b}) \simeq \Delta\tilde{\mathbf{v}}_{ij}(\bar{\mathbf{b}}) + \tfrac{\partial\Delta\bar{\mathbf{v}}_{ij}}{\partial\mathbf{b}^g}\delta\mathbf{b}^g + \tfrac{\partial\Delta\bar{\mathbf{v}}_{ij}}{\partial\mathbf{b}^a}\delta\mathbf{b}^a\), same for \(\Delta\tilde{\mathbf{p}}\); rotation by \(\Exp(\cdot)\) on the right
+@@ 25
+(11.30), p. 315 · <a href="#d95">Day 5</a>
+@@ 26
+Bias factor
+@@ 27
+(11.34), p. 316 · Day 5
+@@ 28
+Q1. A level IMU (z up) rides in a lift that accelerates upward at 1.5 m/s². Its z accelerometer reads
+@@ 29
+Specific force = a − g = 1.5 − (−9.81) = 11.31 m/s². The floor must push harder than at rest.
+@@ 30
+Q2. Which part of the initial orientation can static alignment with a low-cost IMU not determine?
+@@ 31
+Yaw
+@@ 32
+Roll
+@@ 33
+Pitch
+@@ 34
+It determines all three
+@@ 35
+Gravity is the only reference. Rotating about gravity leaves the reading unchanged, so yaw is free.
+@@ 36
+Q3. An accelerometer has noise density 0.02 m/s²/√Hz. After integrating for 25 s, the 1σ velocity error from this noise is
+@@ 37
+Integrated white noise is a random walk: σ√t = 0.02 × √25 = 0.1 m/s, whatever the sampling rate.
+@@ 38
+Q4. A gyroscope bias of 0.05°/s (8.73 × 10⁻⁴ rad/s) goes uncorrected for 10 s. The position error it causes is about
+@@ 39
+Q5. Why does the velocity update of (11.12) contain the term gΔt?
+@@ 40
+To model air drag
+@@ 41
+Because the IMU is assumed to be falling
+@@ 42
+The accelerometer measured acceleration minus gravity, so gravity is added back to recover acceleration
+@@ 43
+To cancel the accelerometer bias
+@@ 44
+Solving (11.1) for the true acceleration gives a = R(ã − b − η) + g. The g term restores what the sensor cannot feel.
+@@ 45
+Q6. A level IMU sits still for 0.5 s. Its velocity increment Δv_ij is
+@@ 46
+Δv = Rᵀ(v_j − v_i − gΔt) = −(0,0,−9.81)×0.5 = (0,0,4.905). It is the integral of the specific force, not a change of velocity.
+@@ 47
+Q7. The solver revises the rotation and velocity at keyframe i. What is recomputed?
+@@ 48
+Naive: nothing. Preintegrated: the increments
+@@ 49
+Both: all sums over the raw IMU samples
+@@ 50
+Naive: only the residual. Preintegrated: all sums
+@@ 51
+Naive: all sums over the raw samples. Preintegrated: only the residual, from stored increments
+@@ 52
+In (11.13) the state at i sits inside every term. In (11.14) it has been moved out, so the stored increments stay valid.
+@@ 53
+Q8. For which change is the first-order update (11.30) of Δv and Δp exact?
+@@ 54
+A change of the gyroscope bias
+@@ 55
+A change of the accelerometer bias
+@@ 56
+A change of either bias
+@@ 57
+Neither; it is always approximate
+@@ 58
+The recipes are linear in the accelerometer bias. The gyroscope bias enters through rotations, which are nonlinear, so that part has an error quadratic in the update.
+@@ 59
+A car on a level road brakes at 3 m/s². Its IMU has x forward and z up. (a) What does the accelerometer read, ignoring bias and noise? (b) If an alignment routine wrongly assumed the car was at rest, what pitch would it report?
+@@ 60
+(a) \(\mathbf{a}^w = (-3, 0, 0)\), \(\mathbf{g}^w = (0,0,-9.81)\), \(\mathbf{R} = \mathbf{I}\). The reading is \(\mathbf{a}^w - \mathbf{g}^w = (-3, 0, 9.81)\) m/s², of length \(\sqrt{9 + 96.24} = 10.26\) m/s².
+@@ 61
+(b) The routine takes the reading for "up". It is tilted from the z-axis toward \(-x\) by \(\arctan(3/9.81) = 17.0^\circ\), so the car appears pitched nose-down by 17°. The length 10.26 instead of 9.81 is the giveaway that it was not at rest.
+@@ 62
+A robot at rest reads \((0, -2.54, 9.48)\) m/s². Compute \(\mathbf{R}^b_w\) with equation (11.6) and describe the tilt.
+@@ 63
+Length: \(\sqrt{2.54^2 + 9.48^2} = \sqrt{96.32} = 9.814\). So \(\mathbf{z} = (0, -0.2588, 0.9659)\).
+@@ 64
+\(\mathbf{e}_1\T\mathbf{z} = 0\), so nothing is removed from \(\mathbf{e}_1\): \(\mathbf{x} = (1, 0, 0)\).
+@@ 65
+Since \(\cos 15^\circ = 0.9659\) and \(\sin 15^\circ = 0.2588\), this is a rotation of 15° about the x-axis: the robot is rolled by 15° and not pitched. Check: \(\mathbf{R}^b_w(0,0,9.814)\T = (0, -2.54, 9.48)\T\).
+@@ 66
+An IMU has an uncorrected gyroscope bias of 0.01°/s and an uncorrected accelerometer bias of 0.02 m/s². After how long does the position error from the gyroscope bias overtake the one from the accelerometer bias, and how large are they then?
+@@ 67
+Set \(\tfrac16 g\,b_g t^3 = \tfrac12 b_a t^2\), so \(t = 3b_a/(g\,b_g)\). With \(b_g = 0.01^\circ/\text{s} = 1.745\times10^{-4}\) rad/s: \(t = 0.06/(9.81\times1.745\times10^{-4}) = 35.0\) s.
+@@ 68
+At that moment each error is \(\tfrac12\times0.02\times35.0^2 = 12.3\) m. Before 35 s the accelerometer bias dominates; afterwards the cubic term wins and keeps pulling ahead.
+@@ 69
+A 1-D preintegration by hand. A sensor moves along a vertical axis without rotating, z up, \(g = -9.81\) m/s². Three accelerometer samples at \(\Delta t = 0.1\) s read 10.81, 9.81, 8.81 m/s², with zero bias. (a) Compute \(\Delta v_{ij}\) and \(\Delta p_{ij}\). (b) Predict \(v_j\) and \(p_j\) for \(v_i = 1\) m/s, \(p_i = 0\), and check by direct integration with (11.12). (c) The solver changes \(v_i\) to 1.5 m/s. What is \(p_j\) now? (d) The accelerometer bias estimate changes from 0 to 0.1 m/s². Correct \(\Delta v_{ij}\) and \(\Delta p_{ij}\) to first order and compare with re-integration.
+@@ 70
+(a) With no rotation \(\Delta R = 1\). \(\Delta v_{ij} = (10.81 + 9.81 + 8.81)\times0.1 = 2.943\) m/s. For \(\Delta p_{ij} = \sum_k[\Delta v_{ik}\Delta t + \tfrac12\tilde a_k\Delta t^2]\) the running \(\Delta v_{ik}\) are 0, 1.081, 2.062:
+@@ 71
+\(k=0\): \(0 + 0.05405\); \(k=1\): \(0.1081 + 0.04905\); \(k=2\): \(0.2062 + 0.04405\). Sum: \(\Delta p_{ij} = 0.46145\) m.
+@@ 72
+Direct: the true accelerations are \(\tilde a + g = 1, 0, -1\). Velocity: 1 → 1.1 → 1.1 → 1.0. Position: \(0.1 + 0.005 = 0.105\); \(+0.11 = 0.215\); \(+0.11 - 0.005 = 0.32\). They agree.
+@@ 73
+(c) Only the \(v_i\Delta t_{ij}\) term changes: \(p_j = 0.45 - 0.44145 + 0.46145 = 0.47\) m. No sample is touched.
+@@ 74
+(d) Without rotation the Jacobians are \(\partial\Delta v/\partial b^a = -\Delta t_{ij} = -0.3\) s and \(\partial\Delta p/\partial b^a = -\tfrac12\Delta t_{ij}^2 = -0.045\) s². Corrected: \(\Delta v_{ij} = 2.943 - 0.03 = 2.913\) m/s, \(\Delta p_{ij} = 0.46145 - 0.0045 = 0.45695\) m. Re-integrating with samples 10.71, 9.71, 8.71 gives \(\Delta v = 2.913\) and \(\Delta p = 0.05355 + (0.1071 + 0.04855) + (0.2042 + 0.04355) = 0.45695\): identical, because the recipes are linear in the accelerometer bias.
+@@ 75
+Write the IMU measurement model and say what an accelerometer reads at rest and in free fall.
+@@ 76
+Explain why gravity makes roll and pitch measurable and leaves yaw free.
+@@ 77
+State the unknowns a visual-inertial system carries at each keyframe: rotation, position, velocity, and two biases.
+@@ 78
+Explain why a tilt error and an accelerometer bias produce similar position errors.
+@@ 79
+Define \(\Delta\mathbf{R}_{ij}\), \(\Delta\mathbf{v}_{ij}\), \(\Delta\mathbf{p}_{ij}\) and say which variables the IMU factor connects.
+@@ 80
+<em>SLAM Handbook</em>, Chapter 11, §11.1–§11.2, pp. 304–319.
+@@ 81
+Forster, Carlone, Dellaert, Scaramuzza, <em>On-Manifold Preintegration for Real-Time Visual-Inertial Odometry</em>, IEEE Transactions on Robotics, 2017.
+@@ 82
+Titterton and Weston, <em>Strapdown Inertial Navigation Technology</em>, 2nd ed., 2004 (error growth rules used in the problems).

@@ -1,0 +1,364 @@
+@@ w03
+"aria-label":"Top left: a robot path with landmarks and the factors between them. Top right: the nonzero pattern of the Jacobian A. Bottom: the patterns of the information matrix and of its triangular factor R, with fill-in marked."
+==
+"aria-label":"왼쪽 위: landmark가 있는 로봇 경로와 그 사이의 factor. 오른쪽 위: Jacobian A의 nonzero 패턴. 아래: information matrix와 그 삼각 factor R의 패턴, fill-in 표시."
+@@ w03
+"A: "+facs.length+" rows (factors) × "+n+" columns"
+==
+"A: "+facs.length+"행 (factor) × "+n+"열"
+@@ w03
+"R, where RᵀR = Λ"
+==
+"R (RᵀR = Λ)"
+@@ w03
+stat("Nonzeros in A",
+==
+stat("A의 nonzero",
+@@ w03
+stat("Nonzeros in Λ",nl,"of "+n*n)
+==
+stat("Λ의 nonzero",nl,"전체 "+n*n+"칸 중")
+@@ w03
+stat("Nonzeros in R",nr,"upper triangle holds "+n*(n+1)/2)
+==
+stat("R의 nonzero",nr,"상삼각 전체는 "+n*(n+1)/2+"칸")
+@@ w03
+"entries of R that are zero in Λ"
+==
+"Λ에서는 0인 R의 원소"
+@@ w03
+button("Add a loop closure",
+==
+button("loop closure 추가",
+@@ w03
+h("div",{class:"vt"},"Sparsity patterns of a small SLAM problem")
+==
+h("div",{class:"vt"},"작은 SLAM 문제의 sparsity 패턴")
+@@ w03
+"A robot drives most of a circle and sees landmarks within its sensor range. Every variable is one number here, so each small square is one matrix entry. Columns are drawn in elimination order."
+==
+"로봇이 원의 대부분을 돌며 센서 범위 안의 landmark를 봅니다. 여기서는 모든 변수가 숫자 하나이므로, 작은 사각형 하나가 행렬 원소 하나입니다. 열은 elimination 순서대로 그립니다."
+@@ w03
+range("Poses",
+==
+range("pose 수",
+@@ w03
+range("Sensor range",
+==
+range("센서 범위",
+@@ w03
+[["pl","poses, then landmarks"],["lp","landmarks, then poses"],["md","minimum degree (greedy)"],["rnd","random"]]
+==
+[["pl","pose 먼저, 그다음 landmark"],["lp","landmark 먼저, 그다음 pose"],["md","minimum degree (greedy)"],["rnd","무작위"]]
+@@ w03
+"pose column"
+==
+"pose 열"
+@@ w03
+"landmark column"
+==
+"landmark 열"
+@@ w03
+"aria-label":"The toy SLAM graph with three poses and two landmarks. Variables that have been eliminated are shaded and receive arrows from the variables they are conditioned on. The factors that remain are small squares."
+==
+"aria-label":"pose 세 개와 landmark 두 개로 된 toy SLAM 그래프. 소거된 변수는 음영으로 표시되고, 그 변수의 조건이 되는 변수들에서 화살표를 받습니다. 남은 factor는 작은 사각형입니다."
+@@ w03
+"Nine factors on five variables. Nothing has been eliminated yet: the table below is [A | b] with its columns in the chosen order."
+==
+"변수 다섯 개에 factor 아홉 개. 아직 아무것도 소거하지 않았습니다. 아래 표는 고른 순서대로 열을 놓은 [A | b]입니다."
+@@ w03
+"Step "+k+": eliminate "+TN[L.v]+". Its factors "+L.used+" are multiplied into one product factor, which QR splits into the conditional "+L.cond+(L.made?" and a new factor "+L.made+" on the separator.":L.sep.length?". Nothing is left over for the separator.":". The separator is empty, so this is a prior and the elimination is finished.")
+==
+"Step "+k+": "+TN[L.v]+" 소거. 이 변수의 factor("+L.used+")를 곱해 product factor 하나로 만들고 QR로 나눕니다. "+(L.made?"결과: conditional "+L.cond+", 그리고 separator 위의 새 factor "+L.made+".":L.sep.length?"결과: conditional "+L.cond+". separator에 남는 것은 없습니다.":"결과: conditional "+L.cond+". separator가 비어 있으므로 이것은 prior이고, elimination이 끝났습니다.")
+@@ w03
+"d or b"
+==
+"d 또는 b"
+@@ w03
+stat("Eliminated",k+" of 5")
+==
+stat("소거한 변수",k+" / 5")
+@@ w03
+stat("Nonzeros in R so far",
+==
+stat("지금까지 R의 nonzero",
+@@ w03
+"blue rows of the table"
+==
+"표의 파란 행"
+@@ w03
+stat("Fill-in so far",
+==
+stat("지금까지 fill-in",
+@@ w03
+"graph edges that did not exist before"
+==
+"전에 없던 그래프 edge"
+@@ w03
+"Back-substitution, last row first: "
+==
+"Back-substitution, 마지막 행부터: "
+@@ w03
+"Eliminate all five variables to read off the estimate by back-substitution."
+==
+"다섯 변수를 모두 소거하면 back-substitution으로 추정값을 읽을 수 있습니다."
+@@ w03
+h("div",{class:"vt"},"Variable elimination, one variable at a time")
+==
+h("div",{class:"vt"},"variable elimination, 한 번에 한 변수씩")
+@@ w03
+"The book's toy problem with every variable a single number. Each step runs a real partial QR factorization on the factors that touch the variable."
+==
+"모든 변수를 숫자 하나로 둔 책의 toy 문제. 매 step은 그 변수에 연결된 factor에 대해 실제 partial QR 분해를 실행합니다."
+@@ w03
+select("Elimination order",
+==
+select("elimination 순서",
+@@ w03
+"ℓ₁ ℓ₂ p₁ p₂ p₃ (the book's)"
+==
+"ℓ₁ ℓ₂ p₁ p₂ p₃ (책의 순서)"
+@@ w03
+"p₁ p₂ p₃ ℓ₁ ℓ₂ (poses first)"
+==
+"p₁ p₂ p₃ ℓ₁ ℓ₂ (pose 먼저)"
+@@ w03
+"p₂ ℓ₁ ℓ₂ p₁ p₃ (p₂ first)"
+==
+"p₂ ℓ₁ ℓ₂ p₁ p₃ (p₂ 먼저)"
+@@ w03
+"p₃ p₂ p₁ ℓ₂ ℓ₁ (reversed)"
+==
+"p₃ p₂ p₁ ℓ₂ ℓ₁ (역순)"
+@@ w03
+button("Eliminate next",
+==
+button("다음 변수 소거",
+@@ w03
+button("Back",
+==
+button("이전",
+@@ w03
+button("Reset",
+==
+button("초기화",
+@@ w03
+"original factor"
+==
+"원래 factor"
+@@ w03
+"new factor τ made by elimination"
+==
+"elimination이 만든 새 factor τ"
+@@ w03
+"eliminated variable and its conditional (a row of R)"
+==
+"소거된 변수와 그 conditional (R의 한 행)"
+@@ w03
+"aria-label":"One-sigma ellipses of the two variables that remain: the marginal distribution and the distribution conditioned on the removed variable."
+==
+"aria-label":"남은 두 변수의 1σ 타원: marginal 분포와, 제거한 변수에 대한 conditional 분포."
+@@ w03
+"Marginalize "+NM[e]+", information: Schur complement"
+==
+NM[e]+" marginalize (information): Schur complement"
+@@ w03
+"Condition on "+NM[e]+", information: delete its row and column"
+==
+NM[e]+" conditioning (information): 그 행과 열 삭제"
+@@ w03
+"Marginalize "+NM[e]+", covariance: delete its row and column"
+==
+NM[e]+" marginalize (covariance): 그 행과 열 삭제"
+@@ w03
+"Condition on "+NM[e]+", covariance: Schur complement"
+==
+NM[e]+" conditioning (covariance): Schur complement"
+@@ w03
+stat("Λ entry between "+nm.join(" and "),
+==
+stat(nm.join("–")+" 사이의 Λ 원소",
+@@ w03
+"before → after marginalizing "+NM[e]
+==
+NM[e]+" marginalize 전 → 후"
+@@ w03
+stat("Std. dev. of "+nm[1],
+==
+stat(nm[1]+"의 표준편차",
+@@ w03
+h("div",{class:"vt"},"Marginalize or condition: one variable of a chain")
+==
+h("div",{class:"vt"},"marginalize 또는 conditioning: 사슬의 변수 하나")
+@@ w03
+"Three numbers in a chain: a prior on x₁ (precision 1), a link x₁–x₂ and a link x₂–x₃. Remove one variable in each of the two ways and compare all four results."
+==
+"사슬로 이어진 숫자 세 개: x₁의 prior (precision 1), x₁–x₂ 연결, x₂–x₃ 연결. 변수 하나를 두 방법으로 각각 없애고 네 결과를 모두 비교해 보십시오."
+@@ w03
+range("Precision of link x₁–x₂",
+==
+range("x₁–x₂ 연결의 precision",
+@@ w03
+range("Precision of link x₂–x₃",
+==
+range("x₂–x₃ 연결의 precision",
+@@ w03
+select("Variable to remove",[[1,"x₂ (the middle)"],[0,"x₁ (an end)"],[2,"x₃ (an end)"]]
+==
+select("없앨 변수",[[1,"x₂ (가운데)"],[0,"x₁ (끝)"],[2,"x₃ (끝)"]]
+@@ w03
+"marginal of the two that remain (1σ)"
+==
+"남은 두 변수의 marginal (1σ)"
+@@ w03
+"conditional, given the removed variable (1σ)"
+==
+"제거한 변수가 주어졌을 때의 conditional (1σ)"
+@@ w03
+"fill-in: a new nonzero"
+==
+"fill-in: 새 nonzero"
+@@ w03
+"aria-label":"Left: the robot's path, landmarks and factors so far. Right: the Bayes tree, root at the top, with the cliques that were recomputed in this step highlighted."
+==
+"aria-label":"왼쪽: 지금까지의 로봇 경로, landmark, factor. 오른쪽: root가 맨 위에 있는 Bayes tree. 이번 step에서 다시 계산한 clique가 강조되어 있습니다."
+@@ w03
+"Bayes tree (root at the top)"
+==
+"Bayes tree (root가 맨 위)"
+@@ w03
+"Empty. Press Add next pose to start the run."
+==
+"비어 있습니다. 다음 pose 추가를 눌러 시작하십시오."
+@@ w03
+"Step "+t+": added x"+t+(t>1?" with an odometry factor":" with a prior")+(r[2]>=0?", an observation of l"+(r[2]+1):"")+(r[3]>=0?", and a loop closure to x"+(r[3]+1):"")+". Re-eliminated "+w+" of "+V.length+" variables."+(t===RUN.length?" End of the run.":"")
+==
+"Step "+t+": x"+t+" 추가 ("+(t>1?"odometry factor":"prior")+(r[2]>=0?", l"+(r[2]+1)+" 관측":"")+(r[3]>=0?", loop closure → x"+(r[3]+1):"")+"). 변수 "+V.length+"개 중 "+w+"개를 다시 소거했습니다."+(t===RUN.length?" 실행이 끝났습니다.":"")
+@@ w03
+stat("Cliques in the tree",
+==
+stat("트리의 clique 수",
+@@ w03
+stat("Re-eliminated this step",t?w+" of "+V.length:"—","variables")
+==
+stat("이번 step에서 다시 소거",t?w+" / "+V.length:"—","변수")
+@@ w03
+stat("Total so far",
+==
+stat("지금까지 합계",
+@@ w03
+"incremental vs refactoring everything each step"
+==
+"incremental vs 매 step 전부 다시 분해"
+@@ w03
+x+" var."
+==
+x+"개"
+@@ w03
+button("Add next pose",
+==
+button("다음 pose 추가",
+@@ w03
+h("div",{class:"vt"},"A Bayes tree that grows with the robot")
+==
+h("div",{class:"vt"},"로봇과 함께 자라는 Bayes tree")
+@@ w03
+"Fourteen poses around a block and three landmarks. Each step adds a pose and its factors, finds the cliques between the touched variables and the root, and re-eliminates only their variables."
+==
+"블록 하나를 도는 pose 14개와 landmark 3개. 매 step마다 pose 하나와 그 factor를 추가하고, 건드린 변수와 root 사이의 clique를 찾아 그 clique의 변수만 다시 소거합니다."
+@@ w03
+button("Run to the end",
+==
+button("끝까지 실행",
+@@ w03
+"new factor, and what was recomputed in this step"
+==
+"새 factor, 그리고 이번 step에서 다시 계산한 것"
+@@ w03
+"pose and odometry"
+==
+"pose와 odometry"
+@@ w03
+"landmark and observation"
+==
+"landmark와 관측"
+@@ w03
+"Variables re-eliminated at each step"
+==
+"step마다 다시 소거한 변수"
+@@ w03
+l:"row "+(i+1)
+==
+l:(i+1)+"행"
+@@ w03
+{l:"new row",
+==
+{l:"새 행",
+@@ w03
+"R is the factor of five poses in a chain (a prior and four odometry steps). The new measurement is one extra row under it. "+tot+" rotation"+(tot>1?"s are":" is")+" needed."
+==
+"R은 사슬로 이어진 pose 다섯 개의 factor입니다 (prior 하나와 odometry step 네 개). 새 측정은 그 아래에 붙는 행 하나입니다. 회전이 "+tot+"번 필요합니다."
+@@ w03
+"Rotation "+k+" mixed row "+(first+k)+" of R with the new row and zeroed the new row's entry in column x"+(first+k)+"."
+==
+"회전 "+k+": R의 "+(first+k)+"행을 새 행과 섞어, 새 행의 x"+(first+k)+" 열 원소를 0으로 만들었습니다."
+@@ w03
+"Done. The new row is zero except for its last number, which is a leftover residual. R is upper-triangular again and holds all six measurements."
+==
+"완료. 새 행은 마지막 숫자를 빼면 0이며, 그 숫자는 남은 residual입니다. R은 다시 상삼각이 되었고 측정 여섯 개를 모두 담고 있습니다."
+@@ w03
+stat("Rotations",k+" of "+tot)
+==
+stat("회전",k+" / "+tot)
+@@ w03
+stat("Rows of R changed",hit.length+" of "+n,"rows above the first nonzero are never touched")
+==
+stat("바뀐 R의 행",hit.length+" / "+n,"첫 nonzero보다 위의 행은 그대로")
+@@ w03
+stat("Estimate before",
+==
+stat("이전 추정값",
+@@ w03
+stat("Estimate after",
+==
+stat("이후 추정값",
+@@ w03
+"by back-substitution":"finish the rotations"
+==
+"back-substitution으로":"회전을 끝내십시오"
+@@ w03
+h("div",{class:"vt"},"Update R with one new measurement")
+==
+h("div",{class:"vt"},"새 측정 하나로 R 업데이트")
+@@ w03
+"Each Givens rotation mixes one row of R with the new row so that one entry of the new row becomes zero. Nothing is refactored from scratch."
+==
+"Givens rotation은 매번 R의 행 하나를 새 행과 섞어 새 행의 원소 하나를 0으로 만듭니다. 처음부터 다시 분해하는 것은 없습니다."
+@@ w03
+select("New measurement",
+==
+select("새 측정",
+@@ w03
+"x₅ − x₁ = 4.6 (loop closure to the start)"
+==
+"x₅ − x₁ = 4.6 (시작점으로의 loop closure)"
+@@ w03
+"x₅ = 4.4 (touches only the newest pose)"
+==
+"x₅ = 4.4 (최신 pose에만 연결)"
+@@ w03
+button("Apply next rotation",
+==
+button("다음 회전 적용",
+@@ w03
+"the new measurement row"
+==
+"새 측정 행"
+@@ w03
+"row of R changed by the last rotation"
+==
+"마지막 회전으로 바뀐 R의 행"
+@@ w03
+"rows changed earlier"
+==
+"그 전에 바뀐 행"

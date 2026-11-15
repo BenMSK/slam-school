@@ -1,0 +1,164 @@
+@@ 1
+<span class="eyebrow">Week 6 · Review</span>
+@@ 2
+Week 6 review: outliers and robust estimation
+@@ 3
+After today you can choose between RANSAC, pairwise consistency, robust losses, and graduated non-convexity for a given problem, and carry out one step of each by hand.
+@@ 4
+Least squares assumes Gaussian errors, and one grossly wrong measurement, usually a wrong data association, can move its answer arbitrarily far. Chapter 3 defends in two layers. In the front-end, RANSAC samples minimal sets and keeps the model most measurements agree with, and pairwise consistency maximization keeps the largest group of measurements that agree with each other, found as a maximum clique. In the back-end, M-estimation swaps the square for a robust loss, IRLS solves it as repeated weighted least squares, Black-Rangarajan duality explains the weights, and graduated non-convexity makes IRLS far less dependent on its starting point. None of these comes with a guarantee, and the strongest results combine the layers.
+@@ 5
+Effect of one outlier on a mean of \(N\)
+@@ 6
+Day 1 (added; cf. §3.1.2, p. 77)
+@@ 7
+Consensus maximization
+@@ 8
+(3.4), p. 80, Day 2
+@@ 9
+RANSAC iterations
+@@ 10
+expected \(1/\omega^n\); for confidence \(p\): \(k\ge\dfrac{\log(1-p)}{\log(1-\omega^n)}\)
+@@ 11
+p. 81 and Day 2
+@@ 12
+Consistency of two 3D-3D matches
+@@ 13
+(3.5), p. 82, Day 3
+@@ 14
+Consistency of two loop closures
+@@ 15
+(3.6), p. 83, Day 3
+@@ 16
+PCM = maximum clique
+@@ 17
+(3.8), pp. 83–84, Day 3
+@@ 18
+M-estimation and influence
+@@ 19
+(3.9), p. 86, Day 4
+@@ 20
+IRLS weight
+@@ 21
+(3.12), p. 89, Day 4
+@@ 22
+B-R duality
+@@ 23
+\(\rho(r)=\min_{w\in[0,1]} w\,r^2+\Phi_\rho(w)\); truncated quadratic: \(\Phi_\rho=(1-w)\beta^2\); Geman-McClure: \(\Phi_\rho=\beta^2(\sqrt{w}-1)^2\)
+@@ 24
+(3.14)–(3.18), pp. 90–92, Day 4
+@@ 25
+GNC weights
+@@ 26
+truncated quadratic: \(w=\beta\sqrt{\mu(\mu+1)}/|r|-\mu\), clipped to \([0,1]\), \(\mu\) grows; Geman-McClure: \(w=\big(\mu\beta^2/(r^2+\mu\beta^2)\big)^2\), \(\mu\) shrinks to 1
+@@ 27
+(3.24)–(3.27), pp. 94–95, Day 5
+@@ 28
+Q1. Four measurements of a distance read 10 m and a fifth reads 60 m. What does least squares return?
+@@ 29
+The mean: (4 × 10 + 60)/5 = 20 m. Equivalently, the 50 m error is divided by N = 5, a shift of 10 m.
+@@ 30
+Q2. A minimal solver needs n = 3 correspondences and half of the correspondences are inliers. What is the expected number of RANSAC iterations before an all-inlier sample?
+@@ 31
+Q3. 30% of the matches are correct, and 45% are wrong but all caused by the same repeated structure, so they agree with one another. What does RANSAC most likely return?
+@@ 32
+The model supported by the 45%, since it has the largest consensus set
+@@ 33
+The correct model, since inliers always win
+@@ 34
+No model, since the outlier rate exceeds 50%
+@@ 35
+The average of the two models
+@@ 36
+RANSAC maximizes consensus. It cannot tell a large self-consistent group of wrong matches from the truth. This is perceptual aliasing at the level of the front-end.
+@@ 37
+Q4. Two matched 3D points are 2.00 m apart in frame k − 1 and 2.05 m apart in frame k. With γ = 0.10 m, what does the consistency test (3.5) say?
+@@ 38
+Inconsistent, because the distances differ
+@@ 39
+Nothing, until the camera motion is estimated
+@@ 40
+Consistent: the distances differ by 0.05 m, within γ
+@@ 41
+Both matches are certainly inliers
+@@ 42
+|2.00 − 2.05| = 0.05 ≤ 0.10, so the pair gets an edge in the consistency graph. The test needs no motion estimate. Passing it is necessary for both to be inliers, not sufficient.
+@@ 43
+Q5. A consistency graph has edges 1–2, 1–3, 2–3, 3–4, 4–5. Which measurements does PCM keep?
+@@ 44
+3 only
+@@ 45
+{1, 2, 3} is the maximum clique: all three pairs are edges. {3, 4, 5} is not a clique because 3–5 is missing. Node 3 has the most edges, but degree alone does not decide.
+@@ 46
+Q6. Geman-McClure loss with β = 1. What IRLS weight does a residual r = 3 get?
+@@ 47
+w = (β²/(β² + r²))² = (1/10)² = 0.01. Small, but not exactly zero as it would be for the truncated quadratic.
+@@ 48
+Q7. Which of these methods needs an initial guess of the state?
+@@ 49
+RANSAC
+@@ 50
+Pairwise consistency maximization
+@@ 51
+Neither front-end nor back-end methods do
+@@ 52
+IRLS and GNC, because they solve the SLAM problem iteratively
+@@ 53
+RANSAC builds its own estimates from minimal samples and PCM never touches the state. IRLS and GNC run Gauss-Newton-type steps on the full problem, and GNC in particular fails when the initial guess is broken (Figure 3.10).
+@@ 54
+Q8. In GNC with the truncated quadratic surrogate (3.24), what happens to the band of residuals with weights strictly between 0 and 1 as μ grows?
+@@ 55
+It widens until it covers every residual
+@@ 56
+It stays the same and only its height changes
+@@ 57
+It shrinks onto r² = β², leaving weights of 0 and 1 only
+@@ 58
+It moves toward r = 0
+@@ 59
+The band is r² ∈ [μ/(μ+1) β², (μ+1)/μ β²]. Both ends tend to β² as μ → ∞, so the surrogate becomes min{r², β²} and the weights become binary.
+@@ 60
+A 3D-3D registration front-end uses a 3-point minimal solver. (a) With 60% outliers, find the expected number of RANSAC iterations to draw an all-inlier sample, and the number needed for 99% confidence. (b) Repeat for 90% outliers.
+@@ 61
+(a) \(\omega = 0.4\), \(\omega^3 = 0.064\). Expected: \(1/0.064 = 15.6\). For 99%: \(k \ge \log(0.01)/\log(1-0.064) = (-4.605)/(-0.0661) = 69.6\), so 70 iterations.
+@@ 62
+(b) \(\omega = 0.1\), \(\omega^3 = 0.001\). Expected: 1000. For 99%: \((-4.605)/\log(0.999) = (-4.605)/(-0.0010005) = 4603\) iterations. Going from 60% to 90% outliers costs a factor of about 65, which is why the chapter turns to PCM for very high outlier rates.
+@@ 63
+A robot drives down a corridor and back (treat it as one-dimensional). Five candidate loop closures each link an early pose \(a_i\) to a late pose \(b_i\). For each one you compute \(e_i\) = (loop-closure displacement) − (displacement predicted by chaining odometry from \(a_i\) to \(b_i\)), and get \(e = \{0.42,\ 0.38,\ 2.90,\ 0.45,\ -1.70\}\) m. (a) Show that the cycle test (3.6) for loop closures \(i\) and \(j\) reduces to \(|e_i - e_j|\le\gamma\). (b) With \(\gamma = 0.15\) m, build the consistency graph and find the maximum clique. (c) What do the kept loop closures say about the odometry?
+@@ 64
+(a) In one dimension poses compose by addition and the identity is 0. Go around the cycle \(a_i \to b_i \to b_j \to a_j \to a_i\): loop closure \(i\) forwards (\(T_i\)), odometry from \(b_i\) to \(b_j\), loop closure \(j\) backwards (\(-T_j\)), odometry from \(a_j\) to \(a_i\). Writing \(q\) for positions obtained by chaining odometry, the sum is \(T_i + (q_{b_j}-q_{b_i}) - T_j + (q_{a_i}-q_{a_j}) = [T_i-(q_{b_i}-q_{a_i})] - [T_j-(q_{b_j}-q_{a_j})] = e_i - e_j\).
+@@ 65
+(b) There are \(5\times4/2 = 10\) pairs. \(|e_1-e_2| = 0.04\), \(|e_1-e_4| = 0.03\), \(|e_2-e_4| = 0.07\): three edges. Every pair involving closure 3 or closure 5 differs by more than 2 m: no edge. The graph is the triangle {1, 2, 4} plus two isolated nodes, so the maximum clique is {1, 2, 4}.
+@@ 66
+(c) They agree that odometry drifted by about 0.4 m between the two passes. Closures 3 and 5 each imply a different drift that nothing else supports.
+@@ 67
+Estimate a scalar \(x\) from \(z = \{0, 1, 2, 3, 19\}\) with residuals \(r_i = z_i - x\). (a) Give the least-squares estimate. (b) Run IRLS with the truncated quadratic loss, \(\beta = 3.5\), from the least-squares estimate until it stops changing. (c) Find the Huber estimate for \(\beta = 3.5\) from the condition \(\sum_i\psi(r_i) = 0\).
+@@ 68
+(a) The mean: \(25/5 = 5\).
+@@ 69
+(b) Iteration 1: residuals \(-5, -4, -3, -2, 14\). Weights are 1 where \(|r|\lt3.5\): \(0, 0, 1, 1, 0\). New \(x = (2+3)/2 = 2.5\). Iteration 2: residuals \(-2.5, -1.5, -0.5, 0.5, 16.5\), weights \(1, 1, 1, 1, 0\), new \(x = 6/4 = 1.5\). Iteration 3: residuals \(-1.5, -0.5, 0.5, 1.5, 17.5\), same weights, \(x = 1.5\). Converged at the mean of the four good values. Here the bad start did not matter. Compare the Day 4 widget, where it did.
+@@ 70
+(c) Guess that the first four residuals are within \(\beta\) and the last is beyond it. Then \(\psi = 2r\) for the first four and \(\psi = 2\beta\) for the last: \(2[(0-x)+(1-x)+(2-x)+(3-x)] + 2(3.5) = 0\), so \(12 - 8x + 7 = 0\) and \(x = 2.375\). Check the guess: the residuals are \(-2.375, -1.375, -0.375, 0.625\) (all within 3.5) and \(16.625\) (beyond). The Huber estimate is 2.375, between the truncated-quadratic answer 1.5 and the least-squares answer 5, because the outlier keeps a constant pull of \(2\beta\).
+@@ 71
+(Stretch.) For GNC with the truncated quadratic, the outlier process is \(\Phi_{\rho_\mu}(w) = \dfrac{\mu(1-w)}{\mu+w}\beta^2\) and the weight inside the band is \(w^\star = \beta\sqrt{\mu(\mu+1)}/|r| - \mu\). (a) Substitute \(w^\star\) into \(w\,r^2 + \Phi_{\rho_\mu}(w)\) and show that you get the middle case of (3.24). (b) Evaluate \(w^\star\) and \(\rho_\mu\) for \(\beta = 2,\ \mu = 0.25,\ r = 3\).
+@@ 72
+(a) Let \(s = \beta\sqrt{\mu(\mu+1)}\), so \(w^\star = s/|r| - \mu\), \(\mu + w^\star = s/|r|\), and \(s^2 = \mu(\mu+1)\beta^2\). First term: \(w^\star r^2 = s|r| - \mu r^2\). Second term: \(\mu\beta^2\,\dfrac{1+\mu-s/|r|}{s/|r|} = \dfrac{\mu(\mu+1)\beta^2\,|r|}{s} - \mu\beta^2 = s|r| - \mu\beta^2\). The sum is \(2s|r| - \mu(\beta^2+r^2) = 2\beta|r|\sqrt{\mu(\mu+1)} - \mu(\beta^2+r^2)\), the middle case of (3.24).
+@@ 73
+(b) The band is \(r^2\in[\tfrac{0.25}{1.25}\cdot4,\ \tfrac{1.25}{0.25}\cdot4] = [0.8, 20]\), and \(r^2 = 9\) is inside. \(\sqrt{\mu(\mu+1)} = \sqrt{0.3125} = 0.559\). \(w^\star = 2(0.559)/3 - 0.25 = 0.1227\). \(\rho_\mu = 2(2)(3)(0.559) - 0.25(4+9) = 6.708 - 3.25 = 3.458\). Check through the weight: \(0.1227\times9 + 0.25\times4\times\tfrac{0.8773}{0.3727} = 1.104 + 2.354 = 3.458\). The plain truncated quadratic would give weight 0 and loss 4.
+@@ 74
+Explain with the \(E/N\) argument why least squares has no protection against one bad measurement.
+@@ 75
+Compute RANSAC iteration counts from \(\omega\), \(n\), and a confidence level.
+@@ 76
+Write a consistency function for a pair of measurements and find a maximum clique in a small graph.
+@@ 77
+Compute \(\rho\), \(\psi\), and the IRLS weight for the Huber, Geman-McClure, and truncated quadratic losses.
+@@ 78
+Describe IRLS as alternating a weighted least-squares solve with closed-form weight updates, and say what GNC adds.
+@@ 79
+Name one situation in which each method fails.
+@@ 80
+<em>SLAM Handbook</em>, Chapter 3 "Robustness to Incorrect Data Association and Outliers", pp. 75–100.
+@@ 81
+Fischler and Bolles, <em>Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and Automated Cartography</em>, 1981 (iteration count for a given confidence).
+@@ 82
+Huber, <em>Robust Statistics</em>, 1981 (M-estimators and influence functions).

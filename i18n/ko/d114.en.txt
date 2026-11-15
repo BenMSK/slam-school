@@ -1,0 +1,176 @@
+@@ 1
+<span class="eyebrow">Week 19 · Review</span>
+@@ 2
+Week 19 review: where networks meet factor graphs
+@@ 3
+After today you can compute a warp, a correlation lookup, a confidence-weighted Gauss-Newton step, and a pointmap loss by hand, and place each system of Chapter 13 on the line from "learned component" to "learned pipeline".
+@@ 4
+Part III turns SLAM toward Spatial AI, and Chapter 13 shows the first step: putting learning into the pipeline without giving up geometry. A network can predict depth or pose, trained with 3D labels or with a view-synthesis loss, and those predictions become factors (DVSO, D3VO). A network can predict matches or optical flow; RAFT does it by building an all-pairs correlation volume once and refining a flow estimate with repeated lookups. DROID-SLAM closes the loop: its network outputs flow revisions and confidences, a differentiable bundle-adjustment layer converts them into pose and depth updates by weighted Gauss-Newton, and everything is trained on pose error. DPVO does the same on sparse patches. DUSt3R goes furthest and regresses a 3D point per pixel for an uncalibrated image pair; cameras and poses are read off afterwards, and many pairs are fused by a confidence-weighted alignment. In every case a least-squares problem on a graph is still there.
+@@ 5
+Attention for one query
+@@ 6
+\(a_j = e^{s_j} / \sum_m e^{s_m}\) with \(s_j = \mathbf{q}\T\mathbf{k}_j\); output \(\sum_j a_j \mathbf{v}_j\)
+@@ 7
+Fig. 13.6, p. 375 · <a href="#d109">Day 1</a>
+@@ 8
+Pose regression loss
+@@ 9
+(13.1), p. 371 · <a href="#d110">Day 2</a>
+@@ 10
+Warp of a pixel with depth
+@@ 11
+\(\mathbf{x}^2 = \pi_c(\mathbf{T}^2_1\, \pi_c^{-1}(\mathbf{x}^1, d^1))\); for a sideways baseline \(b\): \(x^2 = x^1 - f b / d\)
+@@ 12
+(13.2), p. 371 · <a href="#d110">Day 2</a>
+@@ 13
+Synthesized view
+@@ 14
+\(\tilde{I}_2(\mathbf{x}) = I_2(\omega_{1\to2}(\mathbf{x}, \mathbf{d}(\mathbf{x})))\), read by bilinear interpolation
+@@ 15
+(13.3), p. 372 · <a href="#d110">Day 2</a>
+@@ 16
+Correlation volume
+@@ 17
+\(\mathbf{C}_{ijkl} = \sum_m g_\theta(I_1)_{ijm}\, g_\theta(I_2)_{klm}\), or \(\mathbf{C} = \mathbf{F}_1\mathbf{F}_2\T\)
+@@ 18
+(13.4), p. 377 · <a href="#d111">Day 3</a>
+@@ 19
+Lookup and update
+@@ 20
+Read \(\mathbf{C}^l\) on \(\{-r, \dots, r\}^2\) around \((u', v')/2^l\) with \((u', v') = \mathbf{f}(u,v) + (u,v)\); then \(\mathbf{f}^{k+1} = \boldsymbol{\delta}\mathbf{f}^k + \mathbf{f}^k\)
+@@ 21
+(13.5), pp. 377–378 · <a href="#d111">Day 3</a>
+@@ 22
+Induced flow
+@@ 23
+(13.6)–(13.7), p. 378 · <a href="#d112">Day 4</a>
+@@ 24
+DBA layer
+@@ 25
+\(J = \sum_{(i,j)} \norm{\boldsymbol{\delta}\mathbf{f}_{ij} - [\mathbf{h}_{ij}(\mathbf{x}_{ij}) - \mathbf{h}_{ij}(\mathbf{x}^0_{ij})]}^2_{\boldsymbol{\Sigma}_{ij}}\); step: \((\sum \mathbf{J}\T\mathbf{W}\mathbf{J})\boldsymbol{\Delta} = \sum \mathbf{J}\T\mathbf{W}\boldsymbol{\delta}\mathbf{f}\)
+@@ 26
+(13.11), p. 381 · <a href="#d112">Day 4</a>
+@@ 27
+Pointmap
+@@ 28
+(13.14), p. 387 · <a href="#d113">Day 5</a>
+@@ 29
+DUSt3R losses
+@@ 30
+\(\ell_{\text{regr}} = \norm{\mathbf{X}_i / z - \hat{\mathbf{X}}_i / \bar{z}}\); \(\mathcal{L}_{\text{conf}} = \sum C_i \ell_{\text{regr}} - \alpha \log C_i\); best \(C = \alpha/\ell\)
+@@ 31
+(13.15)–(13.17), p. 389 · <a href="#d113">Day 5</a>
+@@ 32
+Q1. A system's network outputs flow corrections and per-pixel confidences, a Gauss-Newton layer turns them into poses, and the training loss is on the poses. Which kind of method is it?
+@@ 33
+A learned component plugged into a classical pipeline
+@@ 34
+Predicted 3D properties added as factors
+@@ 35
+Direct pointmap regression
+@@ 36
+End-to-end training through a differentiable optimizer
+@@ 37
+The loss is measured after the optimizer and its gradient passes back through it. This is DROID-SLAM's design (§13.3).
+@@ 38
+Q2. Attention scores for two keys are 3 and 1. What weight does the first key get? (e² = 7.39)
+@@ 39
+e³/(e³ + e¹) = e²/(e² + 1) = 7.39/8.39 = 0.88. Only the difference of the scores matters.
+@@ 40
+Q3. Two cameras with f = 700 px are 0.3 m apart sideways. A pixel shifts by 14 px between the images. How far away is the point?
+@@ 41
+shift = f·b/d, so d = f·b/shift = 700 · 0.3 / 14 = 15 m.
+@@ 42
+Q4. What does DVSO add to the classical direct system DSO?
+@@ 43
+A learned feature matcher that replaces photometric error
+@@ 44
+A second physical camera
+@@ 45
+A factor that keeps DSO's depth consistent with depth predicted by a network
+@@ 46
+A relocalization module for loop closure
+@@ 47
+The network's metric depth acts like a virtual second camera, entering as an extra factor (p. 372).
+@@ 48
+Q5. Feature maps are 32 × 40. How many entries does level 2 of the correlation pyramid have?
+@@ 49
+Level 2 has shape 32 × 40 × 8 × 10: the 1280 pixels of image 1 times 80 pooled cells of image 2, which is 102,400.
+@@ 50
+Q6. With lookup radius r = 4 and a four-level pyramid, how many correlation values does RAFT read for one pixel in one iteration?
+@@ 51
+Each level gives a (2·4 + 1) × (2·4 + 1) = 81 grid, and there are four levels: 324.
+@@ 52
+Q7. In the DBA cost (13.11), what is the role of the confidence map w?
+@@ 53
+It sets how strongly each pixel's requested flow change counts in the Gauss-Newton step
+@@ 54
+It is the probability that a frame becomes a keyframe
+@@ 55
+It replaces the Jacobian of the measurement function
+@@ 56
+It is the depth uncertainty reported to the user
+@@ 57
+The weights enter the normal equations as W. Pixels the network does not trust barely influence the pose and depth update.
+@@ 58
+Q8. DUSt3R outputs X(2,1) for the second image. In which coordinate frame are its points?
+@@ 59
+The frame of camera 2
+@@ 60
+A world frame fixed by the first image of the dataset
+@@ 61
+The frame of camera 1
+@@ 62
+Normalized image coordinates of image 2
+@@ 63
+Both pointmaps of a pair are expressed in the frame of the first image, which is what makes the relative pose recoverable (p. 388).
+@@ 64
+<strong>Warp and induced flow.</strong> A camera has \(f = 600\) px and principal point \((320, 240)\). Pixel \((380, 240)\) of image 1 has depth 3 m. Camera 2 is 0.3 m to the right of camera 1 with the same orientation. (a) Where does the pixel land in image 2, and what is the induced flow? (b) Where would it land if the depth were wrongly taken as 6 m?
+@@ 65
+(a) Back-project: \(X = d\,(x - c_x)/f = 3 \cdot 60/600 = 0.3\) m, so the point is \((0.3, 0, 3)\) in frame 1. In frame 2 it is \((0.3 - 0.3, 0, 3) = (0, 0, 3)\). Project: \(x^2 = 600 \cdot 0/3 + 320 = 320\). The pixel lands at \((320, 240)\) and the induced flow is \((-60, 0)\) px. Check: \(f b / d = 600 \cdot 0.3 / 3 = 60\).
+@@ 66
+(b) With \(d = 6\): \(X = 6 \cdot 60/600 = 0.6\), the point is \((0.6, 0, 6)\), in frame 2 \((0.3, 0, 6)\), and \(x^2 = 600 \cdot 0.3/6 + 320 = 350\). The flow would be \(-30\) px. The view-synthesis loss compares image 1 at 380 with image 2 at 350 instead of 320, and in general finds a different brightness.
+@@ 67
+<strong>Correlation and lookup.</strong> Two 1-D images have three pixels each, with 2-channel features. Image 1: \((1, 0)\), \((0, 1)\), \((0.6, 0.8)\). Image 2: \((0, 1)\), \((0.8, 0.6)\), \((1, 0)\). (a) Compute the \(3 \times 3\) correlation volume. (b) Which pixel of image 2 does each pixel of image 1 match best, and what flow does that imply? (c) Pixel 3 of image 1 currently has flow \(-0.5\). What value does a lookup with \(r = 0\) return?
+@@ 68
+(a) Each entry is a dot product:
+@@ 69
+(b) Row maxima: pixel 1 → pixel 3 (1.0), flow \(+2\). Pixel 2 → pixel 1 (1.0), flow \(-1\). Pixel 3 → pixel 2 (0.96), flow \(-1\).
+@@ 70
+(c) The current match is at \(3 - 0.5 = 2.5\). Linear interpolation between \(\mathbf{C}[3][2] = 0.96\) and \(\mathbf{C}[3][3] = 0.6\) gives \(0.5 \cdot 0.96 + 0.5 \cdot 0.6 = 0.78\). With a larger radius the lookup would also return the values at 1.5 and 3.5, and the update operator would see that the correlation rises toward smaller positions.
+@@ 71
+<strong>Confidence-weighted Gauss-Newton.</strong> A camera with \(f = 500\) px translates sideways by an unknown \(\Delta\) (meters). A pixel at depth \(d_k\) then changes its flow by \(J_k \Delta\) with \(J_k = -f/d_k\). Three pixels have depths 2, 5, and 10 m, and the network requests flow changes \(\delta f = (-5.0, -2.1, -4.0)\) px. (a) Solve for \(\Delta\) with equal weights. (b) Solve again with weights \((1, 1, 0.1)\). (c) The true motion was 0.02 m. Which pixel was the outlier, and why did it do limited damage even in (a)?
+@@ 72
+The Jacobians are \(J = (-250, -100, -50)\) px/m. The weighted normal equation for one unknown is \(\Delta = \sum_k w_k J_k\, \delta f_k / \sum_k w_k J_k^2\).
+@@ 73
+(a) Numerator: \(250 \cdot 5 + 100 \cdot 2.1 + 50 \cdot 4 = 1250 + 210 + 200 = 1660\). Denominator: \(62500 + 10000 + 2500 = 75000\). \(\Delta = 0.0221\) m.
+@@ 74
+(b) Numerator: \(1250 + 210 + 20 = 1480\). Denominator: \(62500 + 10000 + 250 = 72750\). \(\Delta = 0.0203\) m.
+@@ 75
+(c) A motion of 0.02 m predicts flow changes \((-5, -2, -1)\). The third pixel asked for \(-4\), so it is the outlier. It is far away, so its Jacobian is small and it enters the sums with \(J^2 = 2500\) against \(62500\) for the near pixel: distant points constrain translation weakly. Down-weighting it removes most of the remaining error, from 0.0021 m to 0.0003 m.
+@@ 76
+<strong>DUSt3R's losses.</strong> Work in 2-D. Ground-truth points: \((0, 2)\), \((0, 4)\), \((3, 4)\). (a) The prediction is \((0, 3)\), \((0, 6)\), \((4.5, 6)\). Compute \(\ell_{\text{regr}}\) for each point. (b) The third prediction is instead \((0, 7.5)\). Compute the three losses again. (c) With \(\alpha = 0.5\), which confidence does (13.17) prefer for the third point in (b), and for a point with \(\ell = 0.1\)? What does each then contribute to the loss?
+@@ 77
+(a) Ground-truth distances are 2, 4, 5, so \(\bar{z} = 11/3 = 3.667\). Predicted distances are 3, 6, 7.5, so \(z = 16.5/3 = 5.5\). Every predicted point is 1.5 times its truth and \(z = 1.5\,\bar{z}\), so the normalized points coincide and all three losses are 0.
+@@ 78
+(b) The predicted distances are still 3, 6, 7.5, so \(z = 5.5\) again. Normalized predictions: \((0, 0.545)\), \((0, 1.091)\), \((0, 1.364)\). Normalized truths: \((0, 0.545)\), \((0, 1.091)\), \((0.818, 1.091)\). The first two losses are 0. The third is \(\sqrt{0.818^2 + 0.273^2} = \sqrt{0.669 + 0.074} = 0.862\).
+@@ 79
+(c) For one point, \(C\ell - \alpha \log C\) is minimized at \(C = \alpha/\ell\) when that exceeds 1. Third point: \(\alpha/\ell = 0.5/0.862 = 0.58\), below 1, so the network drives \(C\) toward its floor of 1 and the point contributes about \(0.862\). The point with \(\ell = 0.1\) gets \(C = 5\) and contributes \(5 \cdot 0.1 - 0.5 \ln 5 = 0.5 - 0.805 = -0.305\).
+@@ 80
+Explain what "differentiable" buys: a loss measured on images or poses can train whatever produced the depth, pose, or weights upstream.
+@@ 81
+Write the view-synthesis idea in one line: re-draw one image from another using depth and pose, and penalize the difference. Next week's maps are trained the same way.
+@@ 82
+Compute a softmax and a weighted average by hand.
+@@ 83
+Set up and solve a weighted least-squares step, and say where the weights come from in DROID-SLAM.
+@@ 84
+Define a pointmap and say why DUSt3R's loss ignores global scale.
+@@ 85
+Name, for each of DVSO, D3VO, DROID-SLAM, DPVO, and DUSt3R, what is learned and what is still optimized.
+@@ 86
+<em>SLAM Handbook</em>, Prelude to Part III, pp. 361–365, and Chapter 13 "Boosting SLAM with Deep Learning", pp. 366–396.
+@@ 87
+Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (projection and disparity in the problems).
+@@ 88
+Nocedal and Wright, <em>Numerical Optimization</em>, 2006 (weighted Gauss-Newton step).

@@ -1,0 +1,142 @@
+@@ 1
+<span class="eyebrow">Week 3 · Day 3</span>
+@@ 2
+The Cholesky factor is a Bayes net: back-substitution, fill-in, and the Schur complement
+@@ 3
+After today you can read each row of R as a Gaussian conditional, solve for the MAP estimate by back-substitution, predict fill-in from the graph for a given ordering, and marginalize a Gaussian variable with the Schur complement.
+@@ 4
+About 60 min · Read §1.6.3, pp. 45–46 (2 pages), and p. 38 again · Needs Week 3 Day 2
+@@ 5
+Read first: §1.6.3, p. 45 to the top of p. 46, then the second paragraph of p. 38 again
+@@ 6
+The sentence on p. 45 that links "directed acyclic graph" to "upper-triangular".
+@@ 7
+Equations (1.51)–(1.52): the mean and the covariance of one conditional, written with \(\mathbf{R}_j\), \(\mathbf{T}_j\), \(\mathbf{d}_j\).
+@@ 8
+Equation (1.53) and the paragraph before it: in which order back-substitution visits the variables, and why that order always works.
+@@ 9
+On p. 38: the definition of fill-in. Today explains where it comes from.
+@@ 10
+The triangular factor \(\mathbf{R}\) and the Bayes net are the same object. Row \(j\) of \(\mathbf{R}\) is the Gaussian conditional of variable \(j\) given its separator, so solving \(\mathbf{R}\mathbf{x} = \mathbf{d}\) from the bottom up is MAP inference in the Bayes net. Eliminating a variable ties its neighbours together; in matrix form that tie is the Schur complement, which is also how a Gaussian variable is marginalized out.
+@@ 11
+1. Reading R as a Bayes net
+@@ 12
+Yesterday each elimination step produced one finished row \([\mathbf{R}_j \;\, \mathbf{T}_j \mid \mathbf{d}_j]\). Stack them in elimination order and you get an upper-triangular matrix. For the toy problem on a line with the book's ordering (run the Day 2 widget to the end to see it):
+@@ 13
+The off-diagonal nonzeros of row \(j\) sit in the columns of its separator: they are the arrows into \(\mathbf{x}_j\). A Bayes net is a directed graph without cycles, and "no cycles" means the variables can be ordered so that every arrow points from a later variable to an earlier one. In matrix terms nothing lies below the diagonal. The book's one-line summary: a factor graph is the picture of a sparse Jacobian, and a Bayes net is the picture of a Cholesky factor. <span class="src">§1.6.3 · p. 45</span>
+@@ 14
+You can check that this is the Cholesky factor of Day 1's \(\boldsymbol{\Lambda}\): for instance entry \((3,3)\) of \(\mathbf{R}\T\mathbf{R}\) is \(0.577^2 + 1.915^2 = 4.00\) and entry \((3,4)\) is \((-0.577)(-0.577) + (1.915)(-0.696) = -1.00\).
+@@ 15
+2. Each row is a Gaussian, and back-substitution is MAP inference
+@@ 16
+Equation (1.51) writes the conditional as \(p(\mathbf{x}_j \mid \mathbf{s}_j) = k \exp\!\left(-\tfrac12 \norm{\mathbf{R}_j\mathbf{x}_j + \mathbf{T}_j\mathbf{s}_j - \mathbf{d}_j}_2^2\right)\), and (1.52) says this is a Gaussian in \(\mathbf{x}_j\). A Bayes net made of such conditionals is a <strong>Gaussian Bayes net</strong>. <span class="src">§1.6.3 · p. 45</span>
+@@ 17
+Filling the gap: from (1.51) to mean and covariance
+@@ 18
+Pull \(\mathbf{R}_j\) out of the expression inside the norm. It is square and invertible:
+@@ 19
+Then \(\norm{\mathbf{R}_j(\mathbf{x}_j - \boldsymbol{\mu}_j)}^2 = (\mathbf{x}_j - \boldsymbol{\mu}_j)\T \mathbf{R}_j\T\mathbf{R}_j (\mathbf{x}_j - \boldsymbol{\mu}_j)\). Compare with the exponent of a Gaussian, \((\mathbf{x} - \boldsymbol{\mu})\T\boldsymbol{\Sigma}^{-1}(\mathbf{x} - \boldsymbol{\mu})\): the information matrix is \(\mathbf{R}_j\T\mathbf{R}_j\), so \(\boldsymbol{\Sigma}_j = (\mathbf{R}_j\T\mathbf{R}_j)^{-1}\). The mean moves linearly with the separator; the covariance does not depend on it at all. The constant is \(k = |2\pi\boldsymbol{\Sigma}_j|^{-1/2}\), the usual Gaussian normalizer.
+@@ 20
+<strong>Why maximizing one conditional at a time gives the joint maximum.</strong> The joint density is the product of the conditionals. Each one, whatever its parents are, can reach its peak value \(k\) by setting \(\mathbf{x}_j = \boldsymbol{\mu}_j\), and \(k\) does not depend on the parents. So no variable has to compromise: go through the variables in reverse elimination order, set each to its conditional mean given the values already chosen, and every factor of the product is at its maximum at once.
+@@ 21
+That procedure is equation (1.53), \(\mathbf{x}_j^* = \mathbf{R}_j^{-1}(\mathbf{d}_j - \mathbf{T}_j\mathbf{s}_j^*)\), and it is ordinary back-substitution on \(\mathbf{R}\mathbf{x} = \mathbf{d}\). The last variable has an empty separator, so it comes first. For the toy problem, carrying more digits than printed above:
+@@ 22
+The diagonal carries uncertainty as well. The last conditional has no parents, so it is the marginal of \(p_3\): its variance is \(1/1.021^2 = 0.96\). For the other variables \(1/R_j^2\) is the variance given the separator, which is smaller than the marginal variance.
+@@ 23
+3. Fill-in, seen on the graph
+@@ 24
+The new factor \(\tau(\mathbf{s}_j)\) touches every variable of the separator. In the graph \(G\) of <a href="#d13">Day 1</a> this means: <strong>eliminating a variable joins all of its current neighbours to each other</strong>. An edge that had to be added is a fill-in, and it becomes a nonzero of \(\mathbf{R}\) where \(\boldsymbol{\Lambda}\) had a zero. Row \(j\) of \(\mathbf{R}\) has one diagonal entry plus one entry per separator variable, so the size of \(\mathbf{R}\) is the sum of \(1 + |\mathbf{s}_j|\) over all variables.
+@@ 25
+Try it: choose "poses first" and step through. Watch the pink factor after eliminating p₂ and after p₃.
+@@ 26
+Notice that eliminating p₂ creates a factor between p₃ and ℓ₁, and eliminating p₃ then ties ℓ₁ to ℓ₂, two landmarks that no measurement ever related. R ends with 12 nonzeros and 2 fill-ins instead of 10 and 0, and the estimate is the same to the last digit. The "reversed" ordering is worse still: 13 nonzeros.
+@@ 27
+The <strong>minimum-degree</strong> idea follows directly: at each step eliminate the variable that has the fewest neighbours, because its separator, and so its row of \(\mathbf{R}\) and the factor it leaves behind, is smallest. It is greedy and not optimal, but cheap and usually good. COLAMD, the heuristic behind the 4168 of Figure 1.9, is an approximate minimum-degree ordering that works from the columns of \(\mathbf{A}\) directly. <span class="src">§1.5.3 · p. 38</span> In landmark SLAM it tends to eliminate landmarks early: a landmark seen from two poses has two neighbours, while a pose in the middle of the trajectory has many.
+@@ 28
+4. The Schur complement: elimination in information form
+@@ 29
+The same step can be done on the normal equations \(\boldsymbol{\Lambda}\mathbf{x} = \mathbf{g}\), with \(\mathbf{g} = \mathbf{A}\T\mathbf{b}\). Split the variables into the block \(a\) to eliminate and the rest \(b\):
+@@ 30
+Filling the gap: block elimination
+@@ 31
+Solve the first block-row for \(\mathbf{x}_a\): \(\mathbf{x}_a = \boldsymbol{\Lambda}_{aa}^{-1}(\mathbf{g}_a - \boldsymbol{\Lambda}_{ab}\mathbf{x}_b)\). This is the conditional mean of \(\mathbf{x}_a\) given \(\mathbf{x}_b\), the information-form twin of (1.53). Substitute it into the second block-row and collect \(\mathbf{x}_b\):
+@@ 32
+This smaller system no longer contains \(\mathbf{x}_a\). It is what the remaining factors plus the new factor \(\tau\) add up to. The correction \(\boldsymbol{\Lambda}_{ba}\boldsymbol{\Lambda}_{aa}^{-1}\boldsymbol{\Lambda}_{ab}\) is nonzero in position \((j,k)\) when both \(j\) and \(k\) are neighbours of \(a\): the "join all neighbours" rule again.
+@@ 33
+Numbers: eliminate \(\ell_1\) from Day 1's \(\boldsymbol{\Lambda}\). Here \(\boldsymbol{\Lambda}_{aa} = 3\), and \(\ell_1\) is linked to \(p_1\) and \(p_2\) with \(-1\) each, so the correction is \(\tfrac13\) in the four positions of the \((p_1, p_2)\) block:
+@@ 34
+The next pivot is \(\sqrt{3.667} = 1.915\) and the entry beside it \(-1.333/1.915 = -0.696\): row 3 of \(\mathbf{R}\) above. Cholesky factorization is this step repeated, with a square root taken each time.
+@@ 35
+For a Gaussian, the Schur complement has a second meaning. It is the information matrix of the <strong>marginal</strong> \(p(\mathbf{x}_b)\), the distribution of \(\mathbf{x}_b\) when \(\mathbf{x}_a\) is integrated out. <strong>Conditioning</strong> on a known value of \(\mathbf{x}_a\) is the other way to remove it. The two operations swap roles between the two forms of a Gaussian:
+@@ 36
+To get
+@@ 37
+Covariance form (Σ)
+@@ 38
+Information form (Λ = Σ⁻¹)
+@@ 39
+Marginal p(x_b): forget x_a
+@@ 40
+Keep the block Σ_bb. Delete the rest.
+@@ 41
+Schur complement: Λ_bb − Λ_ba Λ_aa⁻¹ Λ_ab
+@@ 42
+Conditional p(x_b | x_a): x_a is known
+@@ 43
+Schur complement: Σ_bb − Σ_ba Σ_aa⁻¹ Σ_ab
+@@ 44
+Keep the block Λ_bb. Delete the rest.
+@@ 45
+The marginal row follows from the block elimination above. Solve \(\boldsymbol{\Lambda}[\mathbf{u}; \mathbf{v}] = [\mathbf{0}; \mathbf{w}]\): the reduced system gives \(\mathbf{v} = \mathbf{S}^{-1}\mathbf{w}\) with \(\mathbf{S}\) the Schur complement. But \([\mathbf{u}; \mathbf{v}] = \boldsymbol{\Sigma}[\mathbf{0}; \mathbf{w}]\), so \(\mathbf{v} = \boldsymbol{\Sigma}_{bb}\mathbf{w}\). Hence \(\boldsymbol{\Sigma}_{bb} = \mathbf{S}^{-1}\): the covariance of the marginal is the inverse of the Schur complement.
+@@ 46
+Try it: three numbers in a chain, so \(x_1\) and \(x_3\) share no factor. Remove the middle one both ways, then remove an end instead.
+@@ 47
+Notice that Λ has a zero between x₁ and x₃, and marginalizing x₂ puts −0.50 there: fill-in. Conditioning on x₂ leaves the zero, and its ellipse is not tilted: once x₂ is known, the two ends are independent. Remove x₁ or x₃ and no new entry appears, because an end has only one neighbour.
+@@ 48
+Going deeper (optional): why smoothing stays sparse and filtering does not
+@@ 49
+A filter keeps only the current pose and marginalizes each old pose out as soon as the robot moves on. By the rule above, every such step joins all landmarks seen from that pose to each other and to the next pose. After a while the information matrix over the landmarks is full. Keeping the whole trajectory in the problem, as this chapter does, means no pose is marginalized, and \(\boldsymbol{\Lambda}\) keeps the sparse pattern of the factor graph. More variables, but far fewer nonzeros.
+@@ 50
+<strong>"To marginalize a variable, delete its row and column of Λ."</strong> That conditions on it. Deleting rows and columns marginalizes only in covariance form.
+@@ 51
+<strong>"Fill-in is round-off error."</strong> It is structural. The entries are real dependencies created by removing a variable that connected its neighbours.
+@@ 52
+<strong>"Back-substitution needs the inverse of R."</strong> For scalar variables each step is one division. For block variables it is a small triangular solve.
+@@ 53
+Q1. A row of [R | d] for scalar variables reads 2·x₁ − 1·x₂ = 3, and back-substitution has already found x₂ = 1. What is x₁?
+@@ 54
+Q2. For the same row, what is the variance of x₁ given x₂?
+@@ 55
+Σ = (RᵀR)⁻¹ = 1/2² = 0.25. It does not depend on the value of x₂.
+@@ 56
+Q3. G is a path a – b – c – d. Which variable, if eliminated first, creates a fill-in?
+@@ 57
+None of them can
+@@ 58
+b has two neighbours, a and c, which are not joined. Eliminating b adds the edge a – c. The ends a and d have one neighbour each, so nothing needs joining.
+@@ 59
+Q4. Two scalars have Λ = [[2, −1], [−1, 2]]. What is the information (inverse variance) of the marginal of x₂?
+@@ 60
+Schur complement: 2 − (−1)(1/2)(−1) = 1.5. Check through the covariance: Σ = Λ⁻¹ = (1/3)[[2, 1], [1, 2]], so the variance of x₂ is 2/3 = 1/1.5.
+@@ 61
+Q5. Same Λ. What is the information of x₂ once x₁ is known?
+@@ 62
+Conditioning in information form keeps the block: Λ₂₂ = 2. Knowing x₁ can only help, and indeed the variance 1/2 is smaller than the marginal variance 2/3.
+@@ 63
+Row \(j\) of \([\mathbf{R} \mid \mathbf{d}]\) is the conditional \(p(\mathbf{x}_j \mid \mathbf{s}_j)\): mean \(\mathbf{R}_j^{-1}(\mathbf{d}_j - \mathbf{T}_j\mathbf{s}_j)\), covariance \((\mathbf{R}_j\T\mathbf{R}_j)^{-1}\). Upper-triangular means acyclic.
+@@ 64
+Back-substitution in reverse elimination order sets each variable to its conditional mean. That is the MAP estimate.
+@@ 65
+Eliminating a variable joins all its current neighbours. New edges are fill-in. Minimum-degree orderings keep separators small.
+@@ 66
+In information form, elimination is the Schur complement \(\boldsymbol{\Lambda}_{bb} - \boldsymbol{\Lambda}_{ba}\boldsymbol{\Lambda}_{aa}^{-1}\boldsymbol{\Lambda}_{ab}\), which is the information matrix of the marginal.
+@@ 67
+Marginalizing is easy in covariance form and costs a Schur complement in information form. Conditioning is the reverse.
+@@ 68
+<em>SLAM Handbook</em>, §1.6.3 "Sparse Cholesky Factor as a Bayes Net", pp. 45–46, equations (1.50)–(1.53); §1.5.3, p. 38, for fill-in and COLAMD.
+@@ 69
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (marginals and conditionals of a joint Gaussian, the Schur complement).
+@@ 70
+Davis, <em>Direct Methods for Sparse Linear Systems</em>, 2006 (elimination graphs, minimum degree, COLAMD).
+@@ 71
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (information-form filters and what marginalizing poses does to sparsity).

@@ -1,0 +1,374 @@
+@@ 1
+<span class="eyebrow">10주차 · 복습</span>
+@@ 2
+10주차 복습, 그리고 한 쪽으로 보는 Part I
+@@ 3
+오늘이 끝나면 certifiable solver를 pose graph 너머로 확장하고, 그래프로부터 SLAM 추정값의 정확도에 bound를 걸고, Part I의 모든 도구를 back-end라는 하나의 그림 안에 배치할 수 있습니다.
+@@ 4
+약 75분 · 새로 읽을 쪽 없음
+@@ 5
+이번 주 전반부는 9주차의 certifiable 레시피를 바깥으로 넓혔습니다. landmark는 회전이 없는 pose로 들어맞습니다. range는 측정마다 단위 벡터 하나를 추가하면 들어맞습니다. anisotropic noise와 robust loss는 4차와 3차 다항식 문제를 만들고, moment relaxation이 이를 SDP로 바꾸는데, 이 SDP는 certificate를 주지만 풀기 느립니다. 후반부는 최적 추정값조차 얼마나 정확할 수 있는지를 물었습니다. Cramér-Rao bound에 따르면 unbiased estimator의 covariance는 적어도 역 Fisher information \((\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{J})^{-1}\)입니다. 회전을 아는 위치 그래프에서는 그 information이 reduced weighted Laplacian이므로, 정확도는 연결성의 문제가 됩니다: spanning tree, algebraic connectivity, effective resistance.
+@@ 6
+landmark 항 (isotropic noise)
+@@ 7
+=
+@@ 8
+2차로 만든 range 항
+@@ 9
+=
+@@ 10
+weight가 붙은 truncated quadratic
+@@ 11
+=
+@@ 12
+order \(r\)의 moment matrix
+@@ 13
+\(\mathbf{X}=[\mathbf{x}]_r[\mathbf{x}]_r\T\), 한 변 \(\binom{n+r}{r}\); \(\mathbf{X}\succeq 0\)과 redundant 등식으로 relax
+@@ 14
+=
+@@ 15
+오차 분해
+@@ 16
+=
+@@ 17
+=
+@@ 18
+unbiased \(\hat{\mathbf{x}}\)에 대해 \(\cov(\hat{\mathbf{x}})\succeq\mathcal{I}(\mathbf{x}_{\text{true}})^{-1}\)
+@@ 19
+=
+@@ 20
+=
+@@ 21
+=
+@@ 22
+design criterion
+@@ 23
+=
+@@ 24
+위치 그래프의 FIM
+@@ 25
+\(\mathcal{I}=\mathbf{L}_w\otimes\mathbf{I}_3\), \(\mathbf{L}_w=\mathbf{A}\mathbf{W}\mathbf{A}\T\); pose \(i\)의 축당 분산은 \([\mathbf{L}_w^{-1}]_{ii}\)
+@@ 26
+=
+@@ 27
+tree와 edge 하나의 가치
+@@ 28
+=
+@@ 29
+2. 종합 퀴즈: 10주차
+@@ 30
+Q1. landmark SLAM 문제에 pose가 50개, landmark가 400개 있습니다. SE-Sync가 모든 위치를 소거하고 나면 최적화할 대상으로 무엇이 남습니까?
+@@ 31
+회전 450개
+@@ 32
+회전 50개
+@@ 33
+landmark 위치 400개
+@@ 34
+회전 50개와 위치 400개
+@@ 35
+landmark는 pose의 이동처럼 행동하므로 이동과 함께 소거됩니다. 회전 50개만 남습니다.
+@@ 36
+Q2. 두 위치의 차이가 v = (0, 5)이고 측정된 range가 2입니다. 최적 단위 벡터 b와 ‖v − 2b‖²의 값은 무엇입니까?
+@@ 37
+b = (1, 0), 값 29
+@@ 38
+b = (0, 1), 값 3
+@@ 39
+b = (0, −1), 값 49
+@@ 40
+b = (0, 1), 값 9
+@@ 41
+b는 v 방향을 향하고, 값은 (‖v‖ − r)² = (5 − 2)² = 9입니다.
+@@ 42
+Q3. 문제와 목적 함수의 다항식 차수를 바르게 짝지은 것은 무엇입니까?
+@@ 43
+weight가 붙은 truncated-quadratic loss: 3. anisotropic landmark noise: 4
+@@ 44
+weight가 붙은 truncated-quadratic loss: 4. anisotropic landmark noise: 3
+@@ 45
+둘 다: 2
+@@ 46
+단위 벡터 기법을 쓴 뒤의 range-aided SLAM: 4
+@@ 47
+weight 곱하기 제곱 residual은 3차입니다. uᵀ(R W⁻¹ Rᵀ)u는 4차입니다. range 기법은 차수를 2로 되돌립니다.
+@@ 48
+Q4. 미지수 x 하나와 order r = 3에서 monomial vector는 [1; x; x²; x³]입니다. moment matrix의 선형 함수로 쓸 수 있는 다항식의 차수는 최대 얼마입니까?
+@@ 49
+outer product의 원소는 3차 이하 monomial 두 개의 곱이므로 6차까지 나타납니다.
+@@ 50
+Q5. 각각 σ = 0.2인 독립 측정 네 개 z = x + noise가 있습니다. x의 unbiased estimator가 가질 수 있는 가장 작은 표준편차는 얼마입니까?
+@@ 51
+분산 bound는 σ²/N = 0.04/4 = 0.01이므로 표준편차는 0.1입니다.
+@@ 52
+Q6. FIM이 [[4, 2], [2, 2]]입니다. 첫 번째 변수의 분산에 대한 Cramér-Rao bound는 얼마입니까?
+@@ 53
+역행렬은 (1/4)[[2, −2], [−2, 4]]이고, 첫 번째 대각 원소는 0.5입니다. 1/4이 아닙니다: 먼저 역행렬을 구하고, 그다음 대각을 읽습니다.
+@@ 54
+Q7. pose 0이 anchor인 chain 0–1–2의 edge weight가 4(0과 1 사이)와 1(1과 2 사이)입니다. pose 2의 축당 분산은 얼마입니까?
+@@ 55
+저항 1/4과 1이 직렬: 0.25 + 1 = 1.25.
+@@ 56
+Q8. 정사각형(단위 weight의 4-cycle)에는 spanning tree가 4개 있습니다. 단위 weight 대각선을 하나 추가합니다. 이제 spanning tree는 몇 개입니까?
+@@ 57
+마주 보는 꼭짓점은 저항 2인 경로 두 개로 이어지므로 R = 1입니다. 행렬식에 1 + 1·1 = 2가 곱해집니다: tree 8개.
+@@ 58
+1-D chain 0–1–2에서 pose 0이 anchor이고, edge 0–1의 weight는 2, edge 1–2의 weight는 1입니다. (a) reduced Laplacian과 각 pose의 분산을 쓰세요. (b) weight 1인 loop closure 2–0을 추가하고 반복하세요. (c) 행렬식을 weighted spanning tree 개수, 그리고 \(\log(1+wR_{ij})\)와 비교해 확인하세요.
+@@ 59
+(a) \(\mathbf{L}_w=\begin{bmatrix} 3 & -1 \\ -1 & 1 \end{bmatrix}\), \(\det=2\), \(\mathbf{L}_w^{-1}=\tfrac12\begin{bmatrix} 1 & 1 \\ 1 & 3 \end{bmatrix}\). 분산은 0.5와 1.5입니다(저항 \(\tfrac12\)과 \(\tfrac12+1\)이 직렬).
+@@ 60
+(b) \(\mathbf{L}_w=\begin{bmatrix} 3 & -1 \\ -1 & 2 \end{bmatrix}\), \(\det=5\), \(\mathbf{L}_w^{-1}=\tfrac15\begin{bmatrix} 2 & 1 \\ 1 & 3 \end{bmatrix}\). 분산은 0.4와 0.6입니다. pose 2 확인: 저항 1과 1.5인 경로가 병렬이므로 \(1.5/2.5=0.6\)입니다.
+@@ 61
+(c) tree: \(\{01,12\}\)의 weight는 \(2\), \(\{01,20\}\)은 \(2\), \(\{12,20\}\)은 \(1\)이고, 합계 5입니다. closure 전에는 \(R_{20}=1.5\)이므로 행렬식에 \(1+1\cdot 1.5=2.5\)가 곱해집니다: \(2\times 2.5=5\).
+@@ 62
+직선 위 \(x=4\)에 있는 로봇이 \((0,3)\)의 beacon A와 \((8,3)\)의 beacon B까지의 range를 각각 \(\sigma=0.1\) m로 측정합니다. (a) \(x\)에 대한 Fisher information은 얼마이고, unbiased 추정값의 가장 작은 표준편차는 얼마입니까? (b) \(\sigma_B=0.2\) m로 다시 계산하세요.
+@@ 63
+(a) \(h_A=\sqrt{x^2+9}\), \(J_A=4/5=0.8\). \(h_B=\sqrt{(x-8)^2+9}\), \(J_B=(4-8)/5=-0.8\). \(\mathcal{I}=\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{J}=(0.64+0.64)/0.01=128\). 표준편차는 적어도 \(1/\sqrt{128}=0.088\) m입니다.
+@@ 64
+(b) \(\mathcal{I}=0.64/0.01+0.64/0.04=64+16=80\)이므로 적어도 \(1/\sqrt{80}=0.112\) m입니다. noise가 더 큰 beacon도 여전히 정보를 더하며, 결코 해가 되지 않습니다.
+@@ 65
+\(p(x)=x^4-2x^2+3\)에 대해 자유 파라미터 \(\lambda\)를 써서 \(p(x)-\gamma=[1\ x\ x^2]\,\mathbf{Q}\,[1\ x\ x^2]\T\)로 쓰세요. \(\mathbf{Q}\succeq 0\)이 가능한 가장 큰 \(\gamma\)를 찾고, 그것이 global minimum임을 확인하세요.
+@@ 66
+\(\mathbf{Q}=\begin{bmatrix} 3-\gamma & 0 & -\lambda \\ 0 & 2\lambda-2 & 0 \\ -\lambda & 0 & 1 \end{bmatrix}\); \(x^2\)의 계수는 \((2\lambda-2)-2\lambda=-2\)입니다. 가운데 원소 때문에 \(\lambda\ge 1\)이어야 합니다. 모서리 블록 \(\begin{bmatrix} 3-\gamma & -\lambda \\ -\lambda & 1 \end{bmatrix}\)은 행렬식이 음이 아니면 positive semidefinite입니다: \(3-\gamma-\lambda^2\ge 0\), 즉 \(\gamma\le 3-\lambda^2\). 가장 좋은 선택은 \(\lambda=1\)이고, 이때 \(\gamma=2\)입니다.
+@@ 67
+확인: \(p(x)-2=x^4-2x^2+1=(x^2-1)^2\ge 0\)이고, 등호는 \(x=\pm 1\)에서 성립하며 그때 \(p=2\)입니다. bound가 global minimum과 같으므로 relaxation은 exact합니다.
+@@ 68
+(심화.) Sherman-Morrison formula에 따르면 \((\mathbf{L}+w\,\mathbf{a}\mathbf{a}\T)^{-1}=\mathbf{L}^{-1}-\dfrac{w\,\mathbf{L}^{-1}\mathbf{a}\mathbf{a}\T\mathbf{L}^{-1}}{1+w\,\mathbf{a}\T\mathbf{L}^{-1}\mathbf{a}}\)입니다. (a) 이를 써서 새 edge가 어떤 pose의 분산도 늘리지 않음을 보이세요. (b) 단위 weight의 chain 0–1–2–3과 새 단위 weight edge 3–0에 적용해서 Day 4의 분산 0.75, 1, 0.75를 다시 얻으세요.
+@@ 69
+(a) 빼는 행렬의 \(i\)번째 대각 원소는 \(R=\mathbf{a}\T\mathbf{L}^{-1}\mathbf{a}\ge 0\)일 때 \(\dfrac{w\,([\mathbf{L}^{-1}\mathbf{a}]_i)^2}{1+wR}\)입니다. 제곱을 양수로 나눈 값이므로 음이 아니고, 따라서 각 분산은 줄어들 수만 있습니다.
+@@ 70
+(b) \(\mathbf{L}^{-1}=\begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 2 \\ 1 & 2 & 3 \end{bmatrix}\)이고, 3에서 anchor로 가는 edge는 \(\mathbf{a}=[0;0;-1]\)입니다. 그러면 \(\mathbf{L}^{-1}\mathbf{a}=-[1;2;3]\), \(R=3\)입니다. 감소량은 \(\tfrac{1}{4},\tfrac{4}{4},\tfrac{9}{4}\)이므로 새 분산은 \(1-0.25=0.75\), \(2-1=1\), \(3-2.25=0.75\)입니다.
+@@ 71
+4. Part I 개념 지도
+@@ 72
+책의 Part I은 back-end입니다: "front-end가 측정을 넘겨준다"와 "여기 trajectory와 map이 있다" 사이의 모든 것입니다. 1장이 중심입니다. 나머지 장은 각각 1장에 관한 질문 하나에 답합니다.
+@@ 73 attr
+Part I의 개념 지도. 가운데에 1장: factor graph와 least squares. Prelude, Lie group과 continuous time을 다루는 2장, dense map을 다루는 5장이 위에서 들어옵니다. outlier를 다루는 3장은 왼쪽에서 들어옵니다. differentiable optimization을 다루는 4장은 오른쪽으로 나갑니다. certificate와 정확도를 다루는 6장은 아래에서 결과를 평가합니다.
+@@ 74
+2장 · 4–5주차
+@@ 75
+Lie group 위의 pose,
+@@ 76
+continuous-time 경로
+@@ 77
+Prelude · 1주차
+@@ 78
+문제 정의, Gaussian,
+@@ 79
+=
+@@ 80
+5장 · 8주차
+@@ 81
+map: occupancy,
+@@ 82
+distance field, mesh
+@@ 83
+3장 · 6주차
+@@ 84
+잘못된 측정:
+@@ 85
+=
+@@ 86
+1장 · 2–3주차
+@@ 87
+=
+@@ 88
+=
+@@ 89
+4장 · 7주차
+@@ 90
+optimizer를 통과하는
+@@ 91
+gradient
+@@ 92
+6장 · 9–10주차
+@@ 93
+global optimum인가?
+@@ 94
+얼마나 정확할 수 있나?
+@@ 95
+화살표는 "~로 들어간다"는 뜻입니다. 2장, 3장, 5장은 1장이 푸는 문제의 모양을 정하고, 4장은 해의 gradient를 학습된 front-end로 되돌려 보내며, 6장은 해를 평가합니다.
+@@ 96
+Part I의 답
+@@ 97
+여기서 시작
+@@ 98
+무엇을 추정하며, 왜 함께 추정하는가?
+@@ 99
+pose와 map을 함께; drift에는 loop closure가 필요
+@@ 100
+<a href="#d1">1주차 · Day 1</a>
+@@ 101
+문제를 어떻게 쓰는가?
+@@ 102
+factor graph; MAP inference가 nonlinear least squares가 됨
+@@ 103
+<a href="#d7">2주차 · Day 1</a>
+@@ 104
+어떻게 풀고, 왜 빠른가?
+@@ 105
+sparse 행렬 위의 Gauss-Newton과 Levenberg-Marquardt; elimination, Bayes tree, iSAM2
+@@ 106
+<a href="#d10">2주차 · Day 4</a>, <a href="#d13">3주차 · Day 1</a>
+@@ 107
+변수로서의 pose는 무엇인가?
+@@ 108
+작은 벡터의 Exp로 갱신되는 SE(3)의 원소
+@@ 109
+<a href="#d19">4주차 · Day 1</a>
+@@ 110
+rate가 높거나 동기화되지 않은 센서는?
+@@ 111
+continuous-time trajectory: spline과 Gaussian process
+@@ 112
+<a href="#d25">5주차 · Day 1</a>
+@@ 113
+측정 일부가 틀렸다면?
+@@ 114
+먼저 RANSAC과 consistency check, 그다음 graduated non-convexity를 쓴 robust loss
+@@ 115
+<a href="#d31">6주차 · Day 1</a>
+@@ 116
+solver를 거쳐 네트워크를 학습시킬 수 있는가?
+@@ 117
+unrolling 또는 implicit differentiation
+@@ 118
+<a href="#d37">7주차 · Day 1</a>
+@@ 119
+map은 어떤 모습인가?
+@@ 120
+point, occupancy, signed distance, mesh, 학습된 field 중 작업에 맞게 선택
+@@ 121
+<a href="#d43">8주차 · Day 1</a>
+@@ 122
+답이 global optimum인가?
+@@ 123
+SDP로 relax; gap이 0이면 certified
+@@ 124
+<a href="#d49">9주차 · Day 1</a>
+@@ 125
+얼마나 정확할 수 있는가?
+@@ 126
+Cramér-Rao bound; 그래프 연결성
+@@ 127
+<a href="#d57">10주차 · Day 3</a>
+@@ 128
+5. Part I 퀴즈
+@@ 129
+스스로 확인하기: 1–10주차
+@@ 130
+Q1. x에 대한 prior가 평균 0, 분산 4인 Gaussian입니다. x의 측정 z = 5 하나는 분산이 1입니다. posterior 평균은 얼마입니까?
+@@ 131
+information form으로 계산하면 precision은 1/4 + 1 = 1.25이고, 평균은 (0·1/4 + 5·1)/1.25 = 4입니다. 추정값은 더 정밀한 정보원 쪽에 가깝게 놓입니다.
+@@ 132
+Q2. Levenberg-Marquardt에서 damping 파라미터가 매우 커지면 step은 어떻게 됩니까?
+@@ 133
+짧아지고 음의 gradient 방향을 향합니다
+@@ 134
+완전한 Gauss-Newton step이 됩니다
+@@ 135
+무작위 방향이 됩니다
+@@ 136
+한없이 커집니다
+@@ 137
+(JᵀJ + λI)δ = −Jᵀr에서 λ가 크면 δ ≈ −Jᵀr/λ: 작은 steepest-descent step입니다. λ가 작으면 Gauss-Newton이 됩니다.
+@@ 138
+Q3. chain x₁ – x₂ – x₃에서 x₂를 먼저 소거(marginalize)합니다. 남은 문제에는 무엇이 나타납니까?
+@@ 139
+아무것도 바뀌지 않습니다
+@@ 140
+x₁과 x₃가 독립이 됩니다
+@@ 141
+x₁에 걸린 factor가 제거됩니다
+@@ 142
+x₁과 x₃를 잇는 새 factor (fill-in)
+@@ 143
+Schur complement는 소거된 변수의 모든 이웃을 서로 결합합니다. 좋은 elimination order는 이런 fill-in을 작게 유지합니다.
+@@ 144
+Q4. 책이 pose를 T⁰ + Δ가 아니라 T = T⁰ Exp(ξ)로 갱신하는 이유는 무엇입니까?
+@@ 145
+곱셈이 덧셈보다 싸기 때문입니다
+@@ 146
+pose와 행렬의 합은 일반적으로 pose가 아니기 때문입니다. Exp는 6-벡터를 유효한 group 원소로 보내므로 곱은 SE(3) 위에 머뭅니다
+@@ 147
+덧셈을 하면 단위가 바뀌기 때문입니다
+@@ 148
+Exp가 측정 noise를 제거하기 때문입니다
+@@ 149
+SE(3)는 벡터 공간이 아니라 group입니다. 6-벡터 ξ에 대해 최적화하면 constraint를 강제하지 않아도 constraint가 만족됩니다.
+@@ 150
+Q5. prior가 가속도에 대한 white noise 같은 선형 stochastic differential equation에서 올 때, trajectory에 대한 Gaussian-process regression이 싼 이유는 무엇입니까?
+@@ 151
+kernel 행렬이 대각이기 때문입니다
+@@ 152
+마지막 state만 저장하기 때문입니다
+@@ 153
+process가 Markov이므로 kernel 행렬의 역행렬이 sparse(block tridiagonal)하기 때문입니다
+@@ 154
+trajectory를 직선으로 가정하기 때문입니다
+@@ 155
+각 state는 시간상 이웃에만 의존하므로, sparse한 precision matrix와 binary factor로 된 factor graph가 나옵니다.
+@@ 156
+Q6. RANSAC이 sample마다 점 3개로 모델을 맞춥니다. 데이터의 절반이 inlier입니다. inlier로만 된 sample을 적어도 하나 뽑을 확률이 99%가 되려면 sample이 대략 몇 개 필요합니까?
+@@ 157
+inlier로만 된 sample의 확률은 0.5³ = 0.125입니다. (1 − 0.125)ᴺ ≤ 0.01을 풀면 N ≥ ln 0.01 / ln 0.875 ≈ 34.5이므로 35입니다.
+@@ 158
+Q7. solver iteration K번을 unrolling하는 것과 비교할 때, optimizer를 통한 implicit differentiation의 주된 장점은 무엇입니까?
+@@ 159
+Jacobian이 필요 없습니다
+@@ 160
+solver가 수렴하지 않았어도 작동합니다
+@@ 161
+2차 미분을 공짜로 줍니다
+@@ 162
+메모리가 iteration 수에 따라 늘지 않습니다: 해와 선형 solve 한 번만 필요합니다
+@@ 163
+unrolling은 backward pass를 위해 모든 iterate를 저장합니다. implicit function theorem은 해에서의 optimality 조건만 쓰며, solver가 수렴했다고 가정합니다.
+@@ 164
+Q8. occupancy cell이 확률 0.5에서 시작합니다. 독립적인 range reading 두 개가 각각 inverse sensor model 0.7로 "occupied"라고 말합니다. log-odds 갱신 후 cell의 확률은 얼마입니까?
+@@ 165
+odds는 곱해집니다: (0.7/0.3)² = 5.44이고 5.44/6.44 = 0.845. log-odds로는 2 × ln(7/3) = 1.69.
+@@ 166
+Q9. QCQP의 Shor's relaxation이 rank 1인 최적 행렬 X*를 반환합니다. 무엇이 따라 나옵니까?
+@@ 167
+relaxation이 실패했습니다
+@@ 168
+QCQP에 해가 없습니다
+@@ 169
+X* = x*x*ᵀ이고 x*는 QCQP의 global minimizer입니다
+@@ 170
+x*는 local minimizer일 뿐입니다
+@@ 171
+rank-1 해는 원래 문제에서 feasible하고 lower bound d*를 달성하므로 p* = d*입니다.
+@@ 172
+Q10. 어떤 SLAM 추정값이 globally optimal로 certified되었는데, trajectory의 먼 끝이 실제값에서 2 m 떨어져 있습니다. Part I에 맞는 설명은 무엇입니까?
+@@ 173
+pose graph가 loop closure가 적은 긴 chain이라 먼 끝의 Cramér-Rao bound가 큽니다
+@@ 174
+certificate가 틀렸음이 틀림없습니다
+@@ 175
+Gauss-Newton이 local minimum에서 멈췄습니다
+@@ 176
+information matrix가 sparse하지 않았습니다
+@@ 177
+certificate는 실제값이 아니라 cost에 관한 것입니다. 정확도는 데이터가 제한하며, chain에서는 anchor로부터의 거리에 따라 분산이 커집니다.
+@@ 178
+Part II로 넘어가도 되는 기준
+@@ 179
+작은 SLAM 문제를 factor graph와 nonlinear least-squares cost로 쓰고, Gauss-Newton step 한 번이 무엇을 푸는지 말할 수 있습니다.
+@@ 180
+information matrix가 왜 sparse한지, 그리고 elimination order와 fill-in이 풀이 비용에 어떤 영향을 주는지 설명할 수 있습니다.
+@@ 181
+\(\Exp\)로 SE(3) 위의 pose에 perturbation을 주고, 이것이 왜 constraint를 대신하는지 말할 수 있습니다.
+@@ 182
+주어진 outlier 상황에 맞게 RANSAC, robust loss, graduated non-convexity 중에서 고를 수 있습니다.
+@@ 183
+optimality certificate가 무엇을 증명하고 무엇을 증명하지 않는지 말할 수 있습니다.
+@@ 184
+\(\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{J}\)로부터 pose의 불확실성을 추정하고, 어떤 loop closure가 그것을 가장 많이 줄일지 예측할 수 있습니다.
+@@ 185
+<em>SLAM Handbook</em>, 6장, §6.1.3–6.3, pp. 165–181, 그리고 Part I 전체 (Prelude와 1–6장, pp. 3–181).
+@@ 186
+Horn and Johnson, <em>Matrix Analysis</em>, 2nd edition, 2013 (Sherman-Morrison formula, 4번 문제에서 사용).
+@@ 187
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (log-odds occupancy update, Part I 퀴즈 Q8); Hartley and Zisserman, <em>Multiple View Geometry</em>, 2004 (RANSAC sample 수, Q6).

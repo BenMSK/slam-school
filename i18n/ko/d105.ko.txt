@@ -1,0 +1,196 @@
+@@ 1
+<span class="eyebrow">18주차 · Day 3</span>
+@@ 2
+Motion estimation: 땅을 디딘 발로 몸체의 움직임 구하기
+@@ 3
+오늘이 끝나면 stance 다리의 joint 값을 relative pose나 몸체 속도로 바꾸고, leg odometry 측정 식 (12.17)과 (12.21)을 쓰고, encoder noise와 slip이 추정값을 어떻게 drift시키는지 예측할 수 있습니다.
+@@ 4
+약 60분 · §12.2, pp. 342–345 읽기 (3쪽) · 18주차 Day 2 필요
+@@ 5
+먼저 읽기: §12.2, pp. 342–345
+@@ 6
+Figure 12.5 (p. 343)의 두 절반: 같은 움직임을 땅에서 본 것과 몸체에서 본 것.
+@@ 7
+pp. 343–344에서 state를 늘리는 두 가지 이유, 그리고 (12.11)과 (12.12)에서 무엇이 더해지는지.
+@@ 8
+p. 345의 식 (12.21)의 세 항. 그중 하나는 잊기 쉽습니다.
+@@ 9
+Motion estimation은 가정 하나에 기대고 있습니다. 한번 만들어진 contact frame은 한동안 그 자리에 머문다는 것입니다. 이 가정 아래 stance 다리는 두 종류의 측정을 줍니다. 두 시점의 forward kinematics를 비교하면 <strong>relative pose</strong>(상대 자세)를 얻습니다. 한 시점의 Jacobian을 쓰면 몸체의 <strong>속도</strong>를 얻습니다. 둘 다 발이 정말 고정되어 있으면 정확하고, 발이 움직인 만큼 정확히 그만큼 틀립니다.
+@@ 10
+1. Stance 발 하나로 구하는 relative pose
+@@ 11
+어느 순간 base가 \(\mathcal{F}^b\)에 있고 잠시 뒤 \(\mathcal{F}^{b'}\)에 있으며, joint 각도는 각각 \(\mathbf{q}\)와 \(\mathbf{q}'\)라고 합시다. 발 하나가 그동안 계속 땅을 딛고 있으므로 그 contact frame \(\mathcal{F}^k\)는 두 순간에 같습니다. <a href="#d103">Day 1</a>의 합성 규칙과 역변환 규칙으로, 첫 번째 base frame에서 contact frame으로 갔다가 두 번째 base frame으로 다시 올라옵니다. <span class="src">§12.2.1 · p. 343</span>
+@@ 12
+우변에는 encoder 값 말고는 아무것도 없습니다. 말로 하면, 몸체에서 본 발이 뒤로 움직인 만큼 몸체가 앞으로 움직였습니다.
+@@ 13
+빈틈 채우기: 평면에서의 (12.10), 그리고 마지막 단계에 대한 메모
+@@ 14
+<a href="#d104">Day 2</a>의 평면 다리와 똑바로 선 몸체를 생각합시다. 그러면 모든 \(\mathbf{T}\)가 순수한 이동이고, (12.10)은 뺄셈 하나가 됩니다. 몸체의 변위는 다음과 같습니다.
+@@ 15
+예: 착지 순간 발은 base frame에서 \(\mathbf{f}_p(\mathbf{q}) = (0.15,\ -0.65)\) m, 즉 hip보다 15 cm 앞에 있습니다. 한 걸음이 끝날 때는 \(\mathbf{f}_p(\mathbf{q}') = (-0.15,\ -0.65)\) m에 있습니다. 몸체는 \((0.15 - (-0.15),\ 0) = (0.30,\ 0)\) m 움직였습니다.
+@@ 16
+책의 (12.10) 줄은 Figure 12.5의 오른쪽 절반을 따라 이어지다가 곱을 \(\mathbf{fk}(\mathbf{q}')^{-1}\mathbf{fk}(\mathbf{q})\)로 쓰며 끝납니다. 그림의 예에서는 아무것도 회전하지 않으므로 두 행렬이 교환 가능하고, 어느 순서로 곱해도 답이 같습니다. 회전이 끼면 순서가 중요합니다. 위의 \(\mathbf{fk}(\mathbf{q})\,\mathbf{fk}(\mathbf{q}')^{-1}\) 꼴이 첨자를 지워서 얻는 형태입니다.
+@@ 17
+이 relative pose를 이어 붙이는 것은 joint만으로 하는 dead reckoning이고, 초기 leg odometry가 이렇게 동작했습니다. 한계는 두 가지입니다. 그 발이 stance에 있는 동안만 쓸 수 있습니다. 그리고 점 모양 발은 위치는 고정하지만 방향은 고정하지 않으므로, 점 모양 발을 가진 로봇은 언제나 적어도 세 발을 땅에 두어야 하고, 그러면 사족 보행 로봇의 보행 방식 대부분을 쓸 수 없습니다. <span class="src">§12.2.1 · p. 343</span>
+@@ 18
+직관: 왜 점 모양 발 세 개인가
+@@ 19
+강체를 한 점에서 땅에 고정해도 그 점을 중심으로 세 방향으로 돌 수 있습니다. 두 점에서 고정해도 두 점을 잇는 직선을 축으로 흔들릴 수 있습니다. 그 직선 밖에 세 번째 점이 있어야 마지막 자유도가 사라집니다. 휴머노이드의 평평한 발은 이미 여러 점으로 된 작은 면이므로, 이족 보행 로봇에는 발 하나면 충분합니다.
+@@ 20
+2. 더 큰 state와 측정 식
+@@ 21
+사족 보행 로봇의 표준 해법은 접촉점을 소거하지 말고 추정하는 것입니다. 각 다리의 contact frame의 world 위치 \(\mathbf{c}_i = \mathbf{t}^w_k \in \R^3\)를 state에 더합니다. 발목이 있는 휴머노이드는 방향 \(\mathbf{B}_i = \mathbf{R}^w_k \in \SO(3)\)도 더합니다. 그리고 어떤 보행 방식에는 땅에 닿은 발이 너무 적은 순간이 있으므로(gallop에서는 네 발이 모두 공중에 뜹니다) IMU를 가정합니다. gyroscope가 \(\boldsymbol{\omega}\)를 직접 측정하므로 \(\boldsymbol{\omega}\)는 state에서 빠지고, 대신 <a href="#d91">16주차</a>의 IMU bias가 들어옵니다. <span class="src">§12.2.1 · pp. 343–344</span>
+@@ 22
+이제 base pose를 \(\mathbf{T} = \begin{bmatrix} \mathbf{R} & \mathbf{t} \\ \mathbf{0} & 1 \end{bmatrix}\), 다리 \(i\)의 contact pose를 \(\mathbf{C}_i = \begin{bmatrix} \mathbf{B}_i & \mathbf{c}_i \\ \mathbf{0} & 1 \end{bmatrix}\)로 쓰고, 둘 다 world 기준이라고 합시다. base에서 본 contact의 pose가 바로 forward kinematics가 측정하는 것입니다. \(\mathbf{fk}(\mathbf{q}) = \mathbf{T}^{-1}\mathbf{C}_i\), 식 (12.13)입니다. 역변환 규칙으로 곱을 풀면 다음과 같고,
+@@ 23
+이것을 (12.2)의 \(\mathbf{fk}(\mathbf{q})\) 블록과 비교하면 다음을 얻습니다. <span class="src">§12.2.1 · p. 344</span>
+@@ 24
+이 두 줄이 leg odometry measurement model입니다. 좌변은 encoder에서 오고, 우변에는 state 변수만 있습니다. 사족 보행 로봇은 (12.17)만 씁니다.
+@@ 25
+직관: 땅을 디딘 발은 landmark다
+@@ 26
+식 (12.17)은 이 책의 모든 landmark 관측과 같은 꼴입니다. world에 고정된 점 \(\mathbf{c}_i\)를 센서의 frame으로 표현합니다. \(\mathbf{R}\T(\mathbf{c}_i - \mathbf{t})\). 카메라는 3-D 점을 투영하기 전에 이렇게 합니다(<a href="#d63">11주차 · Day 3</a>). 여기서 "센서"는 다리이고, "landmark"는 발이 딛고 선 지점이며, 이 landmark는 stance 한 번 동안만 존재합니다.
+@@ 27
+3. Leg odometry로 걷기
+@@ 28 attr
+접촉점 c1, c2, c3 세 개가 있는 지면선. 그 위에 몸체 위치 네 개: 시작, 발 바꾸기 두 번, 끝. 각 접촉점에서 두 선이 그 stance의 시작과 끝 몸체 위치로 올라가므로, 몸체 경로는 연이은 접촉점 위에 선 삼각형들의 사슬로 재구성됩니다.
+@@ 29
+발 바꾸기
+@@ 30
+끝
+@@ 31
+c₁: 다리 A 딛음
+@@ 32
+c₂: 다리 B 딛음
+@@ 33
+c₃: 다리 A 딛음
+@@ 34
+사각형: 몸체 위치, 사선: stance 시작과 끝의 stance 다리 fₚ(q)
+@@ 35
+다리로 하는 dead reckoning. stance 동안 몸체는 "접촉점 빼기 다리 벡터"에 있습니다. 발을 바꿀 때 새 접촉점은 "몸체 더하기 새 다리의 벡터"에 놓입니다.
+@@ 36
+몸체가 똑바로 서 있으면(\(\mathbf{R} = \mathbf{I}\)) 식 (12.17)은 \(\mathbf{t} = \mathbf{c}_i - \mathbf{f}_p(\mathbf{q})\)가 됩니다. 아래 위젯은 걷는 이족 보행 로봇에서 바로 이것을 실행합니다. 위젯은 시작 위치를 받고, 그 뒤로는 encoder 값만 받습니다.
+@@ 37
+직접 해 보기: 재생을 눌러 걷는 모습을 보세요. 그다음 slip 슬라이더를 10%로 맞추세요.
+@@ 38
+눈여겨볼 점: 기본값인 0.3°의 encoder noise에 slip이 없으면 파란 곡선은 계단 모양입니다. stance마다 평평하고 걸음마다 뜁니다. 3.6 m 뒤 추정값은 1.4 cm 어긋나 있습니다. slip이 10%이면 오차가 걸음마다 늘 같은 방향으로 3 cm씩 커져 37 cm에 이릅니다.
+@@ 39
+빈틈 채우기: 오차가 커지는 방식
+@@ 40
+책은 leg odometry가 drift한다고만 하고 어떻게 drift하는지는 말하지 않습니다. 위젯의 두 곡선은 서로 다른 두 법칙을 보여 줍니다.
+@@ 41
+<strong>Encoder noise.</strong> stance 한 번 동안 추정값은 \(\hat{\mathbf{t}} = \hat{\mathbf{c}} - \mathbf{f}_p(\tilde{\mathbf{q}})\)입니다. noise가 섞인 값 \(\tilde{\mathbf{q}} = \mathbf{q} + \boldsymbol{\eta}\)는 그 순간에만 추정값을 약 \(-\mathbf{J}_v\boldsymbol{\eta}\)만큼 옮깁니다. 다음 값에는 새 noise가 들어 있으므로 아무것도 쌓이지 않습니다. 분홍 곡선이 파란 곡선 주위에서 떨릴 뿐입니다. 누적은 착지 때 일어납니다. 이때 새 접촉점을 \(\hat{\mathbf{c}}_{\text{new}} = \hat{\mathbf{t}} + \mathbf{f}_p(\tilde{\mathbf{q}}_{\text{new leg}})\)로 정하므로, forward kinematics 오차 두 개(이전 다리와 새 다리)가 다음 stance 내내 \(\hat{\mathbf{c}}\)에 고정됩니다. 걸음마다 독립 오차가 하나씩 더해지므로, \(n\)걸음 뒤 오차는 random walk입니다(<a href="#d1">1주차 · Day 1</a>).
+@@ 42
+위젯에서 joint noise를 \(x\)로 보내는 \(\mathbf{J}_v\)의 행은, 발을 바꾸는 순간 두 다리에서 길이가 각각 0.71 m/rad와 0.75 m/rad입니다. \(\sigma_q = 0.3^\circ = 0.0052\) rad이면 각각 3.7 mm와 3.9 mm가 되고, 합치면 \(\sigma_{\text{step}} = \sqrt{3.7^2 + 3.9^2} = 5.4\) mm, 12걸음 걷기의 발 바꾸기 11번 뒤에는 \(5.4\sqrt{11} = 18\) mm입니다. "새 noise"를 몇 번 눌러 보세요. 최종 오차는 보통 1–4 cm입니다.
+@@ 43
+<strong>Slip.</strong> stance 발이 stance마다 \(s\)만큼 뒤로 미끄러지면, 몸체는 매번 같은 부호로 다리 기하가 말하는 것보다 \(s\)만큼 덜 나아갑니다. \(n\)걸음 뒤 오차는 \(n\,s\)로, 제곱근이 아니라 선형입니다. \(s = 3\) cm이면 첫 걸음에서 이미 5.4 mm random walk를 넘어섭니다. Slip은 bias이고, 아무리 평균을 내도 사라지지 않습니다.
+@@ 44
+4. Stance 발 하나로 구하는 속도
+@@ 45
+두 번째 방법은 위치를 아예 건너뜁니다. 같은 사실을 접촉점의 world 위치로 쓴 \(\mathbf{c} = \mathbf{t} + \mathbf{R}\,\mathbf{f}_p(\mathbf{q})\)에서 출발해, 이것이 움직이지 않는다고 둡니다. \(\mathbf{v}^w_k = \mathbf{0}\), 식 (12.19)입니다. 미분하면 세 항이 나옵니다. <span class="src">§12.2.2 · p. 345</span>
+@@ 46
+마지막 항은 어제 본 것입니다. 발이 몸체에 대해 뒤로 움직이므로 몸체가 앞으로 움직입니다. 가운데 항은 <strong>lever-arm</strong>(지렛대 팔) 항입니다. 몸체가 회전하면 joint를 잠가 두어도 다리 끝의 점이 함께 끌려가므로, 그 움직임도 빼 주어야 합니다.
+@@ 47
+빈틈 채우기: 몸체 좌표로 쓴 도함수
+@@ 48
+책은 (12.21)을 world 위첨자로 쓴 뒤, 몸체 좌표 속도는 "로봇의 방향을 써서" 얻는다고만 말합니다. 그 단계를 풀어 보겠습니다. \(\dot{\mathbf{c}} = \mathbf{0}\)으로 두고 \(\mathbf{c} = \mathbf{t} + \mathbf{R}\,\mathbf{f}_p(\mathbf{q})\)를 미분합니다. 곱의 미분법, \(\dot{\mathbf{f}}_p = \mathbf{J}_v\dot{\mathbf{q}}\), 그리고 <a href="#d93">16주차 · Day 3</a>의 회전 kinematics \(\dot{\mathbf{R}}\,\mathbf{a} = \mathbf{R}\,(\boldsymbol{\omega} \times \mathbf{a})\)를 씁니다. 여기서 \(\boldsymbol{\omega}\)는 gyroscope가 재는 body frame 각속도입니다.
+@@ 49
+여기서 \(\dot{\mathbf{t}}\)는 world 좌표로 쓴 base 속도입니다. state는 이를 base 좌표 \(\mathbf{v} = \mathbf{R}\T\dot{\mathbf{t}}\)로 저장하므로 \(\mathbf{R}\T\)를 곱합니다.
+@@ 50
+우변의 모든 양은 base frame에 있고 센서에서 옵니다. \(\boldsymbol{\omega}\)는 gyroscope에서, \(\mathbf{q}\)와 \(\dot{\mathbf{q}}\)는 encoder에서 옵니다. <a href="#d107">Day 5</a>에서 측정으로 쓰는 것이 이 꼴, 식 (12.35)입니다.
+@@ 51
+3-D에서 축 \((x, y, z)\)로 숫자를 넣어 봅니다. Day 2처럼 발은 \(\mathbf{f}_p = (0, 0, -0.693)\) m에 있고 \(\mathbf{J}_v\dot{\mathbf{q}} = (-0.693, 0, 0)\) m/s입니다. 몸체가 회전하지 않으면 \(\mathbf{v} = (0.693, 0, 0)\) m/s입니다. 몸체가 \(\boldsymbol{\omega} = (0, 0.5, 0)\) rad/s로 앞으로 pitch하기도 한다면 \(\boldsymbol{\omega} \times \mathbf{f}_p = (0.5 \times (-0.693),\ 0,\ 0) = (-0.347, 0, 0)\)이고, 다음과 같습니다.
+@@ 52
+hip은 회전 중심보다 0.69 m 위에 있으므로, 0.5 rad/s로 pitch하면 hip이 0.35 m/s만큼 더 빨리 앞으로 갑니다.
+@@ 53
+=
+@@ 54
+속도, (12.21)
+@@ 55
+두 시점의 joint 각도
+@@ 56
+한 시점의 joint 각도와 속도, 그리고 gyroscope
+@@ 57
+추가 state
+@@ 58
+접촉점의 위치(와 방향)
+@@ 59
+encoder 값을 미분하지 않음
+@@ 60
+적분이나 preintegration이 쉬움. 위치 오차를 쌓을 수 있는 이력을 남기지 않음
+@@ 61
+state가 커짐. 발 바꾸기를 처리해야 함
+@@ 62
+joint 속도를 수치 미분으로 구하므로 noise가 더해짐
+@@ 63
+주요 용도
+@@ 64
+사족 보행 로봇(위치만)과 휴머노이드(위치와 방향)
+@@ 65
+사족 보행 로봇에서 널리 쓰이고, 이족 보행 로봇에서는 덜 쓰임
+@@ 66
+<strong>"encoder 샘플마다 drift가 더해진다."</strong> stance 한 번 동안 위치 추정값은 같은 접촉점에 매달려 있으므로 샘플 noise는 쌓이지 않습니다. drift는 걸음마다, 그리고 slip으로 더해집니다.
+@@ 67
+<strong>"몸체 속도는 발 속도에 마이너스를 붙인 것이다."</strong> 몸체가 회전하지 않을 때만 그렇습니다. 그렇지 않으면 lever-arm 항 \(\boldsymbol{\omega} \times \mathbf{f}_p\)를 넣어야 합니다.
+@@ 68
+<strong>"땅에 닿은 발 하나가 몸체의 pose를 고정한다."</strong> 평평한 발은 그렇습니다. 점 모양 발은 위치 하나만 고정하고 방향은 IMU에 맡깁니다.
+@@ 69
+Q1. 평면 로봇이 몸체를 똑바로 세운 채 있습니다. stance 발이 base frame에서 (0.20, −0.60) m에 있다가 잠시 뒤 (−0.10, −0.60) m에 있습니다. 몸체는 어떻게 움직였습니까?
+@@ 70
+뒤로 0.30 m
+@@ 71
+앞으로 0.10 m
+@@ 72
+앞으로 0.30 m
+@@ 73
+IMU 없이는 알 수 없음
+@@ 74
+변위 = f_p(q) − f_p(q′) = (0.20 − (−0.10), 0) = (0.30, 0). 발이 몸체에 대해 30 cm 뒤로 갔으므로 몸체는 30 cm 앞으로 갔습니다.
+@@ 75
+Q2. R = I, t = (3.0, 0, 0.5) m이고 접촉점이 c = (3.2, 0.1, 0) m에 있을 때, (12.17)에 따르면 forward kinematics는 f_p(q)로 무엇을 보고해야 합니까?
+@@ 76
+f_p = Rᵀ(c − t) = (3.2 − 3.0, 0.1 − 0, 0 − 0.5) = (0.2, 0.1, −0.5). base에서 본 접촉점입니다.
+@@ 77
+Q3. stance 발이 f_p = (0, 0, −0.5) m에 있고 J_v q̇ = (−0.4, 0, 0) m/s입니다. gyroscope 값은 ω = (0, 1, 0) rad/s입니다. (12.21)로 구한 몸체 속도 v는 base 좌표로 무엇입니까?
+@@ 78
+ω × f_p = (1 × (−0.5), 0, 0) = (−0.5, 0, 0). 따라서 v = −(−0.5, 0, 0) − (−0.4, 0, 0) = (0.9, 0, 0) m/s입니다. lever-arm 항을 빼먹으면 0.4가 나옵니다.
+@@ 79
+Q4. 로봇이 20걸음을 걷습니다. 다리 기하로는 한 걸음이 25 cm이지만, stance 발이 stance마다 1 cm씩 뒤로 미끄러집니다. encoder가 완벽하다면 leg odometry는 얼마를 보고하고, 실제는 얼마입니까?
+@@ 80
+보고 4.8 m, 실제 5.0 m
+@@ 81
+보고 5.0 m, 실제 4.8 m
+@@ 82
+보고 5.0 m, 실제 5.2 m
+@@ 83
+둘 다 5.0 m: slip은 평균하면 사라짐
+@@ 84
+Odometry는 발이 고정되어 있다고 가정하므로 20 × 25 cm = 5.0 m를 보고합니다. 몸체는 실제로 한 걸음에 24 cm씩 나아가 4.8 m를 갑니다. 20 cm 오차는 걸음 수에 따라 선형으로 커지는 bias입니다.
+@@ 85
+Q5. state (12.11)과 (12.12)에 IMU bias는 있는데 각속도는 없는 이유는 무엇입니까?
+@@ 86
+legged robot에서는 각속도를 추정할 수 없습니다
+@@ 87
+다리가 gyroscope보다 각속도를 더 잘 측정합니다
+@@ 88
+IMU를 가정하므로 gyroscope가 각속도를 직접 측정하고, 그 bias를 추정해야 합니다
+@@ 89
+bias가 접촉점 위치를 대신합니다
+@@ 90
+다리는 모든 순간 믿을 수 있는 것이 아니므로(어떤 보행 방식에는 공중에 뜨는 구간이 있습니다) IMU를 가정합니다. gyroscope가 ω를 주고, IMU를 쓴다는 것은 그 bias를 추정한다는 뜻입니다 (16주차).
+@@ 91
+발이 땅을 딛고 있는 동안 \(\mathbf{T}^b_{b'} = \mathbf{fk}(\mathbf{q})\,\mathbf{fk}(\mathbf{q}')^{-1}\). encoder 값만으로 몸체의 움직임을 구합니다.
+@@ 92
+접촉점 위치 \(\mathbf{c}_i\)(와 방향 \(\mathbf{B}_i\))를 state에 더하면 측정 식 \(\mathbf{f}_p(\mathbf{q}) = \mathbf{R}\T(\mathbf{c}_i - \mathbf{t})\)와 \(\mathbf{f}_R(\mathbf{q}) = \mathbf{R}\T\mathbf{B}_i\)를 얻습니다.
+@@ 93
+stance 발의 속도가 0이라는 사실에서 \(\mathbf{v} = -\boldsymbol{\omega} \times \mathbf{f}_p(\mathbf{q}) - \mathbf{J}_v(\mathbf{q})\,\dot{\mathbf{q}}\)를 얻습니다.
+@@ 94
+Encoder noise는 위치를 걸음마다 한 step씩 가는 random walk처럼 drift시키고, slip은 선형으로 커지는 bias를 더합니다.
+@@ 95
+=
+@@ 96
+Lynch와 Park, <em>Modern Robotics: Mechanics, Planning, and Control</em>, 2017 (변환의 합성, 회전하는 강체 위 한 점의 속도).
+@@ 97
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (회전 kinematics, dead reckoning 오차의 random walk 증가).
+@@ 98
+"빈틈 채우기"의 걸음별 오차 분석은 위젯의 평면 보행 로봇을 위해 우리가 직접 한 것입니다.

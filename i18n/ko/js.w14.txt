@@ -1,0 +1,332 @@
+@@ w14
+"aria-label":"Three stacked plots: transmitted and received chirp frequency against time, the beat signal over one chirp, and the spectrum of the beat signal on a range axis with its peak marked"
+==
+"aria-label":"세 개의 그래프: 시간에 따른 송신·수신 chirp 주파수, chirp 하나 동안의 beat signal, 피크를 표시한 range 축 위의 beat signal 스펙트럼"
+@@ w14
+"frequency against time, two chirps (echo delay drawn ×"+K+")"
+==
+"시간에 따른 주파수, chirp 2개 (echo 지연은 "+K+"배로 확대)"
+@@ w14
+"beat (IF) signal over one chirp, real part, "+NS+" samples"
+==
+"chirp 하나의 beat (IF) signal, 실수부, sample "+NS+"개"
+@@ w14
+"spectrum of the beat signal on a range axis [m], using d = c f₀ / (2S)"
+==
+"range 축 [m] 위의 beat signal 스펙트럼, d = c f₀ / (2S) 사용"
+@@ w14
+"peak "
+==
+"피크 "
+@@ w14
+"2Bd/(Tc), first target"
+==
+"2Bd/(Tc), 첫 target"
+@@ w14
+"Size of a range bin"
+==
+"range bin 크기"
+@@ w14
+"c/(2B); unambiguous to "
+==
+"c/(2B); 최대 range "
+@@ w14
+"Range from the peak"
+==
+"피크에서 구한 range"
+@@ w14
+"true "
+==
+"실제 "
+@@ w14
+"Phase step between chirps"
+==
+"chirp 간 위상 변화"
+@@ w14
+"Velocity from the phase"
+==
+"위상에서 구한 속도"
+@@ w14
+"aliased: |v| is above "+vmax.toFixed(1)+" m/s"
+==
+"aliased: |v|가 "+vmax.toFixed(1)+" m/s 초과"
+@@ w14
+"Add a second target 1.5 m behind"
+==
+"1.5 m 뒤에 두 번째 target 추가"
+@@ w14
+h("div",{class:"vt"},"FMCW radar: from a chirp to a range and a velocity")
+==
+h("div",{class:"vt"},"FMCW radar: chirp에서 range와 속도까지")
+@@ w14
+"A 77 GHz radar sends two 40 µs chirps and takes 128 complex samples of the beat signal in each. Range comes from the peak of the spectrum, velocity from the phase change between the chirps."
+==
+"77 GHz radar가 40 µs chirp를 두 번 보내고, chirp마다 beat signal의 complex sample을 128개 얻습니다. range는 스펙트럼의 피크에서, 속도는 chirp 사이의 위상 변화에서 나옵니다."
+@@ w14
+button("New noise"
+==
+button("새 noise"
+@@ w14
+"transmitted chirp"
+==
+"송신 chirp"
+@@ w14
+"received echo"
+==
+"수신 echo"
+@@ w14
+"spectrum"]
+==
+"스펙트럼"]
+@@ w14
+"aria-label":"Power against range along one radar azimuth, with the adaptive CA-CFAR threshold, a fixed threshold, and the cells each one detects"
+==
+"aria-label":"radar azimuth 하나를 따라 range에 대해 그린 전력, 적응형 CA-CFAR 임계값, 고정 임계값, 그리고 각각이 검출한 cell"
+@@ w14
+"power [dB above the quiet noise level]"
+==
+"전력 [조용한 noise 수준 대비 dB]"
+@@ w14
+"shaded: clutter, 9 dB higher"
+==
+"음영: clutter, 9 dB 높음"
+@@ w14
+"Threshold multiplier"
+==
+"임계값 배수"
+@@ w14
+"CA-CFAR finds",sc[0]+" of 5 targets",sc[1]+" false alarm cells"
+==
+"CA-CFAR 검출","target 5개 중 "+sc[0]+"개","false alarm cell "+sc[1]+"개"
+@@ w14
+"Fixed threshold finds",sf[0]+" of 5 targets",sf[1]+" false alarm cells"
+==
+"고정 임계값 검출","target 5개 중 "+sf[0]+"개","false alarm cell "+sf[1]+"개"
+@@ w14
+"False alarms expected"
+==
+"예상 false alarm 수"
+@@ w14
+"P_fa × 185 noise cells"
+==
+"P_fa × noise cell 185개"
+@@ w14
+h("div",{class:"vt"},"CA-CFAR on one azimuth")
+==
+h("div",{class:"vt"},"azimuth 하나에서의 CA-CFAR")
+@@ w14
+"200 range cells of 0.5 m. Five targets (black markers) sit in exponentially distributed noise whose level is 8 times higher between 55 m and 82 m. The fixed threshold is set for the quiet noise level."
+==
+"0.5 m 크기의 range cell 200개. target 다섯 개(검은 표식)가 지수분포 noise 속에 있고, 55 m와 82 m 사이에서는 noise 수준이 8배 높습니다. 고정 임계값은 조용한 구간의 noise 수준에 맞춰져 있습니다."
+@@ w14
+"Training cells per side"
+==
+"한쪽 training cell 수"
+@@ w14
+"Guard cells per side"
+==
+"한쪽 guard cell 수"
+@@ w14
+"False alarm probability"
+==
+"false alarm 확률"
+@@ w14
+"1 in "+Math.round(Math.pow(10,-v))
+==
+Math.round(Math.pow(10,-v))+"분의 1"
+@@ w14
+"measured power"
+==
+"측정 전력"
+@@ w14
+"CA-CFAR threshold"
+==
+"CA-CFAR 임계값"
+@@ w14
+"fixed threshold"
+==
+"고정 임계값"
+@@ w14
+"CFAR detection on a target"
+==
+"target 위의 CFAR 검출"
+@@ w14
+"aria-label":"Left: top view of a radar with detected points and velocity arrows. Right: measured closing speed of every point against its azimuth, with the fitted cosine curves"
+==
+"aria-label":"왼쪽: 검출된 점과 속도 화살표가 있는 radar를 위에서 본 모습. 오른쪽: 각 점의 측정 closing speed를 azimuth에 대해 그린 그래프와 fit한 cosine 곡선"
+@@ w14
+" m/s off"
+==
+" m/s 오차"
+@@ w14
+"not solvable"
+==
+"풀 수 없음"
+@@ w14
+"top view (sensor looks right)"
+==
+"위에서 본 모습 (센서는 오른쪽을 봄)"
+@@ w14
+"closing speed [m/s] against azimuth θ [°]"
+==
+"azimuth θ [°]에 따른 closing speed [m/s]"
+@@ w14
+"True velocity (forward, left)"
+==
+"실제 속도 (전방, 좌측)"
+@@ w14
+"Least squares, all points"
+==
+"least squares, 모든 점"
+@@ w14
+"After outlier rejection"
+==
+"outlier 제거 후"
+@@ w14
+", kept "+inl.length+" of "+P.length
+==
+", "+P.length+"개 중 "+inl.length+"개 유지"
+@@ w14
+"press Reject outliers"
+==
+"outlier 제거를 누르세요"
+@@ w14
+"One-sigma uncertainty"
+==
+"1-sigma 불확실성"
+@@ w14
+"forward, left: σ√diag((AᵀA)⁻¹)"
+==
+"전방, 좌측: σ√diag((AᵀA)⁻¹)"
+@@ w14
+"Reject outliers (RANSAC)"
+==
+"outlier 제거 (RANSAC)"
+@@ w14
+h("div",{class:"vt"},"Ego-velocity from one radar scan")
+==
+h("div",{class:"vt"},"radar scan 하나로 구하는 ego-velocity")
+@@ w14
+"60 detections, each with an azimuth and a Doppler closing speed. Static points lie on one cosine; points on two moving cars do not. The fit solves a 2×2 least-squares problem."
+==
+"검출 60개, 각각 azimuth와 Doppler closing speed를 가집니다. static 점은 하나의 cosine 위에 놓이고, 움직이는 차 두 대 위의 점은 그렇지 않습니다. fit은 2×2 least-squares 문제를 풉니다."
+@@ w14
+"Sensor speed"
+==
+"센서 속력"
+@@ w14
+"Direction of travel"
+==
+"진행 방향"
+@@ w14
+"Points on moving cars"
+==
+"움직이는 차 위의 점"
+@@ w14
+"New scene"
+==
+"새 장면"
+@@ w14
+"static point"
+==
+"static 점"
+@@ w14
+"point on a moving car"
+==
+"움직이는 차 위의 점"
+@@ w14
+"true velocity"
+==
+"실제 속도"
+@@ w14
+"least squares, all points"
+==
+"least squares, 모든 점"
+@@ w14
+"after outlier rejection"
+==
+"outlier 제거 후"
+@@ w14
+"aria-label":"Two ring-by-sector descriptors drawn as heat maps, the database scan and the rotated noisy query scan, above a plot of descriptor distance against the column shift for the same place and for a different place"
+==
+"aria-label":"heat map으로 그린 ring × sector descriptor 두 개(database scan과, 회전하고 noise가 섞인 query scan), 그 아래 같은 장소와 다른 장소에 대해 column shift에 따른 descriptor distance 그래프"
+@@ w14
+"°, degraded"
+==
+"°, 품질 저하"
+@@ w14
+"columns: 36 sectors of 10° in the sensor frame · rows: 8 rings of 10 m, nearest at the bottom"
+==
+"열: sensor frame 기준 10° sector 36개 · 행: 10 m ring 8개, 가까운 ring이 아래"
+@@ w14
+"descriptor distance against the column shift, written as a heading change [°]"
+==
+"column shift에 따른 descriptor distance (shift를 heading 변화 [°]로 표시)"
+@@ w14
+"Best shift"
+==
+"최적 shift"
+@@ w14
+" sectors → "
+==
+"개 sector → "
+@@ w14
+"true heading change "
+==
+"실제 heading 변화 "
+@@ w14
+"Distance, same place"
+==
+"distance, 같은 장소"
+@@ w14
+"at the best shift"
+==
+"최적 shift에서"
+@@ w14
+"Distance, different place"
+==
+"distance, 다른 장소"
+@@ w14
+"best of all 36 shifts"
+==
+"shift 36개 중 최소"
+@@ w14
+"Margin"
+==
+"격차"
+@@ w14
+"the right place wins"
+==
+"맞는 장소가 이김"
+@@ w14
+"too close to call"
+==
+"너무 가까워 판별 불가"
+@@ w14
+h("div",{class:"vt"},"A Scan Context descriptor for radar")
+==
+h("div",{class:"vt"},"radar용 Scan Context descriptor")
+@@ w14
+"Each bin holds the sum of the intensities of the points that fall in it. The query is the same place seen with a different heading, with 20% of the points dropped, 1 m of jitter and 25 speckle points. The distance is the mean over sectors of one minus the cosine similarity."
+==
+"각 bin에는 그 안에 들어온 점들의 intensity 합이 담깁니다. query는 같은 장소를 다른 heading에서 본 것으로, 점의 20%를 빼고 1 m의 jitter와 speckle 점 25개를 더했습니다. distance는 sector별 (1 − cosine similarity)의 평균입니다."
+@@ w14
+"Heading of the query scan"
+==
+"query scan의 heading"
+@@ w14
+"Field of view of both scans"
+==
+"두 scan의 field of view"
+@@ w14
+"query against the same place"
+==
+"query vs 같은 장소"
+@@ w14
+"query against a different place"
+==
+"query vs 다른 장소"
+@@ w14
+"true heading change"
+==
+"실제 heading 변화"

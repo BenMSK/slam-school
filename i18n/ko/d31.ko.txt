@@ -1,0 +1,234 @@
+@@ 1
+<span class="eyebrow">6주차 · Day 1</span>
+@@ 2
+outlier는 어디서 오고, least squares는 왜 버티지 못하는가
+@@ 3
+오늘이 끝나면 SLAM에서 outlier가 생기는 원인을 꼽고, 잘못된 측정값 하나가 least-squares 추정값을 얼마나 움직이는지 계산하고, breakdown point가 무엇인지 설명할 수 있습니다.
+@@ 4
+약 60분 · §3.1, pp. 75–78 읽기 (4쪽) · 2주차 Day 2 필요
+@@ 5
+먼저 읽기: 장 도입부와 §3.1, pp. 75–78
+@@ 6
+p. 76의 잘못된 data association 예 두 가지: 엉뚱한 identity가 붙은 landmark, 그리고 닮아 보이기만 하는 두 장소 사이의 loop closure.
+@@ 7
+p. 76에 나오는 outlier 원인 중 data association 실수가 <em>아닌</em> 것들.
+@@ 8
+residual을 제곱하는 것이 문제의 뿌리인 이유를 말하는 p. 77의 문장.
+@@ 9
+p. 77의 Figure 3.1: 위쪽 줄(ground truth)과 아래쪽 줄(outlier가 섞인 least squares)의 비교.
+@@ 10
+모든 오차가 Gaussian이라면 least squares가 올바른 estimator입니다. 하지만 실제 front-end는 가끔 엉뚱한 것끼리 match하고, 그런 측정값은 noise 수준이 아니라 미터 단위로 틀립니다. cost가 residual을 하나하나 제곱하기 때문에 이런 <strong>outlier</strong>(이상치) 몇 개가 좋은 측정값 전체를 압도하고, 추정값은 얼마든지 틀어질 수 있습니다.
+@@ 11
+1. least squares가 말없이 가정하는 것
+@@ 12
+<a href="#d8">2주차 · Day 2</a>에서 noise model로부터 back-end 문제를 유도했습니다. 측정값 \(\mathbf{z}_i\)가 예측값 \(h_i(\mathbf{x}_i)\)에 covariance가 \(\boldsymbol{\Sigma}_i\)이고 평균이 0인 Gaussian noise를 더한 것이라면, maximum a posteriori 추정값은 다음 nonlinear least-squares 문제의 해입니다.
+@@ 13
+여기서 \(\mathbf{x}_i\)는 state 중 측정값 \(i\)가 관여하는 부분이고, \(\norm{\mathbf{e}}^2_{\boldsymbol{\Sigma}} = \mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\)입니다. <span class="src">Ch. 3 opening · p. 75</span> 이 장은 항 하나의 크기를 스칼라 <strong>residual</strong>(잔차) \(r_i(\mathbf{x}) = \norm{\mathbf{z}_i - h_i(\mathbf{x}_i)}_{\boldsymbol{\Sigma}_i}\)로 쓰므로, cost는 \(\sum_i r_i(\mathbf{x})^2\)입니다. residual은 표준편차 단위로 잽니다. \(r_i = 3\)은 "이 측정값은 추정값과 3σ만큼 어긋난다"는 뜻입니다. <span class="src">§3.1.2 · p. 77</span>
+@@ 14
+책은 Gaussian을 <strong>light-tailed</strong>(꼬리가 가벼운) 분포라고 부릅니다. 큰 오차에는 확률을 거의 주지 않는다는 뜻입니다. <span class="src">§3.1.2 · p. 77</span>
+@@ 15
+빈틈 채우기: "light-tailed"는 얼마나 가벼운가?
+@@ 16
+표준편차가 \(\sigma\)인 Gaussian 오차 \(e\)가 평균에서 \(k\sigma\)보다 멀리 떨어질 확률은 \(2\,(1 - \Phi(k))\)입니다. 여기서 \(\Phi\)는 표준정규분포의 누적분포함수입니다. \(\Phi\)의 표에서 읽으면:
+@@ 17
+이보다 큰 오차
+@@ 18
+Gaussian model에서의 확률
+@@ 19
+측정값 세 개 중 하나
+@@ 20
+370개 중 하나
+@@ 21
+170만 개 중 하나
+@@ 22
+사실상 절대 없음
+@@ 23
+따라서 Gaussian noise만 있는 model은 10σ 오차가 일어날 수 없다고 말합니다. 그런데 막상 일어나면 estimator는 그 측정값을 그대로 "믿고", 10σ 오차를 그럴듯하게 만드는 유일한 방법을 택합니다. 추정값을 그쪽으로 멀리 옮기는 것입니다.
+@@ 24
+2. 나쁜 측정값은 어디서 오는가
+@@ 25
+back-end는 원시 데이터를 보지 못합니다. front-end가 뽑아낸 것만 봅니다(<a href="#d1">1주차 · Day 1</a> 참고). 그리고 이 추출에는 판단이 들어갑니다. <em>어느</em> landmark를 본 것인가, <em>어느</em> 이전 pose가 같은 장소를 보았는가? 측정값이 무엇을 가리키는지 정하는 일이 <strong>data association problem</strong>(데이터 연관 문제)입니다. 판단이 틀리면 정밀하지만 엉뚱한 대상에 관한 측정값이 나옵니다. <span class="src">§3.1.1 · p. 76</span>
+@@ 26
+원인
+@@ 27
+무엇이 잘못되나
+@@ 28
+종류
+@@ 29
+landmark 식별 오류
+@@ 30
+검출이 landmark \(\ell_j\)에 할당되었지만 실제로는 다른 landmark를 본 것이어서, \(\mathbf{z}_{ij}\)가 \(h(\mathbf{p}_i, \ell_j)\)와 크게 다릅니다.
+@@ 31
+=
+@@ 32
+잘못된 loop closure
+@@ 33
+place recognition이 같은 장면을 보지 않은 pose \(\mathbf{p}_i\)와 \(\mathbf{p}_j\)를 연결합니다.
+@@ 34
+움직이는 물체
+@@ 35
+landmark 식별은 맞지만, model은 landmark가 static이라고 가정하는데 실제로는 움직였습니다.
+@@ 36
+가정 위반
+@@ 37
+센서 고장
+@@ 38
+고장 난 바퀴 encoder, 렌즈에 묻은 먼지.
+@@ 39
+고장 또는 성능 저하
+@@ 40
+잘못된 loop closure에는 흔히 특정한 원인이 있습니다. 바로 <strong>perceptual aliasing</strong>입니다. 서로 다른 두 장소가 센서에게는 똑같아 보이는 현상으로, 한 건물 안의 두 교실이나 똑같이 생긴 사무실 칸막이가 그 예입니다. <span class="src">§3.1.1 · p. 76</span>
+@@ 41 attr
+로봇 경로가 한 복도를 따라 오른쪽으로 가다가 방향을 틀어 나란한 다른 복도를 따라 되돌아옵니다. 교실 A는 첫 번째 복도에, 닮은 교실 B는 두 번째 복도에 있습니다. 올바른 loop closure는 출발점 근처에서 실제로 가까운 두 pose를 잇습니다. 잘못된 loop closure는 교실 A 앞의 pose와 교실 B 앞의 pose를 잇는데, 두 pose는 멀리 떨어져 있습니다.
+@@ 42
+교실 A
+@@ 43
+교실 B
+@@ 44
+끝
+@@ 45
+올바른 loop closure
+@@ 46
+잘못된 loop closure:
+@@ 47
+A와 B가 닮음
+@@ 48
+Perceptual aliasing. 초록 제약은 "이 두 pose는 가깝다"고 말하고, 이는 사실입니다. 분홍 제약은 복도 하나만큼 떨어진 두 pose에 대해 같은 말을 합니다.
+@@ 49
+잘못된 loop closure는 가장 나쁜 종류의 outlier입니다. 참값에 noise가 섞인 것이 아닙니다. 멀리 떨어진 두 pose가 같은 곳이라고, 작은 covariance를 달고 자신 있게 주장하는 것입니다.
+@@ 50
+3. 제곱이 문제를 키우는 이유
+@@ 51
+실제 state 근처에서 cost를 계산해 봅시다. 좋은 측정값의 residual은 1 안팎이므로(σ 단위) 각각 \(\sum_i r_i^2\)에 약 1씩 보탭니다. 20σ 어긋난 outlier는 \(20^2 = 400\)을 보탭니다. 좋은 측정값 400개 몫입니다. optimizer에게는 그 한 항을 줄이는 것이 cost를 가장 빨리 줄이는 길이므로, 좋은 측정값들이 말하는 것에서 벗어나도록 추정값을 휘게 만듭니다. <span class="src">§3.1.2 · p. 77</span>
+@@ 52
+직접 해 보기: 파란 점들은 직선 \(y = 0.5x + 1\) 근처에 있습니다. 분홍 점을 이리저리 끌어 본 다음, 좋은 점의 수를 바꿔 보세요.
+@@ 53
+눈여겨볼 점: 좋은 점이 12개일 때 (8.5, 1.2)에 있는 나쁜 점 하나가 맞춘 직선을 y = 0.52x + 0.82에서 y = 0.36x + 1.35로 바꾸고, 실제 직선에서 계산하면 이 점 하나가 cost의 98%를 차지합니다. 더 멀리 끌면 직선도 한없이 따라갑니다. 좋은 점이 40개면 당기는 힘이 약해지지만 결코 0이 되지는 않습니다.
+@@ 54
+빈틈 채우기: outlier 하나는 추정값을 오차 ÷ N만큼 옮긴다
+@@ 55
+가장 단순한 least-squares 문제는 noise 크기가 같은 직접 측정값 \(z_1, \dots, z_N\) \(N\)개로 숫자 하나 \(x\)를 추정하는 것입니다. cost는 \(\sum_i (z_i - x)^2\)입니다. 도함수를 0으로 놓으면:
+@@ 56
+least-squares 추정값은 평균입니다. 이제 측정값 하나에 오차 \(E\)를 더해 오염시킵니다. 합이 \(E\)만큼 커지므로
+@@ 57
+두 가지를 알 수 있습니다. 이동량이 \(E\)에 비례하므로 피해에는 한계가 없습니다. \(E\)를 충분히 키우면 추정값을 원하는 어디로든 보낼 수 있습니다. 그리고 이동량은 \(1/N\)로만 줄어들기 때문에, 좋은 데이터를 더하면 outlier가 희석될 뿐 사라지지는 않습니다. 예: 2.0인 측정값 9개와 52.0인 측정값 1개는 \(\hat{x} = (9 \times 2 + 52)/10 = 7.0\)을 주는데, 이 값은 어느 측정값과도 멀리 떨어져 있습니다.
+@@ 58
+직선 맞추기나 SLAM에서도 같은 일이 일어나는데, 위젯이 보여 주듯 한 가지가 더해집니다. 데이터 중앙에서 멀리 떨어진 나쁜 점은 지렛대 팔이 길어서 절편뿐 아니라 기울기까지 바꿉니다.
+@@ 59
+4. Breakdown point: "얼마나 취약한가"를 나타내는 숫자
+@@ 60
+강건 통계학은 estimator의 취약성을 <strong>breakdown point</strong>(붕괴점)로 잽니다. 측정값 중 이만큼을 임의의 값으로 바꿔치기하면 추정값을 얼마든지 멀리 움직일 수 있는, 그런 비율의 최솟값입니다. 이 개념은 오늘 읽을 쪽에는 없지만 표준적인 잣대이고, 이 장이 인용하는 논문에서 만나게 됩니다.
+@@ 61
+평균(least squares)의 breakdown point는 \(1/N\)이고 0으로 갑니다. 3절에서 보았듯, 측정값이 몇 개든 나쁜 것 하나면 충분합니다.
+@@ 62
+중앙값의 breakdown point는 50%입니다. 가운데 값을 얼마든지 멀리 끌고 가려면 데이터의 절반을 오염시켜야 합니다.
+@@ 63
+예: 데이터 \(\{0.8,\ 0.9,\ 1.0,\ 1.1,\ 1.2\}\)의 평균은 1.0, 중앙값도 1.0입니다. 1.2를 100으로 바꿔 봅시다. 평균은 \((0.8 + 0.9 + 1.0 + 1.1 + 100)/5 = 20.76\)이 됩니다. \(\{0.8, 0.9, 1.0, 1.1, 100\}\)의 가운데 값인 중앙값은 여전히 1.0입니다.
+@@ 64
+추가 정보가 없으면 어떤 estimator도 breakdown point가 50%를 넘을 수 없습니다. 데이터 대부분이 틀렸고 그것들끼리 서로 맞아떨어진다면, 어느 무리를 믿어야 할지 데이터 안에는 아무 단서가 없기 때문입니다. 이 한계를 Day 3과 Day 5에서 기억하세요. 그곳의 방법들은 50%를 훨씬 넘는 outlier도 견딥니다. 예를 들어 odometry는 믿을 만하다는 식의 추가 정보를 받기 때문에 가능한 일입니다.
+@@ 65
+least squares는 투표를 하는데, 남들과 의견이 다를수록 목소리가 커지는 투표예요. 터무니없이 틀린 측정값 하나가 조용히 맞는 측정값 백 개를 소리쳐서 이겨 버려요.
+@@ 66
+5. map에 미치는 영향과 이번 주 계획
+@@ 67
+Figure 3.1은 세 가지 표준 문제에 보통의 least squares를 그대로 돌린 결과입니다. <span class="src">§3.1.2 · pp. 77–78</span>
+@@ 68
+유형
+@@ 69
+Outlier
+@@ 70
+시뮬레이션 pose graph, 격자 형태
+@@ 71
+2D pose 3500개, 측정값 8953개
+@@ 72
+loop closure에 무작위 outlier 15% 추가
+@@ 73
+=
+@@ 74
+터널에서 얻은 실제 pose graph
+@@ 75
+3D pose 682개, 측정값 3278개
+@@ 76
+데이터에 원래 포함
+@@ 77
+=
+@@ 78
+실제 landmark SLAM
+@@ 79
+2D pose와 landmark 7120개, 측정값 17728개
+@@ 80
+landmark 측정값에 무작위 outlier 15% 추가
+@@ 81
+세 추정값 모두 쓸 수 없습니다. SubT의 실패에는 알아볼 만한 모양이 있습니다. 닮은 두 나란한 복도가 잘못된 loop closure를 잔뜩 만들고, back-end는 그 제약에 따라 두 복도를 하나로 접어 버립니다. <span class="src">§3.1.2 · p. 78</span> perceptual aliasing이 map에 그대로 새겨진 것입니다.
+@@ 82
+이 장은 pipeline의 양쪽 끝에서 문제를 공략합니다:
+@@ 83
+방법
+@@ 84
+=
+@@ 85
+=
+@@ 86
+명백한 outlier를 optimizer에 닿기 전에 찾아서 제거
+@@ 87
+=
+@@ 88
+=
+@@ 89
+살아남은 outlier가 거의 당기지 못하도록 cost를 변경
+@@ 90
+robust loss, IRLS, graduated non-convexity
+@@ 91
+<strong>"outlier는 noise가 아주 큰 측정값이다."</strong> 대개는 엉뚱한 대상을 정밀하게 잰 측정값입니다. 이를 덮으려고 covariance를 모두 키우면 좋은 데이터의 정확도를 버리게 됩니다.
+@@ 92
+<strong>"좋은 데이터가 충분하면 outlier는 평균에 묻혀 사라진다."</strong> 이동량은 \(E/N\)입니다. \(E\)가 유계일 때만 작아지는데, 잘못된 loop closure는 건물 크기만큼 틀릴 수 있습니다.
+@@ 93
+<strong>"outlier는 무작위이므로 방향도 제각각이라 서로 상쇄된다."</strong> perceptual aliasing은 SubT의 복도처럼 서로 맞아떨어지는 outlier를 많이 만듭니다.
+@@ 94
+Q1. range 측정값 19개는 4.0 m, 1개는 44.0 m입니다. range의 least-squares 추정값은 얼마입니까?
+@@ 95
+추정값은 평균입니다. outlier의 오차는 40 m이고 N = 20이므로 이동량은 40/20 = 2 m, 결과는 6.0 m입니다. 검산: (19 × 4 + 44)/20 = 120/20 = 6.
+@@ 96
+Q2. 실제 state에서 계산하면 좋은 측정값 200개의 residual은 각각 1(σ 단위)이고 outlier 하나의 residual은 30입니다. cost Σr² 중 outlier가 차지하는 비율은 얼마입니까?
+@@ 97
+약 82%
+@@ 98
+약 13%
+@@ 99
+약 0.5%
+@@ 100
+약 50%
+@@ 101
+outlier는 30² = 900을, 좋은 측정값은 200 × 1 = 200을 보태므로 비율은 900/1100 ≈ 0.82입니다. 측정값 201개 중 하나가 cost 대부분을 차지합니다.
+@@ 102
+Q3. 카메라가 주차된 차를 landmark로 추적합니다. 차는 모든 frame에서 올바르게 식별되다가, 시야 안에 있는 채로 떠나 버립니다. 그 측정값이 outlier가 되는 이유는 무엇입니까?
+@@ 103
+data association 실패
+@@ 104
+=
+@@ 105
+카메라 noise 증가
+@@ 106
+model은 landmark가 static이라고 가정하는데, 그 가정이 이제 틀림
+@@ 107
+association은 맞으므로 data association 오류가 아닙니다. measurement model은 static landmark를 가정하고, 가정이 깨지면 잘못된 match와 똑같이 큰 residual이 생깁니다(p. 76).
+@@ 108
+Q4. 어떤 양 하나를 측정한 값이 11개 있습니다. 중앙값을 얼마든지 멀리 옮기려면 공격자가 최소 몇 개를 오염시켜야 합니까?
+@@ 109
+값 11개의 중앙값은 6번째로 작은 값입니다. 5개를 오염시키면 6번째로 작은 값은 여전히 좋은 값 6개 중 하나이거나 좋은 값들 사이에 있습니다. 6개를 +∞로 보내면 6번째로 작은 값이 오염됩니다. 평균은 1개면 충분합니다.
+@@ 110
+least squares는 Gaussian noise 아래의 MAP 추정이며, Gaussian은 큰 오차가 사실상 일어나지 않는다고 말합니다.
+@@ 111
+outlier는 주로 잘못된 data association(엉뚱한 landmark, 잘못된 loop closure, perceptual aliasing)에서 오고, 가정 위반과 센서 고장에서도 옵니다.
+@@ 112
+제곱 때문에 residual이 \(k\)인 outlier는 좋은 측정값 \(k^2\)개만큼의 무게를 갖습니다.
+@@ 113
+오염된 측정값 하나는 평균을 \(E/N\)만큼 옮깁니다. \(E\)에 대해 한계가 없습니다. least squares의 breakdown point는 0입니다.
+@@ 114
+이 장의 답은 두 겹입니다. front-end에서 outlier를 걸러내고, 남은 outlier에 대해서는 back-end cost를 robust하게 만듭니다.
+@@ 115
+<em>SLAM Handbook</em>, 3장 도입부와 §3.1 "What Causes Outliers and Why Are They a Problem?", pp. 75–78, 식 (3.1), Figure 3.1.
+@@ 116
+Rousseeuw and Leroy, <em>Robust Regression and Outlier Detection</em>, 1987 (breakdown point; 평균 대 중앙값).
+@@ 117
+Gaussian 꼬리 확률은 표준정규분포표의 값입니다. \(E/N\) 논증은 1주차 Day 4에서처럼 제곱합의 도함수입니다.

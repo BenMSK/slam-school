@@ -1,0 +1,192 @@
+@@ 1
+<span class="eyebrow">11주차 · Day 3</span>
+@@ 2
+카메라 모델: 3D 점에서 픽셀로, 다시 ray로
+@@ 3
+오늘이 끝나면 pinhole 모델로 3D 점을 픽셀에 투영하고, 픽셀을 ray로 unproject하고, radial distortion을 적용하고 되돌리며, 어떤 렌즈에 어떤 모델이 필요한지 말할 수 있습니다.
+@@ 4
+약 60분 · §7.3.1, pp. 197–200 읽기 (4쪽) · 11주차 Day 2 필요
+@@ 5
+먼저 읽기: §7.3.1, pp. 197–200
+@@ 6
+projection 함수 \(\pi\)와 unprojection \(\pi^{-1}\), 그리고 "scale을 제외하고만 알 수 있다(only known up to scale)"는 표현 (p. 198).
+@@ 7
+pinhole 파라미터 네 개와 각각의 의미 (p. 198).
+@@ 8
+radial-tangential 모델에 해석적인 unprojection이 없는 이유 (p. 199).
+@@ 9
+책이 180°까지의 렌즈와 180°를 넘는 렌즈에 각각 권하는 모델 (p. 199), 그리고 rolling shutter가 무엇인지 (p. 200).
+@@ 10
+카메라 모델은 카메라 frame의 3D 점을, calibration된 숫자 몇 개를 써서 픽셀로 보내는 함수 \(\pi\)입니다. 앞으로 가는 방향은 depth로 나누는 것입니다. 거꾸로 가는 방향은 점으로는 불가능하고 ray로만 가능합니다. 나눗셈이 depth를 버렸기 때문입니다. 이 장의 나머지에 나오는 모든 visual measurement model은 \(\pi\) 위에 세워집니다.
+@@ 11
+1. Projection과 unprojection
+@@ 12
+카메라 모델에는 3D 점이 이미지의 어디에 떨어지는지 말하는 <strong>geometric</strong>(기하) 부분과, 픽셀이 얼마나 밝은지 말하는 <strong>photometric</strong>(광도) 부분이 있습니다. <span class="src">§7.3.1 · p. 197</span> geometric 부분은 다음 <strong>projection function</strong>(투영 함수)입니다.
+@@ 13
+여기서 \(\mathbf{x}^c\)는 <strong>camera coordinates</strong>(카메라 좌표계: 원점은 카메라, \(z\)는 optical axis를 따라 앞쪽)로 나타낸 점이고, \(\mathbf{z}\)는 image domain \(\Omega\)에서의 픽셀 위치이며, \(\boldsymbol{\xi}\)는 보통 미리 calibration해 두는 <strong>intrinsic parameters</strong>입니다. <strong>unprojection</strong> \(\mathbf{x}^c = \pi^{-1}(\mathbf{z}, \boldsymbol{\xi})\)는 3D ray를 돌려줍니다. depth를 모르므로 결과는 scale을 제외하고만 알 수 있습니다. <span class="src">§7.3.1.1 · p. 198</span>
+@@ 14
+표기에 관해 두 가지를 주의하십시오. Part I에서 \(\boldsymbol{\xi}\)는 pose perturbation이었지만(<a href="#d21">4주차 · Day 3</a>), 7장에서는 카메라 intrinsics 벡터입니다. 또 책은 \(z\)를 depth 좌표로도 쓰고, 굵은 글씨 \(\mathbf{z}\)로는 measurement를 나타냅니다.
+@@ 15
+2. Pinhole 모델
+@@ 16
+<strong>pinhole</strong> 모델(rectilinear 또는 perspective 모델이라고도 합니다)은 distortion이 없는 좁은 화각 렌즈에 맞습니다. <span class="src">§7.3.1.1 · p. 198</span>
+@@ 17
+\(f_u, f_v\)는 가로, 세로 방향의 픽셀 단위 <strong>focal lengths</strong>(초점 거리)이며, 픽셀이 정사각형이면 \(f_u \approx f_v\)입니다. \((u_0, v_0)\)는 <strong>principal point</strong>(주점)로, optical axis가 이미지와 만나는 픽셀입니다.
+@@ 18 attr
+pinhole 카메라의 측면도. 옆 방향 offset x, depth z인 3D 점에서 나온 ray가 카메라 중심을 지나, 중심 앞쪽 거리 f에 놓인 image plane을 optical axis 위로 f 곱하기 x 나누기 z 높이에서 지납니다.
+@@ 19
+=
+@@ 20
+=
+@@ 21
+3D 점
+@@ 22
+카메라 중심
+@@ 23
+이미지 점, 높이 f·x/z
+@@ 24
+카메라 중심을 공유하는 두 삼각형은 닮음입니다: (이미지 높이) / f = x / z.
+@@ 25
+빈틈 채우기: 공식의 유래와 행렬 형태
+@@ 26
+<strong>닮은 삼각형.</strong> 그림에서 점으로부터 카메라 중심을 지나는 ray는 거리 \(f\)에 있는 평면과 만납니다. 작은 삼각형(두 변이 \(f\)와 이미지 높이)과 큰 삼각형(두 변이 \(z\)와 \(x\))은 각이 같으므로, 이미지 높이 \(= f\,x/z\)입니다. \(y\)도 마찬가지입니다.
+@@ 27
+<strong>픽셀.</strong> 센서는 optical axis가 아니라 이미지 모서리에서부터 픽셀을 세므로 principal point를 더합니다. 렌즈의 focal length가 4 mm이고 픽셀 폭이 5 µm이면 \(f_u = 4\,\text{mm} / 0.005\,\text{mm} = 800\) 픽셀입니다. \(f\)가 "픽셀 단위"인 이유가 이것입니다.
+@@ 28
+<strong>예제.</strong> \(f_u = f_v = 500\), \((u_0, v_0) = (320, 240)\), \(\mathbf{x}^c = (0.4, -0.2, 2)\) m이면:
+@@ 29
+\((420, 190)\)을 unproject하면 \(\big(\tfrac{420-320}{500}, \tfrac{190-240}{500}, 1\big) = (0.2, -0.1, 1)\)이 되고, 이는 \(\mathbf{x}^c/2\)입니다. 방향은 맞지만 depth는 사라졌습니다. 점 \((4, -2, 20)\)도 같은 픽셀에 떨어집니다.
+@@ 30
+<strong>Homogeneous coordinates</strong>(동차 좌표). 픽셀 \((u, v)\)를 \(\lambda \ne 0\)인 임의의 세 값 \((\lambda u, \lambda v, \lambda)\)로 나타내고, "0이 아닌 scale factor를 제외하고 같다"를 \(\sim\)로 씁시다. 그러면 pinhole 모델은 행렬 곱이 됩니다.
+@@ 31
+마지막 원소 \(z\)로 나누면 다시 \(\pi_p\)가 됩니다. 행렬 \(\mathbf{K}\)는 <strong>calibration matrix</strong>이며, \(\pi_p^{-1}(\mathbf{z}) \sim \mathbf{K}^{-1}\begin{bmatrix} u & v & 1 \end{bmatrix}\T\)입니다. 책의 unprojection 공식에 있는 \(\sim\)가 바로 이 기호입니다. homogeneous coordinates는 번거로운 나눗셈을 선형대수로 바꿔 주며, Day 5에서는 이를 이용해 두 view를 연결합니다.
+@@ 32
+<strong>Field of view.</strong> principal point에서 \(W/2\) 떨어진 이미지 가장자리 픽셀은 축에서 \(\arctan\frac{W/2}{f_u}\) 각도의 ray를 봅니다. 폭 640 픽셀, \(f_u = 500\)인 이미지의 가로 field of view는 \(2\arctan(0.64) \approx 65^\circ\)입니다.
+@@ 33
+3. 렌즈 distortion
+@@ 34
+실제 렌즈는 직선을 휘게 합니다. 가장 흔한 보정은 <strong>radial-tangential</strong> 모델입니다. 파라미터 네 개를 더해 \(\boldsymbol{\xi}_{RT} = \begin{bmatrix} \boldsymbol{\xi}_p\T & k_1 & k_2 & p_1 & p_2 \end{bmatrix}\T\)로 만들고, 나눗셈과 픽셀 단위로의 scaling 사이에 한 단계를 끼워 넣습니다. <span class="src">§7.3.1.1 · pp. 198–199</span>
+@@ 35
+\((x', y')\)는 <strong>normalized image coordinates</strong>(정규화 이미지 좌표)로, \(f = 1\)이고 principal point가 원점인 pinhole 이미지입니다. \(k\) 항은 <strong>radial</strong>(방사) 항입니다. 점을 이미지 중심을 지나는 직선을 따라 움직이며, 그 양은 거리 \(r\)에 따라 커집니다. \(p\) 항은 <strong>tangential</strong>(접선) 항으로, 중심에서 살짝 벗어나거나 기울어진 렌즈를 모델링합니다.
+@@ 36
+예: \(k_1 = -0.2\)이고 다른 계수는 모두 0, \(x' = 0.5\), \(y' = 0\)이라 합시다. 그러면 \(r^2 = 0.25\), 배율은 \(1 - 0.05 = 0.95\), \(x'' = 0.475\)입니다. \(f_u = 500\)이면 픽셀이 중심 쪽으로 \(500 \times 0.025 = 12.5\) 픽셀 움직입니다.
+@@ 37
+직접 해 보기: \(k_1\)을 음수에서 양수로 움직이고, 그다음 focal length를 바꿔 보십시오.
+@@ 38
+눈여겨볼 점: \(k_1\)이 음수이면 모서리가 안쪽으로 당겨지고(barrel distortion), \(k_1\)이 양수이면 바깥으로 밀립니다(pincushion). 중심은 거의 움직이지 않고, \(r = 1\)인 모서리는 기본 설정에서 72 픽셀 움직입니다(\(0.18 \times 400\)). 마지막 타일은 그 모서리의 distortion을 되돌리는 데 필요한 iteration 수를 셉니다.
+@@ 39
+빈틈 채우기: iteration으로 distortion 되돌리기
+@@ 40
+픽셀을 unproject하려면 \((x'', y'')\)로부터 \((x', y')\)를 구해야 합니다. 이는 \(r\)에 대한 5차 다항식을 푸는 일이고(tangential 항이 있으면 더 복잡합니다), 그 해를 주는 공식은 없습니다. 책은 Newton-Raphson을 언급합니다. <span class="src">§7.3.1.1 · p. 199</span> distortion이 크지 않다면 더 단순한 방법도 통합니다. radial 항만 있을 때 모델은 \(x' = x'' / (1 + k_1 r^2 + k_2 r^4)\)이며, 여기서 \(r\)은 미지의 점에 속합니다. 그러니 추측하고, 반복합니다.
+@@ 41
+위의 예제(\(x'' = 0.475\), \(k_1 = -0.2\))에서 반복값은 \(0.475 \to 0.49745 \to 0.49973 \to 0.49997\)로, 참값 0.5를 향해 갑니다. 모든 픽셀에 이 계산이 필요한 시스템은 한 번 계산해 lookup table에 저장합니다.
+@@ 42
+4. 광각 렌즈와 fisheye 렌즈
+@@ 43
+pinhole 이미지 점은 principal point에서 \(f\tan\theta\)만큼 떨어져 있습니다. 여기서 \(\theta\)는 ray와 optical axis 사이의 각도입니다. \(\theta \to 90^\circ\)이면 이 값은 무한대로 가므로, pinhole 기반 모델은 옆에서 오는 ray를 나타낼 수 없고, 뒤에서 오는 ray는 말할 것도 없습니다. 책은 흔히 쓰는 선택지를 나열합니다(Figure 7.1에 렌즈들이 있습니다). <span class="src">§7.3.1.1 · pp. 198–199</span>
+@@ 44
+파라미터
+@@ 45
+용도
+@@ 46
+=
+@@ 47
+=
+@@ 48
+distortion이 없는 좁은 화각 렌즈
+@@ 49
+=
+@@ 50
+=
+@@ 51
+=
+@@ 52
+distortion이 약간 있는 일반 렌즈
+@@ 53
+반복 계산
+@@ 54
+Brown-Conrady (책의 정의대로)
+@@ 55
+=
+@@ 56
+광각 렌즈, 180°까지의 field of view
+@@ 57
+=
+@@ 58
+=
+@@ 59
+180°를 넘는 fisheye 렌즈
+@@ 60
+=
+@@ 61
+fisheye 렌즈와 광각 렌즈
+@@ 62
+KB 모델은 \(\tan\theta\)를 각도 자체에 대한 다항식으로 바꿉니다.
+@@ 63
+모든 \(k_n = 0\)이면 \(\theta = 90^\circ\)인 ray는 반지름 \(f\cdot\tfrac{\pi}{2}\), 즉 유한한 값에 떨어집니다. \(f = 300\)이면 약 471 픽셀입니다. DS 모델은 점을 두 단위 구에 차례로 투영한 뒤 이동된 pinhole projection을 적용합니다. 책은 비슷한 reprojection error에서 KB보다 계산이 다섯 배쯤 빠르다고 보고합니다. <span class="src">§7.3.1.1 · p. 199</span>
+@@ 64
+선택이 중요합니다. fisheye 렌즈에는 spherical 모델을, rectilinear 렌즈에는 선형 모델을 써야 합니다. 맞지 않는 모델은 계통 오차를 남기고, 이 오차가 SLAM 추정값 전체에 bias를 줍니다. <span class="src">§7.3.1.4 · p. 200</span>
+@@ 65
+5. 밝기와 시간
+@@ 66
+<strong>photometric model</strong>(광도 모델) \(I = f(E, T)\)는 카메라 설정 \(T\)(노출 시간, gain, gamma correction, de-bayering, lens vignetting)가 주어졌을 때 irradiance \(E\)(픽셀에 도달하는 빛의 세기)를 저장된 intensity \(I\)로 보냅니다. 이미지 간 픽셀 밝기를 비교하는 방법(Day 2의 direct 방법)과 texture가 있는 dense 재구성에서 중요합니다. <span class="src">§7.3.1.2 · pp. 199–200</span>
+@@ 67
+시간도 중요합니다. <strong>global shutter</strong>는 모든 행을 한꺼번에 노출합니다. 대부분의 소비자용 카메라에 있는 <strong>rolling shutter</strong>는 행을 하나씩 차례로 읽으므로, 행마다 조금씩 다른 카메라 pose에서 찍힙니다. 카메라가 60°/s로 회전하는 동안 읽기에 30 ms가 걸린다고 합시다. 마지막 행은 첫 행보다 1.8° 늦게 찍히며, \(f = 500\)에서 이는 \(500\tan 1.8^\circ \approx 16\) 픽셀 이동입니다. 해결책은 global shutter 카메라를 쓰거나, 행마다 pose를 하나씩 두는 모델을 쓰는 것입니다. 후자는 IMU가 노출 중의 움직임을 측정하면 실용적이 됩니다. <span class="src">§7.3.1.3 · p. 200</span> <a href="#d25">5주차 · Day 1</a>의 continuous-time trajectory가 바로 이를 위해 만들어졌습니다.
+@@ 68
+<strong>"Unprojection은 3D 점을 복원한다."</strong> 복원하는 것은 방향입니다. \(\lambda \gt 0\)인 모든 점 \(\lambda\,\pi^{-1}(\mathbf{z})\)가 같은 픽셀로 투영됩니다.
+@@ 69
+<strong>"Focal length는 미터 단위의 거리다."</strong> \(\boldsymbol{\xi}_p\)에서는 픽셀 단위입니다. 물리적 focal length를 픽셀 크기로 나눈 값입니다.
+@@ 70
+<strong>"Distortion은 작은 미관상의 효과다."</strong> 이미지 모서리에서는 수십 픽셀이 될 수 있어서, 좋은 feature detector의 sub-pixel noise보다 훨씬 큽니다.
+@@ 71
+Q1. pinhole 카메라가 \(f_u = f_v = 400\), \((u_0, v_0) = (320, 240)\)입니다. 점 \(\mathbf{x}^c = (1, 0.5, 4)\)는 어디로 투영됩니까?
+@@ 72
+u = 400·(1/4) + 320 = 420, v = 400·(0.5/4) + 240 = 290입니다. (720, 440)은 depth로 나누는 것을 잊은 값이고, (100, 50)은 principal point를 잊은 값입니다.
+@@ 73
+Q2. 같은 카메라에서 픽셀 (520, 240)을 만들 수 있는 3D 점은 무엇입니까?
+@@ 74
+unprojection은 ray 방향 ((520−320)/400, 0, 1) = (0.5, 0, 1)을 줍니다. 점 (2, 0, 4)는 이 방향의 4배이므로 ray 위에 있습니다.
+@@ 75
+Q3. 이미지 폭이 640 픽셀이고 \(f_u = 320\)입니다. 이 pinhole 카메라의 가로 field of view는 얼마입니까?
+@@ 76
+폭의 절반이 320 픽셀이므로 반각은 arctan(320/320) = 45°이고, 전체 field of view는 90°입니다.
+@@ 77
+Q4. 렌즈의 \(k_1 = -0.1\)이고 다른 distortion은 없습니다. 어떤 점의 normalized 좌표가 \(x' = 1\), \(y' = 0\)이고 \(f_u = 400\)입니다. distortion은 이 점의 픽셀을 어떻게 움직입니까?
+@@ 78
+중심에서 멀어지는 쪽으로 40 픽셀
+@@ 79
+중심 쪽으로 40 픽셀
+@@ 80
+중심 쪽으로 4 픽셀
+@@ 81
+움직이지 않음, \(y' = 0\)이므로
+@@ 82
+r² = 1이므로 x″ = 1·(1 − 0.1) = 0.9입니다. normalized 단위로 0.1의 변화는 0.1 × 400 = 40 픽셀이며, k₁이 음수이므로 안쪽 방향입니다.
+@@ 83
+Q5. distortion 항이 있는 pinhole 모델이 190° fisheye 렌즈를 기술하지 못하는 이유는 무엇입니까?
+@@ 84
+fisheye 렌즈에는 principal point가 없어서
+@@ 85
+distortion 다항식의 계수는 두 개로 제한되어서
+@@ 86
+모델이 depth로 나누는 데서 시작하는데, ray가 축에서 90°에 가까워지면 x/z가 한없이 커져서
+@@ 87
+fisheye 카메라는 항상 rolling shutter를 써서
+@@ 88
+normalized 좌표는 tan θ이므로 90°에서 발산하고, 카메라 뒤쪽에서는 부호가 틀립니다. Kannala-Brandt나 Double Sphere 같은 모델은 대신 ray 각도나 구를 써서 매개변수화합니다.
+@@ 89
+\(\mathbf{z} = \pi(\mathbf{x}^c, \boldsymbol{\xi})\)는 카메라 frame의 점을 픽셀로 보냅니다. \(\pi^{-1}\)은 scale을 제외하고만 알 수 있는 ray를 돌려줍니다.
+@@ 90
+Pinhole: \(u = f_u x/z + u_0\), \(v = f_v y/z + v_0\), 또는 homogeneous coordinates로 \(\begin{bmatrix} u & v & 1 \end{bmatrix}\T \sim \mathbf{K}\mathbf{x}^c\).
+@@ 91
+Radial-tangential distortion은 나눗셈과 픽셀 변환 사이에서 normalized 좌표에 작용합니다. 되돌리려면 iteration이 필요합니다.
+@@ 92
+Fisheye 렌즈에는 ray 각도(Kannala-Brandt)나 구(Double Sphere) 위에 세운 모델이 필요합니다.
+@@ 93
+photometric model은 direct 방법에서 중요하고, rolling shutter는 이미지의 행마다 고유한 pose를 줍니다.
+@@ 94
+<em>SLAM Handbook</em>, 7장, §7.3.1 "Camera Model", pp. 197–200, Figure 7.1 포함.
+@@ 95
+닮은 삼각형 유도, homogeneous coordinates, calibration matrix, field-of-view 공식은 Hartley와 Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004를 따릅니다.
+@@ 96
+fixed-point undistortion iteration은 표준적인 단순 기법입니다. 렌즈 distortion 모델은 Szeliski, <em>Computer Vision: Algorithms and Applications</em>, 2010을 참고하십시오.

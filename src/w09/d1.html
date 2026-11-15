@@ -94,7 +94,7 @@
 \[ f(\mathbf{z}) \le (1-t)f(\mathbf{x})+t f(\mathbf{y}) \lt (1-t)f(\mathbf{x})+t f(\mathbf{x}) = f(\mathbf{x}). \]
 <p>That holds for every \(t\in(0,1]\), however small, so there are better points arbitrarily close to \(\mathbf{x}\). Then \(\mathbf{x}\) was not a local minimum. The assumption was wrong, and no better \(\mathbf{y}\) exists.</p></div>
 
-<p>Three quick tests you will reuse all week:</p>
+<p>Four quick tests you will reuse all week:</p>
 <div class="tbl"><table>
   <tr><th>Object</th><th>Convex?</th><th>Why</th></tr>
   <tr><td>\(f(x)=x^2\), or any least-squares cost \(\norm{\mathbf{A}\mathbf{x}-\mathbf{b}}^2\)</td><td>Yes</td><td>The second derivative, \(2\) or \(2\mathbf{A}\T\mathbf{A}\), is never negative. A twice-differentiable function is convex exactly when its Hessian is positive semidefinite everywhere.</td></tr>

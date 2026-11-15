@@ -1,0 +1,146 @@
+@@ 1
+<span class="eyebrow">22주차 · Day 4</span>
+@@ 2
+Dense semantic map: label을 surfel과 voxel에 fusion하기
+@@ 3
+오늘이 끝나면 frame마다 나오는 noise 섞인 label이 surfel map과 voxel map에 어떻게 fusion되는지 설명하고, multi-class log-odds 갱신 식을 유도하고, voxel 하나에 대해 손으로 계산할 수 있습니다.
+@@ 4
+약 60분 · §16.3.1–16.3.2, pp. 471–478 읽기 (8쪽, 그중 3쪽은 대부분 그림) · 8주차 Day 1 필요
+@@ 5
+먼저 읽기: §16.3.1과 §16.3.2, pp. 471–478
+@@ 6
+SuMa++가 "car"로 label된 점을 모두 지워 버리지 않는 이유 (p. 472).
+@@ 7
+range-category observation의 정의 (p. 473).
+@@ 8
+log-odds 벡터, 그것을 되돌리는 softmax, 그리고 갱신 식 (16.24), pp. 474–475.
+@@ 9
+모델 (16.26)의 세 경우, p. 475, 그리고 pruning 규칙, pp. 476–477.
+@@ 10
+dense semantic map은 공간의 작은 조각마다 class별 확률을 저장합니다. segmentation된 이미지 한 장은 noise가 많으므로, map은 Bayes' rule로 여러 장을 fusion합니다. log-odds로 쓰면 이 fusion은 덧셈입니다. 관측 하나가 자신이 닿는 cell에 고정된 벡터를 더합니다.
+@@ 11
+1. Point와 surfel 위의 label
+@@ 12
+segmentation network는 LiDAR scan의 모든 점에 label을 붙일 수 있습니다. scan 하나의 label은 noise가 많고 다음 scan의 label과 어긋나므로, mapping 문제는 이것들을 시간에 걸쳐 통합하는 것입니다. SuMa++는 surfel마다 class 하나와 confidence 하나를 저장합니다. 서로 충돌하는 label은 confidence를 낮추고, confidence가 낮은 surfel은 걸러집니다. <span class="src">§16.3.1 · p. 471</span>
+@@ 13
+같은 메커니즘으로 움직이는 물체도 처리합니다. 움직일 수 있는 class의 점을 모두 지우면 주차된 자동차까지 버리게 되는데, 주차된 자동차는 도시에서 scan registration의 좋은 기준입니다. 저장된 label이 현재 scan과 충돌하는 surfel만 지우는 편이 더 잘 동작했습니다. <span class="src">§16.3.1 · p. 472</span>
+@@ 14
+label은 SLAM에도 다시 쓰입니다. registration은 호환되는 class의 점끼리만 매칭할 수 있고(<a href="#d74">13주차 · Day 2</a>의 ICP와 비교해 보세요), Scan Context(<a href="#d76">13주차 · Day 4</a>) 같은 place descriptor는 loop closure를 위해 class 정보로 확장할 수 있습니다. <span class="src">§16.3.1 · p. 472</span>
+@@ 15
+2. Voxel: 무엇을 관측하고 무엇을 추정하는가
+@@ 16
+환경을 class \(\mathcal{K} = \{0, \dots, K\}\)로 나눕니다. 0은 free space이고 나머지는 물체 class입니다. <strong>range-category observation</strong>은 센서 ray \(b\)마다 하나씩인 쌍 \(z = (r_{t,b}, y_{t,b})\)로, ray가 멈춘 range와 ray가 맞힌 것의 class입니다. RGB-D 카메라는 depth 이미지와 컬러 이미지의 segmentation을 짝지어 픽셀마다 하나씩 만들어 냅니다. <span class="src">§16.3.2 · p. 473</span>
+@@ 17
+map \(\mathbf{m}\)은 cell \(i = 1, \dots, N\)의 grid이고, 각 cell은 알지 못하는 class \(m_i \in \mathcal{K}\)를 가집니다. 로봇 pose를 알고 있으면, Bayes' rule은 새 관측 집합 \(\mathcal{Z}_{t+1}\)이 들어올 때마다 map의 확률 질량 함수 \(p_t(\mathbf{m})\)를 갱신합니다.
+@@ 18
+두 번째 식은 계산 비용 때문에 고른 근사입니다. cell들을 독립으로 취급하므로, map은 가능한 map \((K+1)^N\)개에 대한 분포 하나가 아니라 작은 분포 \(N\)개를 저장합니다. <span class="src">§16.3.2 · pp. 473–474</span>
+@@ 19
+=
+@@ 20
+각 cell은 분포를 <strong>multi-class log-odds</strong> 벡터로 저장합니다. 각 class의 확률을 "free"의 확률과 비교해 로그를 취한 값입니다. <span class="src">§16.3.2 · p. 474</span>
+@@ 21
+첫 원소는 언제나 0입니다. 두 번째 식인 <strong>softmax</strong>가 확률을 되돌려 줍니다. 이 좌표에서는 Bayesian 갱신이 덧셈입니다.
+@@ 22
+빈틈 채우기: (16.24)와 softmax 유도하기
+@@ 23
+cell 하나와 관측 하나에 대한 Bayes' rule입니다. \(\eta\)는 \(k\)에 의존하지 않는 정규화 상수입니다.
+@@ 24
+같은 식을 \(k = 0\)에 대해 쓰고, 나눈 다음 로그를 취합니다. \(\eta\)는 약분됩니다.
+@@ 25
+cell의 class가 주어졌을 때 관측들이 독립이면 likelihood는 곱해지고 그 로그는 더해지므로, \(z\)에 대한 합이 나옵니다. softmax의 경우, \(h_k = \log[p(k)/p(0)]\)은 \(p(k) = p(0)\,e^{h_k}\)라는 뜻입니다. 확률의 합은 1이므로 \(p(0)\sum_j e^{h_j} = 1\)이고, 이 \(p(0)\)을 다시 대입하면 softmax 식이 나옵니다. \(K = 1\)이면 벡터는 \([0,\ \log(p_{\text{occ}}/p_{\text{free}})]\)로, <a href="#d43">8주차 · Day 1</a>의 occupancy log-odds입니다.
+@@ 26
+4. 숫자로 보는 observation model
+@@ 27
+ray 하나는 세 종류의 cell에 각각 다른 말을 하며, 책의 모델은 ray를 따라 구간별 상수입니다. <span class="src">§16.3.2 · p. 475</span>
+@@ 28
+\(\mathbf{E}_k = \mathbf{e}_k\mathbf{e}_k\T\)는 벡터의 \(k\)번째 원소만 남기고, \(\boldsymbol{\phi}^+, \boldsymbol{\psi}^+, \boldsymbol{\phi}^-\)의 첫 원소는 0입니다. 따라서 hit는 "free"에 대해 모든 물체 class를 올리고(\(\boldsymbol{\phi}^+\)) 보고된 class \(y\)를 조금 더 올립니다(\(\boldsymbol{\psi}^+\)). 통과(pass-through)는 모든 물체 class를 내립니다(\(\boldsymbol{\phi}^-\)의 원소는 음수입니다).
+@@ 29 attr
+왼쪽의 센서가 cell 여섯 개가 늘어선 줄로 ray를 보냅니다. ray는 처음 네 cell을 통과하고 다섯 번째 cell에서 끝나며, 거기서 class chair를 보고합니다. cell 아래: 통과한 네 cell에는 각각 phi minus가, 다섯 번째에는 phi plus 더하기 E psi plus가 더해지고, ray가 닿지 않은 여섯 번째에는 아무것도 더해지지 않습니다.
+@@ 30
+센서
+@@ 31
+닿지
+@@ 32
+않음
+@@ 33
+ray 통과: free
+@@ 34
+ray 끝: "chair"
+@@ 35
+h에 더함:
+@@ 36
+label이 붙은 range 측정 하나가 그 ray를 따라 모든 cell을 갱신합니다. 네 cell은 free로, 한 cell은 보고된 class가 차지한 것으로 갱신됩니다.
+@@ 37
+빈틈 채우기: parameter 벡터는 어디서 오는가, 그리고 손으로 하는 세 번의 갱신
+@@ 38
+(16.25)가 말하듯 원소들은 log likelihood ratio입니다. class {free, chair, table}와 다음 센서를 생각합시다. ray는 free cell을 확률 0.9로 통과하고, 어느 class로든 거짓 hit를 각각 확률 0.05로 보고합니다. 점유된 cell은 확률 0.2로 멈추지 않고 통과하며, 멈출 때는 label이 확률 0.75로 맞습니다. 따라서 chair cell은 "hit, chair"를 확률 0.6으로, "hit, table"을 0.2로 줍니다. 그러면
+@@ 39
+이것은 \(\boldsymbol{\phi}^+ = [0, 1.39, 1.39]\), \(\boldsymbol{\psi}^+ = [0, 1.10, 1.10]\), \(\boldsymbol{\phi}^- = [0, -1.50, -1.50]\)인 (16.26)입니다. cell을 \(\mathbf{h} = [0, 0, 0]\)(모든 class가 똑같이 그럴듯함)에서 시작해 chair, table, chair로 label된 hit 세 개를 fusion합니다.
+@@ 40
+softmax는 \(p = [1, 576, 192]/769 = [0.001,\ 0.749,\ 0.250]\)을 줍니다. cell은 거의 확실히 점유되어 있고, chair가 table을 3 대 1로 앞섭니다. 표가 두 개 대 한 개이고, 표 하나가 \(0.6/0.2 = 3\)배의 가치를 갖기 때문입니다.
+@@ 41
+직접 해 보기: "샘플 1개"를 한 번 누르세요. 초기화한 뒤 "샘플 10개"를 누르세요. 그다음 label 정확도를 50%로 놓고 다시 샘플링하세요.
+@@ 42
+눈여겨볼 점: hit 하나만으로도 chair 71%, table 24%, free 6%가 됩니다. 샘플 열 개(chair label 여덟 개, table label 한 개, 통과 한 개)는 chair를 99.95%로 올립니다. 정확도 50%에서는 label에 정보가 없습니다. chair와 table은 동률로 남지만 "free"는 여전히 배제됩니다. 그 증거는 range에서 오기 때문입니다.
+@@ 43
+5. 저장하기: multi-class octree
+@@ 44
+일정한 grid는 넓은 빈 공간에 메모리를 낭비합니다. <strong>octree</strong>(<a href="#d46">8주차 · Day 4</a>)는 공간을 재귀적으로 여덟 개의 octant로 나눕니다. node는 자식이 8개이거나 하나도 없으며, 자식이 없는 node가 <strong>leaf</strong>(단말 노드)입니다. <strong>multi-class octree</strong>에서는 모든 node가 log-odds 벡터를 저장합니다. <span class="src">§16.3.2 · pp. 475–476</span>
+@@ 45
+<strong>갱신.</strong> ray를 tree에 통과시키고, 관측된 leaf를 가장 세밀한 해상도까지 펼친 다음 (16.24)를 적용합니다.
+@@ 46
+<strong>Pruning.</strong> 한 node의 자식 8개가 모두 log-odds가 같은 leaf이면, 자식들을 지우고 부모를 leaf로 만듭니다. 가장 세밀한 cell \(16^3 = 4096\)개로 된 free block은 node 하나로 줄어듭니다. 점유된 영역은 표면만 관측되므로 좀처럼 pruning되지 않습니다.
+@@ 47
+<strong>Clamping.</strong> noise 때문에 같아야 할 cell들도 정확히 같은 값에 이르지 못합니다. \(\mathbf{h}\)의 각 원소를 고정된 구간 안으로 제한하면 cell들이 같은 값에 머물러 pruning될 수 있습니다. 대신 확실성에 가까운 쪽의 정보를 잃습니다.
+@@ 48
+<strong>class는 적게.</strong> 비용은 \(K\)에 선형으로 늘고 pruning될 가능성은 빠르게 떨어지므로, cell은 가장 그럴듯한 class \(\bar{K}\)개만 저장하고 나머지는 "others"로 묶을 수 있습니다.
+@@ 49
+부모의 벡터는 자식 벡터들의 평균일 수도 있고, 보수적으로는 점유되었을 가능성이 가장 큰 자식의 벡터일 수도 있습니다. 여러 로봇이 one-hop 통신으로 각자의 local octree를 합의하면 이런 map 하나를 함께 만들 수 있습니다 (ROAM). <span class="src">§16.3.2 · pp. 476–478</span>
+@@ 50
+Q1. class가 {free, 1, 2}일 때, 어떤 cell의 h = [0, 1.1, −0.7]입니다. class 1의 확률은 얼마입니까?
+@@ 51
+=
+@@ 52
+Q2. 센서는 cell이 class 1이면 확률 0.6으로, class 2이면 0.1로, free이면 0.02로 "hit, class 1"을 보고합니다. 이 관측은 h의 class 2 원소에 얼마를 더합니까?
+@@ 53
+l(z)의 원소 2는 ln[p(z | class 2)/p(z | free)] = ln(0.1/0.02) = ln 5 = 1.61입니다. 다른 label이 붙은 hit도 cell이 free가 아니라는 증거입니다.
+@@ 54
+Q3. 이 장에 따르면, 도시에서 semantic surfel map의 움직일 수 있는 물체를 다루는 규칙 중 어느 것이 더 잘 동작했습니까?
+@@ 55
+움직일 수 있는 class의 점을 모두 제거
+@@ 56
+모두 남기고 ICP를 믿기
+@@ 57
+label 때문에 class 확률이 조금이라도 바뀐 점을 모두 제거
+@@ 58
+저장된 label이 현재 scan과 충돌하는 surfel만 제거
+@@ 59
+주차된 차량은 흔하고 registration에 쓸모가 있습니다. 이를 모두 제거하면 좋은 constraint를 버리게 되므로, label이 충돌하는 surfel만 걸러 냅니다.
+@@ 60
+Q4. multi-class octree에서 free space가 점유된 공간보다 훨씬 잘 압축되는 이유는 무엇입니까?
+@@ 61
+free cell은 아예 저장하지 않아서
+@@ 62
+빈 공간 전체가 통과하는 ray로 관측되어 같은 clamp 값에 이르지만, 물체는 표면만 보여서
+@@ 63
+점유된 cell은 원소당 bit를 더 많이 써서
+@@ 64
+pruning이 class 0에 대해서만 정의되어서
+@@ 65
+pruning에는 같은 자식 8개가 필요합니다. ray는 빈 공간을 어디서나 가로지르고 clamping이 그 값들을 같게 만듭니다. 물체의 내부는 결코 관측되지 않으므로 그 cell들은 표면 cell과 값이 다릅니다.
+@@ 66
+surfel map은 surfel마다 class 하나와 confidence 하나를 저장하며, 충돌하는 label은 confidence를 낮춥니다.
+@@ 67
+range-category observation은 ray마다 range 하나와 class 하나를 줍니다. voxel map은 cell마다 독립적인 class 분포를 저장합니다.
+@@ 68
+"free"에 대한 log-odds로 쓰면 Bayes' rule은 \(\mathbf{h} \leftarrow \mathbf{h} + \mathbf{l}(z)\)이고, softmax가 확률을 돌려줍니다.
+@@ 69
+모델 (16.26)은 ray의 끝점에 \(\boldsymbol{\phi}^+ + \mathbf{E}_{y+1}\boldsymbol{\psi}^+\)를, 가는 길에 \(\boldsymbol{\phi}^-\)를 더합니다. 원소들은 센서의 log likelihood ratio입니다.
+@@ 70
+multi-class octree는 같은 자식들을 pruning합니다. clamping과 class 수 줄이기가 pruning 가능성을 높입니다.
+@@ 71
+<em>SLAM Handbook</em>, §16.3.1 "Point-based and Surfel-based Metric-Semantic SLAM"과 §16.3.2 "Voxel-based Metric-Semantic SLAM", pp. 471–478.
+@@ 72
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (binary Bayes filter의 log-odds 형태, 여기서는 여러 class로 일반화); Hornung, Wurm, Bennewitz, Stachniss, Burgard, <em>OctoMap: An Efficient Probabilistic 3D Mapping Framework Based on Octrees</em>, 2013.
+@@ 73
+풀이 예제의 센서 확률은 설명을 위해 지어낸 값이며, 위젯이 쓰는 값과 같습니다.

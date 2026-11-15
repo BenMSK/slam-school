@@ -1,0 +1,164 @@
+@@ 1
+<span class="eyebrow">20주차 · Day 4</span>
+@@ 2
+3D Gaussian splatting: 투영, 정렬, blending
+@@ 3
+오늘이 끝나면 카메라 Jacobian을 통해 Gaussian의 covariance를 이미지로 투영하고, 투영된 Gaussian들을 앞에서 뒤로 alpha blending하여 픽셀을 계산할 수 있습니다.
+@@ 4
+약 60분 · §14.3 도입부와 §14.3.1, pp. 409–410 읽기 (2쪽) · 20주차 Day 2 필요
+@@ 5
+먼저 읽기: §14.3 도입부와 §14.3.1, pp. 409–410
+@@ 6
+3DGS가 이미지 외에 입력으로 받는 것, 그리고 Gaussian 하나를 parameterize하는 네 가지 (p. 409).
+@@ 7
+식 (14.4): covariance는 직접 저장되지 않고 다른 두 행렬로 만들어집니다.
+@@ 8
+p. 410의 식 (14.5), 그리고 \(\boldsymbol{\Sigma}'\)의 어느 block이 쓰이는지.
+@@ 9
+식 (14.6)과 (14.7), 그다음 정렬, tile, frustum culling에 관한 세 문장.
+@@ 10
+loss (14.8), 그리고 densification과 pruning에 관한 마지막 문장.
+@@ 11
+3DGS는 Day 2의 blending 합을 그대로 두고 opacity를 얻는 곳을 바꿉니다. scene은 반투명 Gaussian blob의 목록입니다. rendering하려면 각 blob을 이미지 위에 납작하게 펴고, blob을 depth 순으로 정렬하고, 한 픽셀을 덮는 blob들을 앞에서 뒤로 섞습니다. 빈 공간에 샘플을 쓰지 않고 모든 단계가 미분 가능하므로, blob을 gradient descent로 사진에 맞출 수 있습니다.
+@@ 12
+1. Gaussian 하나가 저장하는 것
+@@ 13
+각 primitive는 평균 위치 \(\boldsymbol{\mu} \in \R^3\), 크기·모양·방향을 정하는 covariance 행렬 \(\boldsymbol{\Sigma} \in \R^{3\times 3}\), opacity \(o\), 그리고 보는 방향에 따라 달라질 수 있는 색 \(\mathbf{c}\)를 가지며, 색은 spherical-harmonic (SH) 계수로 저장됩니다. 입력은 structure from motion (SfM)으로 얻은 pose가 있는 컬러 이미지 집합과 SfM이 만든 sparse point cloud이며, 이 point cloud에서 초기 Gaussian을 만듭니다. <span class="src">§14.3 · p. 409</span>
+@@ 14
+점 \(\mathbf{x}\)에서 blob의 세기는 정규화 상수를 뺀 Gaussian 함수이므로, 중심에서 1입니다:
+@@ 15
+covariance는 대각 <strong>scaling matrix</strong>(스케일 행렬) \(\mathbf{S}\) (blob의 세 반지름)와 회전 \(\mathbf{R} \in \SO(3)\)으로 만듭니다:
+@@ 16
+빈틈 채우기: covariance를 왜 인수분해하는가
+@@ 17
+covariance는 대칭이고 positive semi-definite여야 합니다: 모든 \(\mathbf{v}\)에 대해 \(\mathbf{v}\T\boldsymbol{\Sigma}\mathbf{v} \ge 0\). gradient descent가 \(\boldsymbol{\Sigma}\)의 자유로운 원소 여섯 개를 직접 조정한다면, step 한 번에 그 집합을 벗어나 "Gaussian"이 더는 Gaussian이 아니게 될 수 있습니다. 인수분해한 형태는 실패할 수 없습니다: \(\mathbf{A} = \mathbf{R}\mathbf{S}\)라 하면, 어떤 \(\mathbf{S}\)와 \(\mathbf{R}\)에 대해서도 \(\mathbf{v}\T\mathbf{A}\mathbf{A}\T\mathbf{v} = \norm{\mathbf{A}\T\mathbf{v}}^2 \ge 0\)입니다.
+@@ 18
+2D 예제. 반지름 \(2\)와 \(0.5\), 30° 회전: \(\cos^2 = 0.75\), \(\sin^2 = 0.25\), \(\cos\sin = 0.433\), 그리고 \(\mathbf{S}\mathbf{S}\T = \diag(4, 0.25)\).
+@@ 19
+확인: trace는 \(4.25 = 4 + 0.25\)이고 행렬식은 \(3.0625 \times 1.1875 - 1.6238^2 = 1.00 = 4 \times 0.25\)로, 회전이 둘 다 보존해야 한다는 사실과 맞습니다.
+@@ 20
+2. Gaussian을 이미지에 투영하기
+@@ 21
+책은 투영된 Gaussian의 covariance를 한 줄로 줍니다:
+@@ 22
+여기서 \(\mathbf{W}\)는 viewing transformation이고 \(\mathbf{J}\)는 projective transformation의 Jacobian이며, 책은 이 투영을 "근사"라고 부릅니다. <span class="src">§14.3.1 · pp. 409–410</span> 각 인자가 무엇을 하는지, 근사가 어디에 있는지 살펴봅니다.
+@@ 23 attr
+위에서 본 그림. 왼쪽의 카메라가 depth 축을 따라 봅니다. 그 앞에 평균 mu, covariance Sigma를 가진 기울어진 타원형 Gaussian이 있습니다. 카메라에서 타원의 가장자리로 가는 ray들이 depth 1의 이미지 선을 자르며, 평균 mu prime, covariance Sigma prime을 가진 짧은 footprint를 표시합니다.
+@@ 24
+=
+@@ 25
+이미지 선 z = 1
+@@ 26
+3D Gaussian: 평균 μ, covariance Σ
+@@ 27
+=
+@@ 28
+평균 μ′, covariance Σ′
+@@ 29
+1D 이미지를 가진 2D 세계에서의 splatting으로, 오늘 위젯의 설정입니다. footprint는 이미지 선 위의 Gaussian으로 취급합니다.
+@@ 30
+빈틈 채우기: 식 (14.5) 유도하기
+@@ 31
+<strong>1단계: 카메라 frame으로.</strong> world 좌표의 점은 카메라 좌표에서 \(\mathbf{x}_c = \mathbf{W}\mathbf{x} + \mathbf{t}\)가 되며, \(\mathbf{W}\)는 world-to-camera 변환의 회전 부분입니다. Gaussian을 선형 변환하면 다시 Gaussian이며, covariance는 \(\cov(\mathbf{A}\mathbf{x} + \mathbf{b}) = \mathbf{A}\boldsymbol{\Sigma}\mathbf{A}\T\)입니다. 따라서 카메라 frame에서 평균은 \(\boldsymbol{\mu}_c = \mathbf{W}\boldsymbol{\mu} + \mathbf{t}\), covariance는 \(\mathbf{W}\boldsymbol{\Sigma}\mathbf{W}\T\)입니다. 이 단계는 정확합니다.
+@@ 32
+<strong>2단계: 평면 \(z = 1\) 위로.</strong> 원근 투영(<a href="#d63">11주차 · Day 3</a>)은 \(\pi(x, y, z) = (x/z,\; y/z)\)입니다. \(z\)로 나누므로 선형이 아니고, Gaussian의 실제 상은 Gaussian이 아닙니다. <a href="#d9">2주차 · Day 3</a>에서 measurement function을 linearization했던 것과 똑같이, \(\pi\)를 평균 주변의 1차 Taylor 전개로 바꿉니다:
+@@ 33
+여기서 \((x, y, z) = \boldsymbol{\mu}_c\)입니다. 근사한 변환은 선형이므로 같은 covariance 규칙이 다시 적용됩니다: \(\boldsymbol{\Sigma}' = \mathbf{J}(\mathbf{W}\boldsymbol{\Sigma}\mathbf{W}\T)\mathbf{J}\T\)는 \(2 \times 2\) 행렬이며, 중심은 \(\boldsymbol{\mu}' = \pi(\boldsymbol{\mu}_c)\)입니다. 책이 왼쪽 위 \(2 \times 2\) block을 말하는 이유는, 흔한 유도에서는 \(\mathbf{J}\)에 세 번째 행이 있어 \(\boldsymbol{\Sigma}'\)가 \(3 \times 3\) 행렬이 되고, 그중 이미지 부분이 그 block이기 때문입니다. 픽셀 단위를 얻으려면 \(\mathbf{J}\)에 focal length를 곱합니다.
+@@ 34
+<strong>숫자로</strong>, 2D 세계(옆 방향 \(x\), depth \(z\))에서 카메라는 원점에 있고 \(\mathbf{W} = \mathbf{I}\)입니다. 여기서 \(\mathbf{J}\)는 한 행 \([\,1/z \;\; -x/z^2\,]\)입니다. \((x, z) = (1, 2)\)에 있고 \(\boldsymbol{\Sigma} = \diag(0.25, 0.04)\)인 Gaussian:
+@@ 35
+같은 ray를 따라 두 배 멀리, \((2, 4)\)로 옮기면: \(\mathbf{J} = [\,0.25 \;\; -0.125\,]\), \(\sigma'^2 = 0.0156 + 0.0006 = 0.0163\), \(\sigma' = 0.127\). depth가 두 배면 footprint는 절반으로, 원근이 요구하는 그대로입니다.
+@@ 36
+3. 앞에서 뒤로, alpha blending
+@@ 37
+픽셀 \(\mathbf{x}_{2D} = [u, v]\T\)에서 Gaussian \(i\)의 opacity는
+@@ 38
+즉 저장된 opacity에 그 픽셀에서의 footprint 값을 곱한 것입니다. 픽셀의 ray를 따라 있는 Gaussian들을 가까운 것부터 depth 순으로 정렬하면, 픽셀 색은
+@@ 39
+<span class="src">§14.3.1 · p. 410</span> <a href="#d116">Day 2</a>의 식 (14.2)와 비교해 보십시오. 거기서는 \(T_i = \prod_{j \lt i}(1 - \alpha_j)\)였습니다. 합은 같습니다. NeRF는 ray를 따라 field를 샘플링해서 \(\alpha_i = 1 - e^{-\sigma_i\delta_i}\)를 얻습니다. 3DGS는 그 픽셀을 마침 덮는 primitive들에서 \(\alpha_i\)를 얻습니다.
+@@ 40
+빈틈 채우기: 루프로 본 compositing
+@@ 41
+식 (14.6)은 두 개의 누적 값, 지금까지의 색 \(C\)와 transmittance \(T\)로 계산합니다. \(C = 0\), \(T = 1\)에서 시작해, 가장 가까운 Gaussian부터 바깥쪽으로 각 Gaussian에 대해:
+@@ 42
+끝에 남은 \(T\)는 모두 배경으로 갑니다. 뒤에서 앞으로 "over" 규칙 \(C \leftarrow \alpha_i\mathbf{c}_i + (1 - \alpha_i)\,C\)로 칠해도 같은 그림이 나옵니다: 배경 \(\mathbf{b}\) 위의 두 층에 대해 둘 다 \(\alpha_1\mathbf{c}_1 + (1 - \alpha_1)\alpha_2\mathbf{c}_2 + (1 - \alpha_1)(1 - \alpha_2)\mathbf{b}\)를 줍니다. 앞에서 뒤로 하는 방식에는 장점이 하나 있습니다: \(T\)가 0에 가까워지면 더 먼 것은 픽셀을 바꿀 수 없으므로 루프를 멈출 수 있습니다.
+@@ 43
+가까운 것부터 \(\alpha = 0.311,\ 0.397,\ 0.708\)인 세 Gaussian: weight는 \(0.311\); \(0.689 \times 0.397 = 0.274\); \(0.689 \times 0.603 \times 0.708 = 0.294\)이고, \(0.689 \times 0.603 \times 0.292 = 0.121\)이 배경에 남습니다. 합은 1입니다.
+@@ 44
+직접 해 보기: 위에서 본 세 Gaussian, 아래쪽의 카메라, 그리고 카메라가 rendering하는 1D 이미지가 있습니다. 분홍 Gaussian을 옆으로, 그다음 카메라에서 멀어지는 쪽으로 끌어 보십시오. opacity와 회전을 바꿔 보십시오. "픽셀 u" 슬라이더를 움직이며 표를 읽어 보십시오.
+@@ 45
+눈여겨볼 점: 기본 픽셀 u = 0.10에서 표는 α = 0.311, 0.397, 0.708과 weight 0.311, 0.274, 0.294를 보여 주고, 0.121이 남습니다: 위의 계산 그대로입니다. Gaussian을 카메라에서 멀리 끌면 이미지 선 위의 footprint가 줄어듭니다. 초록 Gaussian을 분홍 Gaussian 앞으로 끌면 표의 행 순서가 바뀌는데, 각 weight가 그 앞에 있는 모든 것에 의존하기 때문입니다.
+@@ 46
+4. 빠르게 만들기, 학습하게 만들기
+@@ 47
+<strong>정렬과 culling.</strong> blending하려면 시점에서 본 depth 순으로 Gaussian이 정렬되어 있어야 합니다. 이미지를 tile로 나누고 tile마다 GPU radix sort로 정렬합니다. 카메라의 view frustum 밖에 있는 Gaussian은 건너뜁니다 (<strong>frustum culling</strong>). <span class="src">§14.3.1 · p. 410</span>
+@@ 48
+<strong>Loss.</strong> 모든 Gaussian의 parameter는 다음 값을 최소화하여 맞춥니다.
+@@ 49
+이 값은 rendering된 이미지와 실제 이미지를 비교하며, \(\lambda\)는 weight입니다. <span class="src">§14.3.1 · p. 410</span> \(\mathcal{L}_1\)은 픽셀 값의 평균 절대 차이입니다. SSIM(structural similarity index)은 두 이미지의 작은 patch를 국소 밝기, 대비, 패턴으로 비교하므로, 두 번째 항은 각 픽셀을 따로 맞추는 것뿐 아니라 국소 구조를 맞추는 것에 보상을 줍니다.
+@@ 50
+<strong>Gaussian 개수 바꾸기.</strong> gradient descent는 Gaussian을 옮기고, 모양을 바꾸고, 색을 바꿀 수 있지만, 새로 만들 수는 없습니다. 최적화 중에 <strong>adaptive densification and pruning</strong>이 Gaussian의 gradient와 opacity를 바탕으로 개수를 조정합니다. <span class="src">§14.3.1 · p. 410 · Fig. 14.14</span> 원래 방법에서는 gradient가 크면 현재 Gaussian들이 설명하지 못하는 영역이라는 신호이므로 그곳에 Gaussian을 추가하고, opacity가 거의 0으로 떨어진 Gaussian은 제거합니다.
+@@ 51
+위젯으로 돌아가십시오. 아래쪽 띠는 보이지 않는 배치에서 rendering한 목표 이미지입니다. "초기화"를 누른 다음 "목표 쪽으로 gradient step 10번"을 몇 번 누르십시오.
+@@ 52
+loss는 열 step 후 0.0382에서 0.0006으로, 스무 step 후 약 0.0001로 떨어지고, 두 띠가 일치합니다. 위젯의 loss는 각 Gaussian의 색을 별도 채널로 두고 두 이미지 사이의 평균 제곱 차이를 잰 것이며, 식 (14.8)은 아닙니다. 이제 Gaussian마다 "회전" 슬라이더를 열어 보십시오: 목표는 분홍 29°, 파랑 −20°로 그렸는데, 여러분의 결과는 거기서 끝나지 않았을 수 있습니다. 1D 이미지 하나로는 2D scene이 정해지지 않으며, 그래서 학습에는 여러 시점을 씁니다.
+@@ 53
+<strong>"opacity o가 blend의 α이다."</strong> \(\alpha_i = o_i\,G_{2D}\)에는 footprint의 감쇠도 들어 있습니다. 둘은 footprint 중심에서만 같습니다.
+@@ 54
+<strong>"합은 순서와 상관없다."</strong> 각 항에는 앞에 있는 모든 것에 대한 \((1 - \alpha_j)\)의 곱이 붙어 있습니다. 두 Gaussian을 맞바꾸면 weight가 바뀝니다.
+@@ 55
+<strong>"투영된 footprint는 정확하다."</strong> 평균에서 투영을 linearization해서 얻은 것입니다. 카메라로부터의 거리에 비해 큰 Gaussian일수록 오차가 커집니다.
+@@ 56
+<strong>"3DGS는 Gaussian을 통과하는 ray를 추적한다."</strong> 3DGS는 Gaussian을 순회하며 각각을 footprint가 덮는 픽셀에 씁니다. 그것이 rasterization입니다.
+@@ 57
+Q1. 2D 세계에서 한 Gaussian이 광축 위 (x, z) = (0, 4)에 있고 Σ = diag(0.16, 0.09)입니다. 카메라는 원점에 있습니다. 이미지 선 z = 1 위에서 footprint의 표준편차 σ′는 얼마입니까?
+@@ 58
+J = [1/z, −x/z²] = [0.25, 0]. σ′² = 0.25² × 0.16 = 0.01이므로 σ′ = 0.1. 광축 위에서는 depth 방향 분산 0.09가 1차 효과를 내지 않습니다.
+@@ 59
+Q2. 한 픽셀에서 앞쪽의 빨간 Gaussian은 α = 0.6이고 그 뒤의 파란 Gaussian은 α = 0.5입니다. 파란 Gaussian의 weight는 얼마입니까?
+@@ 60
+파랑의 weight는 자기 α에 그 앞의 transmittance를 곱한 값입니다: 0.5 × (1 − 0.6) = 0.2. 빨강은 0.6이고, 0.4 × 0.5 = 0.2가 배경에 닿습니다.
+@@ 61
+Q3. 한 Gaussian의 opacity가 o = 0.8이고 1D footprint의 표준편차가 σ′입니다. footprint 중심에서 2σ′ 떨어진 픽셀에서 α는 얼마입니까?
+@@ 62
+G = exp(−½ · 2²) = e⁻² = 0.135이므로 α = 0.8 × 0.135 = 0.108.
+@@ 63
+Q4. covariance를 자유로운 대칭 행렬이 아니라 R S Sᵀ Rᵀ로 저장하는 이유는 무엇입니까?
+@@ 64
+숫자를 더 적게 씁니다
+@@ 65
+이미지로의 투영이 정확해집니다
+@@ 66
+R과 S가 어떤 값이든 유효한 (positive semi-definite) covariance가 되므로, gradient step이 이를 망가뜨릴 수 없습니다
+@@ 67
+depth 정렬이 필요 없어집니다
+@@ 68
+optimizer가 scale과 회전을 어떻게 바꾸든, 모든 v에 대해 vᵀΣv = ‖SᵀRᵀv‖² ≥ 0입니다.
+@@ 69
+Q5. 식 (14.2)와 (14.6)은 같은 blending 합입니다. 무엇이 다릅니까?
+@@ 70
+3DGS는 뒤에서 앞으로, NeRF는 앞에서 뒤로 섞습니다
+@@ 71
+αᵢ를 얻는 곳: NeRF에서는 ray를 따라 샘플링한 density field, 3DGS에서는 픽셀을 덮는 투영된 primitive
+@@ 72
+NeRF의 weight는 합이 1이고 3DGS의 weight는 그렇지 않습니다
+@@ 73
+NeRF의 합만 미분 가능합니다
+@@ 74
+둘 다 transmittance ∏(1 − αⱼ)를 쓰는, 앞에서 뒤로의 alpha blending입니다. NeRF는 ray 위 모든 곳에 샘플을 씁니다. 3DGS는 그 픽셀에 떨어지는 primitive만 방문합니다.
+@@ 75
+3D Gaussian은 평균, covariance \(\boldsymbol{\Sigma} = \mathbf{R}\mathbf{S}\mathbf{S}\T\mathbf{R}\T\), opacity, 그리고 시점에 따라 달라지는 색을 저장합니다.
+@@ 76
+이미지 속 footprint의 covariance는 \(\boldsymbol{\Sigma}' = \mathbf{J}\mathbf{W}\boldsymbol{\Sigma}\mathbf{W}\T\mathbf{J}\T\)입니다: 카메라 frame으로 회전한 다음, 평균에서 투영을 linearization합니다.
+@@ 77
+픽셀은 그 픽셀을 덮는, depth 순으로 정렬된 Gaussian들에 대한 \(\sum_i \mathbf{c}_i\alpha_i\prod_{j \lt i}(1 - \alpha_j)\)이며, \(\alpha_i = o_i G_{2D}\)입니다.
+@@ 78
+tile, tile별 정렬, frustum culling이 이를 빠르게 만듭니다. L1 + SSIM loss와 densification, pruning이 학습을 가능하게 합니다.
+@@ 79
+<em>SLAM Handbook</em>, §14.3 도입부와 §14.3.1 "Method Overview", pp. 409–410, 식 (14.4)–(14.8), Figures 14.13–14.14.
+@@ 80
+Zwicker, Pfister, van Baar, Gross, <em>EWA Volume Splatting</em>, 2001 (원근 투영을 linearization하여 3D Gaussian을 투영하기).
+@@ 81
+Kerbl, Kopanas, Leimkühler, Drettakis, <em>3D Gaussian Splatting for Real-Time Radiance Field Rendering</em>, 2023 (인수분해된 covariance, 그리고 densification과 pruning의 발동 조건).
+@@ 82
+Porter와 Duff, <em>Compositing Digital Images</em>, 1984 ("over" 규칙). Wang, Bovik, Sheikh, Simoncelli, <em>Image Quality Assessment: From Error Visibility to Structural Similarity</em>, 2004 (SSIM).

@@ -1,0 +1,212 @@
+@@ 1
+<span class="eyebrow">Week 21 · Day 5</span>
+@@ 2
+Deformable SLAM: when nothing in the scene stands still
+@@ 3
+After today you can explain why reconstructing a deforming scene from one camera needs priors, evaluate an as-rigid-as-possible regularizer on a small deformation graph, and describe the tracking and mapping threads of a deformable SLAM system.
+@@ 4
+About 60 min · Read §15.4 and §15.5, pp. 446–453 (8 pages) · Needs Week 12 Day 1 and Week 8 Day 2
+@@ 5
+Read first: §15.4 and §15.5, pp. 446–453
+@@ 6
+The three panels of Figure 15.14 (p. 447): in each, what moves and what is fixed?
+@@ 7
+The template and the isometric deformation model (p. 447), and the "Floating Map Ambiguity" (p. 448).
+@@ 8
+The open questions under "Deformable SLAM" in §15.5 (p. 452).
+@@ 9
+If every point may move freely in every frame, one camera does not provide enough equations to locate the points, let alone the camera. Deformable SLAM becomes solvable by assuming how surfaces deform: smoothly in time, like their neighbours, and without stretching. The rigid part of what the camera sees is then assigned to the camera's own motion and the rest to the scene.
+@@ 10
+1. The problem, and why it is under-constrained
+@@ 11
+If only part of the scene deforms, the robot localizes against the static background as on Day 2, and what remains is reconstruction of a deforming object with known sensor poses. <strong>Deformable SLAM</strong> is the general case with no visible rigid part. The motivating application is minimally invasive surgery, where a monocular camera sees only deforming organs. The related vision problem is <strong>non-rigid structure from motion (NRSfM)</strong>: a point has a different 3D position in every frame, so the map stores a 3D <em>trajectory</em> per point. <span class="src">§15.4 · p. 446</span>
+@@ 12
+Filling the gap: count the unknowns
+@@ 13
+Take \(N\) points seen in \(F\) images. Each observation is a pixel, two numbers.
+@@ 14
+Unknowns
+@@ 15
+Equations
+@@ 16
+Rigid scene, moving camera (<a href="#d65">Week 11 · Day 5</a>)
+@@ 17
+\(3N + 6F - 7\), the 7 being the gauge freedom of <a href="#d70">Week 12 · Day 4</a>
+@@ 18
+353 against 2000
+@@ 19
+Deforming scene, one fixed camera
+@@ 20
+3000 against 2000
+@@ 21
+Deforming scene, depth camera
+@@ 22
+3000 against 3000
+@@ 23
+In the middle row every point in every frame can slide along its viewing ray without changing any pixel: \(NF = 1000\) free depths. More data does not help, because each frame brings as many new unknowns as it removes. The missing equations must come from <strong>priors</strong>. The book names temporal smoothness (a point's trajectory is smooth over time) and spatial smoothness (a point deforms like its neighbours). <span class="src">§15.4.1.1 · p. 446</span> With depth the counts already balance and the priors over-constrain the problem, which is why the book treats that case first. <span class="src">§15.4.2 · p. 449</span>
+@@ 24
+2. From NRSfM to deformable SLAM
+@@ 25
+Classical NRSfM assumes a fixed camera and a moving object with no static background: a hand, a waving flag, a jumping person. Most frames show the whole object. Each point's motion mixes a rigid motion of the object with a local deformation; the rigid part is never computed separately, but it supplies parallax, which makes the estimation well conditioned. <span class="src">§15.4.1.1 · pp. 446–447</span>
+@@ 26
+<strong>Shape from template (SfT)</strong> adds a strong prior: the textured 3D shape of the object at rest, the <strong>template</strong>, is known, and only the deformation is recovered. One model is <strong>isometric</strong> deformation: the geodesic distance between surface points, the shortest path within the surface, is preserved. Paper bends this way; rubber does not. It is well-posed and led to stable real-time solutions; the alternative jointly minimizes a deformation energy and the reprojection error. Without a template, early NRSfM assumed an orthographic camera, valid only for distant objects, and a low-dimensional basis for the trajectories. Close-ups need a perspective camera, where isometry has also worked well. <span class="src">§15.4.1.1 · pp. 447–448</span>
+@@ 27
+Classical NRSfM
+@@ 28
+Deformable SLAM
+@@ 29
+Fixed
+@@ 30
+Moving; its trajectory is estimated too
+@@ 31
+Rigid part of the observed motion
+@@ 32
+Left inside each point's motion
+@@ 33
+Assigned to the camera trajectory
+@@ 34
+Field of view
+@@ 35
+Most frames see the whole object
+@@ 36
+Close-up and exploratory: frames see different regions
+@@ 37
+Processing
+@@ 38
+Batch, over all images
+@@ 39
+Causal, real-time: at time \(k\) only frames \(1 \dots k\)
+@@ 40
+The second row is a hypothesis, not a fact. With no static background the images cannot tell "the tissue drifted right" from "the camera moved left". Separating the rigid from the non-rigid component is ill-posed in general, which the book calls the <strong>floating map ambiguity</strong>; priors on the displacements of the deformable object make the separation possible. <span class="src">§15.4.1.2 · p. 448</span>
+@@ 41
+3. With depth: a canonical map and a deformation graph
+@@ 42
+RGB-D and stereo cameras measure depth. DynamicFusion, which the book calls the seminal work on deformable 3D SLAM from RGB-D data, builds a <strong>canonical map</strong>, the scene's shape at rest, and deforms it to explain the current depth image, combining a form of <strong>embedded deformation (ED) graph</strong> with an <strong>as-rigid-as-possible</strong> regularizer. An ED model discretizes the space of deformations as a graph, which speeds up dense reconstruction. <span class="src">§15.4.2 · p. 449</span>
+@@ 43
+Filling the gap: what a deformation graph and "as rigid as possible" compute
+@@ 44
+A <strong>deformation graph</strong> is a sparse set of nodes spread over the surface. Node \(i\) has a rest position \(\mathbf{q}_i\), a current position \(\mathbf{p}_i\), and a rotation \(\mathbf{R}_i\); edges join nearby nodes. Each dense surface point follows a blend of the transforms of the nodes near it, so a few hundred node transforms stand in for millions of points.
+@@ 45
+The <strong>as-rigid-as-possible</strong> energy asks every node's neighbourhood to move as a rigid piece:
+@@ 46
+The energy is zero exactly when every neighbourhood has only rotated and translated, so bending is cheap and stretching or shearing is expensive.
+@@ 47
+<strong>One node by hand, in the plane.</strong> Rest edges \(\mathbf{e}_1 = (1, 0)\), \(\mathbf{e}_2 = (0, 1)\); current edges \(\mathbf{e}'_1 = (0.8, 0.6)\), \(\mathbf{e}'_2 = (-0.6, 0.8)\). With \(\mathbf{a} \times \mathbf{b} = a_x b_y - a_y b_x\), the best rotation angle is
+@@ 48
+Rotating the rest edges by \(36.9^\circ\) gives exactly the current edges, so this node contributes 0. The simpler prior "neighbours move alike", \(\sum \norm{(\mathbf{p}_i - \mathbf{p}_j) - (\mathbf{q}_i - \mathbf{q}_j)}^2\), gives \(\norm{(-0.2, 0.6)}^2 + \norm{(-0.6, -0.2)}^2 = 0.8\): it punishes a pure rotation that deforms nothing.
+@@ 49
+Minimizing \(E_{\text{ARAP}}\) alternates two easy steps. With positions fixed, each \(\mathbf{R}_i\) has the closed form above (in 3D, an SVD as in <a href="#d74">Week 13 · Day 2</a>). With rotations fixed, the energy is quadratic in the positions, and its gradient vanishes when \(\sum_{j}(\mathbf{p}_i - \mathbf{p}_j) = \sum_{j} \tfrac12(\mathbf{R}_i + \mathbf{R}_j)(\mathbf{q}_i - \mathbf{q}_j)\) at every free node, a linear system.
+@@ 50
+Try it: drag the round handle, and switch the regularizer.
+@@ 51
+Notice: at the start the handle has been pulled down and to the left. With no regularizer only the handle moves, and the strip's departure from rigid motion is 89%. "Neighbours move alike" spreads the displacement but shears every cell: 25%. As-rigid-as-possible lets each piece rotate, and the strip bends like a ruler: 6%. Now drag the handle far beyond the strip's length. No rigid solution exists, and the regularizer spreads the stretch over all edges.
+@@ 52
+After DynamicFusion, VolumeDeform added photometric information, and KillingFusion enforced smooth, nearly isometric deformations (Figure 15.16). All three store the map as an SDF, which scales poorly and limits exploration; SurfelWarp uses surfels instead. For stereo in surgery, MIS-SLAM combines as-rigid-as-possible deformation with the ED model. <span class="src">§15.4.2 · p. 449</span>
+@@ 53
+4. One camera: the tracking and mapping threads
+@@ 54
+A monocular deformable SLAM system keeps the two threads of visual SLAM (<a href="#d67">Week 12 · Day 1</a>): tracking at frame rate, mapping at keyframe rate. <strong>Tracking</strong> resembles shape from template: a shape at rest is assumed available for the area being explored, and each frame estimates the camera pose and the deformation of that local template. <strong>Mapping</strong> takes point tracks and recomputes the templates. <span class="src">§15.4.3–15.4.4 · pp. 450–451</span>
+@@ 55
+Stage
+@@ 56
+DefSLAM
+@@ 57
+NR-SLAM
+@@ 58
+Tracking
+@@ 59
+Deformation energy inspired by a physics-based elastic model
+@@ 60
+Spatial as-rigid-as-possible and viscous temporal regularizers
+@@ 61
+Mapping
+@@ 62
+Isometric NRSfM on covisible keyframes gives a template per keyframe; assumes planar topology
+@@ 63
+A dynamic deformable graph copes with any topology; a visco-elastic model inside a deformable bundle adjustment
+@@ 64
+Feature matching
+@@ 65
+ORB proved inadequate for close-frame tracking in medical scenes; Lucas-Kanade flow (<a href="#d68">Week 12 · Day 2</a>) does better, being invariant to affine lighting changes. ORB with a bag of words still relocalizes.
+@@ 66
+Lucas-Kanade tracking
+@@ 67
+Initialization
+@@ 68
+Isometric NRSfM computes the first templates from scratch; initial matches assume a planar scene
+@@ 69
+Rigid structure from motion gives the initial guess
+@@ 70
+Extending the map
+@@ 71
+Handled by isometric NRSfM once matches for the new points are found
+@@ 72
+New points are triangulated with a rigid and a non-rigid algorithm, and the fitting model is selected
+@@ 73
+5. Where the field stands
+@@ 74
+§15.5 closes with open problems. <span class="src">§15.5 · pp. 451–453</span> Tracking objects helps state estimation under large occlusions and many moving objects, at higher cost. NeRF and 3D Gaussian splatting (<a href="#d115">Week 20</a>) show promise for dynamic scenes, with real-time cost and map management unsolved. Data association is still hard, and the trend is toward learned priors. Lifelong operation needs memory management: what to keep, how to summarize or marginalize, when to forget. For deformable SLAM the basic questions are open: under what conditions can camera trajectory and deformation both be estimated, can the object's rigid motion be told from the camera's, are there local minima? The stated goal is spatio-temporal AI, a world model that gives a consistent history and predicts what comes next.
+@@ 75
+<strong>"As rigid as possible means the object stays rigid."</strong> Each small neighbourhood should move rigidly, each with its own rotation. The whole can bend a great deal.
+@@ 76
+Q1. A fixed monocular camera observes 50 points on a deforming surface in 20 frames. With no priors, how many unknowns and equations are there?
+@@ 77
+150 unknowns, 2000 equations
+@@ 78
+3000 unknowns, 2000 equations
+@@ 79
+2000 unknowns, 3000 equations
+@@ 80
+3000 unknowns, 3000 equations
+@@ 81
+Every point has its own 3D position in every frame: 3 × 50 × 20 = 3000. Each observation is a pixel: 2 × 50 × 20 = 2000. One depth per observation is undetermined.
+@@ 82
+Q2. A node has rest edges (1, 0) and (0, 1) and current edges (0, 1) and (−1, 0). What are its as-rigid-as-possible energy and its "neighbours move alike" energy?
+@@ 83
+2 and 2
+@@ 84
+4 and 0
+@@ 85
+0 and 2
+@@ 86
+0 and 4
+@@ 87
+The current edges are the rest edges rotated by 90°, so the best rotation fits exactly: ARAP energy 0. Without a rotation the differences are (−1, 1) and (−1, −1), with squared lengths 2 + 2 = 4.
+@@ 88
+Q3. In deformable SLAM, part of the observed motion could be explained by a rigid transformation. Where does the working hypothesis put it?
+@@ 89
+In the camera trajectory
+@@ 90
+In the deformation of the scene
+@@ 91
+Half in each
+@@ 92
+It is discarded as an outlier
+@@ 93
+Whatever a rigid transformation can explain is included in the camera trajectory.
+@@ 94
+Q4. Why did Lucas-Kanade optical flow replace ORB matching for frame-to-frame tracking in medical scenes?
+@@ 95
+It needs no camera calibration
+@@ 96
+It recognizes places after tracking is lost
+@@ 97
+It is invariant to affine lighting changes and performed better in close-frame tracking
+@@ 98
+It measures depth directly
+@@ 99
+The book credits LK's better performance there to its invariance to affine lighting changes.
+@@ 100
+A deforming scene seen by one camera has \(3NF\) unknowns and \(2NF\) equations. Temporal and spatial priors, or a depth sensor, supply the rest.
+@@ 101
+Shape from template assumes a known rest shape; isometry, preserving distances within the surface, is the prior that works under perspective.
+@@ 102
+Deformable SLAM moves the camera too, sees the scene in close-up pieces, runs causally, and assigns the rigid part of the motion to the camera.
+@@ 103
+With depth, a canonical map is warped by a deformation graph regularized to be as rigid as possible: neighbourhoods may rotate, not stretch.
+@@ 104
+<em>SLAM Handbook</em>, §15.4 "Deformable SLAM" and §15.5 "Further Readings &amp; Recent Trends", pp. 446–453, Figures 15.14–15.16.
+@@ 105
+Sorkine and Alexa, <em>As-Rigid-As-Possible Surface Modeling</em>, 2007 (the energy and its alternating local and global steps).
+@@ 106
+Sumner, Schmidt, Pauly, <em>Embedded Deformation for Shape Manipulation</em>, 2007 (deformation graphs); Hartley and Zisserman, <em>Multiple View Geometry</em>, 2004 (the 7-parameter gauge).

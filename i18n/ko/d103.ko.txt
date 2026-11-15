@@ -1,0 +1,214 @@
+@@ 1
+<span class="eyebrow">18주차 · Day 1</span>
+@@ 2
+Leg odometry: 아이디어, frame, state
+@@ 3
+오늘이 끝나면 legged robot이 자기 joint로 자신의 움직임을 측정하는 방법을 설명하고, 여기에 쓰이는 네 종류의 기준 frame을 말하고, 식 (12.1)의 state 벡터를 읽을 수 있습니다.
+@@ 4
+약 60분 · 12장 도입부와 §12.1.1–12.1.3, pp. 333–336 읽기 (4쪽) · 11주차 Day 1 필요
+@@ 5
+먼저 읽기: 12장 도입부와 §12.1.1–12.1.3, pp. 333–336
+@@ 6
+leg odometry가 나뉘는 두 하위 문제 (p. 334의 번호 목록).
+@@ 7
+항상 존재하는 frame은 무엇이고, 발이 땅에 닿을 때마다 새로 만들어지는 frame은 무엇인지 (§12.1.2, p. 335, Figure 12.1).
+@@ 8
+p. 336의 식 (12.1)에서 어떤 양은 world 좌표로, 어떤 양은 base 좌표로 쓰여 있는지.
+@@ 9
+미끄러지지 않고 땅을 딛고 선 발은 고정된 점이고, joint encoder는 그 점이 몸체에 대해 어디에 있는지 로봇에게 알려 줍니다. 그러니 발이 그대로 있는 동안 다리 모양이 바뀌는 것은 모두 몸체의 움직임입니다. <strong>Leg odometry</strong>(다리 기반 주행 거리 측정)는 이 관찰을 측정으로 바꾼 것입니다. 어느 발이 땅을 딛고 있는지 정하고, 그 발들의 joint에서 몸체의 움직임을 읽어 냅니다.
+@@ 10
+1. 바퀴에서 다리로
+@@ 11
+Wheel odometry는 바퀴가 얼마나 돌았는지 셉니다. 반지름 0.1 m인 바퀴의 encoder가 3바퀴를 보고했다면, 헛돌지 않았다는 전제에서 바퀴는 \(2\pi \times 0.1 \times 3 = 1.885\) m를 굴러간 것입니다. "leg odometry"라는 이름은 여기서 빌려 온 것입니다. 로봇은 땅에 닿는 부분의 움직임으로 자신의 움직임을 추론합니다. <span class="src">§12.1 · p. 334</span>
+@@ 12
+다리는 바퀴와 달리 땅에 닿았다 떨어졌다 합니다. stride마다 발을 들어 앞으로 옮기는 <strong>swing phase</strong>(유각기, 책은 aerial phase라고도 부릅니다)와 발이 미끄러지지 않고 땅에 머무는 <strong>stance phase</strong>(입각기)가 있습니다. 로봇을 미는 것은 stance 다리뿐이므로, 몸체가 어떻게 움직였는지 알려 주는 것도 stance 다리뿐입니다. 여기서 이 장의 나머지가 푸는 두 하위 문제가 나옵니다. <span class="src">§12.1 · p. 334</span>
+@@ 13
+<strong>Contact estimation</strong>(접촉 추정): 지금 어느 다리가 stance에 있습니까? (<a href="#d106">Day 4</a>)
+@@ 14
+<strong>Motion estimation</strong>(운동 추정): 그 다리들의 joint가 주어졌을 때 몸체는 어떻게 움직였습니까? (<a href="#d105">Day 3</a>)
+@@ 15 attr
+두 stride 동안 trot으로 걷는 사족 보행 로봇의 타임라인. 네 다리마다 한 행이 있고, 막대는 stance phase, 빈칸은 swing phase입니다. 왼쪽 앞다리와 오른쪽 뒷다리가 함께 stance에 있고, 오른쪽 앞다리와 왼쪽 뒷다리가 반 stride 늦게 함께 stance에 있습니다. 세로 표시선은 왼쪽 앞다리와 오른쪽 뒷다리만 stance에 있는 한 순간을 가리킵니다.
+@@ 16
+이 순간 stance인 다리는 둘뿐
+@@ 17
+왼쪽 앞
+@@ 18
+오른쪽 앞
+@@ 19
+왼쪽 뒤
+@@ 20
+오른쪽 뒤
+@@ 21
+=
+@@ 22
+=
+@@ 23
+두 stride
+@@ 24
+trot을 나타낸 우리 그림입니다. 대각선 다리 쌍이 번갈아 땅을 딛습니다. 순간마다 odometry에 쓸 수 있는 다리의 집합이 달라지므로 contact estimation이 먼저입니다.
+@@ 25
+로봇에 이미 카메라, LiDAR, IMU가 있는데 왜 굳이 다리를 쓸까요? 보행 제어기는 로봇이 넘어지지 않도록 drift가 작은 pose와 속도를 높은 빈도로 받아야 하고, 다리는 그 정보를 공짜로 줍니다. 이 장은 leg odometry를 wheel odometry나 IMU preintegration(<a href="#d94">16주차 · Day 4</a>)과 같은 자격으로 SLAM factor graph에 들어가는 측정 하나로 다룹니다. <span class="src">Ch 12 opening · p. 333</span>
+@@ 26
+한 발로 서서 무릎을 굽혀 보세요. 발은 움직이지 않았으니 몸이 움직인 거예요. 자기 관절 각도를 알면 얼마나 움직였는지도 알 수 있어요. 다리 달린 로봇은 이걸 1초에 수백 번 하고, 한 걸음 내디딜 때마다 다른 발로 바꿔 가며 해요.
+@@ 27
+2. 아이디어의 기원
+@@ 28
+시기
+@@ 29
+일어난 일
+@@ 30
+추정에 중요한 이유
+@@ 31
+바퀴로는 지나갈 수 없는 지형을 건너려고 만든 최초의 보행 기계. General Electric의 Walking Truck은 무게가 1400 kg이었고 사람이 조종했습니다.
+@@ 32
+아직 자율성이 없으므로 state estimator도 없습니다.
+@@ 33
+1980년대 후반
+@@ 34
+Raibert의 한 발, 두 발, 네 발 기계가 동적 보행을 보여 줍니다.
+@@ 35
+실제 환경에서 쓸 가능성이 보이고, 이제 자율성을 위해 odometry가 필요해집니다.
+@@ 36
+초기 leg odometry
+@@ 37
+Roston과 Krotkov가 leg kinematics로 Ambler 육족 로봇(2.5톤)의 움직임을 추정합니다. 이후 연구는 particle filter와 Kalman filter로 IMU와 비전을 더합니다.
+@@ 38
+처음에는 kinematics만, 나중에는 다른 센서와 융합.
+@@ 39
+=
+@@ 40
+어떤 지형에서든 동작하는 사족 보행 로봇용 filtering 기반 kinematic-inertial estimator로, 이후 이족 보행 로봇으로 확장되었습니다.
+@@ 41
+지금도 대부분의 시스템이 따르는 틀 (<a href="#d105">Day 3</a>).
+@@ 42
+=
+@@ 43
+LiDAR와 stereo 비전을 더한 휴머노이드의 whole-body estimation. 대부분 Kalman filter이고, 최적화나 factor graph 방법은 일부입니다.
+@@ 44
+Leg odometry가 여러 입력 중 하나가 됩니다.
+@@ 45
+2018–2021, DARPA SubT, 그 이후
+@@ 46
+극한 환경의 legged robot, 사족·이족 보행 로봇용 factor graph estimator, invariant filter.
+@@ 47
+다른 센서와의 체계적인 융합 (<a href="#d107">Day 5</a>).
+@@ 48
+3. 네 종류의 frame
+@@ 49
+이 장은 다음 기준 frame을 씁니다 (Figure 12.1). <span class="src">§12.1.2 · p. 335</span>
+@@ 50
+땅에 고정된 <strong>inertial (world) frame</strong>(관성 좌표계) \(\mathcal{F}^w\).
+@@ 51
+로봇 본체에 고정된 <strong>base frame</strong> \(\mathcal{F}^b\). 본체는 어디에도 고정되어 있지 않아서 <strong>floating base</strong>라고 부릅니다. IMU는 정확히 \(\mathcal{F}^b\)에 있다고 가정합니다.
+@@ 52
+각 다리 끝에 있는 <strong>foot frame</strong> \(\mathcal{F}^{f}\).
+@@ 53
+발이 땅에 닿을 때마다 만들어지는 <strong>contact frame</strong> \(\mathcal{F}^k\). 로봇이 아니라 땅에 고정됩니다. 휴머노이드의 평평한 발이라면 착지 순간의 foot frame과 일치합니다. 사족 보행 로봇의 점 모양 발이라면 발이 정하는 것은 위치뿐입니다.
+@@ 54 attr
+화살표로 이어져 삼각형을 이루는 세 상자. world frame에서 base frame으로 가는 화살표는 구하려는 body pose입니다. base frame에서 contact frame으로 가는 화살표는 다리의 forward kinematics로, encoder로부터 알 수 있습니다. world frame에서 contact frame으로 가는 화살표는 stance 동안 땅에 고정됩니다.
+@@ 55
+=
+@@ 56
+=
+@@ 57
+=
+@@ 58
+= 착지한 발
+@@ 59
+body pose (구할 값)
+@@ 60
+fk(q), encoder에서
+@@ 61
+stance 동안 땅에 고정
+@@ 62
+삼각형 하나로 보는 leg odometry. 발이 땅을 딛고 있는 동안 두 변을 알고 있으니, 세 번째 변인 body pose가 따라 나옵니다.
+@@ 63
+빈틈 채우기: \(\mathbf{T}^{a}_{b}\) 읽는 법
+@@ 64
+이 장은 pose를 첨자 두 개가 붙은 \(4 \times 4\) 행렬로 쓰면서 그 첨자를 따로 설명하지 않습니다. \(\mathbf{T}^{w}_{b}\)는 frame \(w\)에서 표현한 frame \(b\)의 pose입니다. 여기에는 회전 \(\mathbf{R}^w_b\)와 이동 \(\mathbf{t}^w_b\)(\(w\) 좌표로 쓴 \(b\)의 원점)가 들어 있고, 점의 좌표를 \(b\)에서 \(w\)로 바꿉니다.
+@@ 65
+이번 주에는 두 규칙이면 충분합니다.
+@@ 66
+<strong>합성:</strong> \(\mathbf{T}^w_f = \mathbf{T}^w_b\,\mathbf{T}^b_f\). 앞 행렬의 아래 첨자는 뒤 행렬의 위 첨자와 같아야 하고, 둘은 서로 지워집니다.
+@@ 67
+<strong>역변환:</strong> \((\mathbf{T}^w_b)^{-1} = \mathbf{T}^b_w = \begin{bmatrix} \mathbf{R}\T & -\mathbf{R}\T\mathbf{t} \\ \mathbf{0} & 1 \end{bmatrix}\). 첨자를 맞바꿉니다.
+@@ 68
+좌표 \((x, z)\)를 쓰는 수직 평면에서 예제를 풀어 봅니다. \(x\)는 앞, \(z\)는 위입니다. base는 \(\mathbf{t}^w_b = (2.0,\ 0.65)\) m에 있고 \(10^\circ\)만큼 pitch되어 있으므로 \(\mathbf{R}^w_b = \begin{bmatrix} 0.985 & -0.174 \\ 0.174 & 0.985 \end{bmatrix}\)입니다. encoder에 따르면 발은 base frame에서 \(\mathbf{p}^b = (0.15,\ -0.65)\) m에 있습니다. world에서는 다음과 같습니다.
+@@ 69
+발은 \(z = 0\)인 평평한 땅보다 3.6 cm 위에 있습니다. 이 pitch에서는 그 다리가 공중에 떠 있습니다. pitch가 없다면(\(\mathbf{R} = \mathbf{I}\)) 같은 joint 각도에서 발은 \((2.15,\ 0)\), 즉 땅 위에 놓입니다. 몸체의 방향은 위치만큼 중요합니다.
+@@ 70
+4. State
+@@ 71
+legged robot의 전체 state는 base의 pose와 속도, 그리고 모든 joint의 위치와 속도입니다. 이 장은 joint가 각자의 센서로 직접 측정된다고 가정하므로(<a href="#d104">Day 2</a>), 추정할 것은 base만 남습니다. <span class="src">§12.1.3 · pp. 335–336</span>
+@@ 72
+기호
+@@ 73
+좌표계
+@@ 74
+base의 위치
+@@ 75
+world 좌표
+@@ 76
+base의 방향
+@@ 77
+base의 선속도
+@@ 78
+base 좌표
+@@ 79
+base의 각속도
+@@ 80
+\((\mathbf{v}, \boldsymbol{\omega})\) 쌍을 base의 <strong>twist</strong>라고 부릅니다. 여기서는 loop을 닫는 것이 없으므로 이 장은 "state estimation"과 "odometry"를 같은 말로 쓰고, odometry는 loop closure가 없는 SLAM이라는 점을 다시 짚습니다. <span class="src">§12.1.3 · p. 335</span>
+@@ 81
+빈틈 채우기: base 좌표로 쓴 속도
+@@ 82
+\(\mathbf{v}^b_b\)는 world에 대한 base의 속도이고, 세 숫자는 base 자신의 축을 따라 쓴 것입니다. world frame 속도를 얻으려면 회전시키면 됩니다. \(\mathbf{v}^w = \mathbf{R}\,\mathbf{v}\). 예를 들어 로봇이 0.5 m/s로 똑바로 앞으로 걷는다면 어느 쪽을 보든 \(\mathbf{v} = (0.5, 0, 0)\)입니다. 로봇이 world의 \(y\)축 방향을 보고 있다면(yaw \(90^\circ\)) 다음과 같습니다.
+@@ 83
+여기서는 base 좌표가 자연스러운 선택입니다. IMU와 다리 joint가 모두 base에 붙어 있으므로, 이들이 측정한 값은 base 좌표로 나옵니다. gyroscope에서도 같은 규칙을 <a href="#d91">16주차 · Day 1</a>에서 보았습니다.
+@@ 84
+<strong>"contact frame은 로봇에 붙은 frame이다."</strong> 땅에 붙어 있습니다. 착지할 때 만들어지고, 발이 들리면 버려집니다.
+@@ 85
+<strong>"(12.1)의 속도는 world frame 속도이다."</strong> \(\mathbf{v}\)와 \(\boldsymbol{\omega}\)는 둘 다 base 좌표입니다. world를 기준으로 하는 것은 \(\mathbf{t}\)와 \(\mathbf{R}\)뿐입니다.
+@@ 86
+<strong>"땅에 닿은 발은 stance인 발이다."</strong> stance는 접촉점이 움직이지 않는다는 뜻입니다. 땅에 닿은 채 미끄러지는 발은 믿을 만한 정보를 주지 않습니다 (<a href="#d106">Day 4</a>).
+@@ 87
+Q1. 반지름 0.15 m인 바퀴가 헛돌지 않고 2바퀴 돌았습니다. 차량은 얼마나 굴러갔습니까?
+@@ 88
+거리 = 둘레 × 회전 수 = 2π × 0.15 × 2 = 1.88 m. Leg odometry는 "바퀴가 헛돌지 않았다"를 "stance 발이 미끄러지지 않았다"로 바꿉니다.
+@@ 89
+Q2. 발이 땅에 닿을 때마다 새로 만들어지는 frame은 무엇이고, 무엇에 붙어 있습니까?
+@@ 90
+contact frame, 땅에 붙음
+@@ 91
+foot frame, 땅에 붙음
+@@ 92
+contact frame, 발에 붙음
+@@ 93
+base frame, IMU에 붙음
+@@ 94
+contact frame은 착지 순간에 정의되고 땅에 고정된 채 있습니다. foot frame은 stance뿐 아니라 swing에서도 발과 함께 움직입니다.
+@@ 95
+Q3. 평면(x는 앞, z는 위)에서 base가 똑바로 서 있고(R = I) t = (1.0, 0.5) m에 있습니다. forward kinematics에 따르면 발은 base frame에서 (0.2, −0.5) m에 있습니다. world에서 발은 어디에 있습니까?
+@@ 96
+R = I이므로 world 위치는 p + t = (0.2 + 1.0, −0.5 + 0.5) = (1.2, 0.0)입니다. 발은 땅 위에 있습니다.
+@@ 97
+Q4. 로봇이 world의 +y축 방향을 보고 0.4 m/s로 똑바로 앞으로 걷습니다. state (12.1)의 v는 무엇입니까?
+@@ 98
+world 원점이 어디인지에 따라 다름
+@@ 99
+state는 속도를 base 좌표로 저장합니다. "똑바로 앞"은 어느 쪽을 보든 base 자신의 x축입니다. (0, 0.4, 0)은 같은 속도를 world 좌표로 쓴 것입니다.
+@@ 100
+Leg odometry는 땅을 디딘 다리의 joint로부터 몸체의 움직임을 추론합니다.
+@@ 101
+contact estimation(어느 다리가 stance에 있는가)과 motion estimation(그 다리들이 무엇을 알려 주는가)으로 나뉩니다.
+@@ 102
+Frame: world, base (IMU가 있는 곳), 발마다 하나, 그리고 착지할 때마다 땅에 고정되는 contact frame.
+@@ 103
+\(\mathbf{T}^w_b\)는 base 좌표를 world 좌표로 바꿉니다. 합성할 때는 안쪽 첨자를 지우고, 역변환할 때는 첨자를 맞바꿉니다.
+@@ 104
+추정하는 state (12.1)은 world에서의 base 위치와 방향, 그리고 base 좌표로 쓴 base의 선속도와 각속도입니다.
+@@ 105
+<em>SLAM Handbook</em>, 12장 "Leg Odometry for SLAM", 도입부와 §12.1.1–12.1.3, pp. 333–336.
+@@ 106
+Lynch와 Park, <em>Modern Robotics: Mechanics, Planning, and Control</em>, 2017 (homogeneous transformation, frame의 합성과 역변환, twist).
+@@ 107
+trot 타임라인과 바퀴 예제는 p. 334에서 정의한 stance phase와 swing phase를 보여 주려고 우리가 만든 그림입니다.

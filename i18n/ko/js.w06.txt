@@ -1,0 +1,292 @@
+@@ w06
+"Scatter plot of good points along a line and one bad point that can be dragged, with the least-squares line fitted with and without the bad point"
+==
+"직선을 따라 놓인 좋은 점들과 끌어서 옮길 수 있는 나쁜 점 하나의 산점도. 나쁜 점을 넣을 때와 뺄 때 맞춘 least-squares 직선을 함께 보여 줌"
+@@ w06
+stat("Least squares, good points only",
+==
+stat("Least squares, 좋은 점만",
+@@ w06
+"true line: y = 0.50x + 1.00"
+==
+"실제 직선: y = 0.50x + 1.00"
+@@ w06
+stat("Least squares, all points",
+==
+stat("Least squares, 전체 점",
+@@ w06
+"one bad point among "+N+" good"
+==
+"좋은 점 "+N+"개 + 나쁜 점 1개"
+@@ w06
+stat("Bad point's residual",f2(rb),"to the true line; inlier σ = 0.15")
+==
+stat("나쁜 점의 residual",f2(rb),"실제 직선 기준; inlier σ = 0.15")
+@@ w06
+stat("Its share of the cost",
+==
+stat("cost 중 차지하는 몫",
+@@ w06
+"of Σ r² evaluated at the true line"
+==
+"실제 직선에서 계산한 Σ r² 기준"
+@@ w06
+["var(--c5)","good points"]
+==
+["var(--c5)","좋은 점"]
+@@ w06
+"bad point (drag it) and the fit to all points"
+==
+"나쁜 점(끌어 보세요)과 전체 점에 맞춘 직선"
+@@ w06
+"fit to the good points only (dashed)"
+==
+"좋은 점에만 맞춘 직선 (점선)"
+@@ w06
+"One bad point against many good ones"
+==
+"많은 좋은 점 대 나쁜 점 하나"
+@@ w06
+"Least-squares line through N good points plus one point you can drag anywhere."
+==
+"좋은 점 N개와, 어디로든 끌 수 있는 점 하나에 맞춘 least-squares 직선."
+@@ w06
+range("Good points N",
+==
+range("좋은 점 수 N",
+@@ w06
+button("Reset the bad point",
+==
+button("나쁜 점 초기화",
+@@ w06
+"Scatter plot with inliers and outliers. Each RANSAC iteration draws a line through two sampled points, a band of half-width gamma around it, and the best line so far"
+==
+"inlier와 outlier의 산점도. RANSAC iteration마다 샘플링한 두 점을 지나는 직선, 그 주변의 반폭 gamma 띠, 지금까지 가장 좋은 직선을 그림"
+@@ w06
+it+" of "+MAXIT,cur?"this sample agrees with "+cur.S.length+" points":"press Step"
+==
+it+" / "+MAXIT,cur?"이 샘플에 동의하는 점 "+cur.S.length+"개":"한 step을 누르세요"
+@@ w06
+stat("Best consensus set",best?best.S.length+" of "+N:"—",best?wrong+" of them true outliers":"largest set so far")
+==
+stat("최고 consensus set",best?best.S.length+" / "+N:"—",best?"그중 실제 outlier "+wrong+"개":"지금까지 가장 큰 집합")
+@@ w06
+stat("Refit on the consensus set",
+==
+stat("consensus set 재적합",
+@@ w06
+stat("Expected tries",om>0?(1/(om*om)).toFixed(1):"∞","1/ω² with ω = "+nIn+"/"+N+" inliers, minimal set n = 2")
+==
+stat("기대 시도 횟수",om>0?(1/(om*om)).toFixed(1):"∞","1/ω², ω = inlier "+nIn+"/"+N+", minimal set n = 2")
+@@ w06
+button("Play",
+==
+button("재생",
+@@ w06
+pb.textContent="Pause"
+==
+pb.textContent="일시정지"
+@@ w06
+pb.textContent="Play"
+==
+pb.textContent="재생"
+@@ w06
+["var(--c5)","true inlier"]
+==
+["var(--c5)","실제 inlier"]
+@@ w06
+["var(--muted)","true outlier (hollow)"]
+==
+["var(--muted)","실제 outlier (속 빈 점)"]
+@@ w06
+"this sample's line, band ±γ, and the points inside it"
+==
+"이 샘플의 직선, ±γ 띠, 그 안의 점"
+@@ w06
+"best line so far"
+==
+"지금까지 가장 좋은 직선"
+@@ w06
+"least squares on everything (dashed)"
+==
+"전체 점의 least squares (점선)"
+@@ w06
+"RANSAC on a line"
+==
+"직선에 RANSAC 적용"
+@@ w06
+"Sample 2 points, draw the line through them, count the points within γ of it, keep the line with the largest count."
+==
+"점 2개를 샘플링해 두 점을 지나는 직선을 긋고, 직선에서 γ 이내에 있는 점을 센 뒤, 가장 많이 센 직선을 남깁니다."
+@@ w06
+range("Outliers",
+==
+range("Outlier 비율",
+@@ w06
+range("Inlier threshold γ",
+==
+range("inlier 임계값 γ",
+@@ w06
+button("Step",
+==
+button("한 step",
+@@ w06
+button("Reset",
+==
+button("초기화",
+@@ w06
+button("New data",
+==
+button("새 데이터",
+@@ w06
+"Left: ten numbered points seen in frame k minus 1 and their putative matches in frame k. Right: the consistency graph with one node per correspondence, an edge between each consistent pair, and the maximum clique highlighted"
+==
+"왼쪽: frame k 빼기 1에서 본 번호 붙은 점 열 개와 frame k에서의 후보 match. 오른쪽: correspondence마다 node 하나, consistent한 쌍마다 edge 하나를 둔 consistency graph와 강조된 maximum clique"
+@@ w06
+.join(", ")||"none"
+==
+.join(", ")||"없음"
+@@ w06
+stat("Consistent pairs (edges)",edges+" of "+N*(N-1)/2,"pairs with |d(k−1) − d(k)| ≤ γ")
+==
+stat("consistent한 쌍 (edge)",edges+" / "+N*(N-1)/2,"|d(k−1) − d(k)| ≤ γ인 쌍")
+@@ w06
+bestC+" nodes: "+ids((q,i)=>inQ(i)),ties>1?ties+" cliques tie at this size; the first is shown":"unique"
+==
+bestC+"개 node: "+ids((q,i)=>inQ(i)),ties>1?"같은 크기의 clique "+ties+"개; 첫 번째를 표시":"유일"
+@@ w06
+stat("True inliers",ids(q=>!q.out),(N-nOut)+" of "+N)
+==
+stat("실제 inlier",ids(q=>!q.out),(N-nOut)+" / "+N)
+@@ w06
+stat("Mistakes",C.filter((q,i)=>q.out&&inQ(i)).length+" outliers kept, "+C.filter((q,i)=>!q.out&&!inQ(i)).length+" inliers dropped","clique compared with the truth")
+==
+stat("판정 오류","outlier "+C.filter((q,i)=>q.out&&inQ(i)).length+"개 남음, inlier "+C.filter((q,i)=>!q.out&&!inQ(i)).length+"개 탈락","clique를 실제값과 비교")
+@@ w06
+"blue ring: true inlier"
+==
+"파란 테두리: 실제 inlier"
+@@ w06
+"pink ring: true outlier"
+==
+"분홍 테두리: 실제 outlier"
+@@ w06
+"green: in the maximum clique"
+==
+"초록: maximum clique에 속함"
+@@ w06
+"grey edge: consistent pair outside the clique"
+==
+"회색 edge: clique 밖의 consistent한 쌍"
+@@ w06
+"Pairwise consistency and the maximum clique"
+==
+"Pairwise consistency와 maximum clique"
+@@ w06
+"Frame k is frame k − 1 rotated by an unknown angle, plus 0.03 of noise. Two matches are consistent if the distance between their points is the same in both frames, to within γ."
+==
+"frame k는 frame k − 1을 알 수 없는 각도만큼 회전하고 noise 0.03을 더한 것입니다. 두 match의 점 사이 거리가 두 frame에서 γ 이내로 같으면 두 match는 consistent합니다."
+@@ w06
+range("Threshold γ",
+==
+range("임계값 γ",
+@@ w06
+range("Outliers among 10 matches",
+==
+range("outlier 수 (match 10개 중)",
+@@ w06
+button("New scene",
+==
+button("새 장면",
+@@ w06
+"Three plots against the residual r from minus 4 to 4: the loss rho, the influence function psi, and the weight w, for the selected robust loss, with the quadratic loss dashed for comparison"
+==
+"선택한 robust loss의 loss rho, influence function psi, 가중치 w를 residual r이 -4에서 4까지일 때 그린 세 그래프. 비교용 quadratic loss는 점선"
+@@ w06
+"weight w(r) = ψ/(2r)"
+==
+"가중치 w(r) = ψ/(2r)"
+@@ w06
+stat("Loss at r = "+f2(r0),
+==
+stat("r = "+f2(r0)+"에서의 loss",
+@@ w06
+stat("Weight","w = "
+==
+stat("가중치","w = "
+@@ w06
+"Robust-loss gallery"
+==
+"robust loss 모음"
+@@ w06
+"Each loss with its influence function and its IRLS weight. Dashed: the quadratic loss. Amber ticks mark r = ±β."
+==
+"각 loss와 그 influence function, IRLS 가중치. 점선: quadratic loss. 주황색 눈금: r = ±β."
+@@ w06
+range("Parameter β",
+==
+range("파라미터 β",
+@@ w06
+"Scatter plot of the data. Each point is drawn larger the higher its current weight. Lines: least squares, the current robust estimate"+(gnc?", and plain IRLS without graduation":"")
+==
+"데이터 산점도. 현재 가중치가 클수록 점을 크게 그림. 직선: least squares, 현재 robust 추정"+(gnc?", graduation 없는 기본 IRLS":"")
+@@ w06
+"The surrogate loss rho mu against the residual for the current mu, the target loss dashed, and a tick on the axis at each measurement's current residual"
+==
+"현재 mu에서 residual에 대한 surrogate loss rho mu, 점선으로 그린 목표 loss, 각 측정값의 현재 residual 위치에 찍은 축 눈금"
+@@ w06
+t+(done?" (stopped)":"")
+==
+t+(done?" (멈춤)":"")
+@@ w06
+(key==="tls"?", grows ×1.4":", shrinks ÷1.4 down to 1")
+==
+(key==="tls"?", ×1.4씩 증가":", 1까지 ÷1.4씩 감소")
+@@ w06
+"weights from the last line, then a weighted fit"
+==
+"직전 직선으로 가중치를 구한 뒤 weighted least squares"
+@@ w06
+stat("Current line",
+==
+stat("현재 직선",
+@@ w06
+stat("Weights",dn+" of "+nOut+" outliers below 0.5",kept+" of "+(N-nOut)+" inliers at 0.5 or more")
+==
+stat("가중치",dn+"/"+nOut+" outlier: 0.5 미만",kept+"/"+(N-nOut)+" inlier: 0.5 이상")
+@@ w06
+"plain IRLS ends at "+f2(rho(plain))
+==
+"기본 IRLS 최종값 "+f2(rho(plain))
+@@ w06
+"least squares starts at "+f2(rho(L0))
+==
+"least squares 시작값 "+f2(rho(L0))
+@@ w06
+"true outlier (hollow); size = weight"
+==
+"실제 outlier (속 빈 점); 크기 = 가중치"
+@@ w06
+"least squares (dashed)"
+==
+"least squares (점선)"
+@@ w06
+gnc?"GNC estimate":"IRLS estimate"
+==
+gnc?"GNC 추정":"IRLS 추정"
+@@ w06
+"plain IRLS, run to convergence (dotted)"
+==
+"기본 IRLS, 수렴까지 실행 (작은 점선)"
+@@ w06
+"Top: the surrogate loss for the current μ (solid) and the target loss (dashed). Each Step does a weight update, a weighted fit, and a μ update."
+==
+"위: 현재 μ의 surrogate loss (실선)와 목표 loss (점선). 한 step마다 weight update, weighted least squares, μ update를 차례로 합니다."
+@@ w06
+"Starts from the least-squares line. Each Step recomputes every weight from its residual, then solves the weighted line fit."
+==
+"least-squares 직선에서 시작합니다. 한 step마다 각 점의 residual로 모든 가중치를 다시 계산하고, weighted least squares로 직선을 다시 맞춥니다."
+@@ w06
+button("Run to the end",
+==
+button("끝까지 실행",

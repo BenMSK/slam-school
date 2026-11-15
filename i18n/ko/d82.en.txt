@@ -1,0 +1,244 @@
+@@ 1
+<span class="eyebrow">Week 14 · Day 4</span>
+@@ 2
+Radar place recognition: why it is hard and what works
+@@ 3
+After today you can explain why a radar scan of one place changes with the viewpoint, build and compare Scan Context descriptors adapted to radar, and say which learned and hand-crafted methods suit spinning and SoC radars.
+@@ 4
+About 60 min · Read §9.3, pp. 269–273 (4 pages) · Needs Week 13 Day 4
+@@ 5
+Read first: §9.3, pp. 269–273
+@@ 6
+The list of what makes radar place recognition hard, and Figure 9.10 (p. 269).
+@@ 7
+The comparison of spinning and SoC radar for this task (p. 270).
+@@ 8
+How training data can be collected without knowing where each scan was taken (pp. 270–271).
+@@ 9
+What replaces the height value of Scan Context in the radar versions (pp. 271–272), and the remedy for a narrow field of view (pp. 272–273).
+@@ 10
+Place recognition asks whether the current scan was taken somewhere the robot has been before. The LiDAR methods carry over to radar in outline, but a radar scan of the same place is less repeatable: it is coarse, noisy, and changes with the viewing angle. The radar versions therefore describe a place by intensity instead of height, build descriptors from several filtered and motion-compensated scans, and lean on odometry when the field of view is narrow.
+@@ 11
+1. What changes between two visits
+@@ 12
+<strong>Place recognition (PR)</strong> must cope with a different position, such as another lane, and a different heading, such as arriving at a junction from another street. <span class="src">§9.3 · p. 269</span> Radar adds four difficulties of its own. <span class="src">§9.3.1 · p. 269</span>
+@@ 13
+Effect on the scan
+@@ 14
+Low resolution
+@@ 15
+Fewer details, so fewer features that tell places apart
+@@ 16
+Wide beam
+@@ 17
+Angular ambiguity: a distant object appears as a broad patch that looks quite different from close by
+@@ 18
+Low signal-to-noise ratio
+@@ 19
+Without adequate filtering, noise hides the structure that identifies the place (Figure 9.6)
+@@ 20
+Receiver saturation
+@@ 21
+A strong radial streak whose shape depends on the angle from which the target is seen. Figure 9.10 shows two scans from the same location that differ in this way
+@@ 22
+Filling the gap: how wide a beam is at a distance
+@@ 23
+A beam of angular width \(\theta_b\) (in radians) covers an arc of length \(w \approx r\,\theta_b\) at range \(r\). Suppose the beam is 2° wide, which is \(2\pi/180 = 0.035\) rad. At 100 m the arc is 3.5 m long. At 10 m it is 0.35 m. A lamp post is therefore a 3.5 m smear when seen from afar and a dot when seen from nearby, and a descriptor built from the two scans will not agree in that bin. This is the angular ambiguity the book refers to, and it is also the reason Day 2 found radar angles coarse.
+@@ 24
+The sensor type shapes the method. <span class="src">§9.3.1 · pp. 269–270</span>
+@@ 25
+Spinning radar
+@@ 26
+SoC radar
+@@ 27
+View
+@@ 28
+360°, very long range: good for capturing the surrounding structure outdoors
+@@ 29
+Limited range and field of view
+@@ 30
+Data used
+@@ 31
+The 2D radargram treated as an image, or a point cloud after a detector such as CFAR
+@@ 32
+A 2D or 3D point cloud, sparser and noisier; rarely the full datacube
+@@ 33
+Borrowed from
+@@ 34
+Visual PR (image retrieval) and 2D LiDAR PR
+@@ 35
+LiDAR PR
+@@ 36
+Motion distortion
+@@ 37
+Present even at low speed, because the scan is slow
+@@ 38
+Small, because nothing has to rotate
+@@ 39
+Elevation
+@@ 40
+Available in 3+1D sensors, useful indoors where a short range is enough
+@@ 41
+More PR work exists for spinning radar, partly because of the richer wide view and partly because large datasets exist for it. <span class="src">§9.3.1 · p. 270</span>
+@@ 42
+2. Hand-crafted descriptors: Scan Context for radar
+@@ 43
+Recall Scan Context from <a href="#d76">Week 13 · Day 4</a>. Divide the area around the sensor into rings (by range) and sectors (by azimuth), and store one number per bin. The result is a small matrix with one row per ring and one column per sector. For LiDAR the number is the maximum height of the points in the bin. Radar needs changes. <span class="src">§9.3.3 · pp. 271–272</span>
+@@ 44
+<strong>No height in a spinning radar.</strong> Use the return strength instead. One adaptation stores the <em>sum of the intensities</em> of the points in the bin, which encodes both how strong and how many they are.
+@@ 45
+<strong>Sparse and noisy single scans.</strong> Keep only the k strongest returns per azimuth, which removes much of the noise, then build the descriptor from several registered scans so that it is not too sparse.
+@@ 46
+<strong>Slow scanning.</strong> De-skew the points first (Day 3), otherwise the same place gives different descriptors at different speeds.
+@@ 47
+<strong>Unreliable height in 3+1D radar.</strong> Spurious points distort the maximum height, so Intensity Scan Context stores the maximum intensity per bin, and the sum of intensities is an alternative that still encodes vertical structures.
+@@ 48
+Filling the gap: comparing two descriptors, and why a turn is a shift
+@@ 49
+Call the columns of the query descriptor \(\mathbf{q}_j\) and those of a database descriptor \(\mathbf{c}_j\), for sectors \(j = 1,\dots,N_s\). Two columns are compared by the cosine of the angle between them, and the descriptor distance is the average over the columns:
+@@ 50
+The index \(j+s\) wraps around. Why the shift \(s\)? Sectors are counted in the sensor frame. If the sensor has turned by an angle \(\psi\) since the first visit, an object that was in sector \(j+s\) is now in sector \(j\), with \(s = \psi/(360°/N_s)\). The whole matrix is shifted sideways by \(s\) columns, and the rows do not change because ranges do not change. Trying every shift and keeping the smallest distance makes the comparison independent of heading, and the best shift is an estimate of the heading change. With 36 sectors of 10°, a turn of 60° is a shift of 6 columns.
+@@ 51
+The cosine does not care about the overall scale of a column, which helps when the same wall returns more or less power on another day.
+@@ 52
+Try it: the two grids are the descriptors of the same place, the right one from a degraded scan with a different heading. Move the heading slider. Then set the field of view to 120° and move it again.
+@@ 53
+Notice: with a 360° view the best shift recovers the heading (6 sectors for 60°), and the distance to the right place stays at 0.42 for every heading, well below the 0.79 of a different place. With a 120° view the two scans share less of the scene the more the sensor has turned: the distance climbs from 0.40 at 0° to 0.63 at 60°, and at 90° the right place (0.84) scores no better than a wrong one (0.81). In the widget a sector that is empty in both scans is skipped, and a sector that is empty in only one counts as a full mismatch.
+@@ 54
+The second half of that experiment is the book's warning about SoC radars. A place looks quite different from two viewpoints when the sensor covers a small field of view, so rotation invariance is hard to achieve. One remedy is to pre-filter with odometry: compare the current descriptor only with frames whose estimated yaw is within a certain range, for example 20°. <span class="src">§9.3.3 · pp. 272–273</span>
+@@ 55
+Scan Context is not the only descriptor that has been adapted. <span class="src">§9.3.3 · pp. 271–272</span>
+@@ 56
+Radar adaptation described in the book
+@@ 57
+M2DP
+@@ 58
+Designed for 3D point clouds, applied to 2D point clouds extracted from radargrams
+@@ 59
+RING
+@@ 60
+A sinogram that is invariant to rotation and translation. Plain correlation of two sinograms suffers from radar noise, and adding auto-correlation improves the result
+@@ 61
+Scan Context
+@@ 62
+Sum or maximum of intensity per bin, descriptors from several filtered and motion-compensated scans
+@@ 63
+Filling the gap: the eigenvalue test for boring scans
+@@ 64
+Some scans should not be used for place recognition at all. On a highway every stretch looks like every other. The M2DP-based system detects this with principal component analysis (PCA) of the 2D points. <span class="src">§9.3.3 · p. 272</span> Compute the 2 × 2 covariance matrix of the point coordinates and its two eigenvalues \(\lambda_1 \ge \lambda_2\). Each eigenvalue is the variance of the points along one principal direction.
+@@ 65
+Example: a highway scan whose points spread 40 m (one standard deviation) along the road and 3 m across has \(\lambda_1 = 1600\ \text{m}^2\) and \(\lambda_2 = 9\ \text{m}^2\), a ratio of 178. The scan has structure in one direction only and is skipped. A junction with spreads of 30 m and 25 m has eigenvalues 900 and 625, a ratio of 1.4, and is kept.
+@@ 66
+3. Learned descriptors
+@@ 67
+The other route is to let a network turn a scan into a descriptor vector and to compare vectors. <span class="src">§9.3.2 · pp. 270–271</span>
+@@ 68
+For spinning radar the radargram is an image, so image retrieval applies. An early method uses a convolutional network with cylindrical convolutions, which respect the wrap-around of the polar image, to learn a descriptor that does not change with rotation. Matching a query against a database of such descriptors gives <strong>topological</strong> place recognition: it says which stored place you are at, not your exact pose. Adding a pose refinement step turns it into a <strong>topometric</strong> system.
+@@ 69
+Where do training examples come from? A network must see pairs of scans from the same place and pairs from different places. Ground-truth positions would supply them, but they are not needed. <span class="src">§9.3.2 · pp. 270–271</span>
+@@ 70 attr
+A row of scans in the order they were recorded during one drive. One scan is the anchor. The scan recorded right after it is used as a positive example. A scan recorded much later is used as a negative example.
+@@ 71
+one drive, scans in recording order →
+@@ 72
+anchor
+@@ 73
+positive (pulled close)
+@@ 74
+negative (pushed away)
+@@ 75
+Scans recorded one after the other show nearly the same place, so a neighbour in the sequence serves as a positive example. Shifting its polar image adds an artificial rotation. A scan from far away in the sequence serves as a negative example.
+@@ 76
+The network is trained to give the anchor and its positives similar descriptors and to tell them apart from the negatives. No metric location is needed, so the training is unsupervised.
+@@ 77
+SoC radars need their own treatment because of the shorter range and smaller field of view. <span class="src">§9.3.2 · p. 271</span>
+@@ 78
+How it handles sparse, noisy SoC data
+@@ 79
+Spatiotemporal encoder on point clouds projected to a 2D image, followed by a NetVLAD layer
+@@ 80
+Features are re-ranked by RCS to drop irrelevant ones, and several radars around the vehicle widen the view
+@@ 81
+Kernel point convolutions on the 3D cloud, followed by NetVLAD
+@@ 82
+A point importance estimator learns which points matter for recognition, and a separate network encodes the RCS values. Works from a single scan
+@@ 83
+A radar-specific backbone inspired by LiDAR PR networks
+@@ 84
+RANSAC ego-velocity estimation (Day 3) keeps the static inliers and drops the rest as noise
+@@ 85
+Both routes fight the same enemy. A descriptor is only useful if the same place gives the same numbers twice. Hand-crafted radar descriptors get there by throwing away most of the scan (k strongest), adding scans together, and undoing the motion. Learned descriptors get there by being shown many pairs that should match and learning which parts of the scan to ignore.
+@@ 86
+<strong>"A LiDAR descriptor can be applied to radar points unchanged."</strong> A spinning radar has no height, and in 3+1D radar a single spurious point corrupts the maximum height. The radar versions store intensity.
+@@ 87
+<strong>"Scan Context is rotation invariant, so the field of view does not matter."</strong> The column shift only works if both scans see the same surroundings. With a narrow view, a turned sensor sees a different part of the scene.
+@@ 88
+<strong>"A matching descriptor is a loop closure."</strong> It is a candidate. Day 5 shows how pipelines check it against odometry and geometry before it enters the graph.
+@@ 89
+Q1. A Scan Context descriptor has 60 sectors. The robot returns to a place with its heading changed by 90°. By how many columns is the descriptor shifted?
+@@ 90
+Each sector spans 360°/60 = 6°, so 90° is 90/6 = 15 columns.
+@@ 91
+Q2. Why do radar versions of Scan Context store the sum of intensities in a bin?
+@@ 92
+Intensity does not depend on the weather
+@@ 93
+It makes the descriptor smaller
+@@ 94
+Summing removes multipath ghosts
+@@ 95
+Height is missing or unreliable, and the sum encodes both the strength and the number of points
+@@ 96
+A spinning radar has no elevation, and in 3+1D radar spurious points distort the maximum height. The sum of intensities reflects point density and return strength together (p. 272).
+@@ 97
+Q3. A 3+1D radar with a narrow field of view is used for loop detection. What does the book suggest to cope with the lack of rotation invariance?
+@@ 98
+Compare only with frames whose odometry yaw is within a set range of the current one
+@@ 99
+Use more sectors in the descriptor
+@@ 100
+Store maximum height instead of intensity
+@@ 101
+Disable the column shift search
+@@ 102
+With a small field of view a place looks different from another heading, so candidates are pre-filtered by the yaw estimated from odometry, for example within 20° (pp. 272–273).
+@@ 103
+Q4. PCA of the points of a scan gives eigenvalues 900 m² and 4 m². What does the M2DP-based system do with this scan?
+@@ 104
+Uses it as a high-confidence loop candidate
+@@ 105
+Splits it into two scans
+@@ 106
+Leaves it out of place recognition, because it is elongated and not distinctive
+@@ 107
+Rotates it to align with the first eigenvector
+@@ 108
+Very different eigenvalues mean the points lack structure in one direction, as on a highway. Such scans are not considered for place recognition (p. 272).
+@@ 109
+Q5. How can positive training pairs for a learned radar descriptor be obtained without ground-truth positions?
+@@ 110
+By pairing every scan with a random other scan
+@@ 111
+By pairing scans that are neighbours in the recording sequence, with an artificial rotation added by shifting the polar image
+@@ 112
+By pairing scans with equal mean intensity
+@@ 113
+By pairing radar scans with satellite images
+@@ 114
+Consecutive scans show almost the same place. Shifting the polar radargram simulates a different heading. Scans far apart in the sequence act as negatives (pp. 270–271).
+@@ 115
+Radar scans of one place vary because of low resolution, a wide beam, noise and receiver saturation.
+@@ 116
+Spinning radar offers a 360° long-range view and borrows from visual and 2D LiDAR PR. SoC radar has a narrow view and borrows from LiDAR PR.
+@@ 117
+Radar Scan Context stores intensity per ring-sector bin. A heading change is a column shift, found by minimising the mean cosine distance over all shifts.
+@@ 118
+With a narrow field of view the shift search fails for large heading changes, so candidates are pre-filtered by odometry yaw.
+@@ 119
+Learned descriptors can be trained without positions, using sequence neighbours as positives.
+@@ 120
+<em>SLAM Handbook</em>, Ch. 9, §9.3 "Radar Place Recognition", pp. 269–273, Figure 9.10.
+@@ 121
+Kim and Kim, <em>Scan Context: Egocentric Spatial Descriptor for Place Recognition within 3D Point Cloud Map</em>, 2018 (the column-wise cosine distance and the column shift).
+@@ 122
+Bishop, <em>Pattern Recognition and Machine Learning</em>, 2006 (principal component analysis: eigenvalues of the covariance matrix as variances).

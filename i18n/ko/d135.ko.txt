@@ -1,0 +1,150 @@
+@@ 1
+<span class="eyebrow">23주차 · Day 3</span>
+@@ 2
+Open-vocabulary map: 점마다 feature, 그다음 object마다 feature
+@@ 3
+오늘이 끝나면 픽셀별 feature를 confidence 가중 평균으로 map element에 fusion하고, 텍스트 query에 cosine similarity로 답하고, mask를 association해서 object map을 만들 수 있습니다.
+@@ 4
+약 60분 · §17.3부터 §17.3.2의 "Language Descriptions" 전까지, pp. 499–506 읽기 (7쪽) · 23주차 Day 2 필요
+@@ 5
+먼저 읽기: §17.3 도입부, §17.3.1, 그리고 §17.3.2의 "Language Descriptions" 전까지, pp. 499–506
+@@ 6
+map element의 정의 \(m_k \triangleq \{\mathbf{p}_k, \mathbf{f}_k\}\) (p. 501).
+@@ 7
+ConceptFusion에서 pixel-level feature를 만드는 네 항목 (pp. 501–502), 그리고 p. 502의 갱신식 (17.2)–(17.3).
+@@ 8
+식 (17.4)와, map을 만들 때 prompt 목록을 몰라도 된다는 문장 (p. 503).
+@@ 9
+mask를 object에 매칭하는 데 쓰는 두 유사도 점수와 fusion 갱신식 (p. 505).
+@@ 10
+각 map element에 저장하던 class label을 foundation model의 feature vector로 바꿉니다. 그러면 map을 만드는 일은 평균 내기가 됩니다. 각 view가 자신이 보는 element마다 feature 하나를 보탭니다. map을 쓰는 일은 비교하기입니다. 질문을 encode하고, 저장된 feature와 내적을 구해, 점수가 높은 element를 남깁니다. 점마다가 아니라 object마다 vector 하나를 저장하면 map이 수천 배 작아집니다.
+@@ 11
+1. label을 feature로 바꾸기
+@@ 12
+class label은 거친 기술입니다. 책의 공구 상자 예가 요점을 보여 줍니다. "공구"는 맞지만 쓸모가 없고, "망치"가 더 낫고, 색, 재질, 용도, 물체가 내는 소리는 label 하나에 아예 담기지 않습니다. 드문 물체는 어떤 목록에서도 빠져 있습니다. <span class="src">§17.3 · pp. 499–500</span> 그래서 open-vocabulary map은 <a href="#d45">8주차</a>의 geometry를 그대로 두고 거기에 붙는 것을 바꿉니다. map은 다음과 같은 <strong>map element</strong>들의 집합 \(\mathcal{M} \triangleq \{m_k\}\)입니다
+@@ 13
+여기서 \(\mathbf{p}_k\)는 geometry 부분(3D 점, voxel 위치, mesh face)이고 \(\mathbf{f}_k\)는 feature vector입니다. geometry는 앞단의 SLAM 시스템에서 옵니다. <span class="src">§17.3.1 · p. 501</span> 책은 정적인 scene에서 pose가 주어진 RGB-D frame을 차례로 처리한다고 가정합니다. <span class="src">§17.3 · p. 500</span> feature는 2D grid의 cell(navigation에 알맞은 VLMaps), 순서 없는 3D 점 집합(ConceptFusion, OpenScene), 또는 TSDF volume(Open-Fusion. <a href="#d44">8주차 · Day 2</a> 참고)에 둘 수 있습니다. <span class="src">§17.3.1 · p. 501</span>
+@@ 14
+2. 픽셀마다 feature 하나
+@@ 15
+CLIP은 이미지 전체를 vector 하나로 기술하지만, map에는 픽셀마다 vector가 필요합니다. 길은 두 가지입니다. <span class="src">§17.3.1 · p. 501</span>
+@@ 16
+<strong>길 A: dense feature를 출력하는 모델.</strong> CLIP 같은 모델을 segmentation dataset으로 fine-tuning해서 pixel-level feature(OpenScene과 VLMaps가 쓰는 LSeg)나 region-level feature(Open-Fusion이 속도 때문에 쓰는 SEEM)를 내게 합니다. 대가도 있습니다. fine-tuning한 feature는 원래 CLIP feature가 담고 있는 드문 long-tail 개념 일부를 잃는다는 근거가 있습니다.
+@@ 17
+<strong>길 B: CLIP은 그대로 두고 산술을 하기.</strong> ConceptFusion은 이미지 전체의 맥락과 물체 crop을 합칩니다: <span class="src">§17.3.1 · pp. 501–502</span>
+@@ 18
+<strong>Global feature</strong> \(\mathbf{f}^G = f(\mathbf{I})\): 이미지 전체를 encode합니다.
+@@ 19
+<strong>Local feature</strong>: \(\texttt{Seg}(\mathbf{I})\)를 실행하고, 각 mask를 bounding box로 바꾸고, 이미지를 그 box로 crop한 뒤 crop을 encode합니다: \(\mathbf{f}^L_i = f(\mathbf{I}_i)\).
+@@ 20
+<strong>mask별 병합</strong>: \(\mathbf{f}^P_i = w_i \mathbf{f}^G + (1 - w_i)\,\mathbf{f}^L_i\), \(w_i \in [0,1]\). 가중치는 global feature와도, 다른 local feature들과도 다른 local feature를 강조하도록 정합니다.
+@@ 21
+<strong>픽셀별</strong>: \(\mathbf{f}^P_{u,v}\)는 \(\mathbf{Z}_i[u,v] = 1\)인 모든 mask의 mask feature를 더한 뒤 단위 길이로 맞춘 것입니다.
+@@ 22
+(p. 502에는 이 마지막 항목의 합에 \(\mathbf{f}^L_i\)가 인쇄되어 있지만, 항목의 설명대로라면 \(\mathbf{f}^P_i\)입니다.) <a href="#d43">8주차 · Day 1</a>에서처럼 각 픽셀을 depth로 back-project하면, 모든 점이 feature를 지닌 point cloud가 됩니다. 책은 이것을 <strong>range-feature observation</strong>이라고 부릅니다. <span class="src">§17.3.1 · p. 502</span>
+@@ 23
+3. 여러 view를 feature 하나로 fusion하기
+@@ 24
+같은 3D 점이 여러 frame에서 보이므로 그 feature들을 합쳐야 합니다. VLMaps는 같은 grid cell에 떨어지는 모든 feature를 단순히 평균합니다. ConceptFusion은 점마다 feature \(\mathbf{f}_k\)와 <strong>confidence</strong> \(c_k\)를 두고, 새 픽셀 feature가 올 때마다 둘을 갱신합니다: <span class="src">§17.3.1 · p. 502</span>
+@@ 25
+여기서 \(\alpha = e^{-\gamma^2/2\sigma^2}\)이고, \(\gamma\)는 카메라 중심까지의 반경 방향 거리, \(\sigma\)는 scale입니다. \(\gamma\)가 작으면 \(\alpha\)는 1에 가깝고, \(\gamma\)가 크면 \(\alpha\)는 작습니다.
+@@ 26
+<strong>숫자로 보기</strong> (읽기 쉽게 2차원으로). 한 점이 \(c_k = 2\), \(\mathbf{f}_k = (1, 0)\)입니다. 새 view가 \(\gamma = \sigma\)에서 \(\mathbf{f}^P = (0, 1)\)을 주므로 \(\alpha = e^{-1/2} = 0.607\)입니다. 그러면 \(\mathbf{f}_k \leftarrow (2 \cdot (1,0) + 0.607 \cdot (0,1))/2.607 = (0.767, 0.233)\), \(c_k \leftarrow 2.607\)입니다.
+@@ 27
+빈틈 채우기: 가중 평균으로서의 갱신, 그리고 평균이 noise를 지우는 원리
+@@ 28
+<strong>Unrolling.</strong> 한 점을 \(c_k = 0\)에서 시작해, 가중치 \(\alpha_1, \dots, \alpha_n\)으로 feature \(\mathbf{f}_1, \dots, \mathbf{f}_n\)을 넣습니다. 주장: \(n\)번 갱신한 뒤 \(c_k = \sum_t \alpha_t\)이고 \(c_k \mathbf{f}_k = \sum_t \alpha_t \mathbf{f}_t\)입니다. 한 번 갱신한 뒤에는 성립합니다. \(n-1\)번 뒤에 성립한다면, (17.2)에 분모를 곱하면 \(c_k^{\text{new}} \mathbf{f}_k^{\text{new}} = c_k \mathbf{f}_k + \alpha_n \mathbf{f}_n = \sum_{t \le n} \alpha_t \mathbf{f}_t\)가 됩니다. 따라서
+@@ 29
+map은 개별 view를 저장하지 않고, 이 누적 가중 평균과 가중치의 합만 저장합니다. <a href="#d44">8주차 · Day 2</a>의 TSDF weight와 같은 요령입니다.
+@@ 30
+<strong>왜 평균하는가.</strong> 각 view의 feature를 실제 feature에 독립 오차를 더한 것, \(\mathbf{f}_t = \mathbf{f} + \mathbf{e}_t\)로 모델링하고, \(\mathbf{e}_t\)의 \(d\)개 성분이 각각 분산 \(s^2\)를 가진다고 합시다. 가중치가 같으면 평균의 오차는 성분당 분산이 \(s^2/n\)이므로, 그 제곱 길이는 약 \(d s^2 / n\)입니다. 이 오차는 대부분 \(\mathbf{f}\)(길이 1)에 수직이므로
+@@ 31
+\(d = 8\), \(s = 0.6\)이면 view 하나로는 \(1/\sqrt{3.88} = 0.51\), view 스무 개로는 \(1/\sqrt{1.144} = 0.93\)입니다.
+@@ 32
+<strong>주의 하나.</strong> 단위 벡터들의 평균은 길이가 1보다 짧습니다 (위의 예는 길이 0.80). 아래 (17.4)의 arg max에는 상관없지만 \(\langle \mathbf{f}_k, \mathbf{f}_T \rangle\)에 대한 threshold는 영향을 받으므로, 먼저 \(\mathbf{f}_k\)를 정규화하세요.
+@@ 33
+평균만이 유일한 선택은 아닙니다. 고차원 vector를 평균하지 않고 outlier에 강해지기 위해, 책은 대안을 나열합니다. element마다 feature buffer를 두고 그 <strong>medoid</strong>(다른 모든 member에 가장 가까운 member)를 저장하기, buffer를 clustering해서 centroid 몇 개 또는 다수 cluster의 centroid에 가장 가까운 member를 저장하기, Open-Fusion처럼 각 voxel에 feature 사전의 key만 저장하기입니다. <span class="src">§17.3.1 · pp. 502–503</span>
+@@ 34
+4. map에게 질문하기
+@@ 35
+오늘 고른 class로 map에 label을 붙이려면, text encoder로 prompt 목록 \(\mathsf{C}\)를 encode하고 각 element에 가장 잘 맞는 prompt를 줍니다: <span class="src">§17.3.1 · p. 503</span>
+@@ 36
+이것은 image feature 자리에 map feature를 넣은 어제의 classifier (17.1)입니다. \(\mathsf{C}\)는 map을 만드는 데 아무 역할도 하지 않으므로 마음대로 바꿀 수 있습니다. 하지만 주된 용도는 열린 형태의 <strong>query</strong>입니다. 어떤 텍스트 \(T\)든 encode하고, 모든 element를 \(\langle \mathbf{f}_k, \mathbf{f}_T \rangle\)로 점수 매기고, threshold를 넘는 것을 남긴 뒤, 남은 점들을 공간에서 clustering해서 instance를 나눕니다.
+@@ 37
+직접 해 보기: query는 "편하게 앉을 곳"이고 noise 섞인 view가 하나입니다. "fusion한 view 수"를 20까지 올려 보세요. 그다음 다른 query도 고르고 threshold를 움직여 보세요.
+@@ 38
+눈여겨볼 점: view가 하나일 때는 4개 cell만 threshold를 넘고 그중 하나는 틀렸으며, 11개를 놓칩니다. view가 20개면 소파와 안락의자의 cell 14개가 모두 검색되고 다른 것은 없으며, 깨끗한 feature와의 평균 cosine은 위 식이 예측한 대로 0.49에서 0.93으로 오릅니다.
+@@ 39
+query가 텍스트일 필요는 없습니다. aligned encoder가 있는 modality면 무엇이든 됩니다. ConceptFusion은 map 점 클릭(그 점 자신의 \(\mathbf{f}_k\)를 씀), 이미지, 오디오 클립으로 하는 query를 보여 줍니다. DINO 같은 vision 전용 feature로 만든 map은 텍스트 query를 잃지만, 이미지 query와 클릭 query는 여전히 지원합니다. <span class="src">§17.3.1 · pp. 503–504</span>
+@@ 40
+5. object마다 feature 하나
+@@ 41
+dense feature map은 vector가 커서 규모를 키우기 어렵습니다. 세어 봅시다. 점 100만 개가 각각 768개 숫자로 된 feature(책이 p. 510에서 한 CLIP 모델에 대해 인용하는 크기)를 숫자당 4 byte로 가지면 약 3 GB입니다. 가까운 점들은 대개 같은 물체에 속하고 semantics를 공유하므로, feature를 object마다 한 번만 저장합니다. <span class="src">§17.3.2 · p. 504</span> object 200개에는 200 × 768 × 4 byte, 약 0.6 MB가 필요합니다.
+@@ 42
+<strong>object map</strong>은 집합 \(\mathsf{V}_O = \{o_j\}_{j=1}^{J}\)입니다. 각 object에는 point cloud \(\mathsf{P}_{o_j}\), feature \(\mathbf{f}_{o_j}\), detection 횟수 \(n_{o_j}\)가 있습니다. 새 frame마다 다음을 합니다: <span class="src">§17.3.2 · pp. 504–505</span>
+@@ 43
+<strong>추출.</strong> \(\texttt{Seg}(\mathbf{I})\)의 각 mask에 대해 crop을 encode해서 \(\mathbf{f}^M_i\)를 얻고, 그 픽셀들을 back-project해서 map frame의 point cloud \(\mathsf{P}^M_i\)를 만듭니다.
+@@ 44
+<strong>Association.</strong> 각 mask를 기존 object들과 비교합니다. geometric similarity \(\phi_{geo} \in [0,1]\)은 mask 점 중 object의 cloud 안에서 거리 \(\delta_{nn}\) 이내에 이웃이 있는 점의 비율입니다. semantic similarity는 \(\phi_{sim} = \tfrac{1}{2}(\langle \mathbf{f}_i, \mathbf{f}_{o_j} \rangle + 1) \in [0,1]\)입니다. 둘을 합치거나 각각에 threshold를 적용합니다. 매칭되지 않은 mask는 새 object를 시작합니다.
+@@ 45
+<strong>Fusion.</strong> 매칭되면 \(\mathbf{f}_{o_j} \leftarrow (n_{o_j}\mathbf{f}_{o_j} + \mathbf{f}_i)/(n_{o_j}+1)\), \(\mathsf{P}_{o_j} \leftarrow \mathsf{P}_{o_j} \cup \mathsf{P}^M_i\), \(n_{o_j} \leftarrow n_{o_j}+1\)입니다. \(\alpha = 1\)이고 횟수를 confidence로 쓴 (17.2)입니다.
+@@ 46
+<strong>정돈.</strong> 가끔 중복된 object를 병합하고, 횟수가 적은 object는 버립니다.
+@@ 47
+<strong>숫자로 보기.</strong> mask cloud에 점이 200개 있고, 그중 150개가 \(\delta_{nn}\) 이내에 object 점을 가지므로 \(\phi_{geo} = 0.75\)입니다. feature의 내적은 0.6이므로 \(\phi_{sim} = 0.8\)입니다. 둘 다 threshold를 통과하고 object가 \(n = 4\)였다면, 그 feature는 \((4\mathbf{f}_o + \mathbf{f}_i)/5\)가 되고 \(n = 5\)가 됩니다.
+@@ 48
+이제 query는 object 전체를 돌려줍니다: \(o^* = \argmax_{o \in \mathsf{V}_O} \langle \mathbf{f}_o, \mathbf{f}_T \rangle\). 책의 예에서 "마실 것"은 소다 캔에서 높은 점수를 받고, 그 point cloud는 곧바로 motion planner로 넘길 수 있습니다. <span class="src">§17.3.2 · p. 506</span>
+@@ 49
+<strong>"prompt 목록은 mapping 전에 골라야 한다."</strong> \(\mathsf{C}\)도 query도 map에 들어가지 않습니다. feature만 들어갑니다.
+@@ 50
+<strong>"검색된 element는 detection이다."</strong> arg max는 언제나 무언가를 돌려주고, threshold는 여러분이 고른 설정입니다. 어느 쪽도 그 물체가 존재한다고 말해 주지 않습니다.
+@@ 51
+Q1. 한 점이 c = 3, f = (0.8, 0.6)입니다. 새 픽셀 feature (0, 1)이 α = 1로 들어옵니다. (17.2)–(17.3)의 결과는 무엇입니까?
+@@ 52
+f = (3·(0.8, 0.6) + 1·(0, 1))/4 = (2.4, 2.8)/4 = (0.6, 0.7)이고, c = 3 + 1 = 4입니다.
+@@ 53
+Q2. 가중치가 같을 때, fusion한 feature의 성분당 noise를 절반으로 줄이려면 view를 몇 개 평균해야 합니까?
+@@ 54
+평균으로는 절반으로 줄일 수 없음
+@@ 55
+독립 오차 n개의 평균은 분산이 s²/n이므로 표준편차는 s/√n입니다. 절반으로 줄이려면 n = 4가 필요합니다.
+@@ 56
+Q3. 한 mask에 back-project한 점이 40개 있고, 그중 10개가 δ 이내에 object A의 이웃을 가집니다. feature의 내적은 0.9입니다. 두 similarity는 얼마입니까?
+@@ 57
+=
+@@ 58
+=
+@@ 59
+=
+@@ 60
+=
+@@ 61
+=
+@@ 62
+Q4. ConceptFusion은 왜 fine-tuning한 pixel-level 모델을 쓰지 않고 global image feature와 mask crop의 feature를 섞습니까?
+@@ 63
+fine-tuning한 모델은 unit-norm feature를 만들 수 없기 때문
+@@ 64
+fine-tuning한 dense feature보다 long-tail 개념을 더 많이 담고 있는 원래 CLIP feature를 지키기 위해
+@@ 65
+SAM이 global feature를 prompt로 요구하기 때문
+@@ 66
+pixel-level 모델에는 LiDAR가 필요하기 때문
+@@ 67
+책은 fine-tuning한 모델의 dense feature가 손대지 않은 CLIP feature보다 long-tail 개념을 덜 포착한다는 근거를 보고합니다.
+@@ 68
+map element는 geometry에 feature를 더한 것입니다: \(m_k = \{\mathbf{p}_k, \mathbf{f}_k\}\).
+@@ 69
+픽셀별 feature는 fine-tuning한 dense 모델에서 얻거나, global CLIP feature와 mask-crop CLIP feature를 섞어서 얻습니다.
+@@ 70
+식 (17.2)–(17.3)은 confidence 가중 누적 평균을 유지합니다. view \(n\)개를 평균하면 feature noise가 \(\sqrt{n}\)분의 1로 줄어듭니다.
+@@ 71
+label (17.4)과 query는 encode한 텍스트와의 내적이며, map을 만든 뒤에 고릅니다.
+@@ 72
+object map은 object마다 feature 하나를 저장하며, mask association(\(\phi_{geo}\), \(\phi_{sim}\))과 fusion으로 만듭니다.
+@@ 73
+<em>SLAM Handbook</em>, §17.3 도입부, §17.3.1 "Dense Representations", §17.3.2 "Object Maps and 3D Scene Graphs"의 Inference 문단 전까지, pp. 499–506, 식 (17.2)–(17.4).
+@@ 74
+누적 평균을 풀어 쓰는 것과 평균의 분산은 표준적인 내용입니다. Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005를 보세요. cosine 추정과 메모리 수치는 이 코스가 계산한 것입니다.
+@@ 75
+위젯의 map과 8차원 feature는 손으로 만든 것이며 CLIP의 출력이 아닙니다.

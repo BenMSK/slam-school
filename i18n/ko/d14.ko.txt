@@ -1,0 +1,192 @@
+@@ 1
+<span class="eyebrow">3주차 · Day 2</span>
+@@ 2
+variable elimination: factor graph에서 Bayes net으로
+@@ 3
+오늘이 끝나면 factor graph의 변수 하나를 그래프 위에서, 그리고 행렬에 대한 partial QR step으로 손으로 소거하고, 그 결과로 생기는 conditional과 새 factor의 의미를 설명할 수 있습니다.
+@@ 4
+약 60분 · §1.6.1–1.6.2, pp. 40–44 읽기 (5쪽) · 3주차 Day 1 필요
+@@ 5
+먼저 읽기: §1.6.1–1.6.2, pp. 40–44 (p. 45의 1.6.3 제목에서 멈춤)
+@@ 6
+p. 40 식 (1.43)의 세 가지: product factor \(\psi\), conditional \(p(\mathbf{x}_j \mid \mathbf{s}_j)\), 그리고 새 factor \(\tau(\mathbf{s}_j)\).
+@@ 7
+p. 41의 Figure 1.10. 다섯 패널 각각에서 음영 처리된 변수, 이제 그 변수를 가리키는 화살표, 새로 만들어진 빨간 factor를 찾아보십시오.
+@@ 8
+p. 42의 식 (1.47): Figure 1.7에서 어떤 블록 행 세 개를 꺼냈는지, 그리고 왜 그 행들인지.
+@@ 9
+pp. 42–43의 식 (1.48)–(1.49)와 Figure 1.11: 선 위의 행 하나와 선 아래의 빨간 행들.
+@@ 10
+elimination은 변수를 하나씩 없앱니다. 그 변수에 연결된 factor를 모아 곱한 다음, 그 곱을 이웃이 주어졌을 때 그 변수의 conditional density와 이웃에만 걸린 새 factor로 나눕니다. 모든 변수가 사라지면 factor graph는 Bayes net이 되어 있고, 이 Bayes net은 back-substitution으로 MAP 추정값을 내줍니다. linear-Gaussian factor라면 매번의 나누기가 작은 QR 분해이고, 전체 절차는 sparse QR입니다.
+@@ 11
+1. 목표: 작은 conditional들의 곱
+@@ 12
+factor graph는 정규화되지 않은 posterior를 factor들의 곱 \(\phi(\mathbf{x}) = \phi(\mathbf{x}_1, \dots, \mathbf{x}_n)\)으로 저장합니다(식 (1.41)). <strong>variable elimination algorithm</strong>(변수 소거 알고리즘)은 정해진 ordering \(\mathbf{x}_1, \dots, \mathbf{x}_n\)에 대해 이를 식 (1.42)로 다시 씁니다:
+@@ 13
+각 변수가 뒤에 오는 변수에만 의존하는 conditional들의 곱이 <strong>Bayes net</strong>입니다. Bayes net은 방향 그래프이며, \(\mathbf{x}_j\)에는 그 조건이 되는 변수마다 화살표가 하나씩 들어옵니다. 그런 변수들의 집합 \(\mathbf{s}_j\)를 \(\mathbf{x}_j\)의 <strong>separator</strong>라고 합니다. <span class="src">§1.6.1 · p. 40</span> 여기서 \(p(\mathbf{x})\)는 2주차의 posterior \(p(\mathbf{x} \mid \mathbf{z})\)입니다. 측정값은 factor 안에 고정된 숫자로 들어 있으므로 책은 더 이상 이를 적지 않습니다.
+@@ 14
+확률의 연쇄 법칙에 따라 어떤 density든 \(p(x_1 \mid x_2, \dots, x_n)\, p(x_2 \mid x_3, \dots, x_n) \cdots p(x_n)\)처럼 사슬로 쓸 수 있지만, 일반적으로 첫 conditional은 나머지 모든 변수에 의존합니다. sparse factor graph에서는 separator가 작습니다. toy 예제에서는 두 개보다 많은 변수에 의존하는 conditional이 없습니다.
+@@ 15
+왜 이 꼴이 좋을까요? 마지막 conditional \(p(\mathbf{x}_n)\)은 아무것에도 의존하지 않으므로 그것만 따로 최대화할 수 있습니다. 그러면 \(p(\mathbf{x}_{n-1} \mid \mathbf{s}_{n-1})\)의 부모가 모두 알려진 상태가 되고, 이런 식으로 거꾸로 나아갑니다. 책은 이 꼴에서는 샘플링과 marginalization도 쉽다고 덧붙입니다.
+@@ 16
+2. 변수 하나 소거하기
+@@ 17
+알고리즘은 아직 소거되지 않은 변수들 위의 factor graph를 유지하면서 한 가지 step을 반복합니다. <span class="src">§1.6.1 · p. 40</span>
+@@ 18
+빈틈 채우기: step 3의 나누기가 뜻하는 것
+@@ 19
+정규화되지 않은 함수에 곱 법칙 \(p(a, b) = p(a \mid b)\,p(b)\)를 적용한 것입니다. 소거할 변수를 적분해 없앤 것을 새 factor로, 남은 것을 conditional로 정의합니다:
+@@ 20
+이렇게 만들면 conditional은 \(\mathbf{s}_j\)의 어떤 값에 대해서도 \(\mathbf{x}_j\)에 대해 적분하면 1이 되므로 올바른 density이고, 두 조각의 곱은 다시 \(\psi\)입니다. 잃어버리거나 근사한 것은 없습니다. factor \(\tau\)는 요약입니다. \(\mathbf{x}_j\) 자체를 더 이상 묻지 않을 때, 제거된 factor들이 separator에 대해 말해 주던 모든 것을 담습니다.
+@@ 21
+\(\mathbf{x}_j\)에 연결된 factor만 관여합니다. 다른 factor는 모두 \(\mathbf{x}_j\) 입장에서 상수이므로 그래프에 그대로 남습니다. sparse한 그래프에서 elimination이 싼 이유는 전적으로 이 국소성에 있습니다.
+@@ 22
+toy 예제와 ordering \(\boldsymbol{\ell}_1, \boldsymbol{\ell}_2, \mathbf{p}_1, \mathbf{p}_2, \mathbf{p}_3\)에 대해 Figure 1.10의 다섯 step은 다음과 같습니다:
+@@ 23
+제거한 factor
+@@ 24
+=
+@@ 25
+남겨 두는 conditional
+@@ 26
+새 factor
+@@ 27
+1. ℓ₁ 소거
+@@ 28
+2. ℓ₂ 소거
+@@ 29
+3. p₁ 소거
+@@ 30
+ϕ₁, ϕ₂, ϕ₆, 그리고 step 1에서 나온 τ(p₁, p₂)
+@@ 31
+4. p₂ 소거
+@@ 32
+ϕ₃, 그리고 step 3에서 나온 τ(p₂)
+@@ 33
+5. p₃ 소거
+@@ 34
+step 2의 τ(p₃)와 step 4의 τ(p₃)
+@@ 35
+비어 있음
+@@ 36
+p(p₃), prior
+@@ 37
+네 번째 열을 모두 곱하면 식 (1.44)가 됩니다: \(p(\boldsymbol{\ell}_1 \mid \mathbf{p}_1, \mathbf{p}_2)\, p(\boldsymbol{\ell}_2 \mid \mathbf{p}_3)\, p(\mathbf{p}_1 \mid \mathbf{p}_2)\, p(\mathbf{p}_2 \mid \mathbf{p}_3)\, p(\mathbf{p}_3)\). <span class="src">§1.6.1 · p. 41</span> step 3을 눈여겨보십시오. \(\mathbf{p}_1\)의 separator는 step 1에서 만든 factor까지 포함해, 그 시점의 그래프에서 찾습니다.
+@@ 38
+직접 해 보기: 책의 ordering을 고른 상태에서 "다음 변수 소거"를 다섯 번 누르고, 각 상태를 Figure 1.10의 해당 패널과 비교해 보십시오. 숫자는 <a href="#d13">Day 1</a>의 직선 위 toy 문제에서 가져왔습니다.
+@@ 39
+눈여겨볼 점: 각 step은 변수 하나 주변의 factor를 지우고, 그 이웃 위에 새 factor(분홍색)를 많아야 하나 남깁니다. 책의 ordering에서는 새 edge가 한 번도 필요하지 않으므로 fill-in은 0에 머물고, 다섯 step이 끝나면 추정값은 p₁ = 0.076, p₂ = 0.984, p₃ = 1.956, ℓ₁ = 0.620, ℓ₂ = 2.428입니다.
+@@ 40
+3. Gaussian factor라면 product factor는 작은 least squares 문제
+@@ 41
+지금까지는 Gaussian을 가정하지 않았습니다. 이제 모든 factor를 \(\phi_i(\mathbf{x}_i) = \exp\!\left(-\tfrac12 \norm{\mathbf{A}_i\mathbf{x}_i - \mathbf{b}_i}_2^2\right)\)라고 둡니다. linearization을 하면 바로 이 꼴이 나옵니다. 지수 함수를 곱하면 지수가 더해지고, 제곱 norm의 합은 쌓은 벡터의 제곱 norm입니다. 식 (1.45)는 이것이 전부입니다:
+@@ 42
+\(\mathcal{N}_j\)는 \(\mathbf{x}_j\)에 인접한 factor의 집합이고, \(\bar{\mathbf{A}}_j\)는 그 factor들의 행을 쌓은 것이며, \([\mathbf{x}_j; \mathbf{s}_j]\)는 소거할 변수를 그 separator 위에 쌓은 것입니다. <span class="src">§1.6.2 · p. 42</span> 행렬로 말하면, \([\mathbf{A} \mid \mathbf{b}]\)에서 열 \(j\)에 nonzero가 있는 행들을 꺼내는 것입니다.
+@@ 43
+toy 문제의 \(\boldsymbol{\ell}_1\)이라면 이 행들은 \(\phi_4, \phi_7, \phi_8\)의 행이며, 식 (1.47)에 해당합니다. 직선 위에서 열을 \(\ell_1, p_1, p_2\)로 두면:
+@@ 44
+4. partial QR로 나누기
+@@ 45
+식 (1.48)은 우변을 붙인 쌓은 행렬을 다음과 같이 분해합니다.
+@@ 46
+여기서 \(\mathbf{Q}\)는 직교 행렬이고 \(\mathbf{R}_j\)는 상삼각 행렬입니다. \(\mathbf{x}_j\)의 열만 삼각 꼴로 만들고 separator 열은 그대로 따라가기 때문에 <em>partial</em>이라고 부릅니다. <span class="src">§1.6.2 · p. 42</span>
+@@ 47
+빈틈 채우기: 이것이 \(\psi\)를 나누는 이유, 그리고 toy 예제의 한 step 손 계산
+@@ 48
+직교 행렬은 길이를 바꾸지 않습니다: \(\norm{\mathbf{Q}\T\mathbf{v}}^2 = \mathbf{v}\T\mathbf{Q}\mathbf{Q}\T\mathbf{v} = \norm{\mathbf{v}}^2\). 지수에 있는 norm 안에 \(\mathbf{Q}\T\)를 적용하고 (1.48)의 두 블록 행을 읽어 냅니다:
+@@ 49
+합의 지수 함수는 곱이므로, \(\psi\)는 \(\mathbf{x}_j\)를 포함하는 항과 포함하지 않는 항으로 나뉩니다. 두 번째 항이 \(\tau(\mathbf{s}_j)\)입니다. 첫 번째 항은 폭이 \(\mathbf{s}_j\)에 의존하지 않는 \(\mathbf{x}_j\)의 Gaussian이므로, 모든 \(\mathbf{s}_j\)에 대해 같은 상수로 적분됩니다. 즉 그 상수 배를 제외하면 conditional \(p(\mathbf{x}_j \mid \mathbf{s}_j)\)입니다. 이것이 식 (1.49)입니다.
+@@ 50
+이제 숫자로 해 봅니다. 첫 벡터가 \(\bar{\mathbf{A}}_1\)의 첫 열 \((1,1,1)\) 방향을 향하는 정규직교 기저가 필요합니다. 한 가지 선택은 다음과 같습니다.
+@@ 51
+세 벡터가 서로 직교하고 길이가 1인지 확인해 보십시오. \(\mathbf{Q}\T[\bar{\mathbf{A}}_1 \mid \bar{\mathbf{b}}_1]\)의 행은 세 벡터를 세 행에 적용한 결과입니다. 예를 들어 \(\mathbf{q}_1\)은 \(\tfrac{1}{\sqrt3}(1+1+1,\; -1,\; -1 \mid 0.6+0.5-0.3)\)입니다. 세 행을 모두 쓰면:
+@@ 52
+각 행을 문장처럼 읽어 봅니다:
+@@ 53
+<strong>1행, conditional.</strong> \(1.732\,\ell_1 - 0.577\,p_1 - 0.577\,p_2 = 0.462\). 1.732로 나누면 \(\ell_1 = (0.8 + p_1 + p_2)/3\)입니다. 이는 \(\ell_1\)에 대해 말한 세 가지, 즉 0.6에 있다, \(p_1 + 0.5\)에 있다, \(p_2 - 0.3\)에 있다를 평균한 것입니다. precision은 \(1.732^2 = 3\)으로, 단위 측정 세 개 분량입니다.
+@@ 54
+<strong>2행, 새 factor.</strong> \(\sqrt2\)를 곱하면 분산 2인 \(p_2 - p_1 = 0.8\)이 됩니다. 같은 landmark를 두 번 본 측정을 서로 빼면 odometry 측정처럼 작동합니다: \((\ell_1 - p_1) - (\ell_1 - p_2) = 0.5 - (-0.3)\).
+@@ 55
+<strong>3행, 새 factor.</strong> \(\sqrt6\)을 곱하면 분산 6인 \(p_1 + p_2 = 1.0\)이 됩니다. 이 식은 \(2\ell_1 - (\ell_1 - p_1) - (\ell_1 - p_2)\)에서 나오며, 그 값은 \(2(0.6) - 0.5 + 0.3\)입니다.
+@@ 56
+2행과 3행에서 landmark는 사라졌지만, landmark가 두 pose에 대해 알려 준 내용은 그대로 남아 있습니다. 다른 정규직교 \(\mathbf{q}_2, \mathbf{q}_3\)를 고르면 겉모습이 다른 두 행이 나오지만, 같은 factor를 나타냅니다. 위젯은 이 두 행도 삼각 꼴로 만들기 때문에 \((0.82, -0.41 \mid -0.29)\)와 \((0, 0.71 \mid 0.64)\)를 보여 줍니다. 두 쌍의 \(\tilde{\mathbf{A}}_\tau\T\tilde{\mathbf{A}}_\tau\)와 \(\tilde{\mathbf{A}}_\tau\T\tilde{\mathbf{b}}_\tau\)는 같습니다.
+@@ 57 attr
+행렬 연산으로 본 elimination 한 step. 왼쪽: landmark l1에 연결된 factor들의 행 세 개를 쌓은 것으로, 열은 l1, p1, p2와 우변 b입니다. Q transpose를 곱한다는 화살표가 결과로 이어집니다: 첫 행은 p1과 p2가 주어졌을 때 l1의 conditional이고, l1 열이 0인 나머지 두 행은 p1과 p2 위의 새 factor를 이룹니다.
+@@ 58
+최종 R의 한 행
+@@ 59
+그래프로 되돌림
+@@ 60
+ϕ₄, ϕ₇, ϕ₈의 행
+@@ 61
+직선 위 toy 문제의 숫자로 본 Figure 1.11의 step. 행 세 개가 들어갑니다. 하나는 완성된 채로 나오고, 둘은 더 이상 ℓ₁을 언급하지 않는 factor가 되어 나옵니다.
+@@ 62
+문제에서 landmark 하나를 없애려면, 먼저 누가 pose를 알려 준다면 landmark를 어떻게 계산할지 적어 두세요(conditional). 다음으로 그 landmark의 측정이 pose들에 대해서만 무엇을 말해 주는지 적으세요(새 factor). 첫 번째 메모는 나중을 위해 치워 두고, 두 번째 메모로 계속 작업하면 돼요.
+@@ 63
+5. 모든 변수에 대해 하면 sparse QR
+@@ 64
+각 step은 완성된 행 하나 \([\mathbf{R}_j \;\, \mathbf{T}_j \mid \mathbf{d}_j]\)를 행렬의 위쪽으로 옮기고, 행 \([\tilde{\mathbf{A}}_\tau \mid \tilde{\mathbf{b}}_\tau]\)를 남은 factor 모음으로 돌려보냅니다. Figure 1.12는 나머지 네 step을 보여 줍니다. 끝나면 완성된 행들이 Bayes net과 같은 패턴의 상삼각 \(\mathbf{R}\)을 이룹니다. 행 \(j\)는 \(\mathbf{x}_k\)가 \(\mathbf{x}_j\)의 separator에 있을 때 그리고 그때에만 열 \(k\)에 nonzero를 가집니다. partial QR을 쓰는 elimination 알고리즘이 <em>바로</em> sparse QR 분해이며, 책은 sparse Cholesky도 같은 알고리즘의 특수한 경우라고 말합니다. <span class="src">§1.6.2 · pp. 42–44</span> 내일 볼 Schur complement는 이것의 Cholesky 버전입니다.
+@@ 65
+여기서 각 변수는 여러 숫자로 된 블록(pose 하나, landmark 하나)이므로, 매 step은 스칼라 열 한 묶음을 한꺼번에 소거합니다. 책은 이것을 <strong>multi-frontal QR</strong>이라고 부르며, sparse 선형대수 라이브러리는 속도를 위해 이런 묶음을 스스로 만든다고 설명합니다. SLAM에서는 변수의 의미에서 묶음이 공짜로 나옵니다. <span class="src">§1.6.2 · pp. 44–45</span>
+@@ 66
+<strong>"변수를 소거하면 그 변수는 버려진다."</strong> 그 변수의 conditional은 남아 있고, \(\psi = p(\mathbf{x}_j \mid \mathbf{s}_j)\,\tau(\mathbf{s}_j)\)가 정확히 성립합니다. elimination은 정보를 재구성할 뿐 잃지 않습니다.
+@@ 67
+<strong>"새 factor는 추가 측정이다."</strong> 새 factor는 이미 있던 측정들의 요약입니다. 앞에서 계산한 step에서 "p₂ − p₁ = 0.8"은 처음부터 ϕ₇과 ϕ₈에 담겨 있던 내용입니다.
+@@ 68
+<strong>"separator는 원래 그래프에서의 이웃 집합이다."</strong> separator는 소거하는 시점의 이웃 집합입니다. 앞선 step에서 만들어진 factor도 포함되며, 새 edge(fill-in)는 이렇게 생깁니다.
+@@ 69
+Q1. ordering ℓ₁, ℓ₂, p₁, p₂, p₃에서 p₁을 소거할 때 함께 곱해지는 factor는 무엇입니까?
+@@ 70
+ϕ₁, ϕ₂, ϕ₆, 그리고 ℓ₁을 소거할 때 만들어진 factor τ(p₁, p₂)
+@@ 71
+ϕ₁과 ϕ₆만
+@@ 72
+ϕ₂와 ϕ₃
+@@ 73
+ϕ₇은 ℓ₁을 소거할 때 이미 쓰였습니다. p₁ 주변에 남은 것은 unary factor 두 개, odometry factor ϕ₂, 그리고 (p₁, p₂) 위의 새 factor입니다.
+@@ 74
+Q2. 두 행 "ℓ₂ = 2.4"와 "ℓ₂ − p₃ = 0.5"(분산 1의 noise)에서 ℓ₂를 소거합니다. ℓ₂의 R은 무엇입니까?
+@@ 75
+쌓은 행에서 ℓ₂ 열은 (1, 1)이고, R은 그 길이인 √2 = 1.414입니다. 그 제곱인 2가 p₃이 주어졌을 때 ℓ₂의 precision입니다. 단위 측정 두 개 분량입니다.
+@@ 76
+Q3. 같은 step에서 새 factor τ(p₃)는 무엇을 말합니까?
+@@ 77
+p₃ = 1.9, 분산 2
+@@ 78
+p₃ = 1.9, 분산 1
+@@ 79
+p₃ = 2.9, 분산 2
+@@ 80
+아무것도 없음: 변수 하나에 걸린 factor는 정보가 없음
+@@ 81
+두 행에 q₂ = (1, −1)/√2를 적용하면 0.707 p₃ = (2.4 − 0.5)/√2입니다. 따라서 p₃ = 1.9로, ℓ₂의 prior에서 관측값을 뺀 값이며, 두 분산을 더하면 2가 됩니다.
+@@ 82
+Q4. toy 그래프에서 p₂를 가장 먼저 소거하면 그 separator는 무엇입니까?
+@@ 83
+p₁과 p₃
+@@ 84
+ℓ₁, p₁, p₃
+@@ 85
+ℓ₁만
+@@ 86
+나머지 네 변수 모두
+@@ 87
+p₂는 ϕ₂(p₁과 함께), ϕ₃(p₃과 함께), ϕ₈(ℓ₁과 함께)에 나옵니다. 그러면 새 factor가 이 셋을 묶어, 그래프에 없던 edge 두 개를 만듭니다. 위젯에서 "p₂ 먼저" ordering으로 확인해 보십시오.
+@@ 88
+elimination은 변수를 하나씩 처리하며 factor들의 곱 \(\phi(\mathbf{x})\)를 Bayes net \(\prod_j p(\mathbf{x}_j \mid \mathbf{s}_j)\)로 바꿉니다.
+@@ 89
+한 step: \(\mathbf{x}_j\)에 연결된 factor를 제거하고, 곱해서 \(\psi(\mathbf{x}_j, \mathbf{s}_j)\)를 만들고, 이를 \(p(\mathbf{x}_j \mid \mathbf{s}_j)\,\tau(\mathbf{s}_j)\)로 나눈 다음, \(\tau\)를 그래프에 되돌려 놓습니다.
+@@ 90
+linear-Gaussian factor라면 \(\psi\)는 행을 쌓은 작은 least squares 항이고, 나누기는 partial QR 분해입니다.
+@@ 91
+첫 행 블록 \([\mathbf{R}_j \; \mathbf{T}_j \mid \mathbf{d}_j]\)가 conditional입니다. 나머지 행은 separator 위의 새 factor입니다.
+@@ 92
+이 step을 모든 변수에 반복하는 것이 sparse (multi-frontal) QR이며, 완성된 행들이 \(\mathbf{R}\)을 이룹니다.
+@@ 93
+<em>SLAM Handbook</em>, §1.6.1 "Variable Elimination Algorithm"과 §1.6.2 "Linear-Gaussian Elimination", pp. 40–45, 식 (1.41)–(1.49), Figure 1.10–1.12.
+@@ 94
+Koller, Friedman, <em>Probabilistic Graphical Models</em>, 2009 (variable elimination, 그리고 새 factor를 marginal로 정의하는 방법).
+@@ 95
+Dellaert, Kaess, <em>Factor Graphs for Robot Perception</em>, 2017 (partial QR로 하는 Gaussian factor graph의 elimination).
+@@ 96
+Golub, Van Loan, <em>Matrix Computations</em>, 4판, 2013 (QR 분해와 2-norm의 직교 불변성).

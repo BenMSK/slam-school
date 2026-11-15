@@ -1,0 +1,176 @@
+@@ 1
+<span class="eyebrow">Week 2 · Day 2</span>
+@@ 2
+From MAP inference to nonlinear least squares
+@@ 3
+After today you can turn a factor graph with Gaussian noise into a nonlinear least-squares cost by writing each factor as a squared Mahalanobis distance and taking the negative logarithm.
+@@ 4
+About 60 min · Read §1.2, pp. 25–29 (5 pages) · Needs Week 2 Day 1
+@@ 5
+Read first: §1.2, pp. 25–29
+@@ 6
+The three lines of equation (1.6) on p. 26, and the reason the denominator disappears.
+@@ 7
+The Gaussian density (1.9) and the squared Mahalanobis distance (1.10) on p. 27.
+@@ 8
+The bearing model (1.13) and the odometry density (1.16) on p. 28.
+@@ 9
+The step from (1.17) to (1.18) on p. 29, and the paragraph after it about factors being "under-specified".
+@@ 10
+The best estimate is the state that makes the product of all factors as large as possible. If every factor is a Gaussian, the logarithm turns that product into a sum of squared errors, each measured in units of its own standard deviation. Maximizing the posterior and minimizing a weighted sum of squares are the same problem.
+@@ 11
+1. The MAP estimate
+@@ 12
+The posterior \(p(\mathbf{x}\mid\mathbf{z})\) is a whole density. Most of the time we want one answer: the state at its peak. That is the <strong>maximum a posteriori (MAP) estimate</strong>, equation (1.6): <span class="src">§1.2.1 · p. 26</span>
+@@ 13
+\(\argmax_{\mathbf{x}}\) means "the value of \(\mathbf{x}\) at which the expression is largest", not the largest value itself. The denominator \(p(\mathbf{z})\) does not contain \(\mathbf{x}\). Dividing a function by a positive constant rescales its height and does not move its peak, so it can be dropped.
+@@ 14
+Yesterday's graph is given a formal definition here. A factor graph is a <strong>bipartite graph</strong> \(F = (\mathcal{U},\mathcal{V},\mathcal{E})\): there are two kinds of nodes, factors \(\phi_i \in \mathcal{U}\) and variables \(\mathbf{x}_j \in \mathcal{V}\), and every edge in \(\mathcal{E}\) joins a factor to a variable, never two nodes of the same kind. Writing \(\mathbf{x}_i\) for the variables joined to factor \(\phi_i\), the graph defines the function <span class="src">§1.2.1 · p. 26</span>
+@@ 15
+which is the unnormalized posterior \(p(\mathbf{z}\mid\mathbf{x})\,p(\mathbf{x})\). MAP inference is then \(\mathbf{x}^{\text{MAP}} = \argmax_{\mathbf{x}} \prod_i \phi_i(\mathbf{x}_i)\), equation (1.8). <span class="src">§1.2.1 · p. 27</span> Be careful with the index: \(\mathbf{x}_i\) here is "the variables of factor \(i\)", a subset of the state, not the \(i\)-th variable.
+@@ 16
+2. Gaussians and the Mahalanobis distance
+@@ 17
+To compute anything we must say what the factors are. The usual choice is the <strong>multivariate Gaussian density</strong> with mean \(\boldsymbol{\mu}\in\R^n\) and \(n\times n\) covariance matrix \(\boldsymbol{\Sigma}\): <span class="src">§1.2.2 · p. 27</span>
+@@ 18
+The quantity in (1.10) is the <strong>squared Mahalanobis distance</strong>. The fraction in front of the exponential makes the density integrate to one. It does not depend on \(\boldsymbol{\theta}\).
+@@ 19
+Filling the gap: what the Mahalanobis distance measures
+@@ 20
+In one dimension, \(\boldsymbol{\Sigma}=\sigma^2\) and (1.10) is \((\theta-\mu)^2/\sigma^2\): the squared distance from the mean, counted in standard deviations. With a diagonal covariance \(\boldsymbol{\Sigma}=\diag(\sigma_1^2,\dots,\sigma_n^2)\) the inverse is \(\diag(1/\sigma_1^2,\dots,1/\sigma_n^2)\), so
+@@ 21
+Each component is divided by its own standard deviation before squaring. Example: \(\boldsymbol{\Sigma}=\diag(0.09,\,0.01)\), so \(\sigma_1=0.3\) and \(\sigma_2=0.1\). The offset \(\mathbf{e}_A=(0.24,\,0)\) has \(\norm{\mathbf{e}_A}^2_{\boldsymbol{\Sigma}} = 0.0576/0.09 = 0.64\), a distance of \(0.8\) standard deviations. The offset \(\mathbf{e}_B=(0,\,0.24)\) has the same ordinary length but \(\norm{\mathbf{e}_B}^2_{\boldsymbol{\Sigma}} = 0.0576/0.01 = 5.76\), a distance of \(2.4\). The density at \(B\) is lower than at \(A\) by the factor \(\exp(-\tfrac12(5.76-0.64)) \approx 0.08\).
+@@ 22
+When \(\boldsymbol{\Sigma}\) is not diagonal the same thing happens along the axes of its ellipse instead of the coordinate axes. Points with equal Mahalanobis distance from the mean lie on an ellipse and have equal density.
+@@ 23 attr
+Two ellipses centred on the mean mu: the one-sigma and two-sigma contours of a Gaussian that is wide horizontally and narrow vertically. Point A lies to the right of the mean inside the one-sigma ellipse. Point B lies above the mean at the same ordinary distance but outside the two-sigma ellipse.
+@@ 24
+B: 0.24 from μ, which is 2.4σ
+@@ 25
+A: 0.24 from μ, which is 0.8σ
+@@ 26
+solid: 1σ contour · dashed: 2σ contour
+@@ 27
+Σ = diag(0.09, 0.01). A and B are equally far from the mean on a ruler. In Mahalanobis distance B is three times as far, because it lies in the direction in which the Gaussian is narrow.
+@@ 28
+3. Writing down the factors
+@@ 29
+<strong>Measurements.</strong> A measurement is modeled as a prediction plus noise, equation (1.11): <span class="src">§1.2.2 · p. 27</span>
+@@ 30
+\(\mathbf{h}\) is the <strong>measurement prediction function</strong>: what the sensor would read if the pose were \(\mathbf{p}\) and the landmark \(\boldsymbol{\ell}\), with no noise. Since \(\mathbf{z}-\mathbf{h}(\mathbf{p},\boldsymbol{\ell})\) is the noise, and the noise is Gaussian, the density of the measurement is a Gaussian centred on the prediction, equation (1.12):
+@@ 31
+For a 2D bearing the book uses, equation (1.13), <span class="src">§1.2.2 · p. 28</span>
+@@ 32
+where \(\operatorname{atan2}(a,b)\) is the angle of the point \((b,a)\) seen from the origin, in \((-\pi,\pi]\). It is the arctangent of \(a/b\) with the quadrant sorted out.
+@@ 33
+<em>Worked example.</em> Pose position \((1,1)\), landmark \((4,5)\). The prediction is \(\operatorname{atan2}(4,3) = 0.927\) rad (53.1°). Suppose the sensor reported \(z=0.950\) rad with \(\sigma=0.05\) rad. The error is \(0.950-0.927=0.023\) rad, which is \(0.023/0.05 = 0.45\) standard deviations, and the squared Mahalanobis distance is \(0.45^2 \approx 0.21\).
+@@ 34
+<strong>Motion.</strong> The prior on the trajectory is \(p(\mathbf{p}_1)\) times conditional densities \(p(\mathbf{p}_{t+1}\mid\mathbf{p}_t)\). With a <strong>motion model</strong> \(\mathbf{g}\) that predicts the next pose from the current pose and a known control input \(\mathbf{u}_t\), the Gaussian version is equation (1.15), whose exponent is \(-\tfrac12\norm{\mathbf{p}_{t+1}-\mathbf{g}(\mathbf{p}_t,\mathbf{u}_t)}^2_{\boldsymbol{\Sigma}_{\mathbf{Q}}}\). If instead the motion is <em>measured</em> by an odometry reading \(\mathbf{o}_t\), and odometry is taken to measure the difference of poses, the exponent is \(-\tfrac12\norm{\mathbf{o}_t-(\mathbf{p}_{t+1}-\mathbf{p}_t)}^2_{\boldsymbol{\Sigma}_{\mathbf{S}}}\), equation (1.16). <span class="src">§1.2.2 · p. 28</span>
+@@ 35
+<em>Worked example.</em> \(\mathbf{p}_t=(1.0,\,2.0,\,0.10)\), \(\mathbf{p}_{t+1}=(1.9,\,2.1,\,0.15)\), odometry \(\mathbf{o}_t=(1.0,\,0.0,\,0.05)\), and \(\boldsymbol{\Sigma}_{\mathbf{S}}=\diag(0.1^2,\,0.1^2,\,0.05^2)\). The error is \(\mathbf{o}_t-(\mathbf{p}_{t+1}-\mathbf{p}_t) = (0.1,\,-0.1,\,0)\), and its squared Mahalanobis distance is \(1+1+0=2\).
+@@ 36
+What plays the role of "measurement minus prediction"
+@@ 37
+Covariance
+@@ 38
+Equation
+@@ 39
+Gaussian prior on a variable
+@@ 40
+\(\boldsymbol{\Sigma}\) of the prior
+@@ 41
+Landmark measurement
+@@ 42
+Motion model with known control
+@@ 43
+Odometry measurement
+@@ 44
+All four have the same shape, which is what makes the next step work. Gaussian noise is a modeling choice, not a law. A wrong data association produces errors far larger than any Gaussian allows, and for those the book uses densities with heavier tails in Chapter 3. <span class="src">§1.2.2 · p. 28</span>
+@@ 45
+Filling the gap: two practical details about angles
+@@ 46
+Equation (1.13) gives the bearing in the world frame. A sensor mounted on the robot measures the bearing relative to the robot's heading \(\theta\), so in practice the model is \(\operatorname{atan2}(\ell_y-p_y,\ell_x-p_x)-\theta\). The Day 1 widget uses that form. The book keeps the simpler one because it postpones orientation to Chapter 2.
+@@ 47
+Second, angles wrap around. If the prediction is \(3.10\) rad and the measurement is \(-3.10\) rad, the plain difference is \(-6.20\), but the two directions are only \(0.083\) rad apart. Any error that is an angle must be brought back into \((-\pi,\pi]\) before it is squared.
+@@ 48
+4. From a product to a sum of squares
+@@ 49
+Assume every factor is proportional to a Gaussian in its error, equation (1.17): <span class="src">§1.2.3 · p. 29</span>
+@@ 50
+The book then says "taking the negative log and dropping the factor ½" gives (1.18). Here is that step in full.
+@@ 51
+Filling the gap: the negative-log step
+@@ 52
+The logarithm is strictly increasing: if \(a\gt b\gt 0\) then \(\log a\gt\log b\). So a positive function and its logarithm have their maximum at the same place. And the maximum of a function is the minimum of its negative. Therefore
+@@ 53
+where \(c_i\) is the logarithm of the constant hidden in the \(\propto\) sign. Adding the constants \(c_i\) to a function does not move its minimum. Multiplying the function by 2 does not either. What is left is
+@@ 54
+This is a <strong>nonlinear least-squares problem</strong>: "least squares" because the cost is a sum of squares, "nonlinear" because the \(\mathbf{h}_i\) are not linear functions of the state. Minimizing it combines all factors into one answer, which the book calls <strong>sensor fusion</strong>. <span class="src">§1.2.3 · p. 29</span>
+@@ 55
+<em>Worked example of fusion.</em> Two sensors measure the same scalar \(x\) directly: \(z_1=10\) with \(\sigma_1=1\), and \(z_2=12\) with \(\sigma_2=2\). The cost is \((10-x)^2/1+(12-x)^2/4\). Setting the derivative to zero, \(-2(10-x)-\tfrac12(12-x)=0\), gives \(2.5\,x=26\) and \(x=10.4\). The answer is not the midpoint 11. The measurement with the smaller \(\sigma\) is weighted \(1/\sigma^2\), four times as heavily.
+@@ 56
+Every clue complains when the estimate disagrees with it, and a precise clue complains louder than a vague one. The MAP estimate is the state at which the total of the squared complaints is smallest.
+@@ 57
+5. One factor is rarely enough
+@@ 58
+The book makes a point that is easy to skip: most factors are "under-specified". A measurement usually has fewer numbers than the unknowns it touches, so a factor on its own gives the same value to an infinite set of states. A 2D pixel measurement is consistent with a whole ray of 3D points. <span class="src">§1.2.3 · p. 29</span> A bearing is one number about a landmark that has two coordinates. Only the product of several factors has a single peak.
+@@ 59
+Try it: the widget shows the product of the factors that touch one landmark, for every landmark position on a grid. It starts with one bearing factor. Switch on the bearing from p₂, then the prior, and raise the bearing noise.
+@@ 60
+Notice that one bearing factor is a wedge, equally high all along the line of sight, so the MAP estimate is not unique. Two bearing factors multiply to a single blob where the lines of sight cross, with its peak at (2.03, 1.71). That is 0.11 away from the true landmark, because each measured bearing was slightly off. With the prior on and the bearing noise at 15°, the peak moves toward the prior mean, to (2.21, 1.41): a factor's pull depends on its σ.
+@@ 61
+The cost (1.18) is not convex, which means it can have several local minima. The methods of this chapter find the global minimum if they start from a decent initial guess, and may stop in a wrong local minimum if the guess is poor. Solvers that can certify a global optimum are the subject of Chapter 6. <span class="src">§1.2.3 · p. 29</span> You will see a local minimum happen on Day 5.
+@@ 62
+<strong>"MAP gives the true state."</strong> It gives the most probable state under the model. With noisy measurements it is near the truth, not on it, as in the widget.
+@@ 63
+<strong>"Least squares means all errors count equally."</strong> Each error is divided by its standard deviation first. An error of 0.1 m on a sensor with σ = 0.01 m costs 100, and on a sensor with σ = 1 m it costs 0.01.
+@@ 64
+<strong>"The ½ and the normalization constants matter for the answer."</strong> They change the value of the cost, not the location of its minimum. They do matter if you need the actual probability.
+@@ 65
+Q1. Σ = diag(4, 1) and the error is e = (2, 2). What is the squared Mahalanobis distance of e?
+@@ 66
+Each component is squared and divided by its variance: 4/4 + 4/1 = 5. (8 is the ordinary squared length.)
+@@ 67
+Q2. Two sensors measure the same scalar x directly: z1 = 4 with σ1 = 1, and z2 = 10 with σ2 = 2. What is the MAP estimate of x (no prior)?
+@@ 68
+Minimize (4 − x)² + (10 − x)²/4. The derivative gives 2(x − 4) + (x − 10)/2 = 0, so 2.5x = 13 and x = 5.2. The more precise sensor has weight 1/σ² = 1 against 0.25.
+@@ 69
+Q3. A pose is at (0, 0) and a landmark at (1, 1). The measured bearing is 0.885 rad with σ = 0.1 rad. Using model (1.13), how much does this factor add to the cost (1.18)?
+@@ 70
+About 0.01
+@@ 71
+About 0.1
+@@ 72
+About 10
+@@ 73
+About 1
+@@ 74
+The prediction is atan2(1, 1) = π/4 = 0.785 rad. The error is 0.100 rad, which is one standard deviation, and its square is about 1.
+@@ 75
+Q4. A landmark is touched by a single bearing factor from a known pose, and nothing else. Which landmark positions maximize that factor?
+@@ 76
+Exactly one point
+@@ 77
+Every point on the line of sight along the measured bearing
+@@ 78
+Every point on a circle around the pose
+@@ 79
+Every point of the plane
+@@ 80
+All points on that half-line have zero bearing error, so they all give the factor its largest value. A circle would be the answer for a range measurement.
+@@ 81
+The MAP estimate maximizes the unnormalized posterior p(z | x) p(x), which is the product of all factors in the graph.
+@@ 82
+A Gaussian factor is exp(−½ × squared Mahalanobis distance of an error), and the Mahalanobis distance measures the error in standard deviations.
+@@ 83
+Priors, landmark measurements, motion models, and odometry all have the form "measurement minus prediction" with a covariance.
+@@ 84
+Taking the negative log turns the product into the nonlinear least-squares cost (1.18).
+@@ 85
+Single factors are under-specified. The cost is non-convex, so the initial guess matters.
+@@ 86
+<em>SLAM Handbook</em>, §1.2 "From MAP Inference to Least Squares", pp. 25–29.
+@@ 87
+The bearing model relative to the robot's heading follows Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005.
+@@ 88
+The Mahalanobis-distance and inverse-variance weighting examples follow Barfoot, <em>State Estimation for Robotics</em>, 2017.

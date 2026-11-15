@@ -1,0 +1,188 @@
+@@ 1
+<span class="eyebrow">9주차 · Day 4</span>
+@@ 2
+Pose-graph optimization의 semidefinite relaxation과 그 certificate
+@@ 3
+오늘이 끝나면 회전만 남은 pose-graph optimization의 semidefinite relaxation을 쓰고, QCQP의 dual을 유도하고, certificate matrix로 후보 해가 global optimum임을 증명할 수 있습니다.
+@@ 4
+약 60분 · §6.1.2.2의 "Forming the Relaxation"부터 Theorem 6.1까지, pp. 160–161 읽기 (2쪽) · 9주차 Day 3 필요
+@@ 5
+먼저 읽기: §6.1.2.2 "Forming the Relaxation"과 Theorem 6.1, pp. 160–161
+@@ 6
+오늘은 두 쪽뿐입니다. 책이 생략한 duality 이론을 레슨이 보충하기 때문입니다. 읽으면서 찾아볼 것:
+@@ 7
+두 relaxation 단계: \(\SO(d)\)에서 \(\operatorname{O}(d)\)로, 그다음 \(\mathbf{R}\T\mathbf{R}\)에서 \(\mathbf{Z}\)로 (p. 160).
+@@ 8
+Problem 6.3 뒤에 나오는 세 최적값의 사슬 (p. 160).
+@@ 9
+Theorem 6.1에서 relaxation이 exact해지는 조건 (p. 161).
+@@ 10
+Problem 6.2의 Shor's relaxation은 \(\mathbf{R}\T\mathbf{R}\)을 대신하는 행렬 \(\mathbf{Z}\)에 대한 SDP입니다. 그 dual은 검사법 하나를 줍니다: 아무 후보 \(\hat{\mathbf{R}}\)에서 행렬 \(\mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda}\)를 만들고, \(\mathbf{S}\)에 음의 eigenvalue가 없으면 \(\hat{\mathbf{R}}\)는 global optimum입니다. Theorem 6.1은 noise가 충분히 작으면 실제 optimum에서 이 검사가 통과한다고 말합니다.
+@@ 11
+1. 두 relaxation 단계
+@@ 12
+어제는 Problem 6.2, 즉 \(\mathbf{R}=(\mathbf{R}_1\ \cdots\ \mathbf{R}_n)\in\SO(d)^n\) 위의 \(\min\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\)로 끝났습니다. 책은 이를 두 번 relax합니다. <span class="src">§6.1.2.2 · p. 160</span>
+@@ 13
+<strong>1단계: reflection 허용.</strong> 회전은 \(\mathbf{R}_i\T\mathbf{R}_i=\mathbf{I}_d\)이고 행렬식이 \(+1\)인 직교 행렬입니다. <strong>orthogonal group</strong>(직교군) \(\operatorname{O}(d)\)는 첫 조건은 유지하고 둘째 조건은 버리므로 reflection (행렬식 \(-1\))도 포함합니다. Orthonormality는 원소에 대한 이차 방정식들이므로, \(\operatorname{O}(d)^n\) 위의 문제는 선형 항이 없는 QCQP입니다 (책은 <em>homogeneous</em>라고 합니다). (6.19)의 사상 \(\operatorname{BlockDiag}_{d\times d}\)는 \(dn\times dn\) 행렬의 대각 블록 \(n\)개를 읽어 낼 뿐이며, \(\mathbf{R}\T\mathbf{R}\)의 대각 블록은 \(\mathbf{R}_i\T\mathbf{R}_i\)입니다: <span class="src">eq. (6.20) · p. 160</span>
+@@ 14
+<strong>2단계: lift하고 rank 버리기.</strong> 미지수는 \(\mathbf{R}\T\mathbf{R}\)을 통해서만 들어갑니다. 이것은 벡터 \(\mathbf{x}\) 대신 행렬이 들어간 Day 2입니다: \(\mathbf{R}\T\mathbf{R}\)은 대칭이고, positive semidefinite이며, rank가 \(d\)입니다 (\(\mathbf{R}\)의 행이 \(d\)개이므로 1이 아닙니다). 이를 \(\mathbf{Z}\)라 부르고, "positive semidefinite"는 남기고 "rank \(d\)"는 지웁니다: <span class="src">Problem 6.3, eq. (6.21) · p. 160</span>
+@@ 15 attr
+세 겹의 상자. 가장 안쪽은 SO(d)의 n제곱에 속하는 회전들의 집합, 즉 실제 문제이며, 최솟값은 p star MLE입니다. 그 바깥은 R이 O(d)의 n제곱에 속할 때 Z가 R transpose R인 rank d 집합이며, 최솟값은 p star O입니다. 가장 바깥은 대각 블록이 단위행렬인 모든 positive semidefinite Z의 convex 집합이며, 최솟값은 p star SDP입니다. 세 최솟값의 순서는 p star SDP가 p star O 이하이고, p star O가 p star MLE 이하입니다.
+@@ 16
+Z ⪰ 0, 대각 블록 I: convex
+@@ 17
+Z = RᵀR, R ∈ O(d)ⁿ: rank d
+@@ 18
+Z = RᵀR, R ∈ SO(d)ⁿ:
+@@ 19
+실제 문제
+@@ 20
+=
+@@ 21
+=
+@@ 22
+=
+@@ 23
+각 단계는 feasible set을 넓히므로 각 최솟값은 내려갈 수만 있습니다. 가장 바깥 집합만 convex입니다.
+@@ 24
+이것이 사슬 \(p^\star_{\text{MLE}}\ge p^\star_{\mathrm{O}}\ge p^\star_{\text{SDP}}\)입니다. 그리고 Day 2에서처럼, SDP minimizer가 마침 \(\mathbf{R}^\star\in\SO(d)^n\)인 \(\mathbf{Z}^\star=\mathbf{R}^{\star\mathsf{T}}\mathbf{R}^\star\)라면 \(\mathbf{R}^\star\)는 Problem 6.2의 global optimum입니다. <span class="src">pp. 160–161</span>
+@@ 25
+\(\mathbf{Z}\)에 무엇이 들어 있는지 보면 도움이 됩니다. \((i,j)\) 블록은 \(\mathbf{R}_i\T\mathbf{R}_j\), 즉 pose \(i\)와 \(j\) 사이의 상대 회전입니다. Heading이 \(\theta_1,\theta_2\)인 두 평면 pose에 대해
+@@ 26
+Heading의 차이만 나타납니다. 해 전체를 공통 회전 \(\mathbf{G}\)로 돌리면 \(\mathbf{R}\)이 \(\mathbf{G}\mathbf{R}\)로 바뀌지만 \(\mathbf{Z}=\mathbf{R}\T\mathbf{G}\T\mathbf{G}\mathbf{R}\)는 변하지 않습니다. Lift된 변수는 모든 쌍의 상대 회전을 저장하며 gauge freedom이 없습니다. 대가는 크기입니다: 3-D에서 pose가 1000개이면 \(\mathbf{Z}\)는 \(3000\times3000\)입니다.
+@@ 27
+2. QCQP의 Lagrangian duality
+@@ 28
+Day 2는 feasible set을 넓혀 lower bound를 얻었습니다. 같은 bound에 이르는 두 번째 길이 있으며, certificate를 만들어 내는 것은 이 길입니다. 일반 문제 (QCQP)를 봅시다: \(\mathbf{x}\T\mathbf{A}_i\mathbf{x}=b_i\)를 만족하며 \(\mathbf{x}\T\mathbf{C}\mathbf{x}\)를 최소화합니다. Constraint마다 숫자 \(\lambda_i\) 하나, 즉 <strong>Lagrange multiplier</strong>를 도입하고 <strong>Lagrangian</strong>을 만듭니다
+@@ 29
+두 관찰이 모든 일을 합니다.
+@@ 30
+Feasible \(\mathbf{x}\)에서는 괄호 안이 0이므로, \(\boldsymbol{\lambda}\)가 무엇이든 \(L(\mathbf{x},\boldsymbol{\lambda})=\mathbf{x}\T\mathbf{C}\mathbf{x}\)입니다.
+@@ 31
+Constraint를 무시하고 <em>모든</em> \(\mathbf{x}\)에 대해 \(L\)을 최소화합니다. \(\mathbf{S}(\boldsymbol{\lambda})\succeq0\)이면 이차 항은 결코 음수가 아니고, 최솟값은 \(\mathbf{x}=\mathbf{0}\)에서의 \(\mathbf{b}\T\boldsymbol{\lambda}\)입니다. \(\mathbf{S}(\boldsymbol{\lambda})\)에 \(\mathbf{v}\T\mathbf{S}\mathbf{v}\lt0\)인 방향 \(\mathbf{v}\)가 있으면, \(\mathbf{x}=s\mathbf{v}\)로 크기를 키워 \(L\)을 \(-\infty\)로 보낼 수 있습니다.
+@@ 32
+이 제약 없는 최솟값을 <strong>dual function</strong>(쌍대 함수) \(q(\boldsymbol{\lambda})\)라고 합니다. 제약 없는 최솟값은 어느 특정 점에서의 값보다 클 수 없으므로, 모든 feasible \(\mathbf{x}\)에 대해 \(q(\boldsymbol{\lambda})\le L(\mathbf{x},\boldsymbol{\lambda})=\mathbf{x}\T\mathbf{C}\mathbf{x}\)입니다. 따라서 모든 \(\boldsymbol{\lambda}\)에 대해 \(q(\boldsymbol{\lambda})\le p^\star\)입니다. 이것이 <strong>weak duality</strong>(약한 쌍대성)입니다. 그런 bound 중 최선을 찾는 것이 <strong>dual problem</strong>(쌍대 문제)입니다:
+@@ 33
+이것도 SDP이며, 미지수는 \(m\)개뿐입니다. Shor's (SDP)에 같은 구성을 하면 똑같은 dual이 나오므로 두 길은 만납니다: \(\text{dual value}\le d^\star\le p^\star\). Strictly feasible한 점이 있는 convex problem에서는 (Slater's condition; Problem 6.3에서는 \(\mathbf{Z}=\mathbf{I}\)가 그런 점입니다) 첫 부등식이 등식이 되며, 이를 <strong>strong duality</strong>(강한 쌍대성)이라고 합니다.
+@@ 34
+예: 단위 벡터 위에서 \(\mathbf{x}\T\mathbf{C}\mathbf{x}\)를 최소화합니다. Constraint가 하나, \(\mathbf{A}=\mathbf{I}\), \(b=1\)이므로 \(\mathbf{S}(\lambda)=\mathbf{C}-\lambda\mathbf{I}\)이며, 이는 \(\lambda\)가 \(\mathbf{C}\)의 최소 eigenvalue 이하일 때, 그리고 그때에만 positive semidefinite입니다. Dual optimum은 \(\lambda_{\min}(\mathbf{C})\)로, Day 2에서 \(\mathbf{C}=\begin{bmatrix}3 &amp; 2\\ 2 &amp; 0\end{bmatrix}\)에 대해 원판 그림이 준 것과 같은 \(-1\)입니다.
+@@ 35
+3. Certificate matrix
+@@ 36
+빈틈 채우기: global optimality의 충분조건
+@@ 37
+<strong>주장.</strong> \(\hat{\mathbf{x}}\)가 (QCQP)에서 feasible하다고 합시다. 어떤 \(\hat{\boldsymbol{\lambda}}\)가 다음을 만족하는 행렬 \(\mathbf{S}=\mathbf{S}(\hat{\boldsymbol{\lambda}})\)를 준다면
+@@ 38
+\(\hat{\mathbf{x}}\)는 global minimizer입니다.
+@@ 39
+<strong>증명.</strong> 임의의 feasible \(\mathbf{x}\)에 대해, \(\mathbf{C}=\mathbf{S}+\sum_i\hat\lambda_i\mathbf{A}_i\)와 constraint를 쓰면
+@@ 40
+\(\hat{\mathbf{x}}\) 자신에 대해서는 (i)에 의해 첫 항이 0이므로 \(\hat{\mathbf{x}}\T\mathbf{C}\hat{\mathbf{x}}=\mathbf{b}\T\hat{\boldsymbol{\lambda}}\)입니다. 어떤 feasible point도 \(\hat{\mathbf{x}}\)보다 cost가 낮지 않습니다.
+@@ 41
+<strong>\(\hat{\boldsymbol{\lambda}}\) 찾기.</strong> 조건 (i)은 \(\sum_i\lambda_i\mathbf{A}_i\hat{\mathbf{x}}=\mathbf{C}\hat{\mathbf{x}}\), 즉 \(\boldsymbol{\lambda}\)에 대한 선형 방정식입니다. 이는 Lagrangian의 gradient \(2\mathbf{S}\mathbf{x}\)가 \(\hat{\mathbf{x}}\)에서 사라진다는 뜻이며, local solver의 출력이 만족하는 1차 조건입니다. 그러므로: local 해를 가져와 (i)을 multiplier에 대해 풀고, \(\mathbf{S}\)의 최소 eigenvalue를 계산해 (ii)를 검사합니다. 조건 (i), (ii)와 feasibility가 relaxation의 <strong>KKT conditions</strong>입니다.
+@@ 42
+Day 2의 \(\pm1\) 변수 세 개로 이 검사를 손으로 해 봅시다. 여기서 \(\mathbf{A}_i\)는 \((i,i)\)에만 1이 있으므로 \(\sum\lambda_i\mathbf{A}_i=\operatorname{Diag}(\boldsymbol{\lambda})\)이고, (i)은 \(\lambda_i=(\mathbf{C}\hat{\mathbf{x}})_i/\hat x_i\)가 됩니다.
+@@ 43
+경우
+@@ 44
+\(\mathbf{C}\)와 후보
+@@ 45
+Multiplier
+@@ 46
+판정
+@@ 47
+일관됨, coupling \((1,1,-1)\)
+@@ 48
+=
+@@ 49
+\(\mathbf{C}\hat{\mathbf{x}}=(-2,2,2)\)이므로 \(\hat{\boldsymbol{\lambda}}=(-2,-2,-2)\)
+@@ 50
+\(\begin{bmatrix}2 &amp; 1 &amp; 1\\ 1 &amp; 2 &amp; -1\\ 1 &amp; -1 &amp; 2\end{bmatrix}=3\mathbf{I}-\hat{\mathbf{x}}\hat{\mathbf{x}}\T\), eigenvalue \(0,3,3\)
+@@ 51
+\(\mathbf{S}\succeq0\): 인증됨. \(\mathbf{b}\T\hat{\boldsymbol{\lambda}}=-6\)은 cost와 같습니다.
+@@ 52
+모두 불일치, coupling \((1,1,1)\)
+@@ 53
+=
+@@ 54
+\(\mathbf{C}\hat{\mathbf{x}}=(0,0,2)\)이므로 \(\hat{\boldsymbol{\lambda}}=(0,0,-2)\)
+@@ 55
+\(\begin{bmatrix}0 &amp; 1 &amp; 1\\ 1 &amp; 0 &amp; 1\\ 1 &amp; 1 &amp; 2\end{bmatrix}\); \(\mathbf{v}=(1,-1,0)\)이면 \(\mathbf{v}\T\mathbf{S}\mathbf{v}=-2\)
+@@ 56
+Positive semidefinite가 아님: \(\hat{\mathbf{x}}\)가 실제로는 최적인데도 certificate가 없습니다. Relaxation이 tight하지 않습니다 (\(d^\star=-3\)).
+@@ 57
+둘째 행은 이 검사가 한쪽 방향으로만 작동한다는 것을 보여 줍니다. 통과하면 최적성이 증명됩니다. 실패하면 아무것도 증명되지 않습니다.
+@@ 58
+<strong>Pose graph의 경우.</strong> (6.20)에서 constraint는 \(d\times d\) 행렬 방정식 \(\mathbf{R}_i\T\mathbf{R}_i=\mathbf{I}_d\)입니다. 각 constraint는 multiplier로 된 대칭 \(d\times d\) 블록 \(\boldsymbol{\Lambda}_i\)를 받고, \(\boldsymbol{\Lambda}=\operatorname{Diag}(\boldsymbol{\Lambda}_1,\dots,\boldsymbol{\Lambda}_n)\)가 \(\sum\lambda_i\mathbf{A}_i\)의 역할을 합니다. <strong>certificate matrix</strong>는 다음과 같습니다
+@@ 59
+\(\boldsymbol{\Lambda}_i\)의 공식은 조건 (i) \(\mathbf{S}\hat{\mathbf{R}}\T=\mathbf{0}\)에서 나옵니다: \(\tilde{\mathbf{Q}}\hat{\mathbf{R}}\T\)의 블록 \(i\)가 \(\boldsymbol{\Lambda}_i\hat{\mathbf{R}}_i\T\)와 같아야 하고, 오른쪽에 \(\hat{\mathbf{R}}_i\)를 곱하면 \(\boldsymbol{\Lambda}_i\)만 남습니다. 증명은 위와 같되 trace로 씁니다: 임의의 feasible \(\mathbf{Z}\)에 대해 \(\tr(\tilde{\mathbf{Q}}\mathbf{Z})=\tr(\mathbf{S}\mathbf{Z})+\tr(\boldsymbol{\Lambda}\mathbf{Z})\ge\tr(\boldsymbol{\Lambda})\)입니다. 두 positive semidefinite 행렬에 대해 \(\tr(\mathbf{S}\mathbf{Z})\ge0\)이고 \(\tr(\boldsymbol{\Lambda}\mathbf{Z})=\sum_i\tr(\boldsymbol{\Lambda}_i\mathbf{Z}_{ii})=\tr(\boldsymbol{\Lambda})\)이기 때문입니다. \(\hat{\mathbf{R}}\)에서 cost는 \(\tr(\boldsymbol{\Lambda})\)와 같습니다. 따라서 \(\mathbf{S}\succeq0\)이면 \(p^\star_{\text{SDP}}=\tr(\tilde{\mathbf{Q}}\hat{\mathbf{R}}\T\hat{\mathbf{R}})\)이고, \(\hat{\mathbf{R}}\)는 1절의 세 문제 모두에서 한꺼번에 최적입니다.
+@@ 60
+회전만 있는 평면의 경우 블록은 단위행렬의 배수 \(\boldsymbol{\Lambda}_i=\lambda_i\mathbf{I}_2\)로 나오며
+@@ 61
+여기서 \(r_e\)는 Day 1의 edge 각도 residual입니다. 각 pose의 multiplier는 그 pose에 닿는 edge들의 어긋남을 더한 것입니다. 두 edge의 residual이 60°와 90°인 pose (\(\kappa=1\))는 \(\lambda_i=0.5+1=1.5\)를 얻습니다.
+@@ 62
+4. 검사해 보기, 그리고 통과가 보장되는 경우
+@@ 63
+위젯은 Day 1 graph의 heading에 gradient descent를 실행하고, 멈춘 지점에서 \(\mathbf{S}\)를 만들어 eigenvalue 20개를 그립니다.
+@@ 64
+눈여겨볼 점: 첫 실행 (cost 11.595)은 \(\lambda_{\min}(\mathbf{S})=-0.738\)입니다: certificate 없음. "새 시작점"을 누르면 cost 0.091이 되고, 최소 eigenvalue는 0.000입니다. 0이 한 쌍이고 나머지는 모두 양수이니 인증됩니다. 이제 noise를 올리면서 각 수준에서 "새 시작점"을 몇 번씩 누르십시오. 75°까지는 certificate를 얻는 시작점이 늘 있습니다. 80° 이상에서는 하나도 없습니다: 그곳에서는 relaxation이 더 이상 tight하지 않습니다.
+@@ 65
+Relaxation이 언제 tight한지에 대한 책의 보장이 Theorem 6.1입니다. \(\bar{\mathbf{Q}}\)를 noise 없는 실제 relative pose로 만든 데이터 행렬이라고 합시다. \(\bar{\mathbf{Q}}\)에 따라 정해지는 상수 \(\beta\gt0\)가 있어서, \(\norm{\tilde{\mathbf{Q}}-\bar{\mathbf{Q}}}_2\lt\beta\)이면 Problem 6.3은 유일한 해 \(\mathbf{Z}^\star=\mathbf{R}^{\star\mathsf{T}}\mathbf{R}^\star\)를 가지며, 여기서 \(\mathbf{R}^\star\in\SO(d)^n\)는 Problem 6.2의 global minimizer입니다. <span class="src">Theorem 6.1 · p. 161</span> 이 norm은 spectral norm, 즉 가장 큰 singular value이므로, 조건은 "noise가 데이터 행렬을 많이 움직이지 않았다"는 뜻입니다. 그러면 전체 Problem 6.1의 global minimizer는 (6.16)에서 따라 나옵니다.
+@@ 66
+직관: 작은 noise로 충분한 이유
+@@ 67
+이것은 증명이 아니라 아이디어입니다 (증명은 책이 SE-Sync 논문으로 미룹니다). 측정값이 완벽하면 실제 회전의 cost는 0이고, 이는 제곱합이 가질 수 있는 가장 낮은 값입니다. 모든 multiplier가 0이므로 \(\mathbf{S}=\bar{\mathbf{Q}}\)이고, 이는 positive semidefinite입니다: certificate가 성립합니다. Connected graph에서 \(\bar{\mathbf{Q}}\)는 정확히 \(d\)개의 zero eigenvalue를 가지고 나머지는 엄격히 양수입니다. Noise를 조금 더합니다. Optimum과 \(\mathbf{S}\)가 조금 움직입니다. \(d\)개의 0은 0에 머뭅니다. 구성상 \(\mathbf{S}\hat{\mathbf{R}}\T=\mathbf{0}\)이기 때문입니다. 그리고 양의 eigenvalue는 갑자기 0 아래로 뛰어내릴 수 없습니다. 따라서 noise가 그 간격을 닫을 만큼 커질 때까지 \(\mathbf{S}\)는 positive semidefinite로 남습니다. 위젯에서 0의 쌍 (\(d=2\))과 그 간격을 보았습니다.
+@@ 68
+<strong>"S의 음의 eigenvalue는 해가 나쁜 local minimum임을 증명한다."</strong> 이 검사로 그 해를 인증할 수 없다는 것만 증명합니다. 해는 suboptimal일 수도 있고, relaxation이 tight하지 않은 문제에서 최적일 수도 있습니다.
+@@ 69
+<strong>"S는 positive definite여야 한다."</strong> 결코 그렇지 않습니다: \(\mathbf{S}\hat{\mathbf{R}}\T=\mathbf{0}\) 때문에 적어도 \(d\)개의 zero eigenvalue가 있습니다. 검사는 \(\lambda_{\min}(\mathbf{S})\ge0\)이며, 실제로는 "작은 음의 허용 오차보다 낮지 않음"입니다.
+@@ 70
+<strong>"SDP는 회전에 대해 최적화한다."</strong> SDP는 상대 회전이 될 법한 값들의 표인 \(\mathbf{Z}\)에 대해 최적화합니다. \(\mathbf{Z}^\star\)의 rank가 \(d\)일 때만 실제 회전이 거기서 나옵니다.
+@@ 71
+Q1. 3-D에서 pose가 100개인 pose graph가 있습니다. Problem 6.3의 행렬 Z는 얼마나 큽니까?
+@@ 72
+Z는 크기가 d × dn = 3 × 300인 R에 대한 RᵀR을 나타내므로, Z는 dn × dn = 300 × 300입니다.
+@@ 73
+Q2. p*_O가 p*_MLE보다 결코 크지 않은 이유는 무엇입니까?
+@@ 74
+Reflection이 항상 데이터에 더 잘 맞습니다
+@@ 75
+O(d) 문제의 objective가 다릅니다
+@@ 76
+O(d)는 convex입니다
+@@ 77
+모든 회전은 직교 행렬이므로, O(d) 문제는 같은 cost를 더 큰 집합 위에서 최소화합니다
+@@ 78
+SO(d)는 O(d)의 부분집합입니다. 상위 집합 위의 최솟값은 부분집합 위의 최솟값 이하입니다. O(d)는 convex가 아닙니다. Convexity는 lift한 뒤에야 나타납니다.
+@@ 79
+Q3. κ = 1인 평면의 회전만 있는 pose graph에서 한 pose의 edge 세 개가 residual 0°, 60°, 180°를 가집니다. 그 multiplier λ_i는 얼마입니까?
+@@ 80
+=
+@@ 81
+Q4. Local solver가 R̂에서 멈춥니다. S를 만들어 보니 λmin(S) = −0.7입니다. 무엇이 따라 나옵니까?
+@@ 82
+R̂는 local minimum이 아닙니다
+@@ 83
+R̂는 global minimum입니다
+@@ 84
+확실한 것은 없습니다: R̂가 suboptimal일 수도, relaxation이 tight하지 않을 수도 있습니다
+@@ 85
+측정값에 outlier가 있습니다
+@@ 86
+조건 S ⪰ 0은 최적성의 충분조건이지 필요조건이 아닙니다. 실패하면 certificate가 없고, 추가 작업 없이는 두 이유 중 어느 쪽인지 알 수 없습니다 (Day 5).
+@@ 87
+\(\SO(d)\)를 \(\operatorname{O}(d)\)로 relax한 다음, \(\mathbf{R}\T\mathbf{R}\)을 대각 블록이 단위행렬인 positive semidefinite \(\mathbf{Z}\)로 바꿉니다: Problem 6.3, \(p^\star_{\text{MLE}}\ge p^\star_{\mathrm{O}}\ge p^\star_{\text{SDP}}\).
+@@ 88
+QCQP의 Lagrangian은 \(\mathbf{x}\T\mathbf{S}(\boldsymbol{\lambda})\mathbf{x}+\mathbf{b}\T\boldsymbol{\lambda}\)입니다. 그 dual은 \(\mathbf{S}(\boldsymbol{\lambda})\succeq0\)을 만족하며 \(\mathbf{b}\T\boldsymbol{\lambda}\)를 최대화하고, 항상 \(p^\star\)를 아래에서 bound합니다.
+@@ 89
+Feasible 후보가 \(\mathbf{S}\hat{\mathbf{x}}=\mathbf{0}\)과 \(\mathbf{S}\succeq0\)을 만족하는 multiplier를 가지면, 그 후보는 global 최적입니다. PGO에서는 \(\boldsymbol{\Lambda}_i=(\tilde{\mathbf{Q}}\hat{\mathbf{R}}\T\hat{\mathbf{R}})_{ii}\)로 \(\mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda}\)입니다.
+@@ 90
+이 검사는 한쪽 방향입니다: 통과하면 최적성이 증명되고, 실패하면 아무것도 증명되지 않습니다.
+@@ 91
+Theorem 6.1: noise가 graph에 따라 정해지는 문턱값보다 작으면 relaxation은 exact하고, 그 유일한 해는 \(\mathbf{R}^{\star\mathsf{T}}\mathbf{R}^\star\)입니다.
+@@ 92
+<em>SLAM Handbook</em>, §6.1.2.2 "Forming the Relaxation", pp. 160–161, 식 (6.19)–(6.21), Problem 6.3, Theorem 6.1.
+@@ 93
+Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004: Lagrangian, weak duality와 strong duality, Slater's condition, KKT conditions, 그리고 QCQP의 dual.
+@@ 94
+Rosen, Carlone, Bandeira, Leonard, <em>SE-Sync: A certifiably correct algorithm for synchronization over the special Euclidean group</em>, 2019: certificate matrix \(\mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda}\)와 Theorem 6.1의 증명. Certificate matrix는 책의 이 쪽들에는 나오지 않습니다.

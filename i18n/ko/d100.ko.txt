@@ -1,0 +1,242 @@
+@@ 1
+<span class="eyebrow">17주차 · Day 4</span>
+@@ 2
+Degenerate motion: nullspace가 커질 때
+@@ 3
+오늘이 끝나면 aided inertial system의 degenerate motion 네 가지를 말하고, 각각이 orientation이나 scale을 숨기는 이유를 유도하고, 주어진 운동과 센서에서 unobservable 방향의 개수를 예측할 수 있습니다.
+@@ 4
+약 60분 · §11.3.3과 §11.4 도입부, pp. 325–326 읽기 (2쪽) · 17주차 Day 3 필요
+@@ 5
+먼저 읽기: §11.3.3과 §11.4의 첫 문단, pp. 325–326
+@@ 6
+p. 326의 Table 11.1: 네 가지 운동, 각각이 적용되는 센서, 그리고 잃는 것.
+@@ 7
+순수 이동이 roll과 pitch를 잃는 이유에 대한 한 문장짜리 직관 (p. 325).
+@@ 8
+<em>system</em> scale을 잃는 것과 <em>feature</em> scale을 잃는 것의 차이 (pp. 325–326).
+@@ 9
+§11.4 도입부에서 카메라가 IMU에 주는 것과 IMU가 카메라에 주는 것 (p. 326).
+@@ 10
+Day 3의 네 방향은 언제나 unobservable하고 결코 문제가 되지 않습니다. 어떤 운동에서는 nullspace가 더 커지는데, 새로 생긴 방향은 문제가 됩니다. 로봇의 tilt나 map의 metric scale이기 때문입니다. 모든 경우의 메커니즘은 같습니다. accelerometer bias가 변화를 흡수할 수 있거나, 카메라에 parallax가 없거나, 둘 중 하나입니다.
+@@ 11
+1. 표
+@@ 12
+어떤 운동이 기대되는 네 방향 외에 unobservable 방향을 더 만들면, 그 운동은 <strong>degenerate</strong>(퇴화)하다고 합니다. Table 11.1은 네 가지를 듭니다. <span class="src">§11.3.3 · pp. 325–326</span> 아래는 메커니즘을 덧붙인 표입니다. 이어지는 세 절에서 마지막 열을 유도합니다.
+@@ 13
+운동
+@@ 14
+추가로 잃는 것
+@@ 15
+메커니즘
+@@ 16
+1. 순수 이동 (회전 없음)
+@@ 17
+모든 센서
+@@ 18
+global orientation: roll과 pitch가 yaw에 합류
+@@ 19
+일정한 tilt가 일정한 accelerometer bias처럼 보임
+@@ 20
+2. 등가속도 (등속도 포함)
+@@ 21
+monocular 카메라
+@@ 22
+=
+@@ 23
+scale을 바꾼 가속도는 상수만큼만 다르고, bias가 그것을 흡수
+@@ 24
+3. 순수 회전 (이동 없음)
+@@ 25
+=
+@@ 26
+parallax 없음
+@@ 27
+4. 점 feature를 향해 똑바로 이동
+@@ 28
+그 점에 대한 parallax 없음
+@@ 29
+"monocular 카메라"는 bearing만 재는 측정, 즉 <a href="#d98">Day 2</a>의 표기로 \(\lambda_r = 0\)을 뜻합니다. 2–4행은 range를 재는 센서에는 해당하지 않습니다.
+@@ 30
+2. 순수 이동: tilt가 accelerometer bias 속에 숨는다
+@@ 31
+책의 직관은 한 문장입니다. 시스템이 회전하지 않으면 gravity를 accelerometer bias와 혼동할 수 있다는 것입니다. <span class="src">§11.3.3 · p. 325</span> 그 뒤에 있는 대수는 다음과 같습니다.
+@@ 32
+빈틈 채우기: bias는 해의 어떤 회전을 흡수할 수 있는가?
+@@ 33
+noise를 뺀 accelerometer 모델 (11.1)은 \(\mathbf{a}_m(t) = \mathbf{R}(t)\T\big(\mathbf{a}^w(t) - \mathbf{g}\big) + \mathbf{b}^a\)입니다. 해 전체를 고정된 회전 \(\mathbf{Q}\)로 돌립니다: orientation \(\mathbf{Q}\mathbf{R}(t)\), 가속도 \(\mathbf{Q}\mathbf{a}^w(t)\), landmark \(\mathbf{Q}\mathbf{p}_f\). Day 3에서처럼 카메라는 이를 알아채지 못합니다. 돌린 해가 예측하는 accelerometer 측정값은
+@@ 34
+이것이 모든 \(t\)에서 실제 측정값과 같을 필요충분조건은
+@@ 35
+bias는 한 순간에서 다음 순간으로 바뀔 수 없으므로, 우변은 시간에 대해 상수여야 합니다. 방법은 두 가지입니다.
+@@ 36
+\(\mathbf{Q}\mathbf{g} = \mathbf{g}\): 두 번째 항이 사라집니다. 이것은 yaw이며, 모든 운동에서 unobservable합니다.
+@@ 37
+\(\mathbf{R}(t)\)가 상수: body가 전혀 회전하지 않습니다. 그러면 bias를 알맞게 옮겨 주기만 하면 <em>어떤</em> \(\mathbf{Q}\)라도 됩니다. 세 회전이 모두 unobservable합니다.
+@@ 38
+body가 회전하기 시작하면 \(\mathbf{R}(t)\T(\mathbf{Q}\T - \mathbf{I})\mathbf{g}\)는 body와 함께 돌지만 실제 bias는 그렇지 않으므로, 둘이 분리됩니다.
+@@ 39
+<strong>숫자로 보면.</strong> tilt가 1°이면 벡터 \((\mathbf{Q}\T - \mathbf{I})\mathbf{g}\)의 길이는 \(9.81 \times 0.01745 \approx 0.171\ \text{m/s}^2\)입니다. 그래서 이동만 하는 로봇은 "나는 1° 기울어져 있다"와 "내 accelerometer bias가 0.17 m/s²만큼 틀렸다"를 구별할 수 없습니다. 두 설명은 과거를 똑같이 잘 맞추지만 미래는 다르게 예측합니다. 로봇이 실제로 돌기 시작하면 잘못된 선택은 잘못된 가속도로 드러나고, vision으로 보정하지 않으면 10 s 뒤 위치 오차가 \(\tfrac12 \times 0.171 \times 10^2 \approx 8.6\) m가 됩니다.
+@@ 40
+3. 등가속도: scale이 accelerometer bias 속에 숨는다
+@@ 41
+monocular 카메라만으로는 장면의 scale을 결코 알 수 없습니다 (<a href="#d65">11주차 · Day 5</a>). 그림이 그 이유를 숫자로 보여 줍니다.
+@@ 42 attr
+두 패널. 왼쪽: 카메라가 초속 1미터로 오른쪽으로 움직이며, 가로 4미터, 위로 2미터에 있는 landmark를 지나갑니다. 0, 1, 2초의 bearing은 26.6, 33.7, 45도입니다. 오른쪽: 모든 것이 1.5배 크고, 속도는 초속 1.5미터, landmark는 6미터와 3미터에 있습니다. 세 bearing은 같습니다.
+@@ 43
+1 m/s, landmark (4, 2) m
+@@ 44
+1.5 m/s, landmark (6, 3) m
+@@ 45
+t = 0, 1, 2 s의 카메라 위치와 landmark 하나로 향하는 ray. 1 m를 40픽셀로 그렸습니다. 1.5배 큰 세계를 1.5배 빠르게 지나가면 같은 세 bearing, atan2(2, 4), atan2(2, 3), atan2(2, 2)를 얻습니다. 등속도에서는 accelerometer가 두 세계에서 같은 값을 읽으므로 IMU도 도움이 되지 않습니다.
+@@ 46
+accelerometer는 m/s² 단위로 재므로 scale을 정해 줄 수 있어야 합니다. 실제로 정해 줍니다. 단, bias가 끼어들지 않는다면.
+@@ 47
+빈틈 채우기: bias는 언제 scale 변화를 흡수할 수 있는가?
+@@ 48
+해 전체의 scale을 \(s\)배로 바꿉니다. 위치, 속도, landmark에 \(s\)를 곱하므로 가속도는 \(s\,\mathbf{a}^w(t)\)가 됩니다. orientation은 변하지 않고 bearing도 변하지 않습니다. scale을 바꾼 해가 예측하는 accelerometer 측정값은 \(\mathbf{R}\T(s\,\mathbf{a}^w - \mathbf{g}) + \mathbf{b}'\)입니다. 이것이 실제 측정값 \(\mathbf{R}\T(\mathbf{a}^w - \mathbf{g}) + \mathbf{b}^a\)와 같을 필요충분조건은
+@@ 49
+이번에도 우변이 상수여야 합니다. 따라서 scale은 body frame에서 표현한 가속도 \(\mathbf{R}(t)\T\mathbf{a}^w(t)\)가 상수일 때, 정확히 그때 unobservable합니다. 가속도 0(등속도)이 가장 간단한 경우입니다. scale을 바꾼 해를 \(s = 1\)에서 \(s\)로 미분하면, (11.37)의 state 순서로 쓴 추가 null vector를 얻습니다:
+@@ 50
+책이 "위치, 속도, acceleration bias, feature"의 scale을 잃는다고 할 때 가리키는 네 블록이 이것입니다. <span class="src">§11.3.3 · p. 325</span>
+@@ 51
+책의 표는 frame을 밝히지 않고 "constant acceleration"이라고만 씁니다. 이 유도는 그 frame이 body frame이라고 말해 줍니다. body가 회전하지 않으면 두 해석은 일치합니다. 회전한다면, 아래 실습에서 중요한 것이 body frame 가속도임을 확인할 수 있습니다.
+@@ 52
+<strong>scale을 복원할 수 있을 때, 복원하는 방법.</strong> 카메라가 경로를 단위를 모르는 \(\mathbf{q}(t)\)로 준다고 합시다. 그러면 \(\mathbf{p}(t) = s\,\mathbf{q}(t)\)입니다. 회전하지 않는 body라면 accelerometer는 \(s\,\ddot{\mathbf{q}}(t)\)에 상수(gravity와 bias)를 더한 값을 읽습니다. 두 순간의 차이를 취하면 상수는 소거됩니다. \(\ddot{\mathbf{q}}\)가 0.5 단위/s² 변하는 동안 accelerometer 측정값이 1.0 m/s² 변한다면 \(s = 1.0/0.5 = 2\), 즉 한 단위가 2 m입니다. 등가속도에서는 그 차이가 \(0 = s \cdot 0\)이 되어 모든 \(s\)에서 성립합니다.
+@@ 53
+4. Parallax 없음: 순수 회전, 그리고 feature를 향해 달리기
+@@ 54
+움직이는 카메라는 <strong>parallax</strong>(시차)로 depth를 잽니다. parallax는 카메라가 옆으로 이동해서 생기는 점의 bearing 변화입니다. ray에 수직인 이동 \(b_\perp\)와 depth \(\rho\)에 대해 bearing은 대략 다음만큼 바뀝니다.
+@@ 55
+카메라가 회전만 하면 모든 점에서 \(b_\perp = 0\)입니다. 어떤 점을 향해 똑바로 달리면 그 점에서 \(b_\perp = 0\)입니다. 두 경우 모두 \(\rho\)가 무엇이든 \(\Delta\beta = 0\)이므로 depth가 제약되지 않습니다. Day 2의 \(\mathbf{H}_b\mathbf{p}^c_f = \mathbf{0}\)과 같은 상황인데, 이번에는 균형을 깨 줄 두 번째 시점이 없습니다.
+@@ 56
+책은 두 종류의 손실을 구별합니다. <span class="src">§11.3.3 · pp. 325–326</span>
+@@ 57
+<strong>System scale</strong>(2행): 숫자 하나가 trajectory, 속도, accelerometer bias, 모든 feature의 scale을 함께 바꿉니다.
+@@ 58
+<strong>Feature scale</strong>(3행과 4행): feature의 depth만 자유롭습니다. landmark가 셋이고 이동이 없으면 서로 별개인 자유 depth가 세 개입니다.
+@@ 59
+2–4행에는 조건이 하나 붙습니다. feature가 카메라–IMU 간격보다 훨씬 멀리 있어야 합니다: \(\norm{\mathbf{p}^c_f} \gg \norm{\mathbf{p}^c_b}\). <span class="src">§11.3.3 · p. 326</span> IMU에서 떨어져 달린 카메라는 body가 회전할 때 작은 호를 그리며 흔들리고, 그것이 약간의 parallax를 만들기 때문입니다. 간격이 5 cm이고 feature가 5 m 떨어져 있으면 그 효과는 1% 정도라 쓸모 있기에는 너무 작습니다.
+@@ 60
+5. 실습에서 전부 확인하기
+@@ 61
+Day 3의 실습입니다. monocular 카메라, 일정한 body frame 가속도, 그리고 분홍 사본에 적용한 scale 변화 × 1.25로 시작합니다.
+@@ 62
+눈여겨볼 점: eigenvalue 네 개가 0이고, 표는 scale을 unobservable로 표시합니다. 분홍 사본은 25% 더 크고 빠른데, 카메라 측정값은 0° 바뀝니다. 운동을 "변하는 가속도"로 바꾸면 네 번째 0이 사라지고, scale의 information이 0.688이 되며, 같은 분홍 사본이 이제 bearing을 약 8° 바꿉니다.
+@@ 63
+각 행을 설정하기 전에 먼저 예측해 보세요. 모든 개수는 미지수 14개 기준입니다.
+@@ 64
+시점
+@@ 65
+body 회전
+@@ 66
+0인 eigenvalue
+@@ 67
+그 정체
+@@ 68
+위
+@@ 69
+변하는 가속도
+@@ 70
+bearing만
+@@ 71
+상관없음
+@@ 72
+=
+@@ 73
+등가속도 또는 등속도
+@@ 74
+=
+@@ 75
+등가속도
+@@ 76
+range와 bearing
+@@ 77
+x, y, yaw: range가 scale을 고정
+@@ 78
+순수 회전
+@@ 79
+x, y, yaw, 그리고 landmark 3개 각각의 depth
+@@ 80
+옆
+@@ 81
+아니오
+@@ 82
+=
+@@ 83
+=
+@@ 84
+"body 회전"을 켠 2행이 3절에서 약속한 확인입니다. 실습은 가속도를 body frame에서 정하므로, 경로가 휘는 동안에도 가속도가 body frame에서는 일정하고, scale은 여전히 unobservable합니다.
+@@ 85
+bias는 estimator가 마음대로 고를 수 있는 상수입니다. 따라서 accelerometer 측정값을 상수만큼 바꾸는 것은 무엇이든 bias로 설명해 버릴 수 있습니다. body가 전혀 돌지 않으면 tilt는 측정값을 상수만큼 바꿉니다. 가속도가 전혀 변하지 않으면 scale 변화도 측정값을 상수만큼 바꿉니다. estimator에게 변하는 무언가, 즉 회전이나 가속도 변화를 주면 bias는 더 이상 그것을 덮어 줄 수 없습니다.
+@@ 86
+6. 실제로 왜 중요한가
+@@ 87
+책은 degenerate motion이 "state 공간의 일부 방향으로 큰 오차를 낳을 수 있고" 항법 실패로 이어질 수 있으며, 피하거나 감지해 알려야 한다고 지적합니다. <span class="src">§11.3.3 · p. 325; §11.3 · p. 320</span> 실제 운동이 정확히 degenerate인 경우는 드물지만, 그에 가까운 경우는 흔합니다. 직선으로 순항하는 차량은 속도가 거의 일정하고 회전이 거의 없습니다. degenerate에 가깝다는 것은 eigenvalue가 0이 아니라 작다는 뜻이고, 그 방향의 분산은 eigenvalue의 역수에 비례합니다. 그러면 scale이나 tilt의 추정값은 형식적으로는 정의되지만 실제로는 쓸모가 없습니다.
+@@ 88
+§11.4 도입부는 긍정적인 면을 말합니다. 카메라와 IMU는 상호 보완적입니다. IMU는 빠른 가속과 회전을 포착하고, 카메라는 주변을 관측해 관성 drift를 대부분 없애며, IMU는 다시 monocular 시스템의 scale을 observable하게 만듭니다. 단, 운동이 degenerate하지 않아야 합니다. 카메라와 IMU로 만든 시스템을 <strong>visual-inertial odometry (VIO)</strong>라고 하고, loop closure를 더하면 visual-inertial SLAM 시스템이라고 합니다. <span class="src">§11.4 · p. 326</span>
+@@ 89
+<strong>"IMU는 언제나 monocular 시스템에 scale을 준다."</strong> 가속도가 변할 때만 그렇습니다. 등속도에서는 accelerometer가 gravity와 bias만 읽을 뿐 다른 것은 읽지 않습니다.
+@@ 90
+<strong>"등속도는 아무것도 가속하지 않으니 안전하다."</strong> 등속도는 2행의 특수한 경우 \(\mathbf{a} = \mathbf{0}\)이고, 회전이 없으면 1행에도 해당합니다.
+@@ 91
+<strong>"순수 회전은 trajectory의 scale을 잃는다."</strong> scale을 바꿀 trajectory가 없습니다. 위치가 변하지 않으니까요. 잃는 것은 각 feature의 depth입니다.
+@@ 92
+<strong>"degenerate motion은 추정 전체를 망친다."</strong> nullspace에 특정 방향을 더할 뿐입니다. bearing, 상대 orientation, 경로의 모양은 여전히 결정됩니다.
+@@ 93
+Q1. monocular 카메라와 IMU를 단 차가 돌지 않고 일정한 속력으로 직선 주행합니다. global 위치와 yaw 외에 무엇이 unobservable합니까?
+@@ 94
+더 없음
+@@ 95
+scale만
+@@ 96
+scale, 그리고 roll과 pitch
+@@ 97
+roll과 pitch만
+@@ 98
+등속도는 일정한(0인) 가속도이므로 monocular 카메라에서는 system scale을 잃습니다. 회전이 없으면 순수 이동이므로 global orientation 전체를 잃습니다.
+@@ 99
+Q2. 전혀 회전하지 않는 로봇에 tilt 오차가 2° 있습니다. 같은 데이터를 설명하는 accelerometer bias 오차는 대략 얼마입니까?
+@@ 100
+\(9.81 \times \sin 2^\circ = 9.81 \times 0.0349 \approx 0.34\ \text{m/s}^2\): 2° 돌린 gravity는 원래 gravity와 그만큼 다릅니다.
+@@ 101
+Q3. 카메라가 원점에서 (1, 0) m/s로 움직이며 (4, 2) m의 landmark를 봅니다. scale을 3배로 키운 세계에서 t = 2 s의 bearing은 원래의 45°와 비교해 얼마입니까?
+@@ 102
+scale을 키우면 속도 3 m/s, landmark는 (12, 6)입니다. 2 s에 카메라는 (6, 0)에 있으므로 bearing은 atan2(6, 6) = 45°로, atan2(2, 2)와 같습니다.
+@@ 103
+Q4. monocular 카메라와 IMU를 단 드론이 제자리에 떠서 천천히 yaw 회전합니다. 무엇을 잃습니까?
+@@ 104
+system scale: trajectory, 속도, feature를 함께
+@@ 105
+feature scale: 각 landmark의 depth
+@@ 106
+roll과 pitch
+@@ 107
+=
+@@ 108
+순수 회전입니다. parallax가 없으므로 각 depth가 자유롭습니다. body가 회전하므로 roll과 pitch는 observable하게 남고, scale을 의심할 이동도 없습니다.
+@@ 109
+Q5. monocular visual-inertial 시스템이 등속도로 움직입니다. 어떤 변화가 scale을 observable하게 만듭니까?
+@@ 110
+landmark를 더 많이 추적
+@@ 111
+카메라 frame rate 높이기
+@@ 112
+속도를 높였다 줄였다 하기
+@@ 113
+noise가 적은 gyroscope
+@@ 114
+body frame 가속도가 변하면 scale이 observable해집니다. accelerometer bias는 상수만 흡수할 수 있기 때문입니다. landmark나 frame을 늘리면 \(\mathbf{M}\)에 행이 추가되지만, 같은 null vector가 그 행들도 여전히 만족합니다.
+@@ 115
+degenerate motion은 네 gauge 방향에 unobservable 방향을 더하며, 이 추가 방향은 문제가 됩니다.
+@@ 116
+순수 이동: tilt는 accelerometer 측정값을 상수만큼 바꾸고, bias가 이를 흡수합니다. global orientation을 잃습니다. 1°당 약 0.17 m/s²입니다.
+@@ 117
+monocular 카메라에서 body frame 가속도가 일정하면, scale 변화는 측정값을 상수만큼 바꿉니다. system scale을 잃으며, null vector는 \((\mathbf{0}, \mathbf{0}, \mathbf{v}, -\mathbf{R}\T\mathbf{a}, \mathbf{p}, \mathbf{p}_f)\)입니다.
+@@ 118
+순수 회전, 또는 점을 향해 똑바로 가는 운동: parallax가 없으므로 feature depth를 잃습니다.
+@@ 119
+degenerate에 가까운 운동은 작은 eigenvalue와 큰 불확실성을 낳습니다. 회전이 충분하고 가속도가 변하면, IMU는 monocular 카메라에 roll, pitch, scale을 줍니다.
+@@ 120
+<em>SLAM Handbook</em>, §11.3.3 "Degenerate Motions", pp. 325–326, Table 11.1; §11.4 도입부, p. 326.
+@@ 121
+두 bias 흡수 유도는 accelerometer 모델 (11.1)에서 출발한 이 코스 자체의 것입니다. parallax 관계는 Hartley와 Zisserman, <em>Multiple View Geometry</em>, 2004를 따릅니다.

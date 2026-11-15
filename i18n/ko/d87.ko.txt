@@ -1,0 +1,224 @@
+@@ 1
+<span class="eyebrow">15주차 · Day 3</span>
+@@ 2
+front-end: event representation, indirect method와 direct method
+@@ 3
+오늘이 끝나면 event packet 하나로 event frame, time surface, voxel grid를 만들고, indirect, direct, 학습 기반 front-end가 event를 어떻게 pose와 map으로 바꾸는지 설명할 수 있습니다.
+@@ 4
+약 60분 · §10.4, pp. 289–292 읽기 (4쪽) · 15주차 Day 2 필요
+@@ 5
+먼저 읽기: §10.4, pp. 289–292
+@@ 6
+front-end가 무엇을 받고 무엇을 내놓는지(p. 289). 1주차에서 본 정의와 조금 다릅니다.
+@@ 7
+왜 "각 event가 서로 다른 카메라 pose에 대응하는지", 그리고 event를 배열로 바꿀 때 치르는 두 가지 대가(p. 290).
+@@ 8
+왜 "feature를 matching하기보다 tracking하는 것이 자연스러운지"(p. 291).
+@@ 9
+image of warped events가 무엇이고, "움직임을 되돌려서 움직임을 추정한다"가 무슨 뜻인지(p. 292).
+@@ 10
+event 하나는 숫자 네 개이고 noise일 수도 있으므로, front-end는 수천 개를 묶어야 합니다. front-end는 세 가지 설계 선택을 합니다. event를 어떻게 담을지(representation), feature로 줄일지 전부 쓸지(indirect 또는 direct), 처리를 설계할지 학습할지입니다. 어느 선택이든 센서의 속도와 sparsity를 성숙한 image-based 도구의 편리함과 맞바꿉니다.
+@@ 11
+1. front-end가 하는 일
+@@ 12
+이 장에서 <strong>front-end</strong>는 raw event(와 calibration)를 받아 카메라 pose와 장면 map을 내놓습니다. 그다음 <strong>back-end</strong>가 둘을 다듬는데, 더 느리게 돌고, 결과를 되돌려 보내 drift를 줄일 수 있습니다. <span class="src">§10.4 · p. 289</span> <a href="#d1">1주차 · Day 1</a>에서는 front-end가 back-end에 pseudo-measurement를 넘겼지만, 여기서는 처음부터 완전한 추정값을 넘깁니다. 나누는 생각은 같습니다. 먼저 빠르고 거칠게, 다음에 느리고 꼼꼼하게.
+@@ 13 attr
+블록 다이어그램. event가 front-end로 들어갑니다. 그 안에서 representation 단계가 indirect 갈래(feature를 추출한 뒤 기하를 씀) 또는 direct 갈래(모든 event를 정렬함)로 이어집니다. 두 갈래 모두 첫 추정값으로 pose와 edge map을 만듭니다. back-end가 이를 다듬고 보정값을 front-end로 되돌려 보냅니다.
+@@ 14
+=
+@@ 15
+배열 또는 raw
+@@ 16
+=
+@@ 17
+feature → 기하
+@@ 18
+모든 event 정렬
+@@ 19
+=
+@@ 20
+첫 추정값
+@@ 21
+back-end가 다듬음
+@@ 22
+보정값 되먹임
+@@ 23
+§10.4와 §10.5가 설명하는 event-based SLAM 시스템의 구성 요소. 오늘은 점선 상자를 다룹니다.
+@@ 24
+조명이 일정하면 event는 움직이는 윤곽에서 나오므로, 문제를 장면의 edge로 정식화합니다. 또 event 하나가 담는 정보가 매우 적으므로, 믿을 만한 pose나 map을 얻으려면 수천에서 수백만 개가 필요합니다. <span class="src">§10.4 · p. 289</span>
+@@ 25
+2. event representation
+@@ 26
+이미지에서는 모든 픽셀이 timestamp 하나, 따라서 카메라 pose 하나를 공유합니다. 이 공유된 pose가 고전적인 multi-view geometry가 기대는 가정입니다. event는 이 가정을 깹니다. 각 event가 자기만의 microsecond timestamp를 가지므로, 각각 조금씩 다른 pose에 속합니다. <span class="src">§10.4.1 · p. 290</span>
+@@ 27
+그런데도 많은 방법이 성숙한 이미지 도구를 재사용하거나 neural network에 넣으려고 event를 먼저 배열로 바꿉니다. 책은 두 가지 대가를 경고합니다. <strong>quantization</strong>(양자화, timestamp가 비슷한 event가 한데 뭉쳐짐)과 <strong>sparsity 손실</strong>(아무 일도 없던 곳이 0으로 채워져 배열 대부분이 0이 됨)입니다. 책은 event image, time surface, voxel grid를 거론하고, 정의는 survey 논문을 참고하라고 합니다. <span class="src">§10.4.1 · p. 290</span>
+@@ 28
+빈틈 채우기: 세 가지 representation의 정의
+@@ 29
+\(t_0\)부터 \(t_0 + \Delta\)까지의 window에 들어오는 event \(e_k = (\mathbf{x}_k, t_k, p_k)\), \(k = 1, \dots, N_e\)를 생각합니다.
+@@ 30
+<strong>Event frame</strong>(event image). 각 픽셀에 떨어진 polarity를 더합니다:
+@@ 31
+polarity를 무시하고 event 개수만 세는 변형도 있습니다. 어느 쪽이든 window 안의 시간 정보는 모두 사라집니다.
+@@ 32
+<strong>Time surface.</strong> 각 픽셀에 대해 얼마나 최근에 event를 냈는지 저장합니다. \(t_\text{last}(\mathbf{x})\)를 지금까지 그 픽셀의 가장 최근 event 시각, \(\tau\)를 감쇠 상수라고 하면
+@@ 33
+이고, event가 한 번도 없었던 곳은 \(T = 0\)입니다. 방금 event를 낸 픽셀은 \(T = 1\)이고, event가 오래될수록 값이 옅어집니다.
+@@ 34
+<strong>Voxel grid.</strong> window를 \(B\)개의 time bin으로 자르고, 각 event가 가장 가까운 두 bin에 투표하게 하되, 가중치는 event 시각에 선형으로 의존하게 합니다. event 시각을 \(t^*_k = (B-1)(t_k - t_0)/\Delta\)로 다시 스케일하면 0부터 \(B-1\)까지 움직입니다. 그러면 bin \(b = 0, \dots, B-1\)에 대해
+@@ 35
+<strong>풀어 보는 예제.</strong> 한 픽셀이 20 ms window 동안 event 세 개를 받습니다. 2 ms에 \(+1\), 5 ms에 \(+1\), 16 ms에 \(-1\)입니다. \(B = 3\)개의 bin(중심 0, 10, 20 ms)과 \(\tau = 10\) ms를 쓰고, \(t = 20\) ms에서 계산합니다.
+@@ 36
+event frame: \(1 + 1 - 1 = 1\).
+@@ 37
+time surface: 마지막 event가 4 ms 전이므로 \(T = e^{-4/10} = 0.67\).
+@@ 38
+voxel grid: 다시 스케일한 시각은 \(t^* = 0.2,\ 0.5,\ 1.6\)입니다. 첫 event는 bin 0에 0.8, bin 1에 0.2를 줍니다. 둘째는 0.5와 0.5를 줍니다. 셋째는 bin 1에 \(-0.4\), bin 2에 \(-0.6\)을 줍니다. 합계: \(V = (1.3,\ 0.3,\ -0.6)\).
+@@ 39
+각 event의 두 가중치를 합하면 1이므로, 세 voxel 값의 합은 event frame 값인 1과 같습니다. voxel grid는 시간 축을 일부 되살린 event frame입니다.
+@@ 40
+직접 해 보기: 다시 Day 1의 막대입니다. window를 50 ms로 늘린 다음 "현재 시각"과 감쇠를 움직여 보세요.
+@@ 41
+눈여겨볼 점: 20 ms window(event 140개)에서는 event frame이 각 edge를 약 10픽셀에 걸쳐 번지게 보여 주는데, 이는 그동안 막대가 움직인 거리입니다. 60 ms에서 끝나는 50 ms window에서는 17개 픽셀이 ON과 OFF event를 모두 받았고, 그중 14개는 합이 정확히 0입니다. 막대 전체가 지나간 곳에서 event frame은 비어 있습니다. voxel grid는 두 polarity를 서로 다른 time bin에 따로 담습니다. time surface는 각 edge 뒤로 옅어지는 경사이므로 edge가 어느 쪽으로 가는지 보여 줍니다.
+@@ 42
+픽셀당 저장하는 값
+@@ 43
+남는 시간 정보
+@@ 44
+책에 나오는 사용 예
+@@ 45
+=
+@@ 46
+숫자 하나: 합 또는 개수
+@@ 47
+window 안에서는 없음
+@@ 48
+frame-based feature detector 재사용 <span class="src">§10.5 · p. 293</span>
+@@ 49
+=
+@@ 50
+숫자 하나: 마지막 event가 얼마나 최근인지
+@@ 51
+마지막 event의 시각만
+@@ 52
+ESVO: time surface patch로 stereo matching <span class="src">Table 10.1 · p. 295</span>
+@@ 53
+=
+@@ 54
+숫자 \(B\)개
+@@ 55
+약 \(\Delta/(B-1)\)까지
+@@ 56
+neural network의 흔한 입력. DEVO <span class="src">p. 297, Table 10.1</span>
+@@ 57
+raw event
+@@ 58
+아무것도 변환하지 않음
+@@ 59
+전부
+@@ 60
+EVO의 mapping 모듈 <span class="src">§10.4.1 · p. 290</span>
+@@ 61
+한 시스템이 여러 representation을 섞을 수도 있습니다. EVO는 raw event로 mapping하고, edge 같은 event image로 카메라를 tracking합니다. 책이 바라는 이상은 센서의 속도와 sparsity를 지키는 representation이며, 책은 이것이 아직 열린 연구 문제라고 분명히 말합니다. <span class="src">§10.4.1 · p. 290</span>
+@@ 62
+숫자 하나로 quantization이 왜 중요한지 알 수 있습니다. 카메라가 초당 300°(5.24 rad/s)로 돌고 focal length가 200픽셀이라고 합시다. 그러면 이미지 중심 근처에서 그림은 초당 약 \(200 \times 5.24 \approx 1050\)픽셀씩 미끄러집니다. 10 ms에 걸친 event frame은 모든 edge를 10픽셀에 걸쳐 번지게 하는데, 이것이 바로 이 센서가 피하려고 만들어진 motion blur입니다.
+@@ 63
+3. indirect method
+@@ 64
+<strong>indirect method</strong>는 두 단계로 작동합니다. 먼저 event에서 feature(점, 선, 또는 다른 primitive)를 추출하고 tracking한 다음, 이를 고전적인 기하학적 SLAM에 넘깁니다. feature는 stream을 정보가 많은 소수의 primitive로 압축하므로 계산이 줄어듭니다. <span class="src">§10.4.2 · p. 291</span>
+@@ 65
+어려운 부분은 data association입니다. event 하나는 겉모습으로 matching하기에는 정보가 너무 적고 움직임에 너무 의존합니다. 센서가 탈출구를 줍니다. event는 거의 연속적으로 도착하므로, feature의 다음 event가 도착할 때 feature는 거의 움직이지 않았습니다. 픽셀 위치와 시간의 가까움으로 association을 할 수 있고, 멀리 떨어진 두 view 사이에서 feature를 <strong>matching</strong>하는 대신 순간순간 <strong>tracking</strong>하는 것이 자연스러워집니다.
+@@ 66
+나머지는 11주차와 12주차의 도구 상자입니다. 카메라 tracking은 reprojection error를 최소화해 feature를 알려진 map에 맞추고(<a href="#d67">12주차 · Day 1</a>), 3D 구조는 알려진 pose에서 대응하는 feature를 triangulation해 얻습니다(<a href="#d65">11주차 · Day 5</a>). 약한 고리는 feature 단계입니다. noise, sparsity, 비동기성, 움직임 의존성 때문에 event feature는 이미지 feature보다 덜 성숙했습니다. 이것이 정확도를 제한하므로, 일부 시스템은 grayscale 이미지나 IMU를 더해 보완합니다. <span class="src">§10.4.2 · p. 291</span>
+@@ 67
+4. direct method
+@@ 68
+<strong>direct method</strong>는 feature 정의에 맞는 event만이 아니라 모든 event를 씁니다. event를 map, 이미지, 또는 다른 event와 한 단계로 정렬합니다. 즉 photometric error 같은 objective를 최적화해 움직임이나 장면 parameter를 찾습니다. event rate가 컴퓨터가 감당할 수 있는 수준을 넘으면 먼저 denoising하거나 subsampling합니다. <span class="src">§10.4.3 · p. 291</span>
+@@ 69
+direct method는 데이터가 거의 연속적이라는 점에 기댑니다. blind time이 없으므로 한 번의 갱신에서 다음 갱신까지 pose가 조금만 바뀌고, 그래서 각 갱신은 이전 pose에서 출발해 작은 증분만 계산하면 됩니다. <span class="src">§10.4.3 · p. 292</span>
+@@ 70
+책에 따르면 가장 정확한 하위 부류는 <strong>event alignment</strong>로 움직임을 추정합니다. 움직임을 되돌려서 움직임을 추정한다는 생각입니다. 움직임을 추측하고, 모든 event를 그 움직임을 따라 하나의 기준 시각에 있었을 자리로 되돌린 뒤, 옮긴 event를 픽셀마다 더합니다. 그 결과가 <strong>image of warped events (IWE)</strong>입니다. 추측이 맞으면 같은 edge에서 나온 event가 같은 픽셀에 쌓여 IWE가 선명합니다. 틀리면 IWE가 흐릿합니다. 가장 선명한 IWE를 찾는 것을 <strong>contrast maximization (CMax)</strong>이라고 하며, 선명도는 분산, gradient 크기, 또는 다른 척도로 점수를 매길 수 있습니다. 내일 직접 실행해 봅니다. <span class="src">§10.4.3 · p. 292</span>
+@@ 71
+direct method의 data association은 암묵적이고 soft합니다. event들이 픽셀 격자 위에서 서로 가까이 떨어지기 때문에 연관됩니다. <span class="src">§10.4.3 · p. 292</span>
+@@ 72
+5. 설계인가 학습인가
+@@ 73
+지금까지의 event-based SLAM은 대부분 <strong>model-based</strong>입니다. 센서의 작동 원리와 문제의 기하로부터 손으로 설계합니다. <strong>learning-based</strong> 방법은 대신 인공 neural network를 쓰는데, 이미지 같은 representation 위에서 쓰거나 <strong>spiking neural network</strong>로 event에 직접 씁니다. <span class="src">§10.4.4 · p. 292</span>
+@@ 74
+training 신호
+@@ 75
+필요한 것
+@@ 76
+=
+@@ 77
+ground truth pose 또는 depth
+@@ 78
+실제 환경에서 ground truth를 모으기 어려움
+@@ 79
+=
+@@ 80
+event만, 또는 같은 장치의 grayscale frame 같은 두 번째 센서. loss가 시간적 consistency나 photometric consistency를 확인
+@@ 81
+올바른 답이 loss를 최소화하도록 loss를 설계해야 함
+@@ 82
+network는 feature 추출과 tracking 같은 pipeline의 한 부분을 대신할 수도 있고, 시스템 전체를 end-to-end로 대신할 수도 있습니다. 학습 기반 방법은 손으로 쓴 모델 없이도 복잡한 representation과 noise를 다룹니다. 대신 큰 training set이 필요하고, training 데이터와 다른 장면에서는 실패할 수 있는데, 이를 <strong>domain shift</strong>라고 합니다. <span class="src">§10.4.4 · p. 292</span>
+@@ 83
+<strong>"event를 frame으로 바꾸는 데는 대가가 없다."</strong> 시간을 quantization하고 배열을 0으로 채우므로, 센서의 장점 두 가지를 포기하는 셈입니다.
+@@ 84
+<strong>"time surface는 밝기 이미지다."</strong> time surface는 각 픽셀이 얼마나 최근에 event를 냈는지를 저장합니다. 움직임 없는 밝은 장면 영역의 값은 0입니다.
+@@ 85
+<strong>"direct method에는 data association이 없다."</strong> 암묵적으로 있습니다. event는 픽셀 격자 위 어디에 떨어지는가로 연관됩니다.
+@@ 86
+Q1. window는 0부터 30 ms까지이고 voxel grid의 bin은 B = 4개입니다. polarity가 −1인 event가 7 ms에 도착합니다. 이 event는 자기 픽셀의 grid에 무엇을 더할까요?
+@@ 87
+bin 0에만 −1
+@@ 88
+bin 0에 −0.7, bin 1에 −0.3
+@@ 89
+bin 0에 −0.3, bin 1에 −0.7
+@@ 90
+bin 0에 −0.5, bin 1에 −0.5
+@@ 91
+t* = (4 − 1) × 7 / 30 = 0.7입니다. bin 0의 가중치는 1 − 0.7 = 0.3, bin 1의 가중치는 1 − 0.3 = 0.7이고, 둘 다 polarity −1을 곱합니다.
+@@ 92
+Q2. time surface가 τ = 20 ms를 씁니다. 어떤 픽셀이 마지막으로 event를 낸 것은 10 ms 전입니다. 그 값은 얼마일까요?
+@@ 93
+=
+@@ 94
+Q3. window 하나 동안 한 픽셀이 ON event 6개를 받고 이어서 OFF event 6개를 받습니다. polarity를 더하는 event frame에는 그 자리에 어떤 값이 담길까요?
+@@ 95
+0, 아무것도 보지 못한 픽셀과 같음
+@@ 96
+6 − 6 = 0입니다. 완전히 지나간 밝은 막대는 흔적을 남기지 않습니다. voxel grid라면 앞쪽 bin에 양수, 뒤쪽 bin에 음수가 담길 것입니다.
+@@ 97
+Q4. indirect event-based 방법은 왜 멀리 떨어진 view 사이에서 feature를 matching하지 않고 tracking할까요?
+@@ 98
+event가 풍부한 descriptor를 담고 있어 matching이 필요 없기 때문
+@@ 99
+event가 거의 연속적으로 도착해 feature가 event 사이에 아주 조금만 움직이므로, 공간과 시간의 가까움으로 feature를 알아볼 수 있기 때문
+@@ 100
+event camera는 같은 점을 두 번 관측할 수 없기 때문
+@@ 101
+tracking에는 data association이 전혀 필요 없기 때문
+@@ 102
+event 하나에는 matching할 안정적인 겉모습이 없지만, 높은 시간 해상도 덕분에 한 feature의 연속된 event들이 픽셀 공간에서 서로 가깝게 유지되므로 가까움에 따른 association이 통합니다.
+@@ 103
+front-end는 raw event를 pose와 edge map의 첫 추정값으로 바꾸고, back-end는 이를 다듬습니다.
+@@ 104
+모든 event는 자기만의 timestamp, 따라서 자기만의 카메라 pose를 가집니다. event를 배열에 담으면 시간이 quantization되고 sparsity가 사라집니다.
+@@ 105
+event frame: 픽셀당 polarity의 합. time surface: \(\exp(-(t - t_\text{last})/\tau)\). voxel grid: \(B\)개의 time bin 중 가장 가까운 두 bin에 polarity를 선형으로 나눔.
+@@ 106
+indirect method는 feature를 추출하고 tracking한 뒤 고전적인 기하를 씁니다. direct method는 objective 하나를 최적화해 모든 event를 정렬하며, contrast maximization이 대표적인 예입니다.
+@@ 107
+학습 기반 방법은 noise와 representation을 암묵적으로 처리하지만, 데이터가 필요하고 domain shift에 시달릴 수 있습니다.
+@@ 108
+=
+@@ 109
+event representation의 정의: Gallego et al., <em>Event-based Vision: A Survey</em>, 2022(책의 참고문헌 [361]).
+@@ 110
+지수 감쇠를 쓰는 time surface: Lagorce, Orchard, Galluppi, Shi, Benosman, <em>HOTS: A Hierarchy of Event-Based Time-Surfaces for Pattern Recognition</em>, 2017.
+@@ 111
+시간에 대해 선형 가중치를 쓰는 voxel grid: Zhu, Yuan, Chaney, Daniilidis, <em>Unsupervised Event-based Learning of Optical Flow, Depth, and Egomotion</em>, 2019.
+@@ 112
+이미지 속도 추정에는 작은 각도에서의 pinhole 관계(이동량 ≈ focal length × 각도)를 썼으며, Hartley and Zisserman, <em>Multiple View Geometry</em>, 2004에 나옵니다.

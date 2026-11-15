@@ -1,0 +1,260 @@
+@@ w17
+"eigenvalues of the information matrix, smallest on the left"
+==
+"information matrix의 eigenvalue, 왼쪽이 가장 작음"
+@@ w17
+"Bar chart, on a logarithmic scale, of the eigenvalues of the information matrix. Bars below the dashed line are zero: each one is an unobservable direction."
+==
+"information matrix의 eigenvalue를 로그 축으로 그린 막대그래프. 점선 아래의 막대는 0이며, 하나하나가 unobservable 방향입니다."
+@@ w17
+h("th",{},"Row of M")
+==
+h("th",{},"M의 행")
+@@ w17
+h("th",{},"column "+q)
+==
+h("th",{},"열 "+q)
+@@ w17
+"  (reading "+(k+1)+")"
+==
+"  (측정 "+(k+1)+")"
+@@ w17
+"M u = 0 for u = "+basis.join("  and  ")
+==
+"M u = 0의 해: u = "+basis.join("  및  ")
+@@ w17
+"Only u = 0 solves M u = 0: every state can be recovered."
+==
+"M u = 0의 해는 u = 0뿐: 모든 state를 복원할 수 있습니다."
+@@ w17
+stat("States",String(n),
+==
+stat("State 수",String(n),
+@@ w17
+stat("Rank of M",String(n-nz),K+" reading"+(K>1?"s":""))
+==
+stat("M의 rank",String(n-nz),"측정 "+K+"회")
+@@ w17
+stat("Unobservable directions",String(nz),nz?"rank is short by "+nz:"fully observable")
+==
+stat("Unobservable 방향",String(nz),nz?"rank가 "+nz+"만큼 부족":"완전히 observable")
+@@ w17
+h("div",{class:"vt"},"Rank test on a cart")
+==
+h("div",{class:"vt"},"카트로 해 보는 rank 검사")
+@@ w17
+"A cart on a rail with position p, velocity v and accelerometer bias b; one time step is 1 s. Each reading adds the row H Φᵏ to the observability matrix M. The landmark option adds its unknown position ℓ to the state."
+==
+"위치 p, 속도 v, accelerometer bias b를 가진 레일 위의 카트입니다. time step 하나는 1 s입니다. 측정 한 번마다 observability matrix M에 행 H Φᵏ가 하나 추가됩니다. landmark 옵션을 고르면 미지의 위치 ℓ가 state에 추가됩니다."
+@@ w17
+select("What the extra sensor measures",[["pos","position p"],["vel","velocity v"],["lm","landmark distance ℓ − p"]]
+==
+select("추가 센서가 재는 것",[["pos","위치 p"],["vel","속도 v"],["lm","landmark까지 거리 ℓ − p"]]
+@@ w17
+range("Number of readings",
+==
+range("측정 횟수",
+@@ w17
+"A sensor at the left looks along the x axis at a point feature that can be dragged. Coloured curves show the region where the point can be, given a range measurement, a bearing measurement, or both."
+==
+"왼쪽의 센서가 x축 방향으로, 끌어서 옮길 수 있는 점 feature를 봅니다. 색깔 곡선은 range 측정, bearing 측정, 또는 둘 다가 주어졌을 때 점이 있을 수 있는 영역을 보여 줍니다."
+@@ w17
+txt(ox-18,oy-18,"sensor",
+==
+txt(ox-18,oy-18,"센서",
+@@ w17
+"of the point in the sensor frame"
+==
+"sensor frame에서 본 점"
+@@ w17
+stat("Std. dev. along the ray",lr?SR.toFixed(2)+" m":"∞",lr?"set by the range noise":"no range: depth is free")
+==
+stat("ray 방향 표준편차",lr?SR.toFixed(2)+" m":"∞",lr?"range noise가 결정":"range 없음: depth가 자유")
+@@ w17
+stat("Std. dev. across the ray",lb?(r*SB).toFixed(2)+" m":"∞",lb?"range × bearing noise":"no bearing: direction is free")
+==
+stat("ray 수직 방향 표준편차",lb?(r*SB).toFixed(2)+" m":"∞",lb?"range × bearing noise":"bearing 없음: 방향이 자유")
+@@ w17
+button("Range measured",
+==
+button("range 측정",
+@@ w17
+button("Bearing measured",
+==
+button("bearing 측정",
+@@ w17
+h("div",{class:"vt"},"One point measurement")
+==
+h("div",{class:"vt"},"점 하나의 측정")
+@@ w17
+"Drag the point. Range noise is 0.15 m and bearing noise 3°; the curves are drawn at 3σ. The two buttons are the entries λr and λb of the selection matrix Λ."
+==
+"점을 끌어 보세요. range noise는 0.15 m, bearing noise는 3°이며, 곡선은 3σ로 그렸습니다. 두 버튼은 selection matrix Λ의 원소 λr과 λb입니다."
+@@ w17
+"both: 3σ ellipse from (HᵀR⁻¹H)⁻¹"
+==
+"둘 다: (HᵀR⁻¹H)⁻¹의 3σ 타원"
+@@ w17
+"A 2-D scene with three landmarks and the path of a robot carrying an IMU and a camera. A second, coloured copy shows the whole solution after the chosen shift, rotation or scaling."
+==
+"landmark 세 개와, IMU와 카메라를 실은 로봇의 경로가 있는 2-D 장면. 색깔 있는 두 번째 사본은 고른 이동, 회전 또는 scale 변화를 적용한 뒤의 해 전체를 보여 줍니다."
+@@ w17
+"Shift everything along x"
+==
+"이동: 전체를 x 방향으로"
+@@ w17
+"Shift everything along "+(side?"z (up)":"y")
+==
+"이동: 전체를 "+(side?"z (위)":"y")+" 방향으로"
+@@ w17
+"Rotate everything in the plane (tilt against gravity)"
+==
+"회전: 전체를 평면 안에서 (gravity에 대한 tilt)"
+@@ w17
+"Rotate everything about gravity (yaw)"
+==
+"회전: 전체를 gravity 축 둘레로 (yaw)"
+@@ w17
+"Scale everything: path, speed, landmarks"
+==
+"scale: 경로, 속도, landmark 전체"
+@@ w17
+h("th",{},"Change to the whole solution")
+==
+h("th",{},"해 전체에 가하는 변화")
+@@ w17
+h("th",{},"Information about it, |M u|² / |u|²")
+==
+h("th",{},"그 변화에 대한 information, |M u|² / |u|²")
+@@ w17
+h("th",{},"Verdict")
+==
+h("th",{},"판정")
+@@ w17
+extra+" more zero eigenvalue"+(extra>1?"s are":" is")+" not in the table: with no translation there is no parallax, so the depth of each landmark is unobservable on its own (feature scale)."
+==
+"표에 없는 0 eigenvalue가 "+extra+"개 더 있습니다. 이동이 없으면 parallax가 없으므로, 각 landmark의 depth가 저마다 unobservable합니다 (feature scale)."
+@@ w17
+stat("Zero eigenvalues",
+==
+stat("0인 eigenvalue",
+@@ w17
+m.nz+" of "+m.x0.length,"unobservable directions")
+==
+m.x0.length+"개 중 "+m.nz+"개","unobservable 방향")
+@@ w17
+stat("Applied change",
+==
+stat("적용한 변화",
+@@ w17
+"pink copy; accelerometer bias re-fitted"
+==
+"분홍 사본; accelerometer bias 재조정"
+@@ w17
+stat("Camera readings change by",f(c.b)+"° bearing"+(m.rb?", "+f(c.r)+" m range":""),none?"invisible to the sensors":"the data can tell the two apart")
+==
+stat("카메라 측정값 변화","bearing "+f(c.b)+"°"+(m.rb?", range "+f(c.r)+" m":""),none?"센서로는 구별 불가":"데이터로 둘을 구별 가능")
+@@ w17
+button("Body rotates",
+==
+button("body 회전",
+@@ w17
+range("Size of the change",
+==
+range("변화의 크기",
+@@ w17
+h("div",{class:"vt"},"Observability lab")
+==
+h("div",{class:"vt"},"Observability 실습")
+@@ w17
+"A robot with a gyro, a 2-axis accelerometer and a camera that sees three landmarks. M is the derivative of all camera readings with respect to the 14 unknowns (initial heading, velocity, position, both biases, landmarks), with the IMU readings held fixed. Accelerations are set in the body frame."
+==
+"gyro, 2축 accelerometer, 그리고 landmark 세 개를 보는 카메라를 실은 로봇입니다. M은 IMU 측정값을 고정한 채 모든 카메라 측정값을 미지수 14개(초기 heading, 속도, 위치, 두 bias, landmark)로 미분한 것입니다. 가속도는 body frame에서 정합니다."
+@@ w17
+pick("View",[["top","top (gravity ⊥ plane)"],["side","side (gravity in plane)"]]
+==
+pick("시점",[["top","위 (gravity ⊥ 평면)"],["side","옆 (평면 안의 gravity)"]]
+@@ w17
+pick("Motion",[["cv","constant velocity"],["ca","constant acceleration"],["va","varying acceleration"],["pr","pure rotation"]]
+==
+pick("운동",[["cv","등속도"],["ca","등가속도"],["va","변하는 가속도"],["pr","순수 회전"]]
+@@ w17
+pick("Camera",[["b","bearing only (monocular)"],["rb","range and bearing"]]
+==
+pick("카메라",[["b","bearing만 (monocular)"],["rb","range와 bearing"]]
+@@ w17
+pick("Try this change",[["tx","shift along x"],["ty","shift along y / z"],["rot","rotate"],["sc","scale"]]
+==
+pick("적용할 변화",[["tx","x 방향 이동"],["ty","y / z 방향 이동"],["rot","회전"],["sc","scale"]]
+@@ w17
+"true solution, with rays at the first and last frame"
+==
+"실제 해 (첫 frame과 마지막 frame의 ray 포함)"
+@@ w17
+"changed solution, driven by the same IMU readings"
+==
+"바꾼 해 (같은 IMU 측정값으로 구동)"
+@@ w17
+"Three robot poses and two landmarks. Dashed grey lines are the old factors folded into the prior when the first pose was marginalized; blue lines are the new factors. Amber marks show where the estimate has moved to since the old factors were linearized."
+==
+"로봇 pose 세 개와 landmark 두 개. 회색 점선은 첫 pose를 marginalize할 때 prior에 접혀 들어간 옛 factor이고, 파란 선은 새 factor입니다. 주황색 표시는 옛 factor를 linearize한 뒤 추정값이 옮겨 간 위치입니다."
+@@ w17
+"x0, marginalized"
+==
+"x0, marginalize됨"
+@@ w17
+"x, y and yaw stay unobservable"
+==
+"x, y, yaw가 unobservable로 남음"
+@@ w17
+"yaw has become “observable”"
+==
+"yaw가 “observable”해짐"
+@@ w17
+stat("Third-smallest eigenvalue",
+==
+stat("세 번째로 작은 eigenvalue",
+@@ w17
+"no information about global yaw"
+==
+"global yaw에 대한 information 없음"
+@@ w17
+"information that no measurement supplied"
+==
+"어떤 측정도 주지 않은 information"
+@@ w17
+stat("New factors linearize x1, l1, l2",fej?"at estimate A":"at estimate B",fej?"the same point as the prior":"the prior used estimate A")
+==
+stat("새 factor의 linearize 지점",fej?"추정값 A":"추정값 B",fej?"prior와 같은 지점":"prior는 추정값 A를 사용")
+@@ w17
+h("div",{class:"vt"},"Two linearization points for one variable")
+==
+h("div",{class:"vt"},"변수 하나에 linearization point 두 개")
+@@ w17
+"A sliding window after x0 has been marginalized. The information matrix of the window is the prior (old factors, linearized at estimate A) plus the new factors, with unit weights."
+==
+"x0를 marginalize한 뒤의 sliding window입니다. window의 information matrix는 prior(추정값 A에서 linearize한 옛 factor)와 새 factor의 합이며, 가중치는 모두 1입니다."
+@@ w17
+range("How far the estimate has moved since then (A → B)",
+==
+range("그 뒤 추정값이 움직인 정도 (A → B)",
+@@ w17
+button("New perturbation",
+==
+button("새 perturbation",
+@@ w17
+"estimate A (when the prior was built)"
+==
+"추정값 A (prior를 만들 때)"
+@@ w17
+"estimate B (now)"
+==
+"추정값 B (현재)"
+@@ w17
+"old factors, inside the prior"
+==
+"옛 factor (prior 안)"
+@@ w17
+"new factors"
+==
+"새 factor"

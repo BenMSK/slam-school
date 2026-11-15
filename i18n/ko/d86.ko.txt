@@ -1,0 +1,216 @@
+@@ 1
+<span class="eyebrow">15주차 · Day 2</span>
+@@ 2
+event가 다루기 어려운 이유와 방법들의 지도
+@@ 3
+오늘이 끝나면 linearized event generation model로 event가 왜 움직임에 의존하는지 설명하고, event-based SLAM 방법 하나를 책의 분류 체계가 정한 세 축 위에 놓을 수 있습니다.
+@@ 4
+약 60분 · §10.2–10.3, pp. 286–289 읽기 (4쪽) · 15주차 Day 1 필요
+@@ 5
+먼저 읽기: §10.2–10.3, pp. 286–289
+@@ 6
+p. 286 끝과 p. 287 첫머리의 세 가지 과제.
+@@ 7
+저자들이 연구를 이끈다고 말하는 p. 287의 네 가지 질문.
+@@ 8
+"한 번에 몇 개의 event를 처리하는가"에 따른 두 부류의 방법과, 두 번째 부류가 정해야 하는 것(p. 287).
+@@ 9
+data association을 보통 어떻게 처리하는지(p. 287 아래, p. 288 위).
+@@ 10
+event stream은 빠른 동영상이 아닙니다. sparse하고, frame이 없고, event 하나는 1 bit뿐이며, 카메라가 다르게 움직이면 같은 장면에서도 다른 event가 나옵니다. 그래서 이미지용으로 만든 알고리즘은 그대로 적용되지 않습니다. 책은 새 알고리즘들을 서로 독립적인 세 축으로 분류합니다. 한 번에 몇 개의 event를 처리하는가, 방법을 설계했는가 학습했는가, feature를 쓰는가 모든 event를 쓰는가입니다.
+@@ 11
+1. 세 가지 과제
+@@ 12
+책은 모든 방법이 마주해야 하는 데이터의 세 가지 성질을 꼽습니다. <span class="src">§10.2 · pp. 286–287</span>
+@@ 13
+과제
+@@ 14
+의미
+@@ 15
+결과
+@@ 16
+시공간 출력
+@@ 17
+event는 <strong>asynchronous</strong>이고(각 event가 자기 시각을 가짐) <strong>spatially sparse</strong>함. 이미지는 synchronous하고 dense함
+@@ 18
+이미지 시퀀스용 visual SLAM을 그대로 적용할 수 없음
+@@ 19
+움직임에 의존하는 데이터
+@@ 20
+event는 1 bit(밝아짐 또는 어두워짐)이고, 발생 여부가 장면의 texture뿐 아니라 상대 움직임에도 달려 있음
+@@ 21
+장소의 "겉모습"이 고정되지 않아 matching이 어려움
+@@ 22
+noise와 동적 효과
+@@ 23
+photon shot noise, 트랜지스터 noise, 빛의 양에 대한 의존성, 회로의 비이상성
+@@ 24
+일부 event는 가짜이고 일부는 빠지므로, 어떤 event 하나도 믿을 수 없음
+@@ 25
+첫째 행은 Day 1에서 보았습니다. 셋째는 회로의 성질입니다. 둘째가 가장 덜 분명한데, 짧은 유도 하나로 정확히 밝힐 수 있습니다.
+@@ 26
+2. event가 움직임에 의존하는 이유
+@@ 27
+빈틈 채우기: linearized event generation model
+@@ 28
+책은 p. 287에서 "event generation model (10.1) (또는 그 linearized 버전)"을 언급하고, 식 대신 참고문헌을 제시합니다. 그 식을 세 단계로 유도해 봅니다.
+@@ 29
+<strong>1단계: 짧은 시간 간격.</strong> 식 (10.1)은 \(L(\mathbf{x}, t) - L(\mathbf{x}, t - \Delta t) = p\,C\)입니다. \(\Delta t\)가 작으면 시간에 대한 1차 Taylor 전개로 다음을 얻습니다.
+@@ 30
+<strong>2단계: brightness constancy.</strong> 빛이 일정하다고 가정하면, 장면의 한 점은 그 상이 움직이는 동안에도 밝기를 유지합니다. 그 점이 \(\mathbf{x}(t)\)에 있고 이미지 평면 위를 속도 \(\mathbf{v} = \mathrm{d}\mathbf{x}/\mathrm{d}t\)(초당 픽셀)로 움직이면, \(L(\mathbf{x}(t), t)\)는 시간에 대해 일정합니다. chain rule로 미분합니다:
+@@ 31
+여기서 \(\nabla L = (\partial L/\partial x, \partial L/\partial y)\)는 log 이미지의 공간 gradient입니다. edge를 가로질러 어두운 쪽에서 밝은 쪽을 향합니다.
+@@ 32
+<strong>3단계: 합치기.</strong>
+@@ 33
+이 식에서 세 가지 사실을 읽어 낼 수 있습니다.
+@@ 34
+<strong>event rate.</strong> 한 픽셀에서 두 event 사이의 시간은 \(\Delta t \approx C / |\nabla L \cdot \mathbf{v}|\)이므로, 픽셀은 초당 약 \(|\nabla L \cdot \mathbf{v}| / C\)개의 event를 냅니다. 강한 edge와 빠른 움직임은 많은 event를 만듭니다.
+@@ 35
+<strong>polarity.</strong> \(p = \operatorname{sign}(-\nabla L \cdot \mathbf{v})\). 움직임을 반대로 하면 모든 ON이 OFF가 됩니다.
+@@ 36
+<strong>보이지 않는 방향.</strong> \(\mathbf{v}\)가 \(\nabla L\)에 수직이면 움직임이 edge를 따라가고, \(\nabla L \cdot \mathbf{v} = 0\)이 되어 event가 나오지 않습니다. \(\mathbf{v}\) 중에서 gradient 방향 성분만 보입니다.
+@@ 37 attr
+세 개의 패널. 각 패널은 왼쪽이 어둡고 오른쪽이 밝은 세로 edge를 보여 줍니다. 세 패널 모두 gradient 화살표는 오른쪽을 가리킵니다. 첫째 패널에서는 이미지 속도가 edge를 가로질러 왼쪽을 향하고, edge를 따라 event가 나옵니다. 둘째 패널에서는 속도가 edge를 따라 위를 향하고, event가 나오지 않습니다. 셋째 패널에서는 속도가 비스듬하고, event가 더 적게 나옵니다.
+@@ 38
+edge를 가로질러
+@@ 39
+edge를 따라
+@@ 40
+비스듬히
+@@ 41
+어두움
+@@ 42
+밝음
+@@ 43
+=
+@@ 44
+∇L·v = 0: event 없음
+@@ 45
+∇L 방향 v 성분만 작용:
+@@ 46
+event가 더 적음
+@@ 47
+세 가지 이미지 움직임 아래의 같은 edge. gradient ∇L은 어두운 쪽에서 밝은 쪽을 향합니다. 첫째 패널에서는 밝은 쪽이 어두운 픽셀 위로 옮겨 오므로 그 픽셀들이 ON event를 냅니다. 자기 방향을 따라 미끄러지는 edge는 event camera에 보이지 않습니다.
+@@ 48
+<strong>Day 1과 맞춰 보기.</strong> Day 1 simulator(\(v = 0.5\) px/ms, \(C = 0.3\))에서 한 픽셀의 첫 두 ON event는 0.41 ms 간격으로 도착합니다. 모델에 따르면 그 지점에서 edge의 기울기는 픽셀당 \(|\partial L/\partial x| \approx C / (v\,\Delta t) = 0.3 / (0.5 \times 0.41) = 1.46\)입니다. 시뮬레이션한 edge의 그 지점 실제 기울기는 1.49입니다. timestamp 두 개로 국소적인 이미지 gradient를 잰 셈입니다.
+@@ 49
+<strong>2-D 예제.</strong> 세로 edge의 gradient가 픽셀당 \(\nabla L = (0.5, 0)\)이고, 이미지가 \(\mathbf{v} = (-200, 100)\) px/s로 움직입니다. 그러면 초당 \(-\nabla L \cdot \mathbf{v} = -(0.5 \times (-200) + 0 \times 100) = +100\)입니다. \(C = 0.25\)이면 edge 위의 각 픽셀은 초당 \(100/0.25 = 400\)개의 ON event를, 즉 2.5 ms마다 하나씩 냅니다. 움직임의 세로 성분 100 px/s는 아무 기여도 하지 않습니다.
+@@ 50
+눈금이 도드라진 자 위로 손끝을 움직인다고 해 봅시다. 눈금을 가로지르면 눈금 하나하나가 느껴집니다. 눈금을 따라 미끄러지면 아무리 빨리 움직여도 아무것도 느껴지지 않습니다. event camera도 이미지를 똑같은 방식으로 느낍니다. 그래서 책은 움직이는 event camera를 asynchronous edge detector라고 부릅니다. <span class="src">§10.4 · p. 289</span>
+@@ 51
+3. 여기서 생기는 질문들
+@@ 52
+이 과제들은 네 가지 연구 질문이 됩니다. pose와 depth 추정을 위해 event에서 정보를 어떻게 뽑아낼 것인가, 시간상 거의 연속적이고 공간상 sparse한 데이터에 어떤 map과 trajectory 표현이 맞는가, 데이터가 움직임에 의존할 때 correspondence를 어떻게 찾을 것인가, 그리고 이 모든 것을 frame-based 처리의 병목을 다시 만들지 않고 어떻게 해낼 것인가입니다. <span class="src">§10.2 · p. 287</span>
+@@ 53
+event-based SLAM은 이웃한 두 과제와 함께 성장했습니다. <strong>image reconstruction</strong>(영상 복원)은 event에서 절대 밝기를 복원합니다. 위 모델에 따르면 event는 \(\nabla L \cdot \mathbf{v}\)의 sample을 담고 있으므로, 움직임을 알면 이미지를 제약하고 이미지를 알면 움직임을 제약합니다. <strong>optical flow 추정</strong>은 이미지 속도 \(\mathbf{v}\) 자체를 복원합니다. 최초의 event-based SLAM 시스템들도 이미 움직임과 함께 intensity 이미지를 추정했습니다. <span class="src">§10.2 · p. 287</span>
+@@ 54
+4. 방법을 분류하는 세 축
+@@ 55
+책의 분류 체계에는 세 축이 있고, 이 축들은 서로 독립적입니다. <span class="src">§10.3 · p. 287</span>
+@@ 56
+축
+@@ 57
+선택지 A
+@@ 58
+선택지 B
+@@ 59
+한 번에 처리하는 event 수
+@@ 60
+<strong>Event-by-event</strong>: event 하나가 도착할 때마다 state(map과 trajectory)가 바뀔 수 있음. latency 최소
+@@ 61
+event <strong>packet</strong>(group, batch, slice라고도 함). latency가 어느 정도 있고, packet 크기를 정해야 함
+@@ 62
+방법을 얻는 방식
+@@ 63
+<strong>Model-based</strong>: 센서 모델과 기하로부터 설계
+@@ 64
+<strong>Data-driven</strong>: 데이터로부터 학습
+@@ 65
+무엇을 추출하는가
+@@ 66
+<strong>Indirect</strong>: 먼저 event를 feature(event corner, line, normal flow)로 바꾼 뒤 기하학적 SLAM pipeline을 실행. 기하학적 objective
+@@ 67
+<strong>Direct</strong>: 모든 event에서 움직임과 장면 parameter로 한 번에 감. photometric objective(event polarity 또는 event rate의 함수)
+@@ 68
+마지막 축은 frame-based visual SLAM의 indirect method와 direct method(<a href="#d64">11주차 · Day 4</a>)를 그대로 닮았습니다. direct method에서는 event generation model (10.1), 또는 방금 유도한 linearized 버전이 설계의 출발점입니다. <span class="src">§10.3 · p. 287</span>
+@@ 69
+<strong>packet 크기 정하기.</strong> 책은 세 종류의 규칙을 듭니다. event 수 고정, 시간 길이 고정, 그리고 혼합 기준입니다. event rate는 움직임을 따르므로, 각 규칙이 어떻게 동작하는지는 Day 1에서 알 수 있습니다. event 20,000개짜리 packet을 생각해 봅시다. 카메라가 느리게 움직여 초당 100,000개의 event를 만들면 packet은 200 ms에 걸칩니다. 빠르게 움직여 초당 2,000,000개를 만들면 packet은 10 ms에 걸칩니다. 따라서 개수를 고정하면 바로 움직임이 빠를 때 더 자주 갱신하지만, 아무것도 움직이지 않으면 한없이 기다립니다. 10 ms로 시간을 고정하면 갱신 주기를 예측할 수 있지만, 느린 경우에는 쓸 수 있는 event가 1,000개뿐입니다.
+@@ 70
+5. data association, 그리고 지금까지의 길
+@@ 71
+<strong>data association</strong>은 어떤 event들이 같은 장면 점이나 feature에 속하는지 정하는 일입니다. event 하나에는 matching할 descriptor가 없으므로 이것이 핵심 문제입니다. 흔한 해법은 높은 시간 해상도를 활용합니다. 시간이 가깝고 픽셀 위치도 가까운 event들은 같은 edge에서 왔다고 봅니다. <strong>hard association</strong>(각 event를 하나에만 할당)과 <strong>soft association</strong>(event 하나가 가중치를 두고 여러 대상에 기여)이 모두 쓰였습니다. <span class="src">§10.3 · pp. 287–288</span>
+@@ 72
+이 분야는 여러 축을 따라 난이도를 한 단계씩 올리며 전체 문제에 다가갔습니다. 미지수의 수(자유도), 움직임의 종류(순수 회전이나 평면 장면에서 완전한 6-DoF 움직임까지), 장면(단순한 고대비 패턴에서 자연스러운 texture까지), 그리고 장면이 static인지 독립적으로 움직이는 물체를 담고 있는지입니다. 초기 연구는 model-based였고, 최근 연구는 딥러닝도 탐구합니다. event는 움직이는 edge에서 나오므로 이런 시스템이 복원하는 map은 대개 edge map, 즉 sparse 또는 semi-dense한 3D 점입니다. <span class="src">§10.3 · pp. 288–289, Figure 10.3</span>
+@@ 73
+<strong>"같은 장면은 언제나 같은 event를 만든다."</strong> event는 \(\nabla L \cdot \mathbf{v}\)를 sampling합니다. 움직임의 방향을 바꾸면 다른 edge가, 다른 polarity로 event를 냅니다.
+@@ 74
+<strong>"direct는 event-by-event라는 뜻이다."</strong> 두 축은 독립적입니다. 많은 direct method가 packet 단위로 작동하고, 일부 indirect method는 event마다 갱신합니다.
+@@ 75
+<strong>"event가 없는 픽셀은 균일한 표면을 보고 있다."</strong> 움직임과 평행한 edge를 보고 있을 수도 있습니다.
+@@ 76
+Q1. 어떤 픽셀에서 ∇L = (0.4, 0)(픽셀당)이고 이미지 속도는 v = (250, −500) px/s입니다. C = 0.2일 때 linearized model은 무엇을 예측할까요?
+@@ 77
+초당 500 event, OFF
+@@ 78
+초당 500 event, ON
+@@ 79
+초당 1118 event, OFF
+@@ 80
+event 없음
+@@ 81
+∇L·v = 0.4 × 250 = 100(초당)입니다. rate는 100 / 0.2 = 500(초당)이고, polarity는 −100의 부호이므로 OFF입니다. 중요한 것은 속력 |v| = 559 px/s가 아니라 ∇L 방향의 성분뿐입니다.
+@@ 82
+Q2. 카메라가 정지한 장면 앞에서 수평으로 pan합니다. 어떤 edge가 가장 적은 event를 만들까요?
+@@ 83
+세로 edge
+@@ 84
+대각선 edge
+@@ 85
+가로 edge
+@@ 86
+모든 edge가 똑같이 event를 냅니다
+@@ 87
+이미지가 수평으로 움직입니다. 가로 edge는 gradient가 세로 방향이므로 ∇L·v = 0입니다. 자기 방향을 따라 미끄러질 뿐이라 event를 내지 않습니다.
+@@ 88
+Q3. 어떤 방법이 event 10,000개짜리 packet을 씁니다. event rate가 초당 200,000개에서 1,000,000개로 오릅니다. packet 하나가 걸치는 시간은 어떻게 바뀔까요?
+@@ 89
+50 ms 그대로입니다
+@@ 90
+10 ms에서 50 ms로
+@@ 91
+20 ms에서 100 ms로
+@@ 92
+50 ms에서 10 ms로
+@@ 93
+10,000 / 200,000 = 0.05 s이고 10,000 / 1,000,000 = 0.01 s입니다. 개수를 고정하면 움직임이 빨라질 때 packet이 짧아집니다.
+@@ 94
+Q4. 어떤 시스템이 event stream에서 corner를 검출해 tracking하고, 그 track을 reprojection error를 최소화하는 고전적인 pipeline에 넘깁니다. corner detector는 손으로 설계한 것입니다. 이 시스템은 어떻게 분류될까요?
+@@ 95
+=
+@@ 96
+=
+@@ 97
+=
+@@ 98
+=
+@@ 99
+feature를 먼저 뽑고 기하학적 objective를 나중에 쓰므로 indirect입니다. 데이터에서 학습하는 것이 없으므로 model-based입니다.
+@@ 100
+event 데이터는 asynchronous하고 sparse하며, 움직임에 의존하고, noise가 많습니다. image-based SLAM은 그대로 옮겨 쓸 수 없습니다.
+@@ 101
+linearized event generation model: \(-\nabla L \cdot \mathbf{v}\,\Delta t \approx p\,C\). rate는 \(|\nabla L \cdot \mathbf{v}|/C\), polarity는 \(\operatorname{sign}(-\nabla L \cdot \mathbf{v})\)이며, edge를 따라가는 움직임에서는 event가 없습니다.
+@@ 102
+방법은 갱신당 event 수(하나 또는 packet), 설계 방식(model-based 또는 학습), 사용하는 것(indirect는 feature, direct는 모든 event)으로 분류됩니다.
+@@ 103
+data association은 시간과 픽셀 위치의 가까움에 기대며, hard 또는 soft 할당을 씁니다.
+@@ 104
+연구는 회전만 있는 움직임과 단순한 장면에서 자연 장면의 6-DoF 움직임으로 나아갔고, map은 대부분 edge map입니다.
+@@ 105
+<em>SLAM Handbook</em>, §10.2 "Challenges and Applications"와 §10.3 "Overview and Taxonomy of Event-based SLAM Methods", pp. 286–289.
+@@ 106
+linearized event generation model은 Gallego et al., <em>Event-based Vision: A Survey</em>, 2022(책의 참고문헌 [361])를 따릅니다.
+@@ 107
+brightness constancy와 optical flow constraint: Horn and Schunck, <em>Determining Optical Flow</em>, 1981.
+@@ 108
+packet 크기 비교는 Day 1의 event rate로 직접 계산한 것입니다.

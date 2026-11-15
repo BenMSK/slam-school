@@ -1,0 +1,86 @@
+@@ 1
+SLAM School
+@@ 2 attr
+A 24-week companion course for reading the SLAM Handbook: daily lessons, the derivations the book skips, interactive widgets, and quizzes.
+@@ 3
+SLAM School needs JavaScript for navigation, quizzes, and the interactive widgets.
+@@ 4
+The SLAM Handbook, in 24 weeks · <span class="ver">v1.1 (2026-11-15)</span>
+@@ 5
+<a class="btn" id="lang" href="ko.html" aria-label="한국어 / English">KR</a>
+@@ 6 attr
+Switch color theme
+@@ 7
+<span class="em">☾</span><span class="lbl">Dark</span>
+@@ 8 attr
+Sections
+@@ 9
+Course · 24 weeks
+@@ 10 attr
+Weeks
+@@ 11 attr
+Days of this week
+@@ 12
+<span class="eyebrow">A 24-week reading companion</span>
+@@ 13
+Read the SLAM Handbook, and actually understand it.
+@@ 14
+One hour a day, five days a week: a few pages of the book, then a lesson here that fills in the steps the book skips, something to play with, and a quiz. Every sixth day is a review.
+@@ 15
+Start
+@@ 16
+Lessons
+@@ 17
+120 + 24 reviews
+@@ 18
+Widgets
+@@ 19
+<span id="nviz">0</span> interactive
+@@ 20
+The book
+@@ 21
+18 chapters · 550 pp.
+@@ 22
+How to use this course
+@@ 23
+<strong>Have the book open.</strong> Each day starts with a "Read first" box naming the sections and pages of the <em>SLAM Handbook</em> (Carlone, Kim, Barfoot, Cremers, Dellaert, eds., Cambridge University Press). Read those pages before the lesson, or right after it if the pages feel hard.
+@@ 24
+<strong>Then do the lesson.</strong> It restates the idea in plain words, works through the derivation steps the book leaves out, and uses the book's own notation so you can go back and forth.
+@@ 25
+<strong>Play with every widget.</strong> They are small real computations (a Gauss-Newton solver, an ICP loop, a belief-propagation pass), not pictures.
+@@ 26
+<strong>Take the quiz, then mark the day done.</strong> Progress is saved on this device only.
+@@ 27
+<strong>Day 6 of each week is a review:</strong> a formula sheet, a mixed quiz, and pen-and-paper problems with worked solutions.
+@@ 28
+<strong>Check the page chips.</strong> A chip such as <span class="src">§1.3.2 · p. 30</span> tells you where in the book a statement comes from.
+@@ 29
+The map
+@@ 30
+The course follows the book in order: Part I is the estimation machinery (Weeks 1–10), Part II is the sensors (Weeks 11–18), Part III is where the field is heading (Weeks 19–24). Tap a week to see its days.
+@@ 31
+What the colored boxes mean
+@@ 32
+Read first
+@@ 33
+Today's pages in the book, and what to look for.
+@@ 34
+The one thing to remember.
+@@ 35
+The same idea with no jargon.
+@@ 36
+A picture to hang the idea on.
+@@ 37
+Filling the gap
+@@ 38
+A derivation step or background fact the book assumes.
+@@ 39
+Misreadings, and why they are wrong.
+@@ 40
+What to remember.
+@@ 41
+About the sources
+@@ 42
+The course is written against the edition of the handbook compiled on April 21, 2026, and page numbers refer to that edition. The lessons explain the material in their own words and do not reproduce the book's text or figures, so you need the book itself. Background math that the book assumes (linear algebra, probability, optimization, Lie groups) is standard textbook material; each lesson names the reference it follows.
+@@ 43
+SLAM School · <span class="ver">v1.1 (2026-11-15)</span> · A reading companion to the SLAM Handbook · Progress is saved on this device only.

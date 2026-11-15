@@ -1,0 +1,190 @@
+@@ 1
+<span class="eyebrow">Week 5 · Day 2</span>
+@@ 2
+From splines to kernels: the nonparametric view
+@@ 3
+After today you can explain why the number of basis functions is hard to choose, derive the kernel form of the normal equations from the spline form, and build a kernel matrix from a kernel function.
+@@ 4
+About 60 min · Read §2.2.2, pp. 65–66 (2 pages) · Needs Week 2 Day 3 and Week 5 Day 1
+@@ 5
+Read first: §2.2.2, pp. 65–66
+@@ 6
+Read from the heading "2.2.2 From Parametric to Nonparametric" to the heading "2.2.3". While you read, look for:
+@@ 7
+The two ways a spline fit goes wrong, in the first paragraph (p. 65).
+@@ 8
+The regularizer term in equation (2.43) and what it prefers (p. 65).
+@@ 9
+The phrase "with a little bit of algebra" between (2.44) and (2.45) (pp. 65–66). Today's lesson is that algebra.
+@@ 10
+What the last paragraph of the section says looks expensive (p. 66).
+@@ 11
+The regularized spline problem can be rewritten so that the basis functions appear only through one matrix, \(\mathbf{K} = \boldsymbol{\Psi}\boldsymbol{\Psi}\T\), whose entry \((i,j)\) says how strongly the trajectory at time \(t_i\) is tied to the trajectory at time \(t_j\). Once only \(\mathbf{K}\) matters, you can fill it in directly from a <strong>kernel function</strong> and never write down a basis function or a coefficient.
+@@ 12
+1. Too many basis functions, or too few
+@@ 13
+A parametric method makes you pick the type and number of basis functions before you see the data. Pick too many and the curve has enough freedom to follow the noise: it <strong>overfits</strong>. Pick too few and the curve cannot bend as much as the real trajectory did: it is too smooth. <span class="src">§2.2.2 · p. 65</span>
+@@ 14
+Try it: the dots are noisy position measurements (noise standard deviation 0.25) taken at irregular times, with nothing between 5.2 s and 7 s. First shrink the knot spacing to 0.4 s and set λ to 0.001. Then set the spacing to 3 s. Then try 0.4 s with λ = 0.
+@@ 15
+Notice the two error numbers. At the start (knots every 1 s, 12 coefficients for 24 measurements) the residual is 0.21, about the noise level, and the error against the true curve is 0.16. With knots every 0.4 s and λ = 0.001 the residual drops to 0.06, far below the noise, while the true error rises to 0.39: the curve is fitting noise and wanders in the gap. With knots every 3 s both numbers are near 0.4: the curve is too stiff. With λ = 0 and close knots the problem has no unique solution at all.
+@@ 16
+2. The spline problem as regularized least squares
+@@ 17
+To keep the algebra short the book drops the landmarks for this section and keeps only the trajectory. <span class="src">§2.2.2 · p. 65</span> Recall the linear problem that one Gauss-Newton iteration solves (<a href="#d9">Week 2 · Day 3</a>): stack the whitened Jacobians in \(\mathbf{A}\) and the whitened residuals in \(\mathbf{b}\), and find the pose update \(\boldsymbol{\delta}\) that minimizes \(\norm{\mathbf{b} - \mathbf{A}\boldsymbol{\delta}}^2\). Its solution satisfies the normal equations \(\mathbf{A}\T\mathbf{A}\,\boldsymbol{\delta} = \mathbf{A}\T\mathbf{b}\), equation (1.25).
+@@ 18
+With a spline the pose at a measurement time is a linear function of the coefficients, so a change \(\boldsymbol{\delta}_c\) in the coefficients changes the poses at the measurement times by
+@@ 19
+Here \(\boldsymbol{\Psi}\) is a tall matrix with one block row per measurement time and one block column per coefficient. Row \(i\) holds the basis functions evaluated at \(t_i\), so it is zero except at the few active coefficients. For one measurement this is the term the book writes as equation (2.41), with \(\mathbf{H}_i\boldsymbol{\Psi}_i\) as the Jacobian. It is the chain rule you used on <a href="#d25">Day 1</a>. Substituting \(\boldsymbol{\delta} = \boldsymbol{\Psi}\boldsymbol{\delta}_c\) and adding a penalty on large coefficients gives
+@@ 20
+The second term is the <strong>regularizer</strong>. It prefers coefficients near zero, and it is what stops the overfitting you saw in the widget. In the language of <a href="#d8">Week 2 · Day 2</a> it is the negative log of a Gaussian prior \(\N(\mathbf{0}, \mathbf{I})\) on the coefficients, so (2.43) is still a MAP problem.
+@@ 21
+To solve it, set the gradient to zero. The gradient of the first term is \(-2\boldsymbol{\Psi}\T\mathbf{A}\T(\mathbf{b} - \mathbf{A}\boldsymbol{\Psi}\boldsymbol{\delta}_c)\) and of the second is \(2\boldsymbol{\delta}_c\). Setting the sum to zero and moving the unknown to the left:
+@@ 22
+These are the normal equations with \(\mathbf{A}\boldsymbol{\Psi}\) in place of \(\mathbf{A}\), plus \(\mathbf{I}\) from the regularizer. The widget solves exactly this system, with the regularizer scaled by a factor λ so that you can turn it up and down.
+@@ 23
+3. From coefficients to poses
+@@ 24
+The coefficients are a means to an end. What you want is the pose update \(\boldsymbol{\delta}^* = \boldsymbol{\Psi}\boldsymbol{\delta}_c^*\). The book states the equation it satisfies and leaves the steps out. <span class="src">§2.2.2 · pp. 65–66</span>
+@@ 25
+Filling the gap: the "little bit of algebra" from (2.44) to (2.45)
+@@ 26
+<strong>Step 1.</strong> Move the first term of (2.44) to the right and factor:
+@@ 27
+<strong>Step 2.</strong> Multiply both sides by \(\boldsymbol{\Psi}\) from the left. Wherever \(\boldsymbol{\Psi}\boldsymbol{\delta}_c^*\) appears write \(\boldsymbol{\delta}^*\), and name the product \(\mathbf{K} = \boldsymbol{\Psi}\boldsymbol{\Psi}\T\):
+@@ 28
+<strong>Step 3.</strong> Collect the terms with \(\boldsymbol{\delta}^*\) on the left:
+@@ 29
+<strong>Step 4.</strong> Multiply by \(\mathbf{K}^{-1}\) from the left:
+@@ 30
+The coefficients are gone. Compared with the plain normal equations (1.25), the only new thing is \(\mathbf{K}^{-1}\) added on the left.
+@@ 31
+<strong>Check with numbers.</strong> Two measurement times, two basis functions, and for simplicity \(\mathbf{A} = \mathbf{I}\):
+@@ 32
+Coefficient route (2.44): \(\boldsymbol{\Psi}\T\boldsymbol{\Psi} + \mathbf{I} = \begin{bmatrix} 3 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\) and \(\boldsymbol{\Psi}\T\mathbf{b} = (3, 2)\), so \(\boldsymbol{\delta}_c^* = (0.8, 0.6)\) and \(\boldsymbol{\delta}^* = \boldsymbol{\Psi}\boldsymbol{\delta}_c^* = (0.8, 1.4)\). Pose route (2.45): \(\mathbf{I} + \mathbf{K}^{-1} = \begin{bmatrix} 3 &amp; -1 \\ -1 &amp; 2 \end{bmatrix}\) and the right side is \((1, 2)\), so \(\boldsymbol{\delta}^* = \tfrac15(2\cdot1 + 1\cdot2,\ 1\cdot1 + 3\cdot2) = (0.8, 1.4)\). The two routes agree.
+@@ 33
+Going deeper (optional): when does the inverse of K exist?
+@@ 34
+\(\mathbf{K} = \boldsymbol{\Psi}\boldsymbol{\Psi}\T\) has as many rows as there are measurement times but rank at most the number of coefficients. With more times than coefficients, which the book notes is the usual case, this \(\mathbf{K}\) is singular and step 4 cannot be taken literally. Step 3 is always valid. The issue disappears in the next section: there \(\mathbf{K}\) is built from a kernel function and, for the kernels used in practice and distinct times, it is positive definite.
+@@ 35
+4. The kernel trick
+@@ 36
+Look at what \(\mathbf{K}\) contains. Its entry \((i,j)\) is row \(i\) of \(\boldsymbol{\Psi}\) times row \(j\):
+@@ 37
+an inner product of the basis functions evaluated at two times. It is large when the same basis functions are active at both times, and zero when no basis function covers both. The matrix \(\mathbf{K}\) is called the <strong>kernel matrix</strong>. <span class="src">§2.2.2 · p. 66</span>
+@@ 38
+Filling the gap: K is a prior covariance
+@@ 39
+The regularizer said the coefficients have prior \(\mathbf{c} \sim \N(\mathbf{0}, \mathbf{I})\). The trajectory values at the measurement times are \(\mathbf{p} = \boldsymbol{\Psi}\mathbf{c}\), a linear function of a Gaussian, so they are Gaussian with mean zero and covariance
+@@ 40
+So \(K_{ij}\) is the covariance, before any measurement, between the trajectory at \(t_i\) and at \(t_j\). Its inverse \(\mathbf{K}^{-1}\) is the information matrix of that prior (<a href="#d3">Week 1 · Day 3</a>), and (2.45) says: information from the measurements, \(\mathbf{A}\T\mathbf{A}\), plus information from the prior, \(\mathbf{K}^{-1}\). A penalty on coefficients has turned into a prior directly on the trajectory.
+@@ 41
+Equation (2.45) needs the basis functions only through these inner products. The <strong>kernel trick</strong> is to skip the basis functions and choose a function of two times, the <strong>kernel function</strong> \(\mathcal{K}(t,t')\), that returns the inner product directly. The kernel matrix is then filled in by evaluating it at every pair of measurement times: <span class="src">§2.2.2 · p. 66</span>
+@@ 42
+The method is now <strong>nonparametric</strong>: there are no spline coefficients to estimate. What remains to choose are the kernel's <strong>hyperparameters</strong>. The book's example is the squared-exponential kernel, whose usual form is
+@@ 43
+with a <strong>length scale</strong> \(\ell\) (how far apart in time two poses can be and still be strongly tied) and a magnitude \(\sigma_f^2\). For \(\sigma_f = 1\), \(\ell = 1\) s, and times \(0, 1, 3\) s:
+@@ 44 attr
+Plot of the squared-exponential kernel against the time difference measured in length scales. It starts at 1 for zero difference and falls smoothly: 0.607 at one length scale, 0.135 at two, 0.011 at three.
+@@ 45
+time difference |t − t′| divided by the length scale
+@@ 46
+prior covariance between p(t) and p(t′), for unit magnitude
+@@ 47
+The squared-exponential kernel. Poses closer together in time than one length scale are strongly tied, so the trajectory cannot change quickly. A longer length scale gives a smoother trajectory.
+@@ 48
+Parametric (spline)
+@@ 49
+Nonparametric (kernel)
+@@ 50
+What is estimated
+@@ 51
+K coefficients
+@@ 52
+The trajectory at the M measurement times
+@@ 53
+What you choose
+@@ 54
+Type, number, and spacing of basis functions
+@@ 55
+The kernel function and its hyperparameters
+@@ 56
+Linear system
+@@ 57
+(2.44), size set by K
+@@ 58
+(2.45), size set by M
+@@ 59
+What sets the smoothness
+@@ 60
+How many basis functions there are
+@@ 61
+The kernel, for example its length scale
+@@ 62
+A spline says "the trajectory is one of the shapes I can build from these pieces". A kernel says "any shape is allowed, but values at nearby times must agree". The second statement does not limit how detailed the trajectory can be, which is why the book says nonparametric methods have higher representational power.
+@@ 63
+5. What this costs
+@@ 64
+Two things look worse in (2.45). The system is larger, because there are usually more measurement times than coefficients; the book returns to this at the end of §2.2.3, and so do we on <a href="#d28">Day 4</a>. And it needs \(\mathbf{K}^{-1}\). For a kernel such as the squared exponential every pair of times has a nonzero entry in \(\mathbf{K}\), and in general its inverse is dense too. A dense \(\mathbf{K}^{-1}\) is a factor that ties every pose to every other pose, which destroys the sparsity that made SLAM tractable in Week 3. <span class="src">§2.2.2 · p. 66</span>
+@@ 65
+Tomorrow's question is therefore: is there a family of kernels for which \(\mathbf{K}^{-1}\) is sparse by construction? You have already seen a hint. In the numeric check above, \(\mathbf{K} = \begin{bmatrix} 1 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\) is full, but its inverse has the pattern of a chain.
+@@ 66
+<strong>"Nonparametric means there is nothing to tune."</strong> It means no fixed, finite set of basis-function coefficients. The kernel's hyperparameters still have to be chosen, and they set how smooth the result is.
+@@ 67
+<strong>"More basis functions always fit better."</strong> They fit the measurements better. They fit the true trajectory worse once they start following the noise, as the widget shows.
+@@ 68
+<strong>"K and its inverse have the same sparsity."</strong> They generally do not. A full \(\mathbf{K}\) can have a sparse inverse, and that is exactly what the next section exploits.
+@@ 69
+Q1. You fit a spline with very closely spaced knots and no regularizer to noisy data. The residual at the measurements is far below the sensor noise. What has most likely happened?
+@@ 70
+The spline is too stiff
+@@ 71
+The spline is following the noise, and its error against the true trajectory is probably larger than it could be
+@@ 72
+The sensor is more accurate than its specification
+@@ 73
+The basis functions lost their local support
+@@ 74
+A residual below the noise level means the curve is reproducing individual noise values. That is overfitting; between the measurements the curve is usually worse.
+@@ 75
+Q2. At time t₁ the active basis-function values are (0.5, 0.5, 0) and at time t₂ they are (0, 0.5, 0.5). What is the kernel-matrix entry K₁₂?
+@@ 76
+K₁₂ is the inner product of the two rows: 0.5·0 + 0.5·0.5 + 0·0.5 = 0.25. Only the shared basis function contributes.
+@@ 77
+Q3. A squared-exponential kernel has magnitude 1 and length scale 2 s. What is its value for two times 2 s apart?
+@@ 78
+The exponent is −(2²)/(2·2²) = −0.5, and e^−0.5 ≈ 0.607.
+@@ 79
+Q4. In equation (2.45), which term plays the role that the regularizer on the coefficients played in (2.43)?
+@@ 80
+Nothing; the regularizer was dropped
+@@ 81
+The identity matrix in (2.44) came from the regularizer. After the change of variables it becomes K⁻¹, the information matrix of the prior on the trajectory.
+@@ 82
+Q5. A trajectory has 500 measurement times and is modelled by a spline with 40 scalar coefficients. Roughly how large are the systems (2.44) and (2.45)?
+@@ 83
+Both 40 × 40
+@@ 84
+40 × 40 and 500 × 500
+@@ 85
+500 × 500 and 40 × 40
+@@ 86
+Both 500 × 500
+@@ 87
+(2.44) solves for the coefficients, (2.45) for the trajectory at every measurement time. The book points out that the second is larger and deals with it later.
+@@ 88
+Too many basis functions overfit, too few oversmooth. A regularizer \(\norm{\boldsymbol{\delta}_c}^2\) helps, and it is a Gaussian prior on the coefficients.
+@@ 89
+Regularized spline normal equations: \((\boldsymbol{\Psi}\T\mathbf{A}\T\mathbf{A}\boldsymbol{\Psi} + \mathbf{I})\,\boldsymbol{\delta}_c^* = \boldsymbol{\Psi}\T\mathbf{A}\T\mathbf{b}\), equation (2.44).
+@@ 90
+In terms of the poses \(\boldsymbol{\delta}^* = \boldsymbol{\Psi}\boldsymbol{\delta}_c^*\): \((\mathbf{A}\T\mathbf{A} + \mathbf{K}^{-1})\,\boldsymbol{\delta}^* = \mathbf{A}\T\mathbf{b}\) with \(\mathbf{K} = \boldsymbol{\Psi}\boldsymbol{\Psi}\T\), equation (2.45).
+@@ 91
+\(\mathbf{K}\) is the prior covariance of the trajectory at the measurement times. The kernel trick fills it in from a kernel function \(\mathcal{K}(t,t')\) with no basis functions.
+@@ 92
+The open problem is \(\mathbf{K}^{-1}\): dense for a general kernel.
+@@ 93
+<em>SLAM Handbook</em>, §2.2.2 "From Parametric to Nonparametric", pp. 65–66, equations (2.41)–(2.45).
+@@ 94
+The step-by-step derivation of (2.45), the numeric check, and the remark on when the inverse exists are worked out here from (2.44).
+@@ 95
+The reading of the kernel matrix as a prior covariance (the weight-space and function-space views) and the squared-exponential kernel formula follow Rasmussen and Williams, <em>Gaussian Processes for Machine Learning</em>, 2006.

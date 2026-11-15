@@ -1,0 +1,188 @@
+@@ 1
+<span class="eyebrow">Week 10 · Day 5</span>
+@@ 2
+Connectivity as accuracy, and what is still open
+@@ 3
+After today you can score a pose graph by its weighted number of spanning trees and its algebraic connectivity, compute how much a candidate loop closure would add, and list the open problems of certifiable SLAM.
+@@ 4
+About 60 min · Read §6.2.2 "Practical Considerations" and §6.3, pp. 178–181 (4 pages) · Needs Week 10 Days 3–4
+@@ 5
+Read first: p. 178 "Practical Considerations", then §6.3, pp. 178–181
+@@ 6
+Which graph quantity matches the D-criterion and which matches the E-criterion (p. 178).
+@@ 7
+The two advantages of using the Laplacian in place of the FIM (p. 178).
+@@ 8
+The three open questions about certifiable algorithms (p. 179). Each starts with "First", "Second", "Finally".
+@@ 9
+What the "outlier-free odometry backbone" assumption is, and two cases where it fails (p. 180).
+@@ 10
+Yesterday the FIM of a simplified pose graph turned out to be a Laplacian. So the design criteria of Day 3 become graph quantities: the determinant is the weighted number of spanning trees, and the smallest eigenvalue is tied to the algebraic connectivity. A robot can evaluate these before it moves, which is what makes them useful for planning and for pruning.
+@@ 11
+1. D-criterion: counting spanning trees
+@@ 12
+A <strong>spanning tree</strong> of a graph is a set of edges that connects all nodes and contains no loop; with \(n\) nodes it always has \(n-1\) edges. <strong>Kirchhoff's matrix-tree theorem</strong> says that the determinant of the reduced weighted Laplacian is the <strong>weighted number of spanning trees</strong>: <span class="src">§6.2.2 · p. 178</span>
+@@ 13
+With unit weights this is a plain count. Check it on a triangle with nodes 0, 1, 2, node 0 anchored, and weights \(w_{01}=2\), \(w_{12}=3\), \(w_{02}=1\). Any two of the three edges form a spanning tree, so \(t_w=2\cdot 3+2\cdot 1+3\cdot 1=11\). And
+@@ 14
+Try it: the default graph has five edges. Count the trees on the right, then add the edge 1–3. Then remove edges until node 3 is cut off.
+@@ 15
+Notice: with the default five edges there are 8 spanning trees and the determinant is 8. With all six edges both are 16. As soon as some node has no edge left, both are 0: the Laplacian is singular, and that node's position cannot be estimated at all.
+@@ 16
+Filling the gap: why a determinant counts trees
+@@ 17
+The <strong>Cauchy-Binet formula</strong> expands the determinant of a product of a wide matrix and a tall one as a sum over square pieces. For \(\mathbf{L}_w=\mathbf{A}\mathbf{W}\mathbf{A}\T\), with \(\mathbf{A}\) of size \((n-1)\times m\):
+@@ 18
+where \(S\) runs over all choices of \(n-1\) edges and \(\mathbf{A}_S\) keeps only their columns. Two facts finish the proof. If the edges in \(S\) contain a loop, adding their columns around the loop with suitable signs gives zero, so the columns are dependent and \(\det\mathbf{A}_S=0\). If they contain no loop, they form a spanning tree, and then \(\det\mathbf{A}_S=\pm 1\) (peel off a leaf of the tree: its row has a single \(\pm 1\); expand along it and repeat). So each spanning tree contributes exactly \(\prod_{e\in T}w_e\) and everything else contributes nothing.
+@@ 19
+Back to the FIM. For the simplified problem \(\mathcal{I}=\mathbf{L}_w\otimes\mathbf{I}_3\), and \(\det(\mathbf{L}_w\otimes\mathbf{I}_3)=(\det\mathbf{L}_w)^3\), so
+@@ 20
+The D-criterion of Day 3, the volume of the uncertainty ellipsoid, is decided by the weighted number of spanning trees. More trees means more independent ways for information to flow from the anchor to every pose. This makes precise the feeling that a well-connected graph gives an accurate map. <span class="src">§6.2.2 · p. 178</span>
+@@ 21
+2. E- and A-criteria on the graph
+@@ 22
+Criterion (Day 3)
+@@ 23
+Graph quantity
+@@ 24
+Reading
+@@ 25
+\(\log t_w(G)\), the weighted number of spanning trees
+@@ 26
+Overall connectivity
+@@ 27
+\(\lambda_{\min}(\mathbf{L}_w)\), related to the algebraic connectivity
+@@ 28
+The weakest direction: is there a bottleneck?
+@@ 29
+\(3\,\tr(\mathbf{L}_w^{-1})\), three times the sum of effective resistances to the anchor
+@@ 30
+Average pose variance
+@@ 31
+The <strong>algebraic connectivity</strong> (Fiedler value) is the second-smallest eigenvalue \(\lambda_2\) of the <em>full</em> Laplacian (Box 6.1, p. 158). It is zero exactly when the graph falls into two pieces and small when it nearly does. The book says the E-criterion "is related to" it. <span class="src">§6.2.2 · p. 178</span>
+@@ 32
+Filling the gap: how the two eigenvalues are related
+@@ 33
+The reduced Laplacian is the full one with one row and the same column deleted. <strong>Cauchy's interlacing theorem</strong> says the eigenvalues of such a submatrix lie between consecutive eigenvalues of the full matrix. Since the smallest eigenvalue of a Laplacian is 0,
+@@ 34
+So a graph with low algebraic connectivity has a poorly determined direction wherever you put the anchor. In yesterday's widget with odometry only, the two numbers are 0.044 and 0.152; after closing the big loop they are 0.152 and 0.586.
+@@ 35
+3. Which measurement is worth adding?
+@@ 36
+These graph scores have two practical advantages over the FIM itself. They are cheaper: in 3-D pose-graph optimization the Laplacian has one row per pose where the FIM has six. And they need neither a SLAM solution nor actual measurements, only the list of who would observe whom. <span class="src">§6.2.2 · p. 178</span> That is the situation of <strong>active SLAM</strong>, where the robot chooses its path to maximize the accuracy it expects, and of <strong>measurement selection</strong>, where a long-running system keeps only its most informative edges.
+@@ 37
+Filling the gap: the value of one more edge
+@@ 38
+A new edge between poses \(i\) and \(j\) with weight \(w\) changes the Laplacian by a rank-one term, \(\mathbf{L}_w\to\mathbf{L}_w+w\,\mathbf{a}\mathbf{a}\T\), where \(\mathbf{a}\) is the new column of the incidence matrix. The <strong>matrix determinant lemma</strong> gives the new determinant without refactoring:
+@@ 39
+where \(R_{ij}=\mathbf{a}\T\mathbf{L}_w^{-1}\mathbf{a}\) is the effective resistance between \(i\) and \(j\) in the <em>current</em> graph. In estimation terms \(R_{ij}\) is the variance per axis of the current estimate of \(\mathbf{t}_j-\mathbf{t}_i\). So the rule is: measure what you are most uncertain about. On an 8-pose chain with unit weights, the ends are 7 edges apart, \(R_{70}=7\), and closing that loop adds \(\log 8=2.08\); poses 2 and 0 have \(R_{20}=2\), and that loop adds \(\log 3=1.10\). This is the book's "a larger loop helps more", with numbers.
+@@ 40
+Try it: this is yesterday's widget. Start from "All off" and always press the button with the largest number.
+@@ 41
+Notice: the first pick is 7–0 (+2.08), and the tree count goes from 1 to 8. After that every remaining gain is smaller than before: 6–1 drops from +1.79 to +1.06, because the first loop closure already shortened the electrical distance between poses 6 and 1. Adding 6–1 next gives 23 trees. Each new edge is worth less in a graph that is already well connected.
+@@ 42
+4. Further reading: what works and what is open
+@@ 43
+Section 6.3 is a map of the literature. The certifiable approach began with 2-D SLAM, and SE-Sync gave the first fast algorithm and the first exactness guarantee under bounded noise. Certifiable algorithms now exist for rotation averaging, PGO, landmark-based, multi-robot, and range-aided SLAM, and for several front-end problems such as 3-D registration, two-view geometry, perspective-n-point, and calibration. <span class="src">§6.3 · pp. 178–179</span> The open problems fall into three groups.
+@@ 44
+Topic
+@@ 45
+What is open
+@@ 46
+Coverage
+@@ 47
+Some problems have no certifiable algorithm. In visual SLAM the perspective projection is a ratio of polynomials; it can be made polynomial with extra variables, but one per keypoint measurement is impractical. IMU models have also resisted.
+@@ 48
+Speed
+@@ 49
+Outside the problems where the Riemannian Staircase applies, the SDP needs interior-point methods (fine for small front-end problems, too slow for a back-end) or special-purpose solvers that are still slow next to local solvers. Current work shrinks the SDP or removes constraints.
+@@ 50
+Theory
+@@ 51
+Certificates are per instance: computed after solving. There is little general understanding of when a relaxation will be exact.
+@@ 52
+Outliers
+@@ 53
+Common practice wraps a certifiable solver in a graduated non-convexity loop (<a href="#d35">Week 6 · Day 5</a>), which is robust in experiments but not certified. Directly certifiable robust solvers use the moment relaxation and are slow. An alternative solves locally and only <em>checks</em> optimality afterwards.
+@@ 54
+pp. 179–180
+@@ 55
+Odometry backbone
+@@ 56
+Robust formulations usually trust odometry and protect only loop closures. That fails when visual tracking breaks, and in multi-robot SLAM, where no odometry links the robots. Making odometry robust too gives loose relaxations.
+@@ 57
+Mostly outliers
+@@ 58
+If most measurements are wrong, even the optimal robust estimate can be wrong. One direction returns several hypotheses with a guarantee that one is right ("list-decodable" regression).
+@@ 59
+Uncertainty
+@@ 60
+The covariance of Days 3–4 is only as good as the measurement covariances fed in, which are often guesses; some work learns them. With outliers the true spread of estimates can have several peaks, which one covariance cannot describe.
+@@ 61
+pp. 180–181
+@@ 62
+Chapter 6 asked two questions about the answer a SLAM system gives. "Is this the best answer the data allow?" can now be checked for many problems, though not yet for cameras and IMUs, and not yet fast when outliers are in the cost. "How good is the best answer?" depends on how the measurements are wired together, and you can estimate it from the wiring alone, provided you were honest about how noisy each measurement is.
+@@ 63
+<strong>"More spanning trees means every pose is well estimated."</strong> The determinant is an overall volume. A graph can have many trees and still one weakly attached pose; the E- and A-criteria look at that.
+@@ 64
+<strong>"The Laplacian scores are exact for real SLAM."</strong> They are exact for the simplified problem of Day 4. For full PGO they approximate the FIM criteria, closely under certain conditions.
+@@ 65
+<strong>"A certified optimum has a trustworthy covariance."</strong> The certificate concerns the cost. The covariance still rests on the noise model, and outliers or wrong noise levels break it.
+@@ 66
+Q1. A triangle graph has edge weights 1, 2, and 2. What is its weighted number of spanning trees?
+@@ 67
+Each pair of edges is a spanning tree: 1·2 + 1·2 + 2·2 = 8. With node 0 anchored and w₀₁ = 1, w₁₂ = 2, w₀₂ = 2, the reduced Laplacian [[3, −2], [−2, 4]] has determinant 12 − 4 = 8.
+@@ 68
+Q2. The current graph is a chain 0–1–2–3–4 of unit-weight edges. You can add a loop closure between poses 4 and 0 with weight 3. By how much does log det of the reduced Laplacian rise?
+@@ 69
+log 13 ≈ 2.56
+@@ 70
+log 5 ≈ 1.61
+@@ 71
+log 4 ≈ 1.39
+@@ 72
+log 12 ≈ 2.48
+@@ 73
+The effective resistance between 4 and 0 along the chain is 4, so the gain is log(1 + 3·4) = log 13.
+@@ 74
+Q3. Why can a robot evaluate the Laplacian-based criteria before driving a candidate path?
+@@ 75
+Because the Laplacian is always diagonal
+@@ 76
+Because they do not depend on the measurement noise
+@@ 77
+Because they need only the graph (who would observe whom) and the edge weights, not the measurements or a SLAM solution
+@@ 78
+Because loop closures never change the estimate
+@@ 79
+The scores are functions of the graph structure and the precisions. The full FIM (6.53) needs the trajectory, which is not known in advance.
+@@ 80
+Q4. Why is there not yet a practical certifiable algorithm for visual SLAM with pixel measurements?
+@@ 81
+Camera noise is not Gaussian
+@@ 82
+Perspective projection divides by depth, so the cost is not a polynomial unless one extra variable is added per keypoint measurement
+@@ 83
+Visual SLAM has no loop closures
+@@ 84
+Shor's relaxation only works in two dimensions
+@@ 85
+The moment relaxation needs polynomials. A rational projection model can be rewritten with auxiliary variables, but their number makes the SDP impractical.
+@@ 86
+Matrix-tree theorem: \(\det\mathbf{L}_w\) is the weighted number of spanning trees, so the D-criterion of the simplified FIM is \(3\log t_w(G)\).
+@@ 87
+The E-criterion is \(\lambda_{\min}(\mathbf{L}_w)\), bounded above by the algebraic connectivity; the A-criterion sums effective resistances to the anchor.
+@@ 88
+One new edge raises \(\log\det\) by \(\log(1+wR_{ij})\): long loops, between poses whose relative position is uncertain, are worth the most, and gains shrink as the graph fills in.
+@@ 89
+Laplacian scores are small and need no measurements, which suits active SLAM and measurement selection.
+@@ 90
+Open: certifiable solvers for cameras and IMUs, fast solvers for moment relaxations, exactness theory, unreliable odometry, mostly-outlier data, and honest covariances.
+@@ 91
+<em>SLAM Handbook</em>, §6.2.2 "Practical Considerations", p. 178, and §6.3 "Further Readings &amp; Recent Trends", pp. 178–181; Box 6.1, p. 158.
+@@ 92
+Godsil and Royle, <em>Algebraic Graph Theory</em>, 2001 (matrix-tree theorem, algebraic connectivity).
+@@ 93
+Horn and Johnson, <em>Matrix Analysis</em>, 2nd edition, 2013 (Cauchy-Binet formula, interlacing theorem, determinant of a rank-one update).
+@@ 94
+Doyle and Snell, <em>Random Walks and Electric Networks</em>, 1984 (effective resistance).

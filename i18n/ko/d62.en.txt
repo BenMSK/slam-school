@@ -1,0 +1,276 @@
+@@ 1
+<span class="eyebrow">Week 11 · Day 2</span>
+@@ 2
+From photogrammetry to visual SLAM: the terms and the pipeline
+@@ 3
+After today you can tell photogrammetry, bundle adjustment, structure from motion, visual odometry, and visual SLAM apart, sketch the three parts of a visual SLAM system, and compute depth and its uncertainty from two views.
+@@ 4
+About 60 min · Read §7.1–7.2, pp. 193–197 (5 pages) · Needs Week 11 Day 1
+@@ 5
+Read first: §7.1–7.2, pp. 193–197
+@@ 6
+When bundle adjustment was formulated, and when it first ran on computers (p. 194).
+@@ 7
+The one-sentence difference between structure from motion and visual SLAM (p. 194), and between visual odometry and visual SLAM (p. 195).
+@@ 8
+The sentence on p. 196 that says why vision is harder than LiDAR.
+@@ 9
+The two ways to compute visual odometry, and which has the larger basin of convergence (p. 196).
+@@ 10
+A camera records directions to things, not distances. Depth appears only when the same point is seen from two places, and its accuracy depends on how far apart those places are. Everything in visual SLAM, from the 19th-century surveyors to a headset tracking in real time, is a way of organizing that triangulation over many points and many views.
+@@ 11
+1. An old problem
+@@ 12
+Reconstructing the world from pictures is almost as old as photography. The mathematics the back-end runs today was written down before computers existed. <span class="src">§7.1.1 · pp. 193–194</span>
+@@ 13
+When
+@@ 14
+Who
+@@ 15
+What
+@@ 16
+Nicéphore Niépce
+@@ 17
+Photography; the oldest surviving photograph dates from 1827
+@@ 18
+around 1851
+@@ 19
+Aimé Laussedat
+@@ 20
+Topographic maps from terrestrial photographs: the start of photogrammetry
+@@ 21
+Albrecht Meydenbauer
+@@ 22
+Photogrammetry for architectural surveys
+@@ 23
+from 1890
+@@ 24
+Sebastian Finsterwalder
+@@ 25
+Aerial images to reconstruct Alpine glaciers; projective geometry
+@@ 26
+early 1900s
+@@ 27
+Otto von Gruber
+@@ 28
+The mathematical framework of bundle adjustment
+@@ 29
+Hellmut Schmid, Duane Brown
+@@ 30
+Matrix methods for bundle adjustment, run on the largest computers of the time
+@@ 31
+early 1990s
+@@ 32
+Tomasi and Kanade
+@@ 33
+Matrix factorization for static scenes under orthographic projection
+@@ 34
+Computer vision community
+@@ 35
+Multi-view structure from motion: features (SIFT, SURF), matching, RANSAC, minimal solvers, then bundle adjustment
+@@ 36
+around 2000
+@@ 37
+Several groups
+@@ 38
+First real-time structure from motion and visual SLAM
+@@ 39
+The step from offline reconstruction to SLAM needed <strong>causal</strong> methods: methods that estimate using only the images seen so far, not the whole collection. <span class="src">§7.1.1 · p. 194</span>
+@@ 40
+2. Five overlapping terms
+@@ 41
+The book notes that these words are often used interchangeably. They describe similar computations with different emphasis. <span class="src">§7.1.2 · pp. 194–195</span>
+@@ 42
+What sets it apart
+@@ 43
+<strong>Photogrammetry</strong>
+@@ 44
+The science of taking measurements and 3D reconstructions from overlapping photographs
+@@ 45
+The oldest and broadest term; camera positions are often assumed known
+@@ 46
+<strong>Bundle adjustment (BA)</strong>
+@@ 47
+An optimization: adjust camera poses (optionally intrinsics) and 3D points to minimize reprojection error
+@@ 48
+It is a solver step, not a system. It needs a good initial guess and outlier rejection
+@@ 49
+<strong>Structure from motion (SfM)</strong>
+@@ 50
+Estimate the 3D structure and the camera motion together from a collection of images
+@@ 51
+Usually offline and non-causal; images may be unordered; ends with BA
+@@ 52
+<strong>Visual odometry (VO)</strong>
+@@ 53
+Estimate camera motion from consecutive video frames
+@@ 54
+Local: a sliding window of recent frames, no global map, so it drifts
+@@ 55
+<strong>Visual SLAM</strong>
+@@ 56
+Localize and map in real time in an unknown environment
+@@ 57
+Adds place recognition, relocalization, and loop closure to VO
+@@ 58
+The <strong>reprojection error</strong> in the BA row is the distance in the image between where a point was observed and where the current 3D model says it should appear. You will write it as a formula on Day 5. BA minimizes it with the Gauss-Newton or Levenberg-Marquardt methods of <a href="#d10">Week 2 · Day 4</a> and <a href="#d11">Week 2 · Day 5</a>.
+@@ 59
+3. Why vision is harder than LiDAR: depth is not measured
+@@ 60
+A LiDAR returns the distance to each point. A camera returns the projection of the scene's light onto its sensor, and the 3D geometry has to be inferred. That is why the book calls the visual problem more challenging. <span class="src">§7.2 · p. 196</span>
+@@ 61
+Filling the gap: depth from two views, and how uncertain it is
+@@ 62
+Take the simplest case, seen from above. Two identical cameras look along the \(z\) axis. Camera 2 sits a distance \(b\) (the <strong>baseline</strong>) to the right of camera 1. A point at sideways position \(x\) and depth \(z\) (in camera 1's frame) appears at image columns
+@@ 63
+where \(f\) is the focal length in pixels and columns are counted from the image center (tomorrow's lesson derives this). The unknown \(x\) cancels in the difference, called the <strong>disparity</strong>:
+@@ 64
+Far points have small disparity. Now let the disparity be wrong by a small amount \(\delta d\). Differentiate:
+@@ 65
+If each column is measured with independent noise of standard deviation \(\sigma\), then \(\sigma_d = \sqrt{2}\,\sigma\). Numbers: \(f = 500\) px, \(b = 0.5\) m, \(z = 20\) m gives \(d = 12.5\) px. With \(\sigma = 1\) px, \(\sigma_z \approx \frac{400}{250}\times 1.41 = 2.26\) m, an 11% error from one pixel of noise.
+@@ 66
+Two consequences shape every visual SLAM system. Depth error grows with the <em>square</em> of depth. And it shrinks in proportion to the baseline, so a camera must move sideways enough before a new point can be placed.
+@@ 67
+Try it: double the baseline, then double the depth.
+@@ 68
+Notice that the cloud of triangulated points is a thin needle along the viewing direction: sideways position is known well, depth poorly. At the defaults the predicted depth σ is 2.26 m. A baseline of 1 m halves it; a depth of 10 m divides it by four. At the far-left baseline with depth 30 m the disparity is under 2 px, the cloud smears over tens of meters, and some samples give no usable depth at all (the count of valid samples drops below 300).
+@@ 69
+A stereo rig has a fixed, known baseline. A single moving camera has to use its own motion as the baseline, and that motion is itself unknown. This is the root of two issues you will meet again: a monocular system needs a special initialization step (Day 5), and it cannot recover the absolute scale of the scene.
+@@ 70
+4. The three parts of a visual SLAM system
+@@ 71
+Like every SLAM system since <a href="#d1">Week 1 · Day 1</a>, a visual one is split into stages. The book names three sub-functions that complement each other. <span class="src">§7.2 · p. 196</span>
+@@ 72 attr
+Block diagram of a visual SLAM system. Camera frames enter the odometry front-end, which outputs the current pose in real time. The front-end sends keyframes to the mapping back-end and receives a refined map from it. It also sends the current image to place recognition, which sends loop constraints to the back-end. The back-end outputs a consistent trajectory and map.
+@@ 73
+out: pose now, in real time
+@@ 74
+out: consistent path + map
+@@ 75
+Odometry front-end
+@@ 76
+tracks every frame
+@@ 77
+Mapping back-end
+@@ 78
+BA, pose-graph optimization
+@@ 79
+loop closure, relocalization
+@@ 80
+frames
+@@ 81
+keyframes
+@@ 82
+refined map
+@@ 83
+current image
+@@ 84
+loop constraints
+@@ 85
+The front-end must keep up with the camera. The back-end and place recognition run in parallel at a slower rate and share intermediate results such as keypoints and poses (§7.2.4).
+@@ 86
+The <strong>visual odometry front-end</strong> estimates the relative motion between consecutive frames and so provides the initial estimate of the camera pose. <span class="src">§7.2.1 · p. 196</span>
+@@ 87
+The <strong>mapping back-end</strong> refines trajectory and map with global optimization, BA or pose-graph optimization, and folds in the constraints found by place recognition. The result is long-term consistency. <span class="src">§7.2.2 · pp. 196–197</span>
+@@ 88
+<strong>Visual place recognition and relocalization</strong> matches the current image against earlier ones, with classical descriptors or trained networks. It detects revisits, which corrects drift, and it finds the camera again when tracking is lost. <span class="src">§7.2.3 · p. 197</span>
+@@ 89
+These run as parallel threads. Heavy jobs like global optimization are scheduled so that tracking stays real-time. <span class="src">§7.2.4 · p. 197</span>
+@@ 90
+5. Two ways to do visual odometry
+@@ 91
+Feature-based (indirect)
+@@ 92
+Steps
+@@ 93
+Detect feature points, match them across images, then estimate motion
+@@ 94
+One step: optimize over the images themselves
+@@ 95
+Minimizes
+@@ 96
+Reprojection error, over camera motion and 3D points
+@@ 97
+A photometric loss (differences of pixel brightness), over camera motion and 3D structure
+@@ 98
+Data association
+@@ 99
+Explicit: decided by the matching step
+@@ 100
+Implicit: decided by the optimization
+@@ 101
+Closest relative
+@@ 102
+Classical BA
+@@ 103
+Optical flow; "photometric BA"
+@@ 104
+Basin of convergence
+@@ 105
+Larger
+@@ 106
+Smaller, at least in the basic formulation
+@@ 107
+The <strong>basin of convergence</strong> is the set of starting guesses from which the optimizer reaches the right answer. Matched features can pull a poor initial pose a long way, because the match itself says where the point went. Raw brightness only gives a useful gradient within a pixel or two of the right place. Direct methods therefore work <strong>coarse-to-fine</strong>: align heavily down-sampled images first, where a large motion is a small number of pixels, then refine at higher resolution. Some align learned feature maps instead of brightness. <span class="src">§7.2.1 · p. 196</span> Week 12 treats both alignments in detail.
+@@ 108
+<strong>"Bundle adjustment is a kind of SLAM system."</strong> BA is the optimization problem at the core. SfM and visual SLAM are systems that call it.
+@@ 109
+<strong>"Visual odometry plus a map is visual SLAM."</strong> The defining addition is recognizing previously visited places and correcting the trajectory around the loop.
+@@ 110
+<strong>"More pixels of resolution fix depth accuracy."</strong> Depth error scales with \(z^2/(f\,b)\). Without baseline there is no depth, however sharp the image.
+@@ 111
+Q1. A stereo camera has f = 600 px and baseline 0.12 m. A point has disparity 9 px. How far away is it?
+@@ 112
+Q2. With the same rig and the same pixel noise, a point moves from 5 m to 10 m away. Its depth standard deviation is multiplied by about
+@@ 113
+1 (unchanged)
+@@ 114
+σ_z ≈ z²·σ_d/(f·b), so doubling z quadruples the depth uncertainty.
+@@ 115
+Q3. Someone downloads 5,000 unordered tourist photos of a cathedral and computes camera poses and a 3D model overnight. Which term fits best?
+@@ 116
+Structure from motion
+@@ 117
+Visual odometry
+@@ 118
+Visual SLAM
+@@ 119
+Offline, non-causal, unordered images, joint estimation of structure and camera motion: that is SfM. VO and visual SLAM process a video stream as it arrives.
+@@ 120
+Q4. Why do direct methods usually start on down-sampled images?
+@@ 121
+Small images contain less noise
+@@ 122
+Feature detectors only work at low resolution
+@@ 123
+At low resolution a large motion is only a few pixels, which enlarges the basin of convergence
+@@ 124
+The reprojection error is only defined on small images
+@@ 125
+Brightness gradients guide the optimizer only near the solution. Coarse levels bring a large displacement within reach, and finer levels then refine it.
+@@ 126
+Q5. Which component removes accumulated drift in a visual SLAM system that has no GPS?
+@@ 127
+The visual odometry front-end, by tracking more features
+@@ 128
+Place recognition, whose loop constraints the back-end uses to correct the trajectory
+@@ 129
+Coarse-to-fine alignment
+@@ 130
+Intrinsic calibration
+@@ 131
+Odometry errors accumulate no matter how good each step is. Aligning the current image to previously observed ones gives constraints across the loop, and the back-end redistributes the error.
+@@ 132
+Bundle adjustment predates computers; visual SLAM is its online, causal, real-time descendant.
+@@ 133
+SfM is offline reconstruction, VO is local motion estimation that drifts, and visual SLAM adds place recognition and loop closure.
+@@ 134
+A camera does not measure depth. From two views, \(z = f\,b/d\) and \(\sigma_z \approx z^2\sigma_d/(f\,b)\).
+@@ 135
+A visual SLAM system has an odometry front-end, a mapping back-end, and a place recognition and relocalization component, running in parallel.
+@@ 136
+Feature-based odometry minimizes reprojection error with explicit matches; direct odometry minimizes a photometric loss and needs coarse-to-fine to converge.
+@@ 137
+<em>SLAM Handbook</em>, Chapter 7, §7.1 "Historical Background and Terminology" and §7.2 "The Processing Pipeline of a Visual SLAM System", pp. 193–197.
+@@ 138
+The disparity and depth-uncertainty formulas are the standard stereo relations, as in Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004, and Szeliski, <em>Computer Vision: Algorithms and Applications</em>, 2010.

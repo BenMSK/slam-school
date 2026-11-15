@@ -1,0 +1,214 @@
+@@ 1
+<span class="eyebrow">Week 17 · Day 2</span>
+@@ 2
+Linearized measurement models for points, lines, and planes
+@@ 3
+After today you can write the measurement Jacobian of a point, line, or plane feature as a chain of two factors, and say which part of the state each factor can and cannot see.
+@@ 4
+About 60 min · Read §11.3.1.2, pp. 322–324 (3 pages) · Needs Week 17 Day 1
+@@ 5
+Read first: §11.3.1.2, pp. 322–324
+@@ 6
+Start at "Exteroceptive Measurement Models" on p. 322 and stop before §11.3.2 on p. 324. While you read, look for:
+@@ 7
+The selection matrix \(\boldsymbol{\Lambda}\) in (11.42) and what its two switches \(\lambda_r, \lambda_b\) turn on and off (p. 322).
+@@ 8
+The three Jacobians \(\mathbf{H}_r\), \(\mathbf{H}_b\), \(\mathbf{H}_f\) in (11.43), and which of them depends on the sensor (p. 322).
+@@ 9
+The sentence after (11.46) that says which half of the Plücker coordinates reaches the image (p. 323).
+@@ 10
+How a plane is turned into a single 3-vector in (11.49) (pp. 323–324).
+@@ 11
+Every exteroceptive measurement is a function of a feature <em>expressed in the sensor frame</em>. So every measurement Jacobian is a product: a sensor-specific factor (how the reading changes when the feature moves in the sensor frame) times a geometric factor (how the feature in the sensor frame changes when the state changes). The geometric factor only ever sees the feature <em>relative to</em> the sensor, and that single fact produces the unobservable directions of Day 3.
+@@ 12
+1. Point features: range, bearing, and the switch matrix
+@@ 13
+A point landmark \(\mathbf{p}^w_f\) in the world appears in the sensor frame \(\mathcal{F}^c\) at <span class="src">§11.3.1.2 · p. 322</span>
+@@ 14
+A sensor can report the point's <strong>range</strong> \(z_r = \norm{\mathbf{p}^c_f}\) (how far), its <strong>bearing</strong> \(\mathbf{z}_b = h_b(\mathbf{p}^c_f)\) (in which direction, two numbers), or both. The book writes all cases at once, equation (11.42):
+@@ 15
+\(\boldsymbol{\Lambda}\) is a <strong>measurement selection matrix</strong>: \(\lambda_r\) and \(\lambda_b\) are each 0 or 1 and switch the range row and the bearing rows on or off.
+@@ 16
+What it reports about a point
+@@ 17
+Monocular camera
+@@ 18
+direction only
+@@ 19
+LiDAR, stereo or depth camera
+@@ 20
+direction and distance
+@@ 21
+Range-only sensor
+@@ 22
+distance only
+@@ 23
+2. The chain rule, one factor at a time
+@@ 24
+Linearizing (11.42) at the estimate \(\hat{\mathbf{x}}\) gives the error equation (11.43): <span class="src">§11.3.1.2 · p. 322</span>
+@@ 25
+The book stops at the names. The three factors are short enough to write out.
+@@ 26
+Filling the gap: the three Jacobians
+@@ 27
+Write \(\mathbf{p} = (x, y, z)\T\) for \(\hat{\mathbf{p}}^c_f\).
+@@ 28
+<strong>Range.</strong> \(z_r = \sqrt{x^2 + y^2 + z^2}\), so \(\partial z_r/\partial x = x/\norm{\mathbf{p}}\) and likewise for \(y, z\):
+@@ 29
+It is the unit vector along the ray. Range responds only to motion of the point along the ray.
+@@ 30
+<strong>Bearing.</strong> The book leaves \(h_b\) generic. For a pinhole camera in normalized image coordinates (<a href="#d63">Week 11 · Day 3</a>), \(h_b(\mathbf{p}) = (x/z,\ y/z)\T\), and differentiating each entry gives
+@@ 31
+Multiply it by \(\mathbf{p}\): the first row gives \(\tfrac1z(x - x) = 0\), the second \(\tfrac1z(y - y) = 0\). So \(\mathbf{H}_b\,\mathbf{p} = \mathbf{0}\): sliding the point along its own ray does not change its bearing. A bearing measurement carries no depth information. This holds for every bearing function, because a bearing by definition depends only on the direction of \(\mathbf{p}\).
+@@ 32
+<strong>Geometry.</strong> Take the camera frame equal to the body (IMU) frame to keep the algebra short (so \(\mathbf{R}^c_w = (\mathbf{R}^w_b)\T\) and \(\mathbf{p}^w_c = \mathbf{p}^w\)), and insert the error state of Day 1, \(\mathbf{R}^w_b = \hat{\mathbf{R}}(\mathbf{I} + \tilde{\boldsymbol{\theta}}^{\wedge})\). Since \((\mathbf{I} + \tilde{\boldsymbol{\theta}}^{\wedge})\T = \mathbf{I} - \tilde{\boldsymbol{\theta}}^{\wedge}\),
+@@ 33
+where \(-\tilde{\boldsymbol{\theta}}^{\wedge}\hat{\mathbf{p}}^c_f = (\hat{\mathbf{p}}^c_f)^{\wedge}\tilde{\boldsymbol{\theta}}\) by (11.20). In the state order \((\tilde{\boldsymbol{\theta}}, \tilde{\mathbf{b}}^g, \tilde{\mathbf{v}}, \tilde{\mathbf{b}}^a, \tilde{\mathbf{p}}, \tilde{\mathbf{p}}_f)\):
+@@ 34
+<strong>Worked example.</strong> A point sits at \(\hat{\mathbf{p}}^c_f = (1, 2, 2)\T\) m, so \(\norm{\mathbf{p}} = 3\) m. Then
+@@ 35
+Check: \(\mathbf{H}_b\,\mathbf{p} = (0.5 - 0.5,\ 1 - 1)\T = \mathbf{0}\), and \(\mathbf{H}_r\,\mathbf{p} = (1 + 4 + 4)/3 = 3\), the range itself. If the point moves 3 cm further along the ray, the range reading grows by 3 cm and the bearing does not move.
+@@ 36
+Try it in 2-D, where the bearing is one angle \(\beta = \operatorname{atan2}(y, x)\) with \(\mathbf{H}_b = [-y,\ x]/\norm{\mathbf{p}}^2\). Drag the point, and switch the range and the bearing off in turn.
+@@ 37
+Notice: \(\mathbf{H}_b\cdot\mathbf{p}\) is zero wherever the point is. With both measurements the point is confined to a small ellipse whose width across the ray grows with distance (range × bearing noise) while its length along the ray stays 0.15 m. Switch range off and the ellipse opens into a wedge with no limit along the ray: this is a monocular camera.
+@@ 38
+3. What \(\mathbf{H}_f\) already tells you
+@@ 39
+Two features of \(\mathbf{H}_f\) decide most of this week.
+@@ 40
+<strong>The columns for \(\tilde{\mathbf{b}}^g, \tilde{\mathbf{v}}, \tilde{\mathbf{b}}^a\) are zero.</strong> One camera frame says nothing about velocity or biases. These become visible only when errors propagate through \(\boldsymbol{\Phi}\) into position and orientation at later frames. That is why observability needs the stack over time that you will build on Day 3.
+@@ 41
+<strong>The position and feature blocks are equal and opposite.</strong> Shift the robot and the landmark by the same vector \(\mathbf{t}\): \(\tilde{\mathbf{p}} = \tilde{\mathbf{p}}_f = \mathbf{t}\). Then
+@@ 42
+No point measurement, of any sensor type, reacts to a common shift. This is the 3-D version of the figure at the start of <a href="#d97">Day 1</a>.
+@@ 43
+4. Line features
+@@ 44
+A 3-D line through two points \(\mathbf{p}^w_1, \mathbf{p}^w_2\) is stored in <strong>Plücker coordinates</strong>, equation (11.44): <span class="src">§11.3.1.2 · pp. 322–323</span>
+@@ 45
+\(\mathbf{v}_\ell\) is the <strong>direction</strong> of the line. \(\mathbf{n}_\ell\) is its <strong>moment</strong>: a vector normal to the plane that contains the line and the origin. The distance from the origin to the line is \(d_\ell = \norm{\mathbf{n}_\ell}/\norm{\mathbf{v}_\ell}\).
+@@ 46 attr
+A line passes through two points p1 and p2. Together with the origin O they span a shaded triangle. The direction vector v runs from p1 to p2 along the line. The moment vector n points out of the shaded plane. A perpendicular from O to the line has length d equal to the norm of n divided by the norm of v.
+@@ 47
+⊙ n = p₁ × p₂ points out of the shaded plane
+@@ 48
+Plücker coordinates of a line. Six numbers for an object with four degrees of freedom: the overall scale of (n, v) is arbitrary, and n is always perpendicular to v.
+@@ 49
+<strong>Worked example.</strong> \(\mathbf{p}_1 = (1, 0, 2)\), \(\mathbf{p}_2 = (1, 1, 2)\): the line \(x = 1, z = 2\), parallel to the \(y\) axis. Then \(\mathbf{v} = (0, 1, 0)\) and
+@@ 50
+which is the distance \(\sqrt{1^2 + 2^2}\) from the origin to that line. Also \(\mathbf{n}\cdot\mathbf{v} = 0\).
+@@ 51
+Filling the gap: where the frame change (11.45) comes from
+@@ 52
+Move the origin to the camera position \(\mathbf{p}_c\). The two points become \(\mathbf{p}_i - \mathbf{p}_c\), so the direction is unchanged and the moment becomes
+@@ 53
+Then rotate both vectors into the camera axes with \((\mathbf{R}^w_c)\T\). That is (11.45):
+@@ 54
+With the example line and a camera at \(\mathbf{p}_c = (1, 0, 0)\), axes aligned with the world: \(\mathbf{n}^c = (-2, 0, 1) - (1,0,0)\times(0,1,0) = (-2, 0, 1) - (0, 0, 1) = (-2, 0, 0)\). Its norm, 2, is the distance from the camera to the line, as it should be.
+@@ 55
+The image of the line is \(\boldsymbol{\ell} = \mathbf{K}\,\mathbf{n}^c_\ell\), equation (11.46), where \(\mathbf{K}\) is built from the intrinsics. Only the moment enters. The reason is geometric: the camera centre and the 3-D line span a plane with normal \(\mathbf{n}^c_\ell\), and the image line is where that plane cuts the image. The direction \(\mathbf{v}^c_\ell\) says where the line lies <em>inside</em> that plane (how far away, at what angle), and one image cannot see that. <span class="src">§11.3.1.2 · p. 323</span>
+@@ 56
+The measurement (11.47) is the signed distance, in the image, from each detected endpoint \(\mathbf{q}_i = (u_i, v_i, 1)\T\) of the segment to the projected line: \(\mathbf{q}_i\T\boldsymbol{\ell}/\sqrt{\ell_1^2 + \ell_2^2}\). For \(\boldsymbol{\ell} = (3, 4, -10)\) and \(\mathbf{q} = (2, 3, 1)\) it is \((6 + 12 - 10)/5 = 1.6\) pixels. The Jacobian is again a chain, \(\mathbf{H}_x = \frac{\partial \mathbf{z}_\ell}{\partial \boldsymbol{\ell}}\frac{\partial \boldsymbol{\ell}}{\partial \mathbf{x}}\).
+@@ 57
+5. Plane features
+@@ 58
+A plane is the set of points with \(\mathbf{n}_\pi\cdot\mathbf{x} = d_\pi\): a unit normal and a distance from the origin. In the sensor frame, equation (11.48) gives <span class="src">§11.3.1.2 · p. 323</span>
+@@ 59
+The normal rotates; the distance shrinks by however far the sensor has moved along the normal. The book then stores the plane as its <strong>closest point</strong> to the origin, \(\mathbf{p}_\pi = d_\pi\mathbf{n}_\pi\), and the measurement (11.49) is that point seen from the sensor, \(\mathbf{z}_\pi = d^c_\pi\mathbf{n}^c_\pi + \boldsymbol{\eta}^\pi\). <span class="src">§11.3.1.2 · p. 324</span> Three numbers for three degrees of freedom, with no unit-length constraint to maintain.
+@@ 60
+<strong>Worked example.</strong> A ceiling at height 2 m is \(\mathbf{n}^w = (0, 0, 1)\), \(d^w = 2\). A sensor at \(\mathbf{p}_c = (5, 1, 0.5)\) sees it at \(d^c = 2 - 0.5 = 1.5\) m. Moving the sensor sideways changes nothing: a plane measurement is blind to motion parallel to the plane.
+@@ 61
+Feature
+@@ 62
+Stored in the state as
+@@ 63
+Measurement
+@@ 64
+Jacobian chain
+@@ 65
+Point
+@@ 66
+\(\mathbf{p}^w_f\), 3 numbers
+@@ 67
+range and/or bearing of \(\mathbf{p}^c_f\), (11.42)
+@@ 68
+Line
+@@ 69
+Plücker \((\mathbf{n}_\ell, \mathbf{v}_\ell)\), 4 degrees of freedom
+@@ 70
+endpoint-to-line distances in the image, (11.47)
+@@ 71
+Plane
+@@ 72
+closest point \(d_\pi\mathbf{n}_\pi\), 3 numbers
+@@ 73
+closest point in the sensor frame, (11.49)
+@@ 74
+<strong>"\(\boldsymbol{\Lambda}\) deletes rows."</strong> It multiplies them by 0 or 1. The vector \(\mathbf{z}_p\) always has three entries; switched-off entries are zero and carry no information.
+@@ 75
+<strong>"A camera frame constrains velocity."</strong> The velocity and bias columns of \(\mathbf{H}_f\) are zero. Those states are seen only through their effect on later poses.
+@@ 76
+<strong>"Six Plücker numbers mean six unknowns per line."</strong> A line has four degrees of freedom. Scale and the constraint \(\mathbf{n}\cdot\mathbf{v} = 0\) remove two.
+@@ 77
+<strong>"The closest-point form works for every plane."</strong> A plane through the origin has \(d_\pi = 0\), so its closest point is the origin itself and the normal is lost.
+@@ 78
+Q1. A point is at \(\hat{\mathbf{p}}^c_f = (0, 3, 4)\T\) m. What is the range Jacobian \(\mathbf{H}_r\)?
+@@ 79
+\(\mathbf{H}_r = \mathbf{p}\T/\norm{\mathbf{p}}\) with \(\norm{\mathbf{p}} = 5\), so \([0,\ 0.6,\ 0.8]\): the unit vector along the ray.
+@@ 80
+Q2. Which error-state blocks does the Jacobian of a single point measurement touch?
+@@ 81
+All six blocks
+@@ 82
+Velocity, position, and the feature
+@@ 83
+Only the feature
+@@ 84
+Rotation, position, and the feature
+@@ 85
+\(\mathbf{H}_f\) has non-zero blocks for \(\tilde{\boldsymbol{\theta}}\), \(\tilde{\mathbf{p}}\), \(\tilde{\mathbf{p}}_f\) only. The columns for velocity and both biases are zero.
+@@ 86
+Q3. A line passes through \(\mathbf{p}_1 = (1, 0, 0)\) and \(\mathbf{p}_2 = (1, 1, 0)\). What are its moment \(\mathbf{n}\) and its distance from the origin?
+@@ 87
+n = (0, 0, 1), distance 1
+@@ 88
+n = (0, 1, 0), distance 1
+@@ 89
+n = (0, 0, 1), distance √2
+@@ 90
+n = (1, 1, 0), distance 2
+@@ 91
+\(\mathbf{p}_1\times\mathbf{p}_2 = (0\cdot0 - 0\cdot1,\ 0\cdot1 - 1\cdot0,\ 1\cdot1 - 0\cdot1) = (0,0,1)\). \(\mathbf{v} = (0,1,0)\), so \(d = 1/1 = 1\): the line \(x = 1\) in the \(xy\) plane.
+@@ 92
+Q4. Why can a monocular camera not determine the depth of a point from one image?
+@@ 93
+Because its bearing noise is too large
+@@ 94
+Because \(\mathbf{H}_f\) has zero columns for velocity
+@@ 95
+Because \(\mathbf{H}_b\,\mathbf{p}^c_f = \mathbf{0}\): moving the point along its ray changes no bearing
+@@ 96
+Because \(\lambda_b = 0\) for a camera
+@@ 97
+A bearing depends only on the direction of \(\mathbf{p}^c_f\). Its Jacobian annihilates the ray direction, so the information matrix of one bearing measurement has a zero eigenvalue along the ray.
+@@ 98
+Q5. A wall is the plane \(\mathbf{n}^w = (1, 0, 0)\), \(d^w = 6\). The sensor is at \(\mathbf{p}_c = (2, 3, 1)\). What is \(d^c_\pi\)?
+@@ 99
+\(d^c = d^w - \mathbf{p}_c\cdot\mathbf{n}^w = 6 - 2 = 4\) m. The \(y\) and \(z\) coordinates of the sensor do not matter, because they are motion parallel to the wall.
+@@ 100
+Point measurements are range and/or bearing of \(\mathbf{p}^c_f\); the selection matrix \(\boldsymbol{\Lambda}\) picks which.
+@@ 101
+\(\mathbf{H}_x = \boldsymbol{\Lambda}[\mathbf{H}_r; \mathbf{H}_b]\mathbf{H}_f\). Range sees motion along the ray, bearing sees motion across it, and \(\mathbf{H}_b\mathbf{p}^c_f = \mathbf{0}\).
+@@ 102
+\(\mathbf{H}_f = [(\hat{\mathbf{p}}^c_f)^{\wedge},\ \mathbf{0},\ \mathbf{0},\ \mathbf{0},\ -\hat{\mathbf{R}}\T,\ \hat{\mathbf{R}}\T]\): blind to velocity and biases, and blind to a common shift of robot and feature.
+@@ 103
+Lines use Plücker coordinates (moment and direction); only the moment reaches the image.
+@@ 104
+Planes use the closest point \(d_\pi\mathbf{n}_\pi\), transformed by (11.48).
+@@ 105
+<em>SLAM Handbook</em>, §11.3.1.2 "Exteroceptive Measurement Models", pp. 322–324, equations (11.42)–(11.49).
+@@ 106
+The bearing Jacobian and the reading of the image line as a plane through the camera centre follow Hartley and Zisserman, <em>Multiple View Geometry</em>, 2004.
+@@ 107
+The perturbation used for \(\mathbf{H}_f\) follows Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018.

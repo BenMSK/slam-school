@@ -1,0 +1,176 @@
+@@ 1
+<span class="eyebrow">9주차 · Day 3</span>
+@@ 2
+Maximum likelihood로서의 pose-graph optimization과 회전만 남은 형태
+@@ 3
+오늘이 끝나면 noise model에서 pose-graph cost를 유도하고, pose graph의 incidence matrix와 Laplacian을 만들고, 이동을 소거해 회전만 남은 문제를 얻을 수 있습니다.
+@@ 4
+약 60분 · §6.1.2 중 식 (6.18)까지, pp. 154–160 읽기 (6쪽) · 9주차 Day 2 필요
+@@ 5
+먼저 읽기: §6.1.2 도입부, §6.1.2.1, 그리고 §6.1.2.2의 식 (6.18)까지, pp. 154–160
+@@ 6
+측정값 \(\tilde{\mathbf{T}}_{ij}\)의 규약과 그 edge의 방향 (p. 155, Figure 6.2).
+@@ 7
+Noise model (6.8)과 그것이 이끄는 cost, Problem 6.1 (p. 156).
+@@ 8
+Box 6.1 (pp. 157–158): Figure 6.2 graph의 incidence matrix와 Laplacian.
+@@ 9
+식 (6.16)과 Problem 6.2 (p. 159): 이동이 사라집니다.
+@@ 10
+알맞은 noise model을 쓰면 pose-graph optimization의 cost는 회전과 이동의 원소에 대해 이차식이 됩니다. 회전을 고정하면 최선의 이동은 선형 least-squares 문제의 해이므로, 식으로 적은 뒤 대입해 없앨 수 있습니다. 남는 것은 회전에 대한 \(\min\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\)입니다: 데이터 행렬 하나, 이차 objective, 회전 constraint. Shor's relaxation을 기다리는 QCQP입니다.
+@@ 11
+1. Pose, relative pose, 그리고 pose graph
+@@ 12
+<strong>Pose-graph optimization (PGO)</strong>는 relative pose의 noise 섞인 측정값으로부터 \(n\)개의 pose \(\mathbf{T}_1,\dots,\mathbf{T}_n\in\SE(d)\) (\(d=2\) 또는 \(3\))를 추정합니다. <span class="src">§6.1.2.1 · p. 154</span> Pose는 위치 \(\mathbf{t}_i\in\R^d\)와 회전 \(\mathbf{R}_i\in\SO(d)\)의 쌍 \(\mathbf{T}_i=(\mathbf{t}_i,\mathbf{R}_i)\)이며, 행렬로는 다음과 같습니다 (<a href="#d19">4주차 · Day 1</a>)
+@@ 13
+따라서 실제 relative pose "pose \(i\)에서 본 pose \(j\)"의 회전은 \(\bar{\mathbf{R}}_{ij}=\mathbf{R}_i\T\mathbf{R}_j\), 이동은 \(\bar{\mathbf{t}}_{ij}=\mathbf{R}_i\T(\mathbf{t}_j-\mathbf{t}_i)\)입니다. 평면의 예: pose \(i\)는 \((1,0)\)에서 90° (위쪽)를 향하고, pose \(j\)는 \((1,2)\)에 있습니다. 그러면 \(\mathbf{t}_j-\mathbf{t}_i=(0,2)\)이고, \(-90^\circ\)만큼 회전하면 \(\bar{\mathbf{t}}_{ij}=(2,0)\)입니다: 정면으로 2미터, 당연히 그래야 합니다.
+@@ 14
+측정값 \(\tilde{\mathbf{T}}_{ij}=(\tilde{\mathbf{t}}_{ij},\tilde{\mathbf{R}}_{ij})\)는 \(\mathbf{T}_i^{-1}\mathbf{T}_j\)에 noise가 섞인 것입니다. <strong>pose graph</strong>는 pose마다 node 하나, 측정값 \(\tilde{\mathbf{T}}_{ij}\)마다 directed edge \(i\to j\) 하나를 가집니다. 책은 graph가 connected라고 가정합니다. 그렇지 않으면 문제가 서로 독립인 조각으로 나뉩니다. <span class="src">§6.1.2.1 · p. 155</span>
+@@ 15
+2. Noise model과 그것이 만드는 cost
+@@ 16
+Maximum likelihood (<a href="#d8">2주차 · Day 2</a>)를 하려면 noise의 확률 밀도가 필요합니다. 이동에는 책이 Gaussian을 씁니다. 회전에는 \(\SO(d)\) 위의 <strong>isotropic Langevin distribution</strong> \(\mathcal{L}(\mathbf{M},\kappa)\)를 씁니다: <span class="src">eq. (6.7) · p. 155</span>
+@@ 17
+\(\mathbf{M}\)은 가장 가능성 높은 회전, 즉 <strong>mode</strong>(최빈값)이고, \(\kappa\ge0\)는 <strong>concentration</strong>(집중도)이며, \(c_d(\kappa)\)는 정규화 상수입니다. 평면에서 \(\mathbf{M}\T\mathbf{R}\)은 둘 사이의 각도 \(\theta\)만큼의 회전이고, 그 trace는 \(2\cos\theta\)입니다. 그러면 밀도는 \(\exp(2\kappa\cos\theta)\)에 비례하며, 이는 concentration이 \(2\kappa\)인 원 위의 von Mises distribution입니다. <span class="src">p. 156</span> \(\kappa\)가 크면 작은 \(\theta\)만 중요하고, \(\cos\theta\approx1-\theta^2/2\)이므로 밀도는 \(\exp(-\kappa\theta^2)\)에 가깝습니다: 분산이 \(1/(2\kappa)\)인 Gaussian입니다. 따라서 \(\kappa=50\)은 표준편차 \(0.1\) rad, 약 5.7°를 뜻합니다. \(\kappa=0\)이면 모든 회전이 똑같이 가능합니다.
+@@ 18
+각 edge의 생성 모델은 다음과 같습니다 <span class="src">eq. (6.8) · p. 156</span>
+@@ 19
+\(\tau_{ij}\)는 이동 precision (축마다 분산의 역수)입니다. 책은 "간단한 계산"으로 이것이 Problem 6.1이 된다고 말합니다: <span class="src">eq. (6.9) · p. 156</span>
+@@ 20
+빈틈 채우기: 그 간단한 계산
+@@ 21
+Maximum likelihood는 측정값들의 음의 log 밀도의 합을 최소화합니다. Edge 하나를 해 봅시다.
+@@ 22
+<em>이동.</em> Noise는 \(\mathbf{t}^\epsilon=\tilde{\mathbf{t}}_{ij}-\mathbf{R}_i\T(\mathbf{t}_j-\mathbf{t}_i)\)이고, Gaussian의 \(-\log\)는 \(\tfrac{\tau_{ij}}{2}\norm{\mathbf{t}^\epsilon}^2\)에 상수를 더한 것입니다. 벡터에 회전 \(\mathbf{R}_i\)를 곱해도 길이는 변하지 않으므로
+@@ 23
+<em>회전.</em> Noise는 \(\mathbf{R}^\epsilon=\bar{\mathbf{R}}_{ij}\T\tilde{\mathbf{R}}_{ij}=\mathbf{R}_j\T\mathbf{R}_i\tilde{\mathbf{R}}_{ij}\)이고, mode가 \(\mathbf{I}\)인 Langevin 밀도의 \(-\log\)는 \(-\kappa_{ij}\tr(\mathbf{R}_j\T\mathbf{R}_i\tilde{\mathbf{R}}_{ij})\)에 상수를 더한 것입니다. 이제 두 행렬 차의 Frobenius norm 제곱 (원소 제곱의 합, \(\norm{\mathbf{A}}_F^2=\tr(\mathbf{A}\T\mathbf{A})\))을 전개합니다. 두 행렬이 모두 직교 행렬이므로 각각 \(\norm{\cdot}_F^2=d\)입니다:
+@@ 24
+둘을 더하고, 상수를 버리고, 전체에 2를 곱하면 (minimizer는 움직이지 않습니다) (6.9)가 됩니다.
+@@ 25
+<em>평면에서.</em> 각도 \(a\)와 \(b\)의 회전에 대해 \(\tr(\mathbf{R}(a)\T\mathbf{R}(b))=2\cos(a-b)\)이므로 \(\norm{\mathbf{R}(a)-\mathbf{R}(b)}_F^2=4-4\cos(a-b)\)입니다. Edge의 회전 항은 \(r_{ij}=\theta_j-\theta_i-\tilde\theta_{ij}\)일 때 \(4\kappa_{ij}(1-\cos r_{ij})\)입니다. \(\kappa=1\)이면 이것이 Day 1 위젯의 cost입니다.
+@@ 26
+2장의 tangent space Gaussian 모델 대신 Langevin noise를 고르는 이유는 바로 이 대수적 형태입니다: (6.9)의 모든 항은 \(\mathbf{R}_i\)와 \(\mathbf{t}_i\)의 원소에 대해 <em>선형</em>인 무언가의 norm 제곱입니다. <span class="src">§6.1.2.1 · p. 156</span> Logarithm map은 나타나지 않습니다.
+@@ 27
+3. 행렬로 나타낸 graph
+@@ 28
+Box 6.1은 두 행렬을 소개합니다. 여기서는 pose 세 개와 edge \(e_1=(1,2)\), \(e_2=(2,3)\), \(e_3=(1,3)\)를 가진, 이 코스가 만든 graph로 보여 드립니다.
+@@ 29 attr
+node T1, T2, T3 세 개로 된 pose graph. Directed edge가 T1에서 T2로 (edge e1), T2에서 T3로 (edge e2), T1에서 T3로 (edge e3) 갑니다.
+@@ 30
+각 edge는 측정값이 표현된 frame의 pose (tail)에서 측정되는 pose (head)를 향합니다.
+@@ 31
+<strong>incidence matrix</strong>(접속 행렬) \(\mathbf{A}\)는 edge마다 행이 하나이며, tail의 열에 \(-1\), head의 열에 \(+1\)이 있습니다. <strong>Laplacian</strong>은 \(\mathbf{L}=\mathbf{A}\T\mathbf{A}\)입니다: <span class="src">Box 6.1 · pp. 157–158</span>
+@@ 32
+\(\mathbf{L}\)의 대각은 각 node의 edge 수를 세고, 비대각 원소는 edge가 있는 곳에서 \(-1\)이며, edge 방향은 사라졌습니다. 모든 행의 합이 0이므로 \(\mathbf{L}\mathbf{1}=\mathbf{0}\)입니다: 0은 항상 eigenvalue입니다. Connected graph는 zero eigenvalue를 정확히 하나 가집니다.
+@@ 33
+이 행렬이 추정에 나타나는 이유: 각 node에 숫자 \(x_i\)를 놓습니다. \(\mathbf{A}\mathbf{x}\)의 행 \(e\)는 \(x_j-x_i\)이므로
+@@ 34
+Laplacian은 "edge를 가로지르는 차이 제곱의 합"의 행렬이며, 상대 측정값이 벌점을 매기는 것이 바로 이것입니다. PGO에는 두 가지 가중 버전이 필요합니다:
+@@ 35
+행렬
+@@ 36
+대각 블록 \(i\)
+@@ 37
+Edge \(i\to j\)의 비대각 블록
+@@ 38
+\(\mathbf{L}(\mathcal{W}^\tau)\), translational weight graph의 Laplacian, 식 (6.12)
+@@ 39
+\(i\)에 닿는 edge들에 대한 \(\sum\tau\)
+@@ 40
+\(\mathbf{L}(\tilde{G}^\rho)\), <strong>connection Laplacian</strong>, 식 (6.13)
+@@ 41
+\(dn\times dn\), \(d\times d\) 블록으로 구성
+@@ 42
+\(i\)에 닿는 edge들에 대한 \(\bigl(\sum\kappa\bigr)\mathbf{I}_d\)
+@@ 43
+\((i,j)\)에 \(-\kappa_{ij}\tilde{\mathbf{R}}_{ij}\), \((j,i)\)에 그 전치
+@@ 44
+\(e_1,e_2,e_3\)에 가중치 \(\tau=(2,5,1)\)을 주면 첫 번째 행렬은 \(\begin{bmatrix}3 &amp; -2 &amp; -1\\ -2 &amp; 7 &amp; -5\\ -1 &amp; -5 &amp; 6\end{bmatrix}\)입니다. 두 번째 행렬은 같은 패턴에서 측정된 회전을 비대각 블록에 적어 넣은 것입니다. 미지의 회전을 나란히 놓아 \(\mathbf{R}\triangleq(\mathbf{R}_1\ \cdots\ \mathbf{R}_n)\in\R^{d\times dn}\)로 둡니다. 그러면 \(\mathbf{R}\T\mathbf{R}\)의 블록은 \(\mathbf{R}_i\T\mathbf{R}_j\)이고, 블록별로 곱해 보면 다음을 얻습니다.
+@@ 45
+이것이 (6.9)의 회전 절반입니다. (각 edge는 두 대각 블록에 \(\kappa_{ij}\mathbf{I}_d\)를 놓아 \(2d\)를 만들고, 두 비대각 블록은 같은 trace를 한 번씩 줍니다.)
+@@ 46
+<strong>"(6.17b)의 incidence matrix는 Box 6.1의 것과 같다."</strong> Box 6.1은 edge를 행에 두므로 \(\mathbf{A}\)는 \(m\times n\)입니다. (6.17b)와 (6.18)에서 곱 \(\mathbf{A}\boldsymbol{\Omega}^{1/2}\)가 \(m\times m\) 행렬 \(\boldsymbol{\Omega}\)와 크기가 맞으려면 edge가 열에 있어야 합니다. 그곳의 \(\mathbf{A}(\overrightarrow{\mathcal{G}})\)는 Box 행렬의 \(n\times m\) 전치로 읽으십시오. 아래에서도 그렇게 합니다.
+@@ 47
+<strong>"(6.18)의 L은 Laplacian이다."</strong> 그곳의 L은 LQ 분해에서 나온 하삼각 factor입니다.
+@@ 48
+4. 이동 소거하기
+@@ 49
+회전을 고정합니다. 그러면 (6.9)의 회전 항은 상수이고, 이동 항 \(\tau_{ij}\norm{\mathbf{t}_j-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{t}}_{ij}}^2\)는 미지의 \(\mathbf{t}\)에 대해 선형인 식의 norm 제곱입니다. 이것은 선형 least squares (<a href="#d4">1주차 · Day 4</a>)이고, closed-form 해가 있습니다: <span class="src">eq. (6.16) · p. 159</span>
+@@ 50
+여기서 \(\tilde{\mathbf{V}}\in\R^{n\times dn}\)는 이동 측정값으로 만든 행렬이고 (6.14), \({}^\dagger\)는 pseudo-inverse이며, \(\operatorname{vec}\)는 결과인 \(d\times n\) 행렬의 열, 즉 \(\mathbf{t}_1,\dots,\mathbf{t}_n\)을 쌓습니다. (책은 (6.16) 안에 \(\mathbf{R}^*\)라고 인쇄했는데, 이는 우리가 고정한 \(\mathbf{R}\)입니다.) \(\mathbf{t}^\star(\mathbf{R})\)를 다시 대입하면 Problem 6.2가 됩니다: <span class="src">eq. (6.17) · p. 159</span>
+@@ 51
+빈틈 채우기: (6.16)과 (6.17b)는 어디서 오는가
+@@ 52
+이동을 \(\mathbf{T}=(\mathbf{t}_1\ \cdots\ \mathbf{t}_n)\in\R^{d\times n}\)의 열로 모으고, \(\mathbf{A}\)를 \(n\times m\) incidence matrix라고 합시다 (열 \(e\)는 tail \(i\)에 \(-1\), head \(j\)에 \(+1\)을 가집니다). 그러면 \(\mathbf{T}\mathbf{A}\)의 열 \(e\)는 \(\mathbf{t}_j-\mathbf{t}_i\)입니다. (6.15)의 행렬 \(\tilde{\mathbf{D}}\)는 행 \(e\), 블록 \(i\)에 \(-\tilde{\mathbf{t}}_{ij}\T\)를 가지므로, \(\mathbf{R}\tilde{\mathbf{D}}\T\)의 열 \(e\)는 \(-\mathbf{R}_i\tilde{\mathbf{t}}_{ij}\)입니다. \(\boldsymbol{\Omega}=\operatorname{Diag}(\tau_{e_1},\dots,\tau_{e_m})\)로 두면 전체 이동 cost는 Frobenius norm 하나로 쓸 수 있습니다:
+@@ 53
+\(\mathbf{T}\)에 대한 미분을 0으로 놓습니다 (normal equations):
+@@ 54
+\(\mathbf{A}\boldsymbol{\Omega}\tilde{\mathbf{D}}\)가 (6.14)에서 정의한 행렬 \(\tilde{\mathbf{V}}\)라는 것은 원소별로 확인할 수 있습니다. \(\mathbf{L}\mathbf{1}=\mathbf{0}\)이므로 Laplacian은 singular입니다: 모든 위치를 같은 벡터만큼 옮겨도 residual은 하나도 변하지 않습니다. Pseudo-inverse는 위치의 평균이 0인 해 \(\mathbf{T}=-\mathbf{R}\tilde{\mathbf{V}}\T\mathbf{L}(\mathcal{W}^\tau)^\dagger\)를 고르며, 이것이 (6.16)입니다.
+@@ 55
+이 \(\mathbf{T}\)를 residual 행렬에 다시 넣고 인수분해합니다:
+@@ 56
+\(\boldsymbol{\Pi}\)는 단위행렬에서 \(\mathbf{A}\boldsymbol{\Omega}^{1/2}\)의 row space로의 orthogonal projector를 뺀 것이므로, \(\mathbf{A}\boldsymbol{\Omega}^{1/2}\)의 kernel로의 orthogonal projector이며, 책의 정의와 정확히 같습니다. 이것은 익히 아는 least squares입니다: 최선의 fit은 데이터 중 모델이 설명할 수 있는 부분을 제거하고, 설명할 수 없는 부분을 남깁니다. Projector는 \(\boldsymbol{\Pi}\boldsymbol{\Pi}\T=\boldsymbol{\Pi}\)를 만족하므로 남은 cost는
+@@ 57
+이고, 여기에 trace의 cyclic property를 썼습니다. 3절의 회전 절반을 더하면 (6.17b)의 \(\tilde{\mathbf{Q}}\)가 됩니다.
+@@ 58
+직접 해 보기: 위젯은 pose 6개에 대해 이 행렬들을 모두 만듭니다. Pose를 하나 고르고, 그 heading을 비틀고, 위치와 cost를 지켜보십시오.
+@@ 59
+눈여겨볼 점: 마지막 두 타일은 항상 일치합니다: 처음에는 둘 다 17.83이고, pose 2를 30° 비틀면 둘 다 187.43입니다. 왼쪽 타일은 (6.16)의 위치가 필요했지만, 오른쪽 타일 \(\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\)는 위치를 한 번도 계산하지 않았습니다. 또한 pose 하나를 비틀면 다른 pose들도 움직이고, 한 바퀴 전체에 걸친 cost 곡선이 non-convex한 물결 하나라는 점도 눈여겨보십시오.
+@@ 60
+5. Problem 6.2의 모습
+@@ 61
+Problem 6.2의 미지수는 \(n\)개의 회전이고, 데이터 행렬은 측정값으로부터 한 번만 계산하는 \(dn\times dn\) 행렬 \(\tilde{\mathbf{Q}}\) 하나입니다. \(\tilde{\mathbf{Q}}\)는 positive semidefinite입니다. <em>임의의</em> \(d\times dn\) 행렬 \(\mathbf{R}\)에 대해 \(\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\)가 norm 제곱의 합이기 때문입니다. 책은 이제 이 문제가 데이터 행렬이 더 복잡할 뿐인 rotation averaging의 형태가 되었다고 지적합니다. <span class="src">§6.1.2.2 · p. 160</span>
+@@ 62
+실용적인 점 하나. \(\boldsymbol{\Pi}\)는 dense한 \(m\times m\) 행렬이라 큰 graph에서는 계산 비용이 큽니다. 식 (6.18)은 (축소된) 가중 incidence matrix의 sparse한 삼각 factor로 이를 다시 써서, \(\tilde{\mathbf{Q}}\)와의 곱이 계속 저렴하도록 합니다. <span class="src">eq. (6.18) · p. 160</span> Day 5의 solver에는 이런 곱만 필요합니다.
+@@ 63
+Objective는 \(\mathbf{R}\)의 원소에 대해 이차입니다. 남은 장애물은 constraint set \(\SO(d)^n\)뿐입니다. 내일 이 집합에 Day 2의 방법을 적용합니다.
+@@ 64
+Q1. 평면에서 pose i는 (3, 1)에 있고 heading이 180°이며, pose j는 (1, 1)에 있습니다. i에서 본 j의 실제 상대 이동은 무엇입니까?
+@@ 65
+t_j − t_i = (−2, 0). R_iᵀ, 즉 −180° 회전을 곱하면 두 부호가 모두 뒤집혀 (2, 0)이 됩니다. Pose j는 −x 방향을 향한 로봇의 정면 2미터 앞에 있습니다.
+@@ 66
+Q2. 평면의 한 edge가 κ = 10이고 회전 residual이 60°입니다. 그 회전 항은 cost (6.9)에 얼마나 기여합니까?
+@@ 67
+평면에서 그 항은 4κ(1 − cos r) = 4 · 10 · (1 − 0.5) = 20입니다.
+@@ 68
+Q3. 한 node에 이동 precision이 τ = 2, 5, 1인 edge가 세 개 있습니다. L(W^τ)에서 그 node의 대각 원소는 무엇입니까?
+@@ 69
+(6.12)에 의해 대각 원소는 그 node에 닿는 edge 가중치의 합입니다: 2 + 5 + 1 = 8.
+@@ 70
+Q4. 이동은 closed-form으로 소거할 수 있는데 회전은 왜 그럴 수 없습니까?
+@@ 71
+이동이 더 정확하게 측정됩니다
+@@ 72
+회전을 고정하면 cost는 이동에 대한 제약 없는 선형 least-squares 문제이지만, 회전은 SO(d)로 제약됩니다
+@@ 73
+이동의 개수가 회전보다 적습니다
+@@ 74
+Graph의 Laplacian에 역행렬이 있습니다
+@@ 75
+이동은 residual에 선형으로 들어가는 자유 벡터이므로 normal equations가 이를 풉니다. 회전도 선형으로 들어가지만 이차 constraint를 만족해야 하므로, 한 번의 선형 풀이로는 최적해를 얻을 수 없습니다.
+@@ 76
+Q5. 회전 측정값의 concentration이 κ = 200입니다. 대략 어느 정도의 각도 표준편차입니까?
+@@ 77
+약 0.3°
+@@ 78
+약 5.7°
+@@ 79
+약 2.9°
+@@ 80
+약 0.07°
+@@ 81
+κ가 크면 각도는 분산이 1/(2κ) = 1/400인 Gaussian에 가까우므로, 표준편차는 0.05 rad, 즉 2.9°입니다.
+@@ 82
+측정값 \(\tilde{\mathbf{T}}_{ij}\)는 noise 섞인 \(\mathbf{T}_i^{-1}\mathbf{T}_j\)이며, 회전은 \(\mathbf{R}_i\T\mathbf{R}_j\), 이동은 \(\mathbf{R}_i\T(\mathbf{t}_j-\mathbf{t}_i)\)입니다.
+@@ 83
+Gaussian 이동 noise와 Langevin 회전 noise는 cost (6.9)를 주며, 이는 미지수의 원소에 대해 선형인 것들의 norm 제곱의 합입니다.
+@@ 84
+Laplacian \(\mathbf{A}\T\mathbf{A}\)는 edge를 가로지르는 차이 제곱의 합을 나타내고, 그 가중 버전과 블록 버전은 \(\tau\), \(\kappa\), 그리고 측정된 회전을 담습니다.
+@@ 85
+회전을 고정하면 최적 이동은 (6.16)의 \(\mathbf{t}^\star(\mathbf{R})\)이고, 이를 대입하면 \(\SO(d)^n\) 위의 \(\min\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\)이 남습니다.
+@@ 86
+<em>SLAM Handbook</em>, §6.1.2와 §6.1.2.1, 그리고 Box 6.1이 있는 §6.1.2.2 "Simplifying the Maximum Likelihood Estimator", pp. 154–160, 식 (6.7)–(6.18), Figure 6.2.
+@@ 87
+Rosen, Carlone, Bandeira, Leonard, <em>SE-Sync: A certifiably correct algorithm for synchronization over the special Euclidean group</em>, 2019: 이 코스의 "빈틈 채우기"가 따르는 회전만 남은 문제의 유도로, incidence matrix를 edge마다 열 하나로 씁니다.
+@@ 88
+Barfoot, <em>State Estimation for Robotics</em>, 2017: 행렬로서의 pose와 그 역행렬.

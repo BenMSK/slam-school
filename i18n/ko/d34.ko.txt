@@ -1,0 +1,194 @@
+@@ 1
+<span class="eyebrow">6주차 · Day 4</span>
+@@ 2
+M-estimation: robust loss, IRLS, Black-Rangarajan duality
+@@ 3
+오늘이 끝나면 robust loss를 influence function으로 비교하고, IRLS 가중치를 유도해 IRLS를 손으로 돌리고, robust loss를 weighted least squares와 outlier process의 합으로 다시 쓸 수 있습니다.
+@@ 4
+약 60분 · §3.3 도입부–§3.3.2, pp. 85–92 읽기 (8쪽, 그중 2쪽은 그림) · 6주차 Day 1, 2주차 Day 4 필요
+@@ 5
+먼저 읽기: §3.3 도입부, §3.3.1, §3.3.2, pp. 85–92
+@@ 6
+p. 86의 식 (3.9)와 그 바로 아래에서 \(\rho\)에 거는 요구 조건.
+@@ 7
+Figure 3.5(p. 87)의 loss 모양 여섯 가지. 어느 것이 평평해집니까?
+@@ 8
+p. 89의 가중치 규칙 (3.12)와 이 규칙이 나오는 두 gradient.
+@@ 9
+p. 90의 (3.14)가 두 수의 \(\min\)을 가중치에 대한 최소화로 바꾸는 방식, 그리고 p. 92의 outlier process (3.18).
+@@ 10
+cost의 제곱을 큰 residual에서 더 천천히 자라는 함수로 바꿉니다. 그러면 outlier가 당기는 힘이 유한해지거나 사라집니다. 새 문제는 더 이상 least squares가 아니지만, weighted least-squares 문제의 <em>연속</em>으로 풀 수 있습니다. 각 측정값에 현재 residual이 얼마나 믿을 만한지에 따라 가중치를 주고, 풀고, 반복합니다.
+@@ 11
+1. M-estimation과 influence function
+@@ 12
+front-end에서의 제거는 outlier를 일부 놓치므로 back-end가 이를 견뎌야 합니다. <span class="src">§3.3 · p. 85</span> <strong>M-estimation</strong>("maximum-likelihood-type estimation")은 Day 1의 residual \(r_i(\mathbf{x})\)는 그대로 두고, residual에 적용하는 함수만 바꿉니다:
+@@ 13
+<strong>robust loss</strong>(강건 손실) \(\rho\)는 음이 아니어야 하고, 큰 residual에서 이차보다 느리게 자라야 합니다. <span class="src">§3.3 · p. 86</span> 이것이 왜 올바른 요구인지 보려면, 연쇄 법칙으로 cost \(f(\mathbf{x}) = \sum_i \rho(r_i(\mathbf{x}))\)의 gradient를 구합니다:
+@@ 14
+두 번째 인자는 측정값 \(i\)가 추정값을 어느 방향으로 옮기려 하는지 말해 줍니다. 첫 번째 인자는 얼마나 세게 당기는지 말해 줍니다. 이 인자가 <strong>influence function</strong>(영향 함수) \(\psi(r) := \partial\rho(r)/\partial r\)입니다. <span class="src">§3.3 · p. 86</span> quadratic loss에서는 \(\psi(r) = 2r\)입니다. 당기는 힘이 한없이 커지는데, Day 1의 문제를 다시 말한 것입니다. robust loss는 큰 \(r\)에서 \(\psi(r) \ll 2r\)이고, 이상적으로는 \(\psi(r)\to 0\)입니다.
+@@ 15
+2. loss 메뉴
+@@ 16
+Figure 3.5는 흔히 쓰는 선택지를 곡선으로 보여 줍니다. <span class="src">§3.3 · pp. 86–87</span> 여기서는 공식으로 정리하며, 각 loss에는 inlier가 끝나는 지점을 표시하는 파라미터 \(\beta\)가 하나 있습니다. 책은 truncated quadratic (3.13)과 Geman-McClure (3.17)의 공식을 줍니다. Huber와 Tukey는 표준 정의이며, 작은 \(r\)에서 모든 loss가 \(r^2\)과 같도록 책과 같은 방식으로 배율을 맞췄습니다. 마지막 열 \(w = \psi/(2r)\)는 3절에서 설명합니다.
+@@ 17
+=
+@@ 18
+가중치 w(r)
+@@ 19
+=
+@@ 20
+=
+@@ 21
+\(|r|\le\beta\)이면 \(r^2\), 아니면 \(2\beta|r|-\beta^2\)
+@@ 22
+\(|r|\le\beta\)이면 \(2r\), 아니면 \(\pm 2\beta\)
+@@ 23
+\(|r|\le\beta\)이면 \(1\), 아니면 \(\beta/|r|\)
+@@ 24
+=
+@@ 25
+=
+@@ 26
+\(|r|\le\beta\)이면 \(\tfrac{\beta^2}{3}\big[1-(1-r^2/\beta^2)^3\big]\), 아니면 \(\tfrac{\beta^2}{3}\)
+@@ 27
+\(|r|\le\beta\)이면 \(2r(1-r^2/\beta^2)^2\), 아니면 \(0\)
+@@ 28
+\(|r|\le\beta\)이면 \((1-r^2/\beta^2)^2\), 아니면 \(0\)
+@@ 29
+=
+@@ 30
+\(|r|\lt\beta\)이면 \(2r\), 아니면 \(0\)
+@@ 31
+\(|r|\lt\beta\)이면 \(1\), 아니면 \(0\)
+@@ 32
+직접 해 보기: loss를 고르고 residual 슬라이더를 움직이세요. 가운데 패널을 지켜보세요.
+@@ 33
+눈여겨볼 점: β = 1인 Huber에서 residual 2.5의 loss는 4.00이고 quadratic은 6.25를 매깁니다. influence는 2.00에서 상한이 걸리지만 quadratic은 5.00입니다. 상한이 있다고 0인 것은 아닙니다. outlier는 계속 당깁니다. Geman-McClure로 바꾸면 influence가 올라갔다가 정점을 찍고 다시 0을 향해 떨어집니다. truncated quadratic과 Tukey는 β 너머에서 정확히 0입니다.
+@@ 34
+고르는 법: <span class="src">§3.3 · pp. 86–87</span>
+@@ 35
+<strong>Huber</strong>는 convex라서 최적화가 잘 됩니다. bundle adjustment에서 흔히 씁니다. 대가는 방금 본 0이 아닌 influence입니다.
+@@ 36
+평평해지는 loss(Geman-McClure, Tukey, truncated quadratic)는 먼 outlier에 influence를 거의 또는 전혀 주지 않지만, non-convex라서 optimizer가 나쁜 local minimum에 멈출 수 있습니다.
+@@ 37
+딱 잘리는 cut-off(truncated quadratic)는 inlier가 가질 수 있는 최대 오차를 아는 문제에 알맞습니다.
+@@ 38
+<strong>maximum consensus loss</strong>는 작은 residual에 0, 큰 residual에 1을 주는 loss로, outlier 개수를 셉니다. 이를 최소화하는 것이 Day 2의 consensus maximization (3.4)입니다. influence가 어디서나 0이라 gradient는 쓸모가 없고, 샘플링으로 최적화합니다. 그것이 RANSAC입니다.
+@@ 39
+더 깊이 (선택): robust loss도 여전히 MAP이다
+@@ 40
+\(\rho\)로 바꾼다고 확률을 버리는 것은 아닙니다. loss는 noise 밀도의 음의 로그이고, 천천히 자라는 loss는 heavy-tailed 밀도에 해당합니다. <span class="src">§3.3 · pp. 88–89</span> \(\max\{e^{-r^2},\ e^{-\beta^2}\}\)에 비례하는 밀도를 생각해 보세요. 0 근처에서는 Gaussian이고, 멀리서는 일정한 바닥(센서 범위에 걸친 균등 밀도)입니다. 그 음의 로그는 \(\min\{r^2, \beta^2\}\), 곧 truncated quadratic입니다. 이 바닥은 "작은 확률로 이 측정값은 state와 무관하다"는 뜻입니다.
+@@ 41
+=
+@@ 42
+문제 (3.9)에는 두 가지 대가가 따릅니다. <a href="#d10">2주차 · Day 4</a>의 빠른 solver인 Gauss-Newton과 Levenberg-Marquardt에는 제곱합이 필요합니다. 그리고 non-convex cost에서는 어떤 local solver든 시작점에 의존하게 됩니다. <span class="src">§3.3.1 · p. 89</span> 단순한 gradient descent는 어떤 문제에서는 통하지만(Figure 3.6) iteration이 수천 번 듭니다. <span class="src">§3.3 · p. 88</span>
+@@ 43
+<strong>Iteratively reweighted least squares (IRLS)</strong>는 그 solver들을 되찾아 줍니다. 매 iteration마다 이전 추정값에서 얻은 가중치로 <em>weighted</em> least-squares 문제를 풉니다:
+@@ 44
+빈틈 채우기: 왜 이 가중치이고, 왜 iteration이 올바른 곳에 도착하는가
+@@ 45
+가중치를 \(w_i\)로 고정하고 weighted cost \(\sum_i w_i\,r_i^2(\mathbf{x})\)를 미분합니다:
+@@ 46
+(3.10)의 \(\sum_i \psi(r_i)\,\partial r_i/\partial\mathbf{x}\)와 비교해 보세요. \(2\,w_i\,r_i = \psi(r_i)\), 즉 \(w_i = \psi(r_i)/(2r_i)\)이면 두 합은 항별로 같습니다. 이것이 (3.12)입니다.
+@@ 47
+이제 iteration이 수렴했다고 합시다: \(\mathbf{x}^{(t+1)} = \mathbf{x}^{(t)} = \mathbf{x}^\star\). 그러면 \(\mathbf{x}^\star\)는 자기 자신의 가중치로 만든 weighted 문제를 최소화하므로, \(\mathbf{x}^\star\)에서 weighted gradient가 0입니다. 위의 항별 일치에 따라 robust cost의 gradient (3.10)도 그곳에서 0입니다. IRLS의 고정점은 M-estimation 문제의 stationary point입니다. non-convex \(\rho\)에서는 나쁜 local minimum일 수 있는데, 이것이 내일 주제입니다.
+@@ 48
+<strong>손으로 풀기.</strong> \(z = \{1, 2, 3, 14\}\)에서 숫자 하나 \(x\)를 추정합니다. \(r_i = z_i - x\)이고 Huber loss, \(\beta = 2\)를 씁니다. 상수의 weighted least-squares fit은 가중 평균 \(x = \sum w_i z_i / \sum w_i\)입니다.
+@@ 49
+=
+@@ 50
+현재 x에서의 residual
+@@ 51
+가중치 (|r| ≤ 2이면 1, 아니면 2/|r|)
+@@ 52
+새 x
+@@ 53
+시작: 가중치 모두 1
+@@ 54
+5.000 (평균)
+@@ 55
+극한
+@@ 56
+좋은 측정값만의 평균은 2입니다. least squares는 5라고 합니다. Huber는 2.667에 자리 잡습니다. 훨씬 낫지만 여전히 끌려가 있는데, outlier가 가중치 0.176을 유지하기 때문입니다. 극한값은 \(\sum_i\psi(r_i) = 0\)에서 바로 확인할 수 있습니다. 처음 세 residual은 quadratic 구간에, 네 번째는 \(\beta\) 너머에 있으므로 \(2(1-x)+2(2-x)+2(3-x)+2\beta = 0\)에서 \(x = 8/3\)을 얻습니다.
+@@ 57
+SLAM에서 각 iteration 안의 "풀기"는 weighted 문제에 대한 Gauss-Newton 또는 Levenberg-Marquardt step 한 번입니다. <span class="src">§3.3.1 · p. 89</span> Day 2의 직선 맞추기에 적용해 보세요. 점의 40%가 outlier이고, 대부분은 두 번째 직선 위에 있습니다.
+@@ 58
+눈여겨볼 점: Huber(β = 0.5)에서 IRLS는 least-squares 직선 y = 0.12x + 2.81에서 약 28 step 만에 y = 0.37x + 1.44로 옮겨 가서 그대로 머무는데, 여전히 outlier에 끌려 있습니다. Geman-McClure는 약 12 step 만에 실제 직선 바로 옆인 y = 0.51x + 0.94에 도달합니다. truncated quadratic은 2 step 후 y = 0.09x + 2.86에서 멈춥니다. 나쁜 시작 직선 근처에 우연히 있던 점만 남기고, 나머지에는 가중치 0을 영영 줘 버린 것입니다.
+@@ 59
+책의 실험도 대체로 같습니다(Figure 3.7). IRLS는 수십 번의 iteration으로 수렴하고 gradient descent보다 훨씬 빠르며(M3500에서 Huber loss로 약 5 s 대비 1.5 s 미만), 정확도는 조금 떨어지고, non-convex loss에서는 틀린 해로 끝날 수 있습니다. <span class="src">§3.3.1 · pp. 89–91</span>
+@@ 60
+4. Black-Rangarajan duality: 가중치를 변수로
+@@ 61
+규칙 (3.12)는 gradient를 맞춰서 얻었고, truncated quadratic의 \(|r| = \beta\)처럼 \(\rho\)가 꺾이는 곳에서는 정의되지 않습니다. <strong>Black-Rangarajan (B-R) duality</strong>는 가중치를 최적화의 미지수로 삼아 같은 알고리즘에 더 깔끔한 토대를 줍니다. <span class="src">§3.3.2 · p. 90</span>
+@@ 62
+truncated quadratic \(\rho(r_i) = \min\{r_i^2, \beta_i^2\}\) (3.13)에서 시작합니다. 책은 이를 다음과 같이 다시 씁니다
+@@ 63
+빈틈 채우기: (3.14) 확인과 Geman-McClure 경우 전체 풀이
+@@ 64
+<strong>Truncated quadratic.</strong> (3.14)의 식은 \(w_i\)에 대해 선형입니다: \(\beta_i^2 + w_i\,(r_i^2 - \beta_i^2)\)와 같습니다. \([0,1]\) 위의 선형 함수는 끝점에서 가장 작습니다. \(r_i^2 \lt \beta_i^2\)이면 기울기가 음수이므로 \(w_i = 1\)이고 값은 \(r_i^2\)입니다. \(r_i^2 \gt \beta_i^2\)이면 기울기가 양수이므로 \(w_i = 0\)이고 값은 \(\beta_i^2\)입니다. 어느 쪽이든 결과는 \(\min\{r_i^2, \beta_i^2\}\)입니다. 예: \(r = 3,\ \beta = 2\)이면 \(4 + 5w\)이고, \(w = 0\)에서 최소가 되며 값은 4입니다.
+@@ 65
+<strong>Geman-McClure.</strong> Example 3.5는 \(\rho(r) = \beta^2 r^2/(\beta^2+r^2)\) (3.17)이 \(\Phi_\rho(w) = \beta^2(\sqrt{w}-1)^2\) (3.18)일 때 \(\min_{w\in[0,1]}\ w\,r^2 + \Phi_\rho(w)\)와 같다고 주장하고, 계산은 생략합니다. \(g(w) = w\,r^2 + \beta^2(\sqrt{w}-1)^2\)를 미분하면:
+@@ 66
+\(g'(w) = 0\)으로 놓으면 \(\sqrt{w} = \beta^2/(r^2+\beta^2)\)이므로
+@@ 67
+이 값은 \([0,1]\) 안에 있고, \(g''(w) = \tfrac12\beta^2 w^{-3/2} \gt 0\)이므로 최솟값입니다. \(\sqrt{w^\star} - 1 = -r^2/(r^2+\beta^2)\)를 써서 다시 대입하면:
+@@ 68
+이것이 (3.17)입니다. 또 \(w^\star\)가 2절 표의 Geman-McClure 가중치라는 점에도 주목하세요. B-R duality와 규칙 (3.12)는 같은 수를 줍니다.
+@@ 69
+모든 측정값에 (3.14)를 대입하면, M-estimation은 state와 측정값마다 하나씩 있는 가중치에 대한 결합 문제가 됩니다:
+@@ 70
+첫 번째 항은 weighted least squares입니다. 두 번째 항은 꺼진 측정값마다 \(\beta_i^2\)를 부과하므로, optimizer가 모든 것을 그냥 버릴 수는 없습니다. 해에서 \(w_i = 1\)은 inlier, \(w_i = 0\)은 outlier를 나타냅니다. <span class="src">§3.3.2 · p. 90</span>
+@@ 71
+Theorem 3.4는 이를 loss의 한 계열로 확장합니다. loss를 제곱 residual의 함수로 본 \(\phi(z) := \rho(\sqrt{z})\)를 씁니다. \(z\to0\)일 때 \(\phi'(z)\to1\), \(z\to\infty\)일 때 \(\phi'(z)\to0\), 그리고 \(\phi''(z)\lt0\)이면 M-estimation (3.9)는 다음과 동치입니다
+@@ 72
+여기서 penalty \(\Phi_\rho\)를 <strong>outlier process</strong>라고 하며, loss에 따라 달라집니다. <span class="src">§3.3.2 · pp. 90–92</span> Geman-McClure에서는 조건을 쉽게 확인할 수 있습니다: \(\phi(z) = \beta^2 z/(\beta^2+z)\), \(\phi'(z) = \beta^4/(\beta^2+z)^2\)는 \(z = 0\)에서 1이고 0으로 가며, \(\phi''(z) = -2\beta^4/(\beta^2+z)^3 \lt 0\)입니다. 내일은 \(\mathbf{x}\)와 가중치를 번갈아 바꾸며 (3.16)을 풉니다.
+@@ 73
+<strong>"robust loss는 outlier를 제거한다."</strong> influence를 줄일 뿐입니다. 위의 예제가 보여 주듯 Huber에서는 influence가 결코 0이 되지 않습니다.
+@@ 74
+<strong>"IRLS 가중치는 튜닝 파라미터다."</strong> 가중치는 \(w = \psi(r)/(2r)\)로 residual에서 계산합니다. 파라미터는 \(\beta\) 하나뿐입니다.
+@@ 75
+<strong>"IRLS는 robust cost의 최솟값을 찾는다."</strong> 시작점에 따라 달라지는 stationary point를 찾습니다. 위젯의 truncated quadratic 실행은 cost 8.04에서 멈추지만, 같은 loss에서 실제 직선 옆의 직선은 cost가 약 4.3입니다.
+@@ 76
+Q1. Huber loss, β = 1에서 residual r = 4인 측정값은 IRLS 가중치를 얼마 받습니까?
+@@ 77
+β 너머에서 가중치는 β/|r| = 1/4입니다. w = ψ/(2r)로 검산: ψ = 2β = 2, 2/(2 × 4) = 0.25.
+@@ 78
+Q2. β = 2인 Geman-McClure loss에서 r = 2일 때 loss와 가중치는 얼마입니까?
+@@ 79
+ρ = β²r²/(β² + r²) = 16/8 = 2로, quadratic loss r² = 4의 절반입니다. 가중치는 (β²/(β² + r²))² = (4/8)² = 0.25입니다.
+@@ 80
+Q3. 스칼라 데이터 z = {0, 1, 2, 9}에 truncated quadratic loss, β = 3.5로 IRLS를 한 번 돌립니다. 평균 x = 3에서 시작할 때 새 추정값은 얼마입니까?
+@@ 81
+residual z − x는 −3, −2, −1, 6입니다. |r|이 3.5보다 작은 것은 가중치 1, 마지막은 0을 받습니다. 가중 평균은 (0 + 1 + 2)/3 = 1.0입니다.
+@@ 82
+Q4. residual이 커져도 outlier가 당기는 힘이 줄어들지 않는 loss는 무엇입니까?
+@@ 83
+Huber의 influence는 β 너머에서 ±2β로 일정합니다. Geman-McClure의 influence는 0을 향해 줄고, 나머지 둘은 β 너머에서 정확히 0입니다. Huber는 convexity를 얻는 대신 이를 감수합니다.
+@@ 84
+Q5. 문제 (3.15)에서 optimizer가 모든 가중치를 0으로 놓아 첫 번째 항을 없애 버리지 않는 이유는 무엇입니까?
+@@ 85
+가중치의 합이 N이 되도록 제약되어 있습니다
+@@ 86
+가중치를 0으로 놓을 때마다 두 번째 항을 통해 β²를 치릅니다
+@@ 87
+0.5 미만의 가중치는 허용되지 않습니다
+@@ 88
+residual이 무한대가 됩니다
+@@ 89
+outlier process (1 − w)β²는 측정값을 버릴 때마다 β²를 부과합니다. 버리는 것은 residual의 제곱이 β²를 넘을 때만 이득입니다.
+@@ 90
+M-estimation은 \(r^2\)를 이차보다 느리게 자라는 robust loss \(\rho(r)\)로 바꿉니다 (3.9).
+@@ 91
+influence function \(\psi = \rho'\)는 측정값이 얼마나 세게 당기는지를 나타냅니다. Huber는 여기에 상한을 둡니다. Geman-McClure, Tukey, truncated quadratic은 이를 0으로 보내는 대신 non-convexity라는 대가를 치릅니다.
+@@ 92
+IRLS는 \(w_i = \psi(r_i)/(2r_i)\) (3.12)로 weighted least squares를 반복해서 풉니다. 그 고정점은 robust cost의 stationary point입니다.
+@@ 93
+B-R duality는 \(\rho(r) = \min_{w\in[0,1]} w\,r^2 + \Phi_\rho(w)\)로 씁니다. truncated quadratic에서는 \(\Phi_\rho = (1-w)\beta^2\), Geman-McClure에서는 \(\Phi_\rho = \beta^2(\sqrt{w}-1)^2\)입니다.
+@@ 94
+<em>SLAM Handbook</em>, §3.3 도입부, §3.3.1 "Iteratively Reweighted Least Squares", §3.3.2 "Black-Rangarajan Duality", pp. 85–92, 식 (3.9)–(3.20), Theorem 3.4, Example 3.5, Figure 3.5–3.7.
+@@ 95
+Huber, <em>Robust Statistics</em>, 1981 (M-estimator, Huber loss, influence function, Tukey's biweight를 다룸).
+@@ 96
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (추정 문제에서의 robust cost function과 IRLS).
+@@ 97
+Black and Rangarajan, <em>On the Unification of Line Processes, Outlier Rejection, and Robust Statistics with Applications in Early Vision</em>, 1996 (이 duality의 출처).

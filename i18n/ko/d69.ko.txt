@@ -1,0 +1,202 @@
+@@ 1
+<span class="eyebrow">12주차 · Day 3</span>
+@@ 2
+Bundle adjustment 풀기: sparsity와 Schur complement
+@@ 3
+오늘이 끝나면 bundle adjustment Hessian의 어떤 block이 0이고 왜 그런지 말하고, Schur complement로 point를 소거해 reduced camera system을 얻고, 그 block 중 어느 것이 fill-in되는지 예측할 수 있습니다.
+@@ 4
+약 60분 · §7.4.3, pp. 211–213, p. 214의 Figure 7.10 읽기 (약 2쪽) · 3주차 Day 3, 12주차 Day 1 필요
+@@ 5
+먼저 읽기: §7.4.3, pp. 211–213, p. 214의 Figure 7.10
+@@ 6
+p. 211에서 관측 하나가 Hessian에 더하는 세 block을 나열한 문장.
+@@ 7
+p. 212에서 선형 시스템의 양변에 곱하는 행렬과, 그 행렬이 만드는 0.
+@@ 8
+p. 213의 식 (7.7) 세 줄.
+@@ 9
+Figure 7.10에서 reduced system의 카메라 1과 2 사이 block, 그리고 빠져 있는 카메라 1과 3 사이 block.
+@@ 10
+bundle adjustment에서 모든 측정은 정확히 카메라 하나와 point 하나에 관여합니다. 그래서 Hessian의 point 부분은 block diagonal이고, point를 선형 시스템에서 거의 공짜로 없앨 수 있습니다. 남는 것은 카메라만의 작은 시스템, 즉 <strong>reduced camera system</strong>입니다. 이것을 푼 뒤, 작은 별도 계산으로 각 point를 복원합니다.
+@@ 11
+1. BA iteration 안의 선형 시스템
+@@ 12
+Gauss-Newton과 Levenberg-Marquardt(<a href="#d10">2주차 · Day 4</a>, <a href="#d11">Day 5</a>)는 같은 일을 반복합니다. 현재 추정값에서 모든 residual을 linearize하고 update에 대한 선형 시스템을 풉니다. update를 카메라 부분 \(\mathbf{d}_c\)(카메라당 숫자 6개)와 그 뒤의 point 부분 \(\mathbf{d}_p\)(point당 숫자 3개)로 쌓습니다. 책은 이 시스템을 다음과 같이 씁니다. <span class="src">§7.4.3 · p. 213</span>
+@@ 13
+빈틈 채우기: block은 어디서 오고 어느 것이 0인가
+@@ 14
+관측 하나의 residual \(\mathbf{e}_{ij} = \mathbf{z}_{ij} - \pi(\mathbf{R}^i_w \mathbf{x}^w_j + \mathbf{t}^i_w)\)를 봅시다. 이 residual은 카메라 \(i\)와 point \(j\)에만 의존하고 다른 것에는 의존하지 않습니다. 따라서 linearization에는 0이 아닌 Jacobian block이 두 개뿐입니다.
+@@ 15
+여기서 \(\mathbf{A}_{ij}\)는 <a href="#d67">Day 1</a>의 pose Jacobian이고, \(\mathbf{B}_{ij}\)는 \(\partial \mathbf{x}^c / \partial \mathbf{x}^w = \mathbf{R}^i_w\)에서 나옵니다. noise weight가 1이라면(아니라면 각 곱의 가운데에 \(\boldsymbol{\Sigma}_{ij}^{-1}\)를 넣습니다), Gauss-Newton 행렬 \(\mathbf{H} = \mathbf{J}\T\mathbf{J}\)와 우변 \(\mathbf{b} = \mathbf{J}\T\mathbf{e}^0\)는 관측에 대한 합입니다.
+@@ 16
+합은 실제로 존재하는 관측에 대해서만 취합니다. 이제 0을 읽어 봅시다.
+@@ 17
+두 카메라에 걸친 residual은 없으므로 \(\mathbf{H}_{cc}\)에는 off-diagonal block이 없습니다. 카메라마다 \(6 \times 6\) block이 하나씩 있는 <strong>block diagonal</strong> 행렬입니다.
+@@ 18
+두 point에 걸친 residual은 없으므로 \(\mathbf{H}_{pp}\)는 point마다 \(3 \times 3\) block이 하나씩 있는 block diagonal 행렬입니다.
+@@ 19
+\([\mathbf{H}_{cp}]_{ij}\)는 카메라 \(i\)가 point \(j\)를 관측할 때만 0이 아닙니다.
+@@ 20
+이것이 p. 211의 문장, 즉 관측마다 그 카메라의 diagonal block, 그 point의 diagonal block, 그리고 카메라-point off-diagonal block 하나를 더한다는 내용입니다. 모든 factor가 카메라 하나와 point 하나를 잇는 graph에 대한 <a href="#d13">3주차 · Day 1</a>의 factor graph sparsity입니다.
+@@ 21
+2. Schur complement trick
+@@ 22
+map에는 보통 카메라보다 point가 몇 자릿수 더 많으므로 책은 point를 먼저 소거합니다. <span class="src">§7.4.3 · pp. 211–212</span> 이 도구는 일반적입니다. \(\mathbf{D}\)가 역행렬을 갖는 임의의 block 시스템에서, 0 block이 생기도록 고른 행렬을 양변의 왼쪽에 곱합니다.
+@@ 23
+이것은 block Gaussian elimination입니다. 두 번째 block 행에 \(\mathbf{B}\mathbf{D}^{-1}\)을 곱해 첫 번째 행에서 뺍니다. 첫 행에는 더 이상 \(\mathbf{x}_2\)가 없으므로 \(\mathbf{x}_1\)을 혼자 구할 수 있고, \(\mathbf{x}_2\)는 그 뒤에 구합니다.
+@@ 24
+행렬 \(\mathbf{A} - \mathbf{B}\mathbf{D}^{-1}\mathbf{C}\)를 \(\mathbf{D}\)의 <strong>Schur complement</strong>라고 합니다. \(\mathbf{D} = \mathbf{H}_{pp}\)로 두고 BA에 적용하면 <span class="src">§7.4.3 · p. 213, eq. (7.7)</span>
+@@ 25 attr
+화살표로 이어진 상자 세 개. 첫째: point를 소거하여 모든 point를 카메라 방정식에 흡수합니다. 둘째: reduced camera system, 즉 카메라만의 작은 시스템을 풉니다. 셋째: back-substitution으로 각 point를 그 point를 본 카메라들로부터 복원합니다.
+@@ 26
+1. point 소거
+@@ 27
+모든 point를
+@@ 28
+카메라 방정식에 흡수
+@@ 29
+2. 카메라 풀기
+@@ 30
+=
+@@ 31
+작고, 카메라만
+@@ 32
+3. Back-substitution
+@@ 33
+각 point를
+@@ 34
+그 카메라들로 복원
+@@ 35
+식 (7.7)의 세 줄. 1단계와 3단계는 point를 하나씩 처리하고, 결합된 시스템을 푸는 것은 2단계뿐입니다.
+@@ 36
+<strong>손으로 확인할 만큼 작은 시스템.</strong> 미지수가 1개인 카메라 하나와, 미지수가 1개씩인 point 두 개:
+@@ 37
+여기서 \(\mathbf{H}_{pp} = \diag(2, 3)\)은 diagonal이므로 역행렬은 나눗셈 두 번이면 됩니다. 1단계: \(H^{red}_{cc} = 6 - (2 \cdot 2 / 2 + 3 \cdot 3 / 3) = 6 - 5 = 1\)이고, 우변은 \(7 - (2 \cdot 2/2 + 3 \cdot 3/3) = 2\)가 됩니다. 2단계: \(d_c = 2\). 3단계: \(d_{p1} = (2 - 2 \cdot 2)/2 = -1\), \(d_{p2} = (3 - 3 \cdot 2)/3 = -1\). 첫 행으로 확인: \(6 \cdot 2 - 2 - 3 = 7\).
+@@ 38
+3. 왜 싼가, 그리고 무엇이 fill-in되는가
+@@ 39
+두 가지 사실 덕분에 이 trick이 이득입니다.
+@@ 40
+<strong>\(\mathbf{H}_{pp}^{-1}\)은 거의 공짜입니다.</strong> block diagonal 행렬은 block별로 역행렬을 구합니다. point마다 \(3 \times 3\) 역행렬 하나이며, 큰 factorization은 전혀 없습니다. back-substitution도 마찬가지입니다. 책의 표현으로는 둘 다 "point 하나씩" 할 수 있습니다. <span class="src">§7.4.3 · p. 213</span>
+@@ 41
+<strong>남는 시스템이 작습니다.</strong> keyframe 100개와 point 20,000개라면 전체 시스템의 미지수는 \(600 + 60{,}000 = 60{,}600\)개입니다. reduced camera system의 미지수는 600개입니다.
+@@ 42
+대가는 <strong>fill-in</strong>입니다(<a href="#d15">3주차 · Day 3</a>). \(\mathbf{H}_{cc}\)는 block diagonal이었지만 \(\mathbf{H}^{red}_{cc}\)는 그렇지 않습니다. \(\mathbf{H}_{pp}\)가 block diagonal임을 이용해 곱의 block 하나를 풀어 쓰면
+@@ 43
+point \(j\)의 항은 카메라 \(i\)<em>와</em> 카메라 \(k\)가 모두 그 point를 관측할 때만 0이 아닙니다. 따라서 reduced camera system의 block \((i, k)\)는 두 카메라가 point를 하나 이상 공유할 때, 그리고 그때만 0이 아닙니다. 그 sparsity pattern은 threshold가 1인 <a href="#d67">Day 1</a>의 covisibility graph입니다. 이것으로 Figure 7.10이 설명됩니다. 카메라 1과 2 사이에는 block이 있고, 카메라 1과 3 사이에는 없습니다. <span class="src">§7.4.3 · p. 213</span>
+@@ 44
+두 카메라가 본 point는 둘 사이의 단단한 연결입니다. 한 카메라를 움직이면 point도 움직여야 하고, 그것이 다른 카메라를 당깁니다. point를 소거해도 이 연결은 사라지지 않습니다. "카메라 – point – 카메라"가 같은 강도의 직접적인 "카메라 – 카메라" constraint로 바뀔 뿐입니다. 이것이 3주차의 marginalization입니다. reduced camera system은 point가 결국 어떤 값이 되든, 측정값이 카메라에 대해서만 담고 있는 정보입니다.
+@@ 45
+4. 직접 보기
+@@ 46
+위젯은 Day 1의 평평한 세계에서 실제 BA 문제를 풉니다. 카메라 6대(각 미지수 3개)와 point 14개(각 미지수 2개), 즉 미지수 46개와 1차원 관측 48개입니다. 카메라 1과 2는 강한 prior factor로 제자리에 고정되어 있어, 마치 그 pose가 initialization 단계에서 온 것처럼 다룹니다. 이런 장치가 왜 필요한지는 Day 4에서 설명합니다. 작은 Levenberg-Marquardt damping이 나쁜 시작점에서 발산하지 않도록 막아 줍니다.
+@@ 47
+직접 해 보기: \(\mathbf{H}\)의 pattern을 읽은 뒤 "다음 step"을 세 번 눌러 iteration 하나를 진행해 보세요. 그다음 "10 iteration 실행"을 누르세요.
+@@ 48
+눈여겨볼 점: \(\mathbf{H}\)에서 카메라 block(왼쪽 위)과 point block(오른쪽 아래)에는 대각선 위의 작은 정사각형만 있고, 모든 결합은 off-diagonal block에 있습니다. 처음 누르면 reduced system은 18 × 18이고 대부분 차 있지만, 카메라 쌍 1–6과 2–6의 block은 비어 있습니다. 이 카메라들은 공통으로 보는 point가 없습니다. Schur 경로와 46 × 46 시스템의 직접 풀이는 약 12자리까지 같은 update를 줍니다. iteration 10번이면 RMS reprojection error가 약 35 px에서 약 0.3 px로 떨어집니다. 이것이 0.5 px noise보다 낮은 이유는, 측정값이 48개뿐인데 자유로운 미지수 40개가 noise 대부분을 흡수하기 때문입니다.
+@@ 49
+5. Dense 또는 sparse: local BA와 full BA
+@@ 50
+reduced camera system도 결국 풀어야 하고, 그 구조가 푸는 방법을 정합니다. <strong>local BA</strong>에서는 같은 point를 보기 때문에 keyframe을 골랐으므로 거의 모든 쌍이 point를 공유합니다. reduced system은 거의 꽉 차 있고 dense solver가 알맞은 도구입니다. <strong>Full BA</strong>는 keyframe이 훨씬 많지만 대부분의 쌍은 멀리 떨어져 아무것도 공유하지 않습니다. reduced system은 크고 sparse하며, sparse solver(3주차의 sparse Cholesky)가 이득입니다. <span class="src">§7.4.3 · p. 213</span>
+@@ 51
+=
+@@ 52
+=
+@@ 53
+Keyframe
+@@ 54
+covisibility window, 수십 개
+@@ 55
+map 전체, 수백 개 이상
+@@ 56
+쌍 사이의 covisibility
+@@ 57
+높음
+@@ 58
+평균적으로 낮음
+@@ 59
+=
+@@ 60
+작고 거의 꽉 참
+@@ 61
+크고 sparse함
+@@ 62
+알맞은 solver
+@@ 63
+=
+@@ 64
+=
+@@ 65
+<strong>"Schur complement는 해를 근사한다."</strong> 정확합니다. 영리한 순서로 한 Gaussian elimination일 뿐이며, 위젯은 직접 풀이와의 차이가 반올림 오차 수준임을 보여 줍니다.
+@@ 66
+<strong>"\(\mathbf{H}_{pp}\)는 diagonal이다."</strong> <em>block</em> diagonal입니다. 한 point의 세 좌표는 서로 결합되어 있지만, 다른 point와는 결합되지 않습니다.
+@@ 67
+<strong>"point를 소거한다는 것은 point를 최적화하지 않는다는 뜻이다."</strong> point는 매 iteration의 3단계에서 갱신됩니다. 소거는 미지수를 푸는 순서만 바꿉니다.
+@@ 68
+<strong>"카메라가 더 적으니 카메라를 소거하자."</strong> 비용은 남는 쪽이 정합니다. 카메라를 소거하면 point에 대한 거대하고 꽉 찬 시스템이 남습니다.
+@@ 69
+Q1. 3-D BA 문제에 keyframe 50개와 point 10,000개가 있습니다. 전체 시스템과 reduced camera system의 미지수는 각각 몇 개입니까?
+@@ 70
+30,300과 30,000
+@@ 71
+10,050과 50
+@@ 72
+60,300과 300
+@@ 73
+30,300과 300
+@@ 74
+전체는 6 × 50 + 3 × 10,000 = 30,300입니다. point를 소거하면 카메라 미지수 6 × 50 = 300개만 남습니다.
+@@ 75
+Q2. 스칼라 장난감 시스템이 \(H_{cc} = 5\), \(\mathbf{H}_{cp} = (2, \; 1)\), \(\mathbf{H}_{pp} = \diag(4, 1)\)입니다. reduced camera system의 행렬 \(H^{red}_{cc}\)는 얼마입니까?
+@@ 76
+Q3. 카메라 2와 7은 공통으로 관측하는 point가 없습니다. reduced camera system의 block (2, 7)에 대해 무엇을 알 수 있습니까?
+@@ 77
+identity 행렬입니다
+@@ 78
+소거 후에는 모든 카메라가 결합되므로 0이 아닙니다
+@@ 79
+0입니다
+@@ 80
+알 수 없습니다. noise에 따라 다릅니다
+@@ 81
+각 point는 두 카메라가 모두 관측할 때만 block (i, k)에 기여합니다. 공유하는 point가 없으면 합의 모든 항이 0이고, H_cc에도 원래 그런 block이 없었습니다.
+@@ 82
+Q4. \(\mathbf{H}_{pp}^{-1}\)을 계산하기 쉬운 이유는 무엇입니까?
+@@ 83
+iteration 동안 point가 고정되어 있기 때문입니다
+@@ 84
+두 point에 걸친 residual이 없어서 행렬이 block diagonal이고, 작은 block마다 따로 역행렬을 구하기 때문입니다
+@@ 85
+identity로 대체되기 때문입니다
+@@ 86
+point가 카메라보다 적기 때문입니다
+@@ 87
+block diagonal 구조는 측정의 구조, 즉 관측마다 카메라 하나와 point 하나라는 데서 나옵니다.
+@@ 88
+Q5. 강하게 covisible한 keyframe 15개에 대한 local BA의 reduced camera system에는 어떤 solver가 알맞습니까?
+@@ 89
+sparse solver (BA는 항상 sparse하므로)
+@@ 90
+필요 없음 (시스템이 diagonal이므로)
+@@ 91
+dense solver (거의 모든 keyframe 쌍이 point를 공유하므로)
+@@ 92
+covisibility가 높으면 90 × 90 reduced system의 거의 모든 block이 fill-in됩니다. sparse solver는 대부분의 keyframe 쌍이 아무것도 공유하지 않는 full BA에서 이득입니다.
+@@ 93
+관측마다 카메라 하나와 point 하나를 결합하므로 \(\mathbf{H}_{cc}\)와 \(\mathbf{H}_{pp}\)는 block diagonal이고, \(\mathbf{H}_{cp}\)에는 관측마다 block이 하나씩 있습니다.
+@@ 94
+Schur complement는 point를 소거합니다: \(\mathbf{H}^{red}_{cc} = \mathbf{H}_{cc} - \mathbf{H}_{cp}\mathbf{H}_{pp}^{-1}\mathbf{H}_{cp}\T\). 이것은 정확한 block elimination입니다.
+@@ 95
+reduced camera system을 풀어 \(\mathbf{d}_c\)를 구한 뒤, 각 point를 back-substitution합니다: \(\mathbf{H}_{pp}\mathbf{d}_p = \mathbf{b}_p - \mathbf{H}_{cp}\T\mathbf{d}_c\).
+@@ 96
+reduced system의 block \((i,k)\)는 카메라 \(i\)와 \(k\)가 point를 공유할 때, 그리고 그때만 0이 아닙니다.
+@@ 97
+local BA는 거의 꽉 찬 reduced system을 주고(dense solver), full BA는 크고 sparse한 시스템을 줍니다(sparse solver).
+@@ 98
+<em>SLAM Handbook</em>, §7.4.3 "Solving BA", pp. 211–214, 식 (7.7), Figure 7.10.
+@@ 99
+Triggs, McLauchlan, Hartley, Fitzgibbon, <em>Bundle Adjustment: A Modern Synthesis</em>, 2000, normal equations의 block 구조와 reduced camera system 참고.
+@@ 100
+Hartley and Zisserman, <em>Multiple View Geometry</em>, 2004, sparse Levenberg-Marquardt 부록, 같은 유도 참고.
+@@ 101
+Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004, Schur complement 부록 참고.

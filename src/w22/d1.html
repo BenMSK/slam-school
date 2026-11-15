@@ -54,7 +54,7 @@
 <p>Here \(\mathbf{b}_{j,0}\) is the position of part \(j\) on the average car, each \(\mathbf{b}_{j,k}\) is one way cars differ from the average (a <strong>mode of variability</strong>), and the <strong>deformation coefficients</strong> \(c_k \in \R_{\ge 0}\) say how much of each mode this car has. The \(\mathbf{b}\)'s are fixed per category. The \(c_k\) are estimated per object. <span class="src">§16.2.1.1 · p. 457</span></p>
 <p>Try it: the pink rings are detected keypoints of one car. Press "Fit shape only", then press "Gauss-Newton step" four times.</p>
 <div class="viz" data-viz="w22_shape"></div>
-<p class="cap">Notice that shape alone cannot explain the detections: with the wrong scale and yaw, \(c_1\) runs into its upper limit and the error stays above 130 cm. Three Gauss-Newton steps on all four unknowns bring it to about 6 cm, the noise level, at \(c_1 \approx 0.80\), \(c_2 \approx 0.53\), \(\lambda \approx 1.29\), yaw 25°; the fourth changes nothing.</p>
+<p class="cap">Notice that shape alone cannot explain the detections: with the wrong scale and yaw, \(c_1\) runs into its upper limit and the error stays above 130 cm. Three Gauss-Newton steps on all four unknowns bring it to about 6 cm, close to the noise level, at \(c_1 \approx 0.80\), \(c_2 \approx 0.53\), \(\lambda \approx 1.29\), yaw 25°; the fourth changes nothing.</p>
 
 <div class="box note"><h4>Filling the gap: where the modes \(\mathbf{b}_{j,k}\) come from</h4>
 <p>The book says the modes are obtained by PCA. The recipe: take \(N\) CAD models of the category, each annotated with the same \(J\) parts. Stack the \(J\) part positions of model \(n\) into one vector \(\mathbf{m}_n \in \R^{3J}\). Then</p>

@@ -1,0 +1,172 @@
+@@ 1
+<span class="eyebrow">13주차 · 복습</span>
+@@ 2
+13주차 복습: 펄스에서 pose graph까지, LiDAR SLAM
+@@ 3
+오늘이 끝나면 time-of-flight 측정에서 출발해 registration된 scan, 장소 descriptor, loop가 닫힌 pose graph까지 따라갈 수 있고, 단계마다의 작은 계산을 손으로 할 수 있습니다.
+@@ 4
+LiDAR는 레이저 펄스의 시간을 재서 range를 얻고, 이를 beam 각도와 짝지어 point cloud를 만듭니다. point cloud는 가까이는 촘촘하고 멀리는 성기며, 약 0.1 s의 sweep에 걸쳐 모입니다. scan registration은 두 cloud 사이의 rigid motion을 찾습니다. 쌍을 알면 SVD로 closed form을 얻고, 모르면 nearest-neighbour matching과 정렬을 번갈아 하는 ICP를 씁니다. point-to-plane, GICP, NDT는 "거리"의 뜻을 바꿉니다. LiDAR odometry 시스템은 registration을 motion compensation, feature 선택이나 빠른 탐색, local map으로 감싸며, 이동 거리의 대략 0.1%만큼 drift합니다. place recognition은 scan 전체를 묘사해, drift한 pose를 믿지 않고도 재방문을 감지합니다. 검증된 loop closure는 pose graph에 들어가고, 그 최적화가 오차를 trajectory 전체에 다시 나누며, 그 뒤 map을 이에 맞게 갱신합니다.
+@@ 5
+time of flight로 구하는 range; 이웃한 점 사이 간격
+@@ 6
+=
+@@ 7
+=
+@@ 8
+=
+@@ 9
+쌍을 알 때의 closed form (point-to-point)
+@@ 10
+Horn의 방법, p. 227 · Day 2에서 유도
+@@ 11
+2D에서의 같은 식
+@@ 12
+=
+@@ 13
+ICP correspondence
+@@ 14
+=
+@@ 15
+Point-to-plane residual과 Jacobian 행, \(\mathbf{m}_i = \mathbf{R}^{0\mathsf{T}}\mathbf{n}_i\)
+@@ 16
+=
+@@ 17
+constant velocity \(\boldsymbol{\varpi}\)로 deskewing
+@@ 18
+=
+@@ 19
+이웃 covariance; edge, plane
+@@ 20
+=
+@@ 21
+=
+@@ 22
+polar descriptor 거리; 가장 좋은 shift \(n^\ast\)에서 얻는 heading
+@@ 23
+=
+@@ 24
+loop closure 불일치 \(e\) 중 step \(k\)가 떠맡는 몫
+@@ 25
+=
+@@ 26
+Q1. time-of-flight LiDAR에서 45 m 떨어진 표면이 있습니다. 반사파는 발사 후 얼마 뒤에 도착합니까?
+@@ 27
+=
+@@ 28
+=
+@@ 29
+=
+@@ 30
+=
+@@ 31
+=
+@@ 32
+Q2. 3D LiDAR를 마주 보는 벽을 10 m에서 20 m로 옮깁니다. 벽 위의 제곱미터당 점 수는 어떻게 됩니까?
+@@ 33
+4분의 1로 줄어듭니다
+@@ 34
+이웃 사이 간격은 수평 방향과 수직 방향 모두에서 rΔθ입니다. r를 두 배로 하면 두 간격이 모두 두 배가 되므로 밀도는 4분의 1로 떨어집니다.
+@@ 35
+Q3. closed-form 정렬에서 det(VUᵀ) = −1이 나왔습니다. 이것은 무엇을 뜻하며, 어떻게 해야 합니까?
+@@ 36
+VUᵀ는 반사임; 대신 V diag(1, 1, −1) Uᵀ를 씀
+@@ 37
+쌍이 틀렸음; ICP를 다시 시작
+@@ 38
+회전이 180°임; t의 부호를 뒤집음
+@@ 39
+H가 singular함; 해가 없음
+@@ 40
+행렬식이 −1인 직교 행렬은 cloud를 거울처럼 뒤집습니다. 가장 작은 singular value에 해당하는 방향의 부호를 바꾸면 가장 좋은 proper rotation이 됩니다.
+@@ 41
+Q4. point-to-point ICP에 대한 설명 중 옳은 것은 무엇입니까?
+@@ 42
+matching 단계에서 cost가 오를 수 있습니다
+@@ 43
+두 scan이 같은 장면을 보이면 언제나 cost가 0이 됩니다
+@@ 44
+어느 반 단계도 cost를 높일 수 없지만, 잘못된 정렬에서 멈출 수 있습니다
+@@ 45
+표면 normal이 필요합니다
+@@ 46
+matching은 현재 추정값에 대해 가장 가까운 짝을 고르고 정렬은 정확한 최소화이므로, cost는 단조롭게 줄어듭니다. 수렴하는 곳은 시작 추정값에 따라 정해지는 local minimum입니다.
+@@ 47
+Q5. 센서가 이동 없이 20°/s로 회전하며, 한 sweep에 0.1 s가 걸립니다. 보정하지 않으면, sweep의 맨 끝에 측정된 range 20 m의 점은 옆으로 대략 얼마나 밀립니까?
+@@ 48
+=
+@@ 49
+sweep이 끝날 때 센서는 2° = 0.0349 rad 돌아 있고, 20 m × 0.0349 = 0.70 m입니다. 회전 오차는 range에 따라 커집니다.
+@@ 50
+Q6. 이웃 covariance의 eigenvalue가 0.9, 0.002, 0.001입니다. 이 점은 어떤 종류이며, 어느 eigenvector가 쓸모 있습니까?
+@@ 51
+Planar; 가장 작은 것, normal로
+@@ 52
+Scatter; 없음
+@@ 53
+Planar; 가장 큰 것, normal로
+@@ 54
+Edge; 가장 큰 것, edge의 방향으로
+@@ 55
+지배적인 eigenvalue가 하나면 점들이 직선을 따라 놓인 것입니다. 그 eigenvector가 직선의 방향입니다.
+@@ 56
+Q7. polar descriptor의 sector가 24개입니다. 로봇이 heading을 135° 바꾼 채 어떤 장소를 다시 찾았습니다. 어느 column shift에서 가장 잘 맞아야 합니까?
+@@ 57
+sector 하나는 360°/24 = 15°이고, 135°/15° = 9열입니다(반대 방향으로 세면 24 − 9 = 15).
+@@ 58
+Q8. 네 odometry step의 분산이 같습니다. 정확한 loop closure가 총합이 1.2 m 길다고 알려 줍니다. 두 번째 step 뒤에 도달한 pose는 얼마나 움직입니까?
+@@ 59
+0.3 m 뒤로
+@@ 60
+0.6 m 뒤로
+@@ 61
+1.2 m 뒤로
+@@ 62
+움직이지 않음
+@@ 63
+각 step은 1.2/4 = 0.3 m씩 짧아집니다. 두 step 뒤의 pose에는 보정 두 개가 쌓여 0.6 m입니다.
+@@ 64
+2D LiDAR의 각도 간격이 0.25°이고, 12 m/s로 달리는 차량 위에서 10 Hz로 돕니다. (a) scan 하나에 점이 몇 개 들어 있습니까? (b) 60 m 떨어진 벽의 반사파 지연은 얼마입니까? (c) 그 벽이 센서를 마주 본다면 이웃한 점은 얼마나 떨어져 있습니까? (d) scan 하나 동안 차량은 얼마나 움직입니까?
+@@ 65
+(a) 360/0.25 = 1440개. (b) \(\Delta t = 2d/c = 120/(3\times10^8) = 4\times10^{-7}\) s = 400 ns. (c) \(s \approx r\Delta\theta = 60 \times 0.25 \times \pi/180 = 0.262\) m. (d) scan 하나에 0.1 s가 걸리므로 12 × 0.1 = 1.2 m. 이는 60 m에서의 점 간격의 네 배가 넘으며, 그래서 scan을 deskew해야 합니다.
+@@ 66
+세 쌍이 주어집니다: \(\mathbf{q}_1 = (1, 0)\), \(\mathbf{q}_2 = (-1, 0)\), \(\mathbf{q}_3 = (0, 3)\)와 \(\mathbf{p}_1 = (2, 0)\), \(\mathbf{p}_2 = (2, 2)\), \(\mathbf{p}_3 = (5, 1)\). \(\mathbf{p}_i = \mathbf{R}(\theta)\mathbf{q}_i + \mathbf{t}\)를 만족하는 회전 각도 \(\theta\)와 이동 \(\mathbf{t}\)를 구하십시오.
+@@ 67
+centroid: \(\bar{\mathbf{q}} = (0, 1)\), \(\bar{\mathbf{p}} = (3, 1)\). 중심을 뺀 점: \(\mathbf{q}' = (1,-1),\ (-1,-1),\ (0, 2)\)와 \(\mathbf{p}' = (-1,-1),\ (-1, 1),\ (2, 0)\).
+@@ 68
+\(\theta = \operatorname{atan2}(-8, 0) = -90^\circ\)입니다. −90° 회전은 \((x, y)\)를 \((y, -x)\)로 보내므로 \(\mathbf{R}\bar{\mathbf{q}} = (1, 0)\)이고 \(\mathbf{t} = \bar{\mathbf{p}} - \mathbf{R}\bar{\mathbf{q}} = (2, 1)\)입니다. 확인: \(\mathbf{R}\mathbf{q}_3 + \mathbf{t} = (3, 0) + (2, 1) = (5, 1) = \mathbf{p}_3\).
+@@ 69
+2D scan을 point-to-plane ICP로 두 벽에 맞춥니다. 현재 추정값은 \(\mathbf{R}^0 = \mathbf{I}\), \(\mathbf{t}^0 = \mathbf{0}\)이고, 회전은 맞다고 알려져 있으므로 이동 갱신 \(\boldsymbol{\rho}\)만 풉니다. 세 쌍은 normal이 \((1, 0)\)인 벽 위에 있고 각각 residual \(r^0 = 0.2\) m를 가집니다. 두 쌍은 normal이 \((0, 1)\)인 벽 위에 있고 각각 \(r^0 = -0.1\) m입니다. (a) \(\boldsymbol{\rho}\)를 구하십시오. (b) 첫 번째 벽이 보이지 않으면 무엇이 달라집니까?
+@@ 70
+(a) \(\mathbf{R}^0 = \mathbf{I}\)이면 \(\mathbf{m}_i = \mathbf{n}_i\)이고 Jacobian 행의 이동 부분은 \(\mathbf{J}_i = -\mathbf{n}_i\T\)입니다. normal equations는 \(\big(\sum_i \mathbf{n}_i\mathbf{n}_i\T\big)\boldsymbol{\rho} = \sum_i \mathbf{n}_i r_i^0\)입니다:
+@@ 71
+확인: 새 residual은 \(r_i^0 - \mathbf{n}_i\T\boldsymbol{\rho} = 0.2 - 0.2 = 0\)과 \(-0.1 + 0.1 = 0\)입니다.
+@@ 72
+(b) 행렬이 \(\begin{bmatrix} 0 & 0 \\ 0 & 2 \end{bmatrix}\)가 되어 singular합니다. 두 번째 성분은 여전히 \(-0.1\)이지만 첫 번째 성분은 정해지지 않습니다. 남은 벽을 따라 미끄러져도 어떤 residual도 변하지 않기 때문입니다. 이것이 복도 degeneracy이며, 그 벽 위에 점을 아무리 더해도 고쳐지지 않습니다.
+@@ 73
+로봇이 분산이 \((0.01, 0.01, 0.04, 0.04)\) m²인 odometry step \(u = (5, 5, 5, 5)\) m를 네 번 밟습니다. loop closure가 첫 pose에서 마지막 pose까지의 변위를 분산 \(\sigma_L^2 = 0.02\) m²로 \(z = 19.0\) m라고 측정합니다. (a) 보정된 pose를 구하십시오. (b) loop closure edge에는 불일치가 얼마나 남으며, 왜 0이 아닙니까? (c) \(\sigma_L^2 \to \infty\)이면 어떻게 됩니까?
+@@ 74
+(a) \(e = z - \sum u_k = 19 - 20 = -1\). 분모는 \(0.01 + 0.01 + 0.04 + 0.04 + 0.02 = 0.12\)이므로
+@@ 75
+보정된 step은 \(4.917, 4.917, 4.667, 4.667\)이고, pose는 \(0,\ 4.917,\ 9.833,\ 14.5,\ 19.167\)입니다.
+@@ 76
+(b) 보정된 총합은 19.167 m이므로 loop closure edge에는 \(19.0 - 19.167 = -0.167\) m \(= e\,\sigma_L^2/0.12\)의 residual이 남습니다. loop closure 자체에도 noise가 있으므로, 다른 모든 edge처럼 불일치 가운데 자기 분산에 비례하는 몫을 떠맡습니다.
+@@ 77
+(c) 모든 \(\delta_k \to 0\): 분산이 무한한 측정값은 정보를 담지 않으므로 odometry만의 해가 그대로 유지됩니다. 반대 극한인 \(\sigma_L^2 \to 0\)에서는 보정의 합이 정확히 \(e\)가 됩니다.
+@@ 78
+시간 지연을 range로, (range, 각도) 쌍을 점으로 바꾸고, 점 간격이 range에 따라 어떻게 변하는지 말하기.
+@@ 79
+registration cost (8.1)을 쓰고 쌍을 알 때 풀며, ICP의 두 반 단계와 ICP에 좋은 initial guess가 필요한 이유를 설명하기.
+@@ 80
+point-to-plane residual이 무시하는 것, 그리고 복도에서 normal equations가 singular해지는 이유를 설명하기.
+@@ 81
+time stamp와 constant velocity가 주어졌을 때 점 하나를 deskew하기.
+@@ 82
+polar descriptor가 heading 변화를 column shift로 바꾸는 방식, 그리고 invariance와 awareness의 뜻을 설명하기.
+@@ 83
+place recognition 후보에서 갱신된 map에 이르기까지 일어나는 일을 설명하기.
+@@ 84
+<em>SLAM Handbook</em>, 8장 "LiDAR SLAM", pp. 224–249.
+@@ 85
+Arun, Huang, Blostein, <em>Least-squares fitting of two 3-D point sets</em>, 1987, 그리고 Umeyama, <em>Least-squares estimation of transformation parameters between two point patterns</em>, 1991.
+@@ 86
+Kim, Kim, <em>Scan Context: Egocentric spatial descriptor for place recognition within 3D point cloud map</em>, 2018 (Scan Context 원 논문).

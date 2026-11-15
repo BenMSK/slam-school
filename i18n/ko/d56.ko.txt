@@ -1,0 +1,214 @@
+@@ 1
+<span class="eyebrow">10주차 · Day 2</span>
+@@ 2
+anisotropic noise, outlier, 그리고 moment relaxation
+@@ 3
+오늘이 끝나면 anisotropic noise와 robust loss가 SLAM을 3차 또는 4차 다항식 문제로 만드는 이유를 설명하고, 이를 relax하는 moment matrix를 만들고, 그 결과로 얻는 SDP가 풀기 어려운 이유를 말할 수 있습니다.
+@@ 4
+약 60분 · §6.1.4.2, pp. 169–173 읽기 (5쪽) · 9주차 Day 2와 6주차 Day 4 필요
+@@ 5
+먼저 읽기: §6.1.4.2, pp. 169–173
+@@ 6
+p. 170의 각주 6: noise가 isotropic일 때 anisotropic cost를 다시 2차식으로 되돌리는 한 줄.
+@@ 7
+p. 171의 (6.36)에서 목적 함수의 차수, 그리고 그 차수를 만드는 새 변수.
+@@ 8
+p. 172의 monomial vector (6.38)과 moment matrix (6.39). 서로 다른 두 칸에 나타나는 monomial을 하나 찾아보세요.
+@@ 9
+p. 173에서 Riemannian Staircase가 더 이상 통하지 않는 두 가지 이유.
+@@ 10
+Shor's relaxation은 벡터 \(\mathbf{x}\)를 행렬 \(\mathbf{x}\mathbf{x}\T\)로 lift합니다. 이 행렬에는 미지수 두 개의 곱이 모두 들어 있으므로 어떤 2차식이든 표현할 수 있습니다. cost가 3차나 4차라면, 그 곱들까지 담은 더 긴 벡터를 lift하면 됩니다. 이것이 <strong>moment relaxation</strong>입니다. 이것도 SDP이고 certificate를 주지만, SDP가 더 크고 degenerate하므로 9주차의 빠른 solver는 더 이상 쓸 수 없습니다.
+@@ 11
+1. anisotropic noise가 만드는 4차 cost
+@@ 12
+실제 센서가 모든 방향으로 똑같이 불확실한 경우는 드뭅니다. 예를 들어 stereo 카메라는 landmark의 위치를 시선 방향으로는 그에 수직인 방향보다 훨씬 덜 정밀하게 잡습니다. landmark 모델은 \(\tilde{\mathbf{m}}_{ik}=\mathbf{R}_i\T(\mathbf{m}_k-\mathbf{t}_i)+\boldsymbol{\epsilon}_{ik}\), \(\boldsymbol{\epsilon}_{ik}\sim\N(\mathbf{0},\mathbf{W}_{ik})\)가 되고, 여기서 covariance \(\mathbf{W}_{ik}\)는 <strong>anisotropic</strong>(비등방성)입니다: 단위 행렬의 상수배가 아닙니다. Problem 6.7은 어제의 (6.29)에서 landmark 항을 다음 항으로 바꿉니다: <span class="src">§6.1.4.2 · pp. 169–170</span>
+@@ 13
+아래첨자가 붙은 norm은 <strong>Mahalanobis norm</strong>으로 읽습니다: residual에 역 covariance로 weight를 준 \(\mathbf{e}\T\mathbf{W}_{ik}^{-1}\mathbf{e}\)입니다(<a href="#d4">1주차 · Day 4</a>). 각주 6도 이렇게 씁니다: \(\mathbf{W}_{ik}=\mu_{ik}^{-1}\mathbf{I}\)이면 \(\mu_{ik}\norm{\mathbf{e}}^2\)가 됩니다.
+@@ 14
+빈틈 채우기: 차수 세기
+@@ 15
+\(\mathbf{u}=\mathbf{m}_k-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{m}}_{ik}\)로 씁니다. \(\mathbf{u}\)의 각 원소는 미지수 \((\mathbf{R}_i,\mathbf{t}_i,\mathbf{m}_k)\)에 대해 1차입니다. 어제처럼 residual은 \(\mathbf{e}=\mathbf{R}_i\T\mathbf{u}\)이므로
+@@ 16
+\(\mathbf{W}^{-1}=\mu\mathbf{I}\)이면 가운데 인자는 \(\mu\,\mathbf{R}_i\mathbf{R}_i\T=\mu\mathbf{I}\)가 되어 회전이 상쇄되고, 항은 2차인 \(\mu\norm{\mathbf{u}}^2\)입니다. 이것이 어제의 문제입니다. 그렇지 않으면 상쇄되지 않습니다. 2-D에서 \(\mathbf{R}=\begin{bmatrix} c & -s \\ s & c \end{bmatrix}\), \(\mathbf{W}^{-1}=\diag(1,4)\)일 때:
+@@ 17
+원소 \(3s^2\), \(3cs\), \(3c^2\)는 미지수 \(c,s\)에 대해 2차이고 cost에 남습니다. \(\diag(4,4)\)이면 같은 곱이 \(4\mathbf{I}\)입니다.
+@@ 18
+4차 cost를 <strong>quartic</strong>이라고 합니다. QCQP가 아니므로 Shor's relaxation을 바로 적용할 수 없습니다. <span class="src">§6.1.4.2 · p. 170</span>
+@@ 19
+2. outlier가 만드는 3차 cost
+@@ 20
+6주차에서는 의심스러운 residual을 각각 robust loss \(\rho\)로 감싸서 outlier를 다뤘습니다. Problem 6.8은 이를 landmark 항에 적용해 \(\rho\big(\sqrt{\mu_{ik}}\norm{\mathbf{m}_k-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{m}}_{ik}}_2\big)\)로 씁니다. truncated quadratic loss와 Black-Rangarajan duality(<a href="#d34">6주차 · Day 4</a>)를 쓰면 이런 항은 각각 다음이 됩니다: <span class="src">§6.1.4.2 · pp. 170–171</span>
+@@ 21
+여기서 \(\beta\)는 inlier가 가질 수 있는 가장 큰 residual이고, \(w_{ik}\)는 측정마다 하나씩 있는 새 미지수입니다.
+@@ 22
+빈틈 채우기: (6.36)이 truncated quadratic인 이유
+@@ 23
+\(a=\mu_{ik}\norm{\cdot}^2\ge 0\)으로 씁니다. pose를 고정하면 항 \(w\,a+(1-w)\beta^2=\beta^2+w\,(a-\beta^2)\)는 \(w\)에 대한 직선이므로, \([0,1]\)에서의 최솟값은 끝점에서 나옵니다: \(a\lt\beta^2\)이면 \(w=1\)(cost \(a\)), 아니면 \(w=0\)(cost \(\beta^2\))입니다. 최솟값은 \(\min(a,\beta^2)\), 즉 truncated quadratic입니다. 따라서 \(w=1\)은 측정을 inlier로, \(w=0\)은 outlier로 표시합니다. 숫자로 보면: \(\beta^2=4\), \(a=1.5\)이면 \(w=1\), cost 1.5이고, \(a=9\)이면 \(w=0\), cost 4입니다.
+@@ 24
+차수: \(w\)(1차) 곱하기 제곱 residual(2차)은 3차입니다. constraint \(0\le w\le 1\)은 1차 다항식 부등식 두 개로 쓸 수도 있고, 2차 부등식 하나 \(w(1-w)\ge 0\)으로 쓸 수도 있습니다.
+@@ 25
+목적 함수의 차수
+@@ 26
+constraint
+@@ 27
+분류
+@@ 28
+PGO, landmark, (6.33) 이후의 range-aided
+@@ 29
+2차 등식
+@@ 30
+=
+@@ 31
+truncated-quadratic loss, (6.36)
+@@ 32
+많아야 2차, 일부는 부등식
+@@ 33
+=
+@@ 34
+anisotropic noise, (6.34)
+@@ 35
+3. polynomial optimization과 moment matrix
+@@ 36
+<strong>polynomial optimization problem (POP)</strong>(다항식 최적화 문제)는 다항식 등식 \(h_i(\mathbf{x})=0\)과 부등식 \(g_i(\mathbf{x})\le 0\)을 만족하면서 다항식 \(p(\mathbf{x})\)를 최소화합니다. QCQP는 차수가 2인 특수한 경우입니다. POP는 일반적으로 어렵습니다. 그래도 SLAM을 이렇게 쓰는 이유는 표준 레시피인 <strong>moment relaxation</strong>(Lasserre's relaxation이라고도 함)이 어떤 POP든 SDP로 바꿔 주기 때문입니다. <span class="src">§6.1.4.2 · p. 171</span>
+@@ 37
+미지수 두 개 \(\mathbf{x}=[x_1;x_2]\), 4차까지인 경우의 레시피는 이렇습니다: 차수가 \(r=2\) 이하인 모든 monomial을 벡터에 모으고, 그 벡터의 outer product를 취합니다. <span class="src">§6.1.4.2 · p. 172</span>
+@@ 38
+\(\mathbf{X}_4\)가 <strong>moment matrix</strong>입니다. 원소가 4차 이하의 모든 monomial이므로, 4차 이하의 다항식은 모두 이 행렬의 <em>선형</em> 함수 \(\tr(\mathbf{C}\mathbf{X}_4)\)입니다. POP는 "\(\tr(\mathbf{H}_i\mathbf{X})=0\)과 \(\mathbf{X}=[\mathbf{x}]_2[\mathbf{x}]_2\T\)를 만족하면서 \(\tr(\mathbf{C}\mathbf{X})\)를 최소화하라"가 됩니다 (6.40). Shor's relaxation(<a href="#d50">9주차 · Day 2</a>)에서와 똑같이, 마지막 조건은 \(\mathbf{X}\succeq 0\)이면서 \(\rank(\mathbf{X})=1\)인 것과 같습니다. rank 조건을 버리면 SDP가 남습니다. 숫자 \(r\)을 relaxation의 <strong>order</strong>라고 합니다.
+@@ 39
+새로운 점이 하나 있습니다. 어떤 monomial은 여러 칸에 들어갑니다: \(x_1x_2\)는 \(1\cdot x_1x_2\)로서 \((1,5)\) 원소이기도 하고, \(x_1\cdot x_2\)로서 \((2,3)\) 원소이기도 합니다. 진짜 outer product라면 이 칸들은 저절로 같습니다. rank 조건을 버리면 그렇지 않으므로, relaxation은 \(X_{15}=X_{23}\)을 명시적으로 요구해야 합니다. 이런 등식이 <strong>redundant constraint</strong>(중복 제약)입니다: 원래 문제에는 아무것도 더하지 않지만 relaxation을 더 tight하게 만듭니다. 두 번째 종류는 constraint에서 나옵니다: \(h_i(\mathbf{x})=0\)이면 \(x_1h_i(\mathbf{x})=0\)과 \(x_2h_i(\mathbf{x})=0\)도 성립합니다. <span class="src">§6.1.4.2 · p. 172</span>
+@@ 40
+빈틈 채우기: redundant 등식은 몇 개?
+@@ 41
+변수 \(n\)개에서 차수가 \(r\) 이하인 monomial은 \(\binom{n+r}{r}\)개입니다: 여기서는 \(\binom{4}{2}=6\)개이고, 이것이 \([\mathbf{x}]_2\)의 크기입니다. \(6\times 6\) 대칭 행렬에는 자유 원소가 \(6\cdot 7/2=21\)개 있지만, 4차 이하의 서로 다른 monomial은 \(\binom{2+4}{4}=15\)개뿐입니다. 따라서 \(21-15=6\)개의 등식이 필요합니다: \(x_1^2\), \(x_1x_2\), \(x_2^2\), \(x_1^2x_2\), \(x_1x_2^2\), \(x_1^2x_2^2\)에 하나씩입니다. 예를 들어 \(x_1^2x_2^2\)는 \((4,6)\) 원소이면서 \((5,5)\) 원소입니다.
+@@ 42
+행렬은 빠르게 커집니다. 미지수가 \(n=1000\)개인 문제의 Shor's relaxation은 한 변이 1001인 행렬을 씁니다. order-2 moment matrix는 한 변이 \(\binom{1002}{2}=501{,}501\)입니다. 책이 monomial을 일부만 남기는 sparse monomial basis를 언급하는 이유가 여기 있습니다.
+@@ 43
+4. 손으로 확인할 수 있을 만큼 작은 relaxation
+@@ 44
+미지수 하나와 \(p(x)=x^4-ax^2+bx\)를 생각합니다. \(a\gt 0\)이면 우물이 두 개인 곡선입니다. monomial vector는 \([x]_2=[1;x;x^2]\)이고, relax한 moment matrix는
+@@ 45
+입니다. 여기서 \(y_k\)는 \(x^k\)를 대신하는 변수입니다. 모서리와 가운데에 모두 \(y_2\)를 쓰는 것이 redundant constraint \(Y_{13}=Y_{22}\)입니다. 모든 실수 \(x\)는 목적 함수 값이 \(p(x)\)인 feasible한 \(\mathbf{Y}\)를 줍니다(\(y_k=x^k\)로 놓으면 됩니다). 따라서 \(d^*\le p^*\)이고, 여기서 \(p^*\)는 global minimum입니다.
+@@ 46
+빈틈 채우기: 직접 검증할 수 있는 lower bound
+@@ 47
+이 행렬이 positive semidefinite가 되는 숫자 \(\gamma,\lambda\)를 찾았다고 합시다:
+@@ 48
+전개하면 \([1\ \ x\ \ x^2]\,\mathbf{Q}\,[1\ \ x\ \ x^2]\T=-\gamma+bx+(2\lambda-a-2\lambda)x^2+x^4=p(x)-\gamma\)입니다. \(\mathbf{Q}\)가 positive semidefinite이면 좌변이 음이 아니므로, 모든 \(x\)에 대해 \(p(x)\ge\gamma\)입니다: \(\gamma\)는 certified lower bound입니다. outer product 대신 \(\mathbf{Y}\)를 넣고 같은 계산을 하면 \(\tr(\mathbf{Q}\mathbf{Y})=y_4-ay_2+by_1-\gamma\ge 0\)이므로 \(\gamma\le d^*\)이기도 합니다. 자유 변수 \(\lambda\)가 존재하는 것은 오직 \(x^2\)가 두 칸에 있기 때문이며, 이 변수는 redundant constraint의 Lagrange multiplier입니다.
+@@ 49
+\(a=2\), \(b=0\)일 때 손으로 풀어 봅니다: \(\lambda=1\), \(\gamma=-1\)로 고릅니다. 그러면 \(\mathbf{v}=[1;0;-1]\)에 대해 \(\mathbf{Q}=\mathbf{v}\mathbf{v}\T\)이므로 positive semidefinite이고, 실제로 \(x^4-2x^2+1=(x^2-1)^2\ge 0\)입니다. 따라서 \(p(x)\ge -1\)이고, \(p(\pm 1)=-1\)이므로 이 bound는 실제로 도달됩니다.
+@@ 50
+가장 좋은 \(\gamma\)를 찾는 문제는 위 SDP의 dual입니다(<a href="#d52">9주차 · Day 4</a>). 변수가 하나인 다항식에서는 가장 좋은 \(\gamma\)가 항상 \(p^*\)와 같습니다. 변수가 하나인 음이 아닌 다항식은 sum of squares이기 때문입니다.
+@@ 51
+직접 해 보기: 기본 설정에서 gap을 읽어 보세요. 그다음 "시작 x"를 −1.5로 옮겨 보세요.
+@@ 52
+눈여겨볼 점: 시작점 1.5에서 gradient descent는 오른쪽 우물의 x = 1.131에서 p = −1.070으로 멈춥니다. relaxation의 bound는 −3.514이므로 gap은 2.444이고, 이 점은 certified되지 않습니다. −1.5에서 시작하면 descent는 p = −3.514인 x = −1.301에 도달합니다: gap이 0이므로, 다른 곳을 전혀 찾아보지 않고도 이 점이 최적임이 certified됩니다. bound는 시작점에 의존하지 않습니다.
+@@ 53
+출력 줄은 9주차에서 만난 두 번째 사실도 보여 줍니다: 최적점에서 \(\mathbf{Q}\)는 eigenvalue 0을 하나 가지며, 그 null vector는 \([1;x^*;x^{*2}]\)이고, 여기서 global minimizer를 읽어 낼 수 있습니다.
+@@ 54
+5. hierarchy, 그리고 함정
+@@ 55 attr
+pipeline 두 개. 위: 2차 QCQP가 Shor's relaxation을 거쳐 non-degenerate SDP가 되고, Riemannian Staircase가 이를 빠르게 풉니다. 아래: 3차 또는 4차 다항식 문제가 moment relaxation을 거쳐 redundant constraint가 있는 SDP가 되고, 이를 풀려면 더 느린 전용 solver가 필요합니다.
+@@ 56
+9주차와 어제
+@@ 57
+2차
+@@ 58
+=
+@@ 59
+x를 x xᵀ로 lift
+@@ 60
+=
+@@ 61
+=
+@@ 62
+=
+@@ 63
+빠름
+@@ 64
+오늘
+@@ 65
+3차 또는 4차
+@@ 66
+=
+@@ 67
+monomial을 lift
+@@ 68
+redundant, 더 큼
+@@ 69
+전용 solver
+@@ 70
+더 느림
+@@ 71
+두 pipeline 모두 certificate로 끝납니다. local optimization만큼 빠른 solver로 끝나는 것은 위쪽뿐입니다.
+@@ 72
+차수 \(r=3,4,\dots\)까지의 monomial로 같은 구성을 반복하면 점점 더 크고 tight한 SDP의 <strong>hierarchy</strong>(계층)가 생깁니다. 가벼운 가정 아래에서 relaxation은 어떤 유한한 order에서 exact해집니다. anisotropic noise나 outlier가 있는 SLAM에서는 sparse monomial basis를 써도 이미 낮은 order에서 exact하다는 것이 실험으로 확인됩니다. <span class="src">§6.1.4.2 · p. 172</span>
+@@ 73
+함정은 solver입니다. redundant constraint가 있는 SDP는 <strong>degenerate</strong>하며, 이것이 Riemannian Staircase를 두 가지로 망가뜨립니다: 수렴 증명에 필요한 constraint qualification 조건이 대개 성립하지 않고, dual 문제의 해가 무한히 많습니다. moment relaxation 전용 solver가 있지만 local solver에 비하면 아직 느립니다. <span class="src">§6.1.4.2 · pp. 172–173</span>
+@@ 74
+직관: redundancy가 solver에 해로운 이유
+@@ 75
+<strong>constraint qualification</strong>은 constraint에 대한 regularity condition입니다. 가장 흔한 것은 해에서 constraint들의 gradient가 선형 독립이기를 요구합니다. redundant constraint는 다른 constraint로부터 따라 나오므로, 바로 이런 조건을 깨뜨리는 종류의 종속성입니다. 또 constraint들이 종속이면 최적성을 certify하는 Lagrange multiplier가 유일하지 않습니다: weight를 한 constraint에서 그와 동등한 다른 constraint로 옮길 수 있습니다. 그러면 "그" multiplier를 추적하는 알고리즘에는 하나로 정해진 목표가 없습니다.
+@@ 76
+<strong>"redundant constraint는 버려도 된다."</strong> redundant한 것은 원래 문제에 대해서뿐입니다. relaxation에서는 이것들이 moment matrix의 칸들을 서로 묶어 주며, 없으면 bound가 나빠집니다.
+@@ 77
+<strong>"order를 높이는 것이 언제나 답이다."</strong> 더 tight해지지만 행렬의 한 변이 \(\binom{n+r}{r}\)처럼 커집니다. 실제 연구는 대신 크기를 줄입니다(sparse basis).
+@@ 78
+<strong>"weight w는 constraint 때문에 0 또는 1이어야 한다."</strong> (6.36)은 \(w\in[0,1]\)만 요구합니다. cost가 \(w\)에 대해 선형이므로 최적해는 저절로 0이나 1에 놓입니다.
+@@ 79
+Q1. anisotropic landmark 항 (6.34)는 4차인데 isotropic 항은 2차인 이유는 무엇입니까?
+@@ 80
+anisotropic noise가 landmark를 추가로 만듭니다
+@@ 81
+weight 행렬이 회전과 교환 가능하지 않으므로 R W⁻¹ Rᵀ가 cost에 남아 차수 2를 더합니다
+@@ 82
+Mahalanobis norm이 제곱근을 취합니다
+@@ 83
+회전 constraint가 4차가 됩니다
+@@ 84
+항은 uᵀ(R W⁻¹ Rᵀ)u이고 u는 1차입니다. W⁻¹ = μI이면 가운데 인자가 μI로 줄어들고, 그렇지 않으면 R에 대해 2차이므로 합해서 4차입니다.
+@@ 85
+Q2. β² = 4인 (6.36)에서, 어떤 측정의 weighted squared residual μ‖·‖²이 현재 pose에서 6.25입니다. 그 항을 최소화하는 w와 그때의 cost는 무엇입니까?
+@@ 86
+=
+@@ 87
+=
+@@ 88
+=
+@@ 89
+=
+@@ 90
+항은 4 + w(6.25 − 4)로 w에 대해 증가하므로 w = 0이고 cost는 β² = 4입니다: 이 측정은 outlier로 취급됩니다.
+@@ 91
+Q3. 미지수가 세 개이고 order r = 2일 때 moment matrix의 크기는 얼마입니까?
+@@ 92
+변수 3개에서 2차 이하인 monomial: 1, 1차 세 개, 2차 여섯 개. 합하면 C(3+2, 2) = 10입니다.
+@@ 93
+Q4. local solver가 cost 12.0인 점을 반환했고 moment relaxation은 bound 11.2를 반환했습니다. 무엇을 결론 내릴 수 있습니까?
+@@ 94
+이 점은 global minimum입니다
+@@ 95
+이 점은 분명히 나쁜 local minimum입니다
+@@ 96
+global minimum은 11.2와 12.0 사이에 있으므로, 이 점은 global minimum보다 많아야 0.8 위에 있습니다
+@@ 97
+relaxation이 실패했으므로 아무것도 알려 주지 않습니다
+@@ 98
+d* ≤ p* ≤ 임의의 feasible 점의 cost. gap 0.8이 suboptimality의 상한입니다. 점은 최적인데 relaxation이 exact하지 않은 것일 수도 있습니다. 숫자만으로는 구분할 수 없습니다.
+@@ 99
+anisotropic noise는 cost에 \(\mathbf{R}\mathbf{W}^{-1}\mathbf{R}\T\)를 남깁니다: 4차. truncated-quadratic loss는 측정마다 weight \(w\)를 추가합니다: 3차. 둘 다 QCQP가 아니라 POP입니다.
+@@ 100
+moment relaxation은 차수 \(r\) 이하 monomial의 벡터를 그 outer product로 lift하고, rank-1 조건을 버리고, 반복되는 monomial을 서로 묶는 redundant constraint를 추가합니다.
+@@ 101
+이것은 lower bound \(d^*\le p^*\)를 주며, \(\text{cost}-d^*=0\)이면 global minimum이 certified됩니다. 9주차와 똑같습니다.
+@@ 102
+order가 높을수록 tight하지만 훨씬 큽니다. SLAM에서는 낮은 order로도 이미 exact한 경우가 많습니다.
+@@ 103
+함정: 이런 SDP는 degenerate하고, Riemannian Staircase가 적용되지 않으며, 쓸 수 있는 solver는 느립니다.
+@@ 104
+=
+@@ 105
+Lasserre, <em>Moments, Positive Polynomials and Their Applications</em>, 2010 (moment matrix, hierarchy, monomial 개수).
+@@ 106
+Blekherman, Parrilo, Thomas (eds.), <em>Semidefinite Optimization and Convex Algebraic Geometry</em>, 2013 (sum of squares; 음이 아닌 일변수 다항식은 sum of squares임).
+@@ 107
+Nocedal and Wright, <em>Numerical Optimization</em>, 2006 (constraint qualification과 multiplier의 유일성).

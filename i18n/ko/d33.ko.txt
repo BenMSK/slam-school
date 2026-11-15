@@ -1,0 +1,194 @@
+@@ 1
+<span class="eyebrow">6주차 · Day 3</span>
+@@ 2
+Pairwise consistency maximization과 maximum clique
+@@ 3
+오늘이 끝나면 점 match와 loop closure에 대한 consistency function을 쓰고, consistency graph를 만들고, 그 maximum clique로 inlier 집합을 찾을 수 있습니다.
+@@ 4
+약 60분 · §3.2.2, pp. 81–85 읽기 (5쪽) · 6주차 Day 2 필요
+@@ 5
+먼저 읽기: §3.2.2, pp. 81–85
+@@ 6
+RANSAC이 pose-graph 문제에 맞지 않는 두 가지 이유(p. 81).
+@@ 7
+두 consistency function: p. 82의 3D-3D correspondence용 (3.5)와 p. 83의 loop closure용 (3.6). 둘 다 state \(\mathbf{x}\)를 포함하지 않습니다.
+@@ 8
+p. 84의 clique 정의와 네 단계 요약.
+@@ 9
+p. 85에 정리된 PCM과 RANSAC의 장단점, 각주 11 포함.
+@@ 10
+"이 측정값이 model과 맞는가?"를 묻는 대신 "이 두 측정값이 서로 맞는가?"를 묻습니다. 이 질문에는 model도 solver도 필요 없습니다. 서로 맞는 쌍마다 edge를 하나씩 그려 graph를 만듭니다. inlier는 모두 서로 맞으므로 모든 쌍이 연결된 무리, 곧 clique를 이루고, 가장 큰 clique를 inlier 집합으로 삼습니다.
+@@ 11
+1. 왜 front-end 방법이 하나 더 필요한가
+@@ 12
+RANSAC에는 작은 minimal set과 적지 않은 inlier 비율이 필요합니다. pose graph의 loop closure는 둘 다 주지 못합니다. \(N\)개 pose를 결정하는 가장 작은 샘플은 측정값 \(N-1\)개이고, perceptual aliasing 때문에 후보 loop closure 대부분이 틀릴 수도 있습니다. <span class="src">§3.2.2 · p. 81</span> <strong>Pairwise Consistency Maximization (PCM)</strong>은 샘플링하지 않습니다. 서로 consistent한 측정값의 가장 큰 집합을 찾으며, 책에 따르면 outlier가 90%를 넘는 집합도 가려냈습니다. <span class="src">§3.2.2 · p. 82</span>
+@@ 13
+Day 1에서 어떤 estimator도 임의의 outlier가 50%를 넘으면 견디지 못한다는 것을 보았습니다. PCM은 이와 모순되지 않습니다. PCM은 하나의 가정에 기댑니다. 틀린 측정값은 서로 무관한 방식으로 틀리므로 서로 맞는 일이 드물고, 맞는 측정값은 항상 서로 맞는다는 가정입니다.
+@@ 14
+2. Consistency function
+@@ 15
+<strong>consistency function</strong>(일관성 함수) \(F\)는 측정값 두 개를 받아, 둘이 동시에 맞을 수 있을 때 작아지는 수를 돌려줍니다:
+@@ 16
+여기서 \(\gamma\)는 noise 수준으로 정합니다. 이 함수는 <strong>state independent</strong>(state와 무관)입니다. \(\mathbf{x}\)가 나타나지 않으므로 검사를 데이터에 바로 적용합니다. <span class="src">§3.2.2 · p. 83</span> \(F\)는 측정값 종류마다 설계해야 합니다. 책은 두 가지를 제시합니다.
+@@ 17
+<strong>3D-3D correspondence (Example 3.2).</strong> RGB-D 카메라는 3D 점을 줍니다. correspondence \(i\)는 시간 \(k-1\)에 본 점 \(\mathbf{z}_i(k-1)\)과 시간 \(k\)에 본 점 \(\mathbf{z}_i(k)\)를 짝짓습니다. \(i\)와 \(j\)가 둘 다 static 점의 올바른 match라면, 두 점 사이의 거리는 두 frame에서 같습니다:
+@@ 18
+빈틈 채우기: 거리가 변할 수 없는 이유
+@@ 19
+두 frame은 알 수 없는 회전 \(\mathbf{R}\)과 이동 \(\mathbf{t}\)로 이어진 두 카메라 pose에서 같은 static 점들을 봅니다. 올바른 correspondence는 모두 <em>같은</em> \(\mathbf{R}, \mathbf{t}\)로 \(\mathbf{z}(k-1) = \mathbf{R}\,\mathbf{z}(k) + \mathbf{t}\)를 만족합니다. \(i\)에 대한 식에서 \(j\)에 대한 식을 빼면 이동이 소거됩니다:
+@@ 20
+회전은 길이를 바꾸지 않습니다. \(\mathbf{R}\T\mathbf{R} = \mathbf{I}\)이므로 어떤 벡터 \(\mathbf{v}\)에 대해서도 \(\norm{\mathbf{R}\mathbf{v}}^2 = \mathbf{v}\T\mathbf{R}\T\mathbf{R}\mathbf{v} = \mathbf{v}\T\mathbf{v} = \norm{\mathbf{v}}^2\)입니다. 따라서 카메라 운동이 무엇이었든 (3.5)의 두 거리는 noise 범위 안에서 같습니다. 알 수 없는 운동이 소거되었으니 solver가 필요 없습니다.
+@@ 21
+<strong>수치 예 (간단히 2D로).</strong> \(k-1\)에서: \(\mathbf{z}_1 = (0,0)\), \(\mathbf{z}_2 = (3,4)\), \(\mathbf{z}_3 = (6,8)\). \(k\)에서: \(\mathbf{z}_1 = (1,1)\), \(\mathbf{z}_2 = (-3,4)\), \(\mathbf{z}_3 = (2,2)\).
+@@ 22
+쌍 (1,2): \(k-1\)에서 거리 5, \(k\)에서 \(\sqrt{(-4)^2 + 3^2} = 5\). 차이 0: consistent.
+@@ 23
+쌍 (1,3): \(k-1\)에서 거리 10, \(k\)에서 \(\sqrt{1^2 + 1^2} = 1.41\). 차이 8.59: 어떤 합리적인 \(\gamma\)에 대해서도 inconsistent.
+@@ 24
+쌍 (1,3)에 대한 검사는 1과 3이 둘 다 맞을 수는 없다고 말합니다. 어느 쪽이 틀렸는지는 말하지 않습니다. 그것은 모든 쌍을 함께 보고 결정합니다.
+@@ 25
+<strong>Loop closure (Example 3.3).</strong> odometry는 믿을 만하고 loop closure만 틀릴 수 있다고 가정합니다. 두 loop closure, 즉 pose \(a\)와 \(b\) 사이의 \(\mathbf{T}^a_b\)와 pose \(c\)와 \(d\) 사이의 \(\mathbf{T}^c_d\)를 생각합니다. 이들은 odometry와 함께 cycle을 이루고, cycle을 따라 합성한 상대 pose는 출발점으로 돌아와야 합니다:
+@@ 26
+여기서 \(\bar{\mathbf{T}}^b_c\)와 \(\bar{\mathbf{T}}^d_a\)는 \(b\)에서 \(c\)까지, \(d\)에서 \(a\)까지 이어 붙인 odometry 측정값이고, dist는 pose가 identity \(\mathbf{I}\)에서 얼마나 떨어져 있는지 잽니다. <span class="src">§3.2.2 · p. 83</span>
+@@ 27 attr
+직사각형의 네 꼭짓점에 놓인 pose a, b, c, d가 하나의 cycle로 이어져 있습니다. 위쪽 변 a에서 b, 아래쪽 변 c에서 d는 loop closure입니다. 오른쪽 변 b에서 c, 왼쪽 변 d에서 a는 odometry chain입니다. cycle을 한 바퀴 돌면 출발한 곳으로 돌아와야 합니다.
+@@ 28
+loop closure, a→b
+@@ 29
+loop closure, c→d
+@@ 30
+odometry, b→c
+@@ 31
+odometry, d→a
+@@ 32
+cycle을 한 바퀴 돌면:
+@@ 33
+네 운동이 상쇄되어야 함
+@@ 34
+식 (3.6)을 그림으로. 두 loop closure가 모두 맞다면 네 상대 pose를 합성한 결과는 (거의) identity입니다.
+@@ 35
+<strong>1차원 예.</strong> 곧은 복도에서 pose는 위치, 상대 pose는 부호 있는 변위, 합성은 덧셈, identity는 0입니다. 측정값이 \(T^a_b = +0.1\) m, \(\bar{T}^b_c = +3.0\) m, \(T^c_d = -0.2\) m, \(\bar{T}^d_a = -3.1\) m라고 합시다. cycle을 돌면 \(0.1 + 3.0 - 0.2 - 3.1 = -0.2\) m입니다. \(\gamma = 0.5\) m이면 이 쌍은 consistent합니다. 이제 두 번째 loop closure를 \(T^c_d = +4.0\) m라고 주장하는 aliasing된 것으로 바꾸면 합은 \(4.0\) m가 되고 이 쌍은 inconsistent합니다. 실제로는 loop가 길수록 \(\gamma\)도 커집니다. odometry chain이 길수록 noise가 더 쌓이기 때문입니다(p. 83의 각주 9).
+@@ 36
+3. 쌍에서 graph로, graph에서 clique로
+@@ 37
+PCM은 <em>모든</em> 쌍이 consistent한 측정값의 가장 큰 집합을 찾습니다:
+@@ 38
+<span class="src">§3.2.2 · p. 83</span> consensus maximization (3.4)와 비교하면 \(\mathbf{x}\)가 사라졌고, 모든 제약을 미리 한 번에 계산할 수 있습니다.
+@@ 39
+<strong>consistency graph</strong>를 만듭니다. 후보 측정값마다 node를 하나 두고, \(F(\mathbf{z}_i, \mathbf{z}_j) \le \gamma\)일 때마다 \(i\)와 \(j\) 사이에 edge를 둡니다. <strong>clique</strong>(완전 부분 그래프)는 어느 두 node든 edge로 이어진 node 집합입니다. <strong>maximum clique</strong>는 그중 가장 큰 것입니다. 문제 (3.8)은 consistency graph에서의 maximum clique 문제와 정확히 같습니다. <span class="src">§3.2.2 · pp. 83–84</span>
+@@ 40
+<strong>손으로 풀기.</strong> 측정값 A–F 여섯 개의 consistent한 쌍이 A–B, A–C, A–D, B–C, B–D, C–D, D–E, D–F, E–F라고 합시다. 가능한 \(6\times5/2 = 15\)쌍 중 edge는 9개입니다. {A, B, C, D}는 clique입니다: 여섯 쌍이 모두 목록에 있습니다. {D, E, F}는 크기 3의 clique입니다. 크기 5의 clique가 있을까요? 있다면 그 원소마다 이웃이 적어도 4개여야 하는데, 그만큼 이웃이 있는 것은 D(A, B, C, E, F)뿐입니다. 따라서 그런 clique는 없고, maximum clique는 {A, B, C, D}이며, PCM은 이 넷을 남기고 E와 F를 버립니다. D가 E, F와도 consistent하다는 점에 주목하세요. outlier와 edge 하나쯤 있어도 문제없습니다. 중요한 것은 서로 consistent한 큰 무리에 속하느냐입니다.
+@@ 41
+직접 해 보기: 두 frame 사이의 점 match 10개입니다. 위젯은 45쌍 모두에 (3.5)를 적용하고, maximum clique를 찾으려고 모든 부분집합을 조사합니다.
+@@ 42
+눈여겨볼 점: 기본값 γ = 0.15에서 45쌍 중 22쌍이 consistent합니다. 실제 inlier 여섯 개(1, 2, 3, 4, 9, 10) 사이의 15쌍과 우연히 맞은 7쌍입니다. 우연한 edge들은 큰 clique를 이루지 못하므로 maximum clique는 정확히 inlier 여섯 개입니다. γ를 0.05로 낮추면 noise가 일부 edge를 끊어서 inlier 두 개가 빠집니다. γ를 0.50으로 올리면 outlier 7이 clique에 들어옵니다. γ = 0.15로 돌아가 outlier를 7개로 놓으면, outlier가 70%인데도 inlier 세 개를 여전히 찾아냅니다.
+@@ 43
+4. 계산 비용
+@@ 44
+PCM의 네 단계는 이렇습니다. \(F\)를 고르고, 모든 쌍에 대해 계산해 graph를 만들고, maximum clique를 찾고, 그 측정값을 돌려줍니다. <span class="src">§3.2.2 · p. 84</span>
+@@ 45
+빈틈 채우기: 작업량 세기
+@@ 46
+<strong>graph를 만드는 것은 싸게 듭니다.</strong> 측정값 \(N\)개에는 \(N(N-1)/2\)쌍이 있습니다. \(N = 10\)이면 45, \(N = 1000\)이면 499 500입니다. 검사 하나는 산술 연산 몇 번입니다.
+@@ 47
+<strong>clique를 찾는 것이 어려운 부분입니다.</strong> 위젯은 \(2^{10} = 1024\)개 부분집합을 모두 확인합니다. 이 전수 조사는 측정값이 하나 늘 때마다 두 배가 됩니다. \(N = 60\)이면 벌써 약 \(10^{18}\)개입니다. maximum clique 문제는 NP-hard이고 근사하기도 어렵습니다. <span class="src">§3.2.2 · p. 84</span> 실제로는 두 계열의 알고리즘을 씁니다:
+@@ 48
+<strong>정확한</strong> 알고리즘. 보통 branch and bound입니다. 부분집합을 탐색하되, 지금까지 찾은 최선의 clique를 넘을 수 없는 가지는 통째로 버립니다. 예를 들어 이웃이 3개뿐인 node는 크기가 4보다 큰 clique에 속할 수 없으므로, 크기 4의 clique를 찾은 뒤에는 제외합니다. 최악의 경우 시간은 여전히 지수적입니다.
+@@ 49
+<strong>휴리스틱</strong> 알고리즘. 더 빠르지만, 크기는 크되 가장 크지는 않은 clique를 돌려줄 수 있습니다.
+@@ 50
+어느 쪽이 실용적인지는 graph의 밀도가 정합니다. 최근의 정확한 solver는 크고 sparse한 graph에서 maximum clique를 빠르게 찾습니다. 많은 쌍이 consistent한 dense graph에서는 정확한 solver가 느립니다. <span class="src">§3.2.2 · pp. 84–85</span>
+@@ 51
+5. PCM 대 RANSAC
+@@ 52
+=
+@@ 53
+=
+@@ 54
+검사 대상
+@@ 55
+minimal solver로 구한 model \(\hat{\mathbf{x}}\)에 대해 각 측정값
+@@ 56
+측정값 쌍끼리 서로
+@@ 57
+minimal solver 필요?
+@@ 58
+예, 작은 minimal set과 함께
+@@ 59
+consistency function 필요?
+@@ 60
+예, 그리고 어떤 문제(2D-2D correspondence)에서는 쉽게 설계할 수 있는 것이 없음
+@@ 61
+outlier 비율
+@@ 62
+약 70% 미만에서 효과적
+@@ 63
+90% 이상도 처리한 사례 있음
+@@ 64
+어려운 단계
+@@ 65
+샘플 수가 \(1/\omega^n\)처럼 증가
+@@ 66
+maximum clique는 NP-hard, dense graph에서 느림
+@@ 67
+추가로 돌려주는 것
+@@ 68
+추정값 \(\hat{\mathbf{x}}\)
+@@ 69
+측정값 집합만
+@@ 70
+두 검사를 통과하는 것은 측정값이 inlier이기 위한 <strong>필요조건이지 충분조건이 아닙니다</strong>(p. 85의 각주 11). pairwise 검사는 너무 관대할 수 있습니다. (3.5)에 대한 구체적인 예가 거울상입니다. 시간 \(k\)의 점들이 \(k-1\)의 점들을 반사한 것이라면 모든 쌍의 거리가 보존되어 모든 쌍이 통과하지만, 한 집합을 다른 집합으로 옮기는 회전과 이동은 없습니다. minimal solver라면 알아챘을 것입니다. 쌍별 거리로는 알 수 없습니다. 책은 일반적으로 (3.5)가 RANSAC이라면 걸러냈을 outlier를 일부 받아들일 수 있다고 지적합니다. <span class="src">§3.2.2 · p. 85</span>
+@@ 71
+PCM의 품질은 \(F\)를 어떻게 고르느냐에 달려 있습니다. 쓸모없는 함수 \(F \equiv 0\)은 모든 쌍을 consistent하게 만들어, graph는 완전 graph가 되고 maximum clique는 전체 집합이 됩니다. 아무것도 걸러지지 않습니다. inlier만 통과할 수 있는 함수라면 outlier를 모두 걸러냅니다. <span class="src">§3.2.2 · p. 85</span> 실제 함수는 그 사이 어딘가에 있고, 통과한 것은 나머지를 감당해야 하는 back-end로 넘어갑니다. 그것이 내일 주제입니다.
+@@ 72
+<strong>"inlier와 edge로 이어진 측정값은 inlier다."</strong> inlier 하나와의 edge는 우연히 생기며, γ가 클수록 더 자주 생깁니다. maximum clique에 속하는지만이 중요합니다.
+@@ 73
+<strong>"inconsistent한 쌍은 어느 측정값이 틀렸는지 알려 준다."</strong> 두 측정값이 둘 다 맞을 수는 없다는 것만 알려 줍니다. 판단은 graph 전체가 내립니다.
+@@ 74
+<strong>"PCM은 50% 한계를 넘으니 RANSAC보다 엄밀히 강하다."</strong> PCM은 outlier끼리 서로 inconsistent할 때 작동합니다. 닮은 두 복도 사이의 잘못된 loop closure 여럿처럼 서로 맞아떨어지는 outlier는 가장 큰 clique를 이룰 수 있습니다.
+@@ 75
+Q1. place recognition 모듈이 loop closure 20개를 제안합니다. PCM은 pairwise consistency 검사를 몇 번 수행합니까?
+@@ 76
+순서 없는 쌍마다 한 번: 20 × 19 / 2 = 190.
+@@ 77
+Q2. 복도(1-D)에서 두 loop closure가 +0.3 m(a에서 b)와 −0.1 m(c에서 d)를 측정합니다. odometry는 b에서 c까지 +5.0 m, d에서 a까지 −5.4 m를 줍니다. γ = 0.25 m일 때 두 loop closure는 consistent합니까?
+@@ 78
+예: cycle의 합은 −0.2 m이고 0.2 ≤ 0.25
+@@ 79
+아니오: cycle의 합은 10.8 m
+@@ 80
+아니오: 합이 정확히 0이어야 함
+@@ 81
+pose를 추정하지 않고는 판단할 수 없음
+@@ 82
+0.3 + 5.0 − 0.1 − 5.4 = −0.2 m. identity(0)로부터의 거리는 0.2 m로 γ 이내입니다. 이 검사는 측정값만 쓰고, 추정한 pose는 전혀 쓰지 않습니다.
+@@ 83
+Q3. node 1–6으로 된 consistency graph에 edge 1–2, 1–3, 2–3, 3–4, 3–5, 3–6, 4–5, 4–6, 5–6이 있습니다. maximum clique의 크기는 얼마입니까?
+@@ 84
+{3, 4, 5, 6}은 clique입니다: 여섯 쌍 3–4, 3–5, 3–6, 4–5, 4–6, 5–6이 모두 edge입니다. 크기 5의 clique가 되려면 이 넷 모두와 이어진 node가 하나 더 있어야 하는데, node 1과 2는 4, 5, 6과 이어져 있지 않습니다.
+@@ 85
+Q4. 수천 개 pose가 있는 pose graph의 loop closure에 RANSAC은 쓸 수 없는데 PCM은 쓸 수 있는 이유는 무엇입니까?
+@@ 86
+PCM은 쌍마다 전체 pose graph를 풉니다
+@@ 87
+maximum clique는 다항 시간에 풀 수 있으므로 consensus maximization보다 쉽습니다
+@@ 88
+PCM에는 임계값이 필요 없습니다
+@@ 89
+검사에 두 측정값과 그 사이의 odometry만 쓰고, N − 1개 측정값의 minimal set으로 추정한 model은 쓰지 않습니다
+@@ 90
+consistency function (3.6)은 state independent이고 pairwise입니다. RANSAC이라면 N − 1개 측정값으로 된 spanning tree를 샘플링해야 합니다. maximum clique는 NP-hard이고, γ도 여전히 필요합니다.
+@@ 91
+consistency function \(F(\mathbf{z}_i, \mathbf{z}_j) \le \gamma\)는 state 없이 두 측정값이 둘 다 맞을 수 있는지 검사합니다.
+@@ 92
+3D-3D match: 강체 운동은 두 점 사이의 거리를 보존합니다 (3.5). loop closure: cycle을 따라 합성한 pose는 identity가 됩니다 (3.6).
+@@ 93
+PCM (3.8) = consistency graph의 maximum clique.
+@@ 94
+graph를 만드는 데 \(N(N-1)/2\)번의 검사가 듭니다. maximum clique는 NP-hard이며, branch and bound로 정확히 풀거나 휴리스틱으로 근사적으로 풉니다.
+@@ 95
+pairwise consistency는 필요조건이지 충분조건이 아니므로, 일부 outlier는 back-end까지 갑니다.
+@@ 96
+<em>SLAM Handbook</em>, §3.2.2 "Graph-theoretic Outlier Rejection and Pairwise Consistency Maximization", pp. 81–85, 식 (3.5)–(3.8), Example 3.2와 3.3, Figure 3.3과 3.4.
+@@ 97
+회전이 길이를 보존한다는 증명, 거울상 예, 부분집합 개수는 표준적인 선형대수와 셈으로, 여기서 덧붙였습니다.

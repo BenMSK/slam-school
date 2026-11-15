@@ -1,0 +1,206 @@
+@@ 1
+<span class="eyebrow">Week 7 · Day 4</span>
+@@ 2
+Derivatives on Lie groups
+@@ 3
+After today you can define the Jacobian of a function between Lie groups with the plus and minus operators, derive the Jacobians of inversion, composition, and group action, chain them, and take a gradient step on a manifold.
+@@ 4
+About 60 min · Read §4.3, pp. 109–113 (5 pages) · Needs Week 4 Days 3 and 5
+@@ 5
+Read first: §4.3, pp. 109–113
+@@ 6
+Equations (4.21) and (4.22) on p. 109: the right and left versions of ⊕ and ⊖, and which frame each perturbation lives in.
+@@ 7
+Equation (4.23) on p. 110: the definition of a Jacobian when neither input nor output is a vector.
+@@ 8
+The three closed forms on p. 112, equations (4.32)–(4.34). Each ends one step before the final answer; today finishes them.
+@@ 9
+Example 4.4 on p. 111 and Example 4.5 on p. 113: how the Jacobians are used.
+@@ 10
+Poses cannot be subtracted, so the usual definition of a derivative does not apply to them. Replace "+" by ⊕ (perturb through the exponential map) and "−" by ⊖ (compare through the logarithm) and the definition works again. The result is an ordinary matrix that maps a small tangent vector at the input to a small tangent vector at the output, and it obeys the ordinary chain rule. This is what lets AutoDiff, unrolling, and implicit differentiation run on SLAM variables.
+@@ 11
+1. Plus and minus on a group
+@@ 12
+Recall from <a href="#d20">Week 4 · Day 2</a>: a Lie group \(\mathcal{M}\) is a smooth manifold; at each element \(\boldsymbol{\chi}\) there is a tangent space, a vector space where calculus works; \(\Exp\) maps a tangent vector \(\boldsymbol{\tau}\in\R^n\) to a group element and \(\Log\) maps back, equation (4.20). <span class="src">§4.3.1 · p. 109</span> The chapter writes group elements as \(\boldsymbol{\chi}\) and composition as \(\circ\).
+@@ 13
+To measure a small change between two group elements, combine one \(\Exp\) or \(\Log\) with one composition. Because composition does not commute, there are two versions: <span class="src">§4.3.1 · pp. 109–110</span>
+@@ 14
+These are equations (4.21) and (4.22). The right perturbation \(\boldsymbol{\tau}\) is expressed in the <strong>local frame</strong> at \(\boldsymbol{\chi}_1\); the left perturbation \(\boldsymbol{\varepsilon}\) is expressed in the <strong>global frame</strong>.
+@@ 15 attr
+A circle representing the group SO(2). At a point chi on the circle a straight tangent line touches it. An arrow tau lies along the tangent line. The point chi plus tau lies on the circle, reached by wrapping tau around the circle. Beside the picture are the definitions of the right plus and right minus operators.
+@@ 16
+tangent space at χ
+@@ 17
+the group (here SO(2), drawn as a circle)
+@@ 18
+χ ⊕ τ = χ ∘ Exp(τ)
+@@ 19
+group element and tangent vector in,
+@@ 20
+group element out
+@@ 21
+χ₂ ⊖ χ₁ = Log(χ₁⁻¹ ∘ χ₂)
+@@ 22
+two group elements in,
+@@ 23
+tangent vector out
+@@ 24
+⊕ wraps a tangent vector onto the group; ⊖ unwraps the difference of two group elements back into the tangent space. Together they stand in for + and −.
+@@ 25
+<strong>Example on SE(2).</strong> A planar pose at position \((2, 0)\) with heading 90°, and the tangent vector "one unit forward, no turn", \((1, 0, 0)\) (translation first, as in the book). Right-⊕ applies it in the robot's own frame: the robot moves along its heading to \((2, 1)\). Left-⊕ applies the same vector in the world frame: the pose is shifted along the world x-axis to \((3, 0)\). Same numbers, different meaning.
+@@ 26
+2. The Jacobian of a function between groups
+@@ 27
+For \(f:\mathcal{M}\to\mathcal{N}\) the book defines, with the right operators, <span class="src">§4.3.1 · p. 110</span>
+@@ 28
+This is the <strong>right Jacobian</strong> \(\mathbf{J}_R\). It maps the tangent space at \(\boldsymbol{\chi}\) to the tangent space at \(f(\boldsymbol{\chi})\), both local. Using the left operators instead gives the <strong>left Jacobian</strong> \(\mathbf{J}_L\), equation (4.25), which maps between the global tangent spaces.
+@@ 29
+Filling the gap: what "divide by a vector" means
+@@ 30
+You cannot divide by \(\boldsymbol{\tau}\). The notation is shorthand. Define the ordinary vector function \(g(\boldsymbol{\tau}) = \Log\big(f(\boldsymbol{\chi})^{-1}\circ f(\boldsymbol{\chi}\circ\Exp(\boldsymbol{\tau}))\big)\). It takes a vector, returns a vector, and \(g(\mathbf{0}) = \mathbf{0}\). The Jacobian is its ordinary matrix of partial derivatives at zero, which is equation (4.24):
+@@ 31
+The second form is the one to remember: perturb the input by \(\boldsymbol{\tau}\), and the output is perturbed by \(\mathbf{J}_R\boldsymbol{\tau}\). Column \(j\) of \(\mathbf{J}_R\) is what happens to the output when you nudge the input along the \(j\)-th tangent direction. The widget below computes Jacobians exactly this way, with a nudge of \(10^{-5}\).
+@@ 32
+Sanity check: if both groups are plain vector spaces with addition, then \(\Exp\) and \(\Log\) are the identity map, ⊕ is +, ⊖ is −, and (4.23) is the usual derivative.
+@@ 33
+The two Jacobians carry the same information. A left perturbation can be moved to the right with the adjoint (<a href="#d23">Week 4 · Day 5</a>): \(\Exp(\boldsymbol{\varepsilon})\circ\boldsymbol{\chi} = \boldsymbol{\chi}\circ\Exp(\Ad_{\boldsymbol{\chi}}^{-1}\boldsymbol{\varepsilon})\). Doing this at the input and the output gives \(\mathbf{J}_L = \Ad_{f(\boldsymbol{\chi})}\,\mathbf{J}_R\,\Ad_{\boldsymbol{\chi}}^{-1}\).
+@@ 34
+3. Closed forms: inversion, composition, and the chain rule
+@@ 35
+For the basic operations the limit can be worked out once and reused. With these blocks, derivatives of longer expressions follow from the chain rule, which holds for these Jacobians exactly as for ordinary ones: <span class="src">§4.3.2 · pp. 111–112</span>
+@@ 36
+The book's derivations (4.32) and (4.33) stop at expressions such as \((\boldsymbol{\chi}_1^{-1}\boldsymbol{\tau}^\wedge\boldsymbol{\chi}_1)^\vee/\boldsymbol{\tau}\). One fact from Week 4 finishes them.
+@@ 37
+Filling the gap: finishing the three limits
+@@ 38
+The <strong>adjoint</strong> \(\Ad_{\boldsymbol{\chi}}\) is the matrix defined by \(\Ad_{\boldsymbol{\chi}}\boldsymbol{\tau} = (\boldsymbol{\chi}\,\boldsymbol{\tau}^\wedge\boldsymbol{\chi}^{-1})^\vee\). It moves an exponential across a group element:
+@@ 39
+<strong>Inversion</strong>, \(f(\boldsymbol{\chi}) = \boldsymbol{\chi}^{-1}\). Put it into (4.23) and use \((\boldsymbol{\chi}\Exp(\boldsymbol{\tau}))^{-1} = \Exp(-\boldsymbol{\tau})\boldsymbol{\chi}^{-1}\):
+@@ 40
+This is linear in \(\boldsymbol{\tau}\), so the Jacobian is the matrix in front: \(\dfrac{\partial\boldsymbol{\chi}^{-1}}{\partial\boldsymbol{\chi}} = -\Ad_{\boldsymbol{\chi}}\). That completes (4.32).
+@@ 41
+<strong>Composition, first factor</strong>, \(f(\boldsymbol{\chi}) = \boldsymbol{\chi}\circ\boldsymbol{\chi}_1\):
+@@ 42
+That completes (4.33). <strong>Composition, second factor</strong>: \(\Log\big((\boldsymbol{\chi}\boldsymbol{\chi}_1)^{-1}\boldsymbol{\chi}\boldsymbol{\chi}_1\Exp(\boldsymbol{\tau})\big) = \Log(\Exp(\boldsymbol{\tau})) = \boldsymbol{\tau}\), so the Jacobian is \(\mathbf{I}\), equation (4.34).
+@@ 43
+<strong>Chain-rule check.</strong> For \(h(\boldsymbol{\chi}) = (\boldsymbol{\chi}\circ\boldsymbol{\chi}_1)^{-1}\), (4.31) gives \(-\Ad_{\boldsymbol{\chi}\boldsymbol{\chi}_1}\cdot\Ad_{\boldsymbol{\chi}_1^{-1}} = -\Ad_{\boldsymbol{\chi}}\Ad_{\boldsymbol{\chi}_1}\Ad_{\boldsymbol{\chi}_1}^{-1} = -\Ad_{\boldsymbol{\chi}}\). Directly: \(h = \boldsymbol{\chi}_1^{-1}\circ\boldsymbol{\chi}^{-1}\), a composition whose second factor is \(\boldsymbol{\chi}^{-1}\), so the Jacobian is \(\mathbf{I}\cdot(-\Ad_{\boldsymbol{\chi}})\). The two routes agree.
+@@ 44
+Right Jacobian
+@@ 45
+Why, in words
+@@ 46
+χ⁻¹ with respect to χ
+@@ 47
+−Ad of χ
+@@ 48
+inverting flips the sign of the perturbation and moves it from the right of χ to the right of χ⁻¹
+@@ 49
+χ ∘ χ₁ with respect to χ
+@@ 50
+Ad of χ₁⁻¹
+@@ 51
+the perturbation sits in the middle of the product and must be carried past χ₁
+@@ 52
+χ ∘ χ₁ with respect to χ₁
+@@ 53
+identity
+@@ 54
+a right perturbation of the last factor is already a right perturbation of the product
+@@ 55
+Try it: a planar two-link arm on SE(2). Choose what to differentiate, then change the link and the perturbation.
+@@ 56
+Notice that the finite-difference Jacobian and the closed form agree to about ten decimals at every setting. At the defaults, the third column of the Jacobian (0.964, 1.149, 1) says that rotating the first joint moves the end-effector sideways as well as turning it: that is the lever arm, and it shrinks when you shorten the link. For "with respect to χ₁" the Jacobian is the identity for any link. For composition and inversion the prediction J·τ equals the actual change even for a large τ, because these maps are exactly linear in the tangent vector (the derivations above never needed "small"). The fourth option, the group action of §4, is different: there the linear prediction (amber) leaves the actual displacement (pink) as τ grows.
+@@ 57
+Example 4.5 is the same situation on SO(3): two joint rotations and the end-effector orientation \(\mathbf{R} = \mathbf{R}_1\circ\mathbf{R}_2\). <span class="src">Example 4.5 · p. 113</span> For rotations \(\Ad_{\mathbf{R}} = \mathbf{R}\), so
+@@ 58
+A small rotation of the first joint reaches the end-effector re-expressed through the second joint; a small rotation of the second joint reaches it unchanged.
+@@ 59
+4. Jacobians of Exp and of the group action
+@@ 60
+Two more building blocks appear on pp. 112–113. The first is the derivative of the exponential map itself, written with a left superscript that names the perturbation type: <span class="src">§4.3.2 · p. 112</span>
+@@ 61
+These are (4.35) and (4.36). In the "perturb in, perturb out" form: \(\Exp(\boldsymbol{\tau}+\delta\boldsymbol{\tau}) \approx \Exp(\boldsymbol{\tau})\circ\Exp(\mathbf{J}_r(\boldsymbol{\tau})\,\delta\boldsymbol{\tau})\) and \(\Exp(\boldsymbol{\tau}+\delta\boldsymbol{\tau}) \approx \Exp(\mathbf{J}_l(\boldsymbol{\tau})\,\delta\boldsymbol{\tau})\circ\Exp(\boldsymbol{\tau})\). They answer: if I change the <em>coordinates</em> \(\boldsymbol{\tau}\) a little, how does the group element move, measured locally or globally? Both equal \(\mathbf{I}\) at \(\boldsymbol{\tau}=\mathbf{0}\), and on a commutative group such as SO(2) they are \(\mathbf{I}\) everywhere. Their closed forms for SO(3) were in <a href="#d23">Week 4 · Day 5</a>.
+@@ 62
+The second is the <strong>group action</strong>, a group element applied to a vector, such as a rotation applied to a point. Equation (4.37) defines its Jacobians with respect to the group element and with respect to the vector. <span class="src">§4.3.2 · p. 113</span>
+@@ 63
+Filling the gap: the action Jacobians for a rotated point
+@@ 64
+Take \(f(\mathbf{R},\mathbf{v}) = \mathbf{R}\mathbf{v}\) with \(\mathbf{R}\in\SO(3)\), \(\mathbf{v}\in\R^3\). The output is a vector, so the output ⊖ is plain subtraction. Perturb \(\mathbf{R}\) on the right and use \(\Exp(\boldsymbol{\tau}) \approx \mathbf{I} + \boldsymbol{\tau}^\wedge\) for small \(\boldsymbol{\tau}\), where \(\boldsymbol{\tau}^\wedge\mathbf{v} = \boldsymbol{\tau}\times\mathbf{v} = -\mathbf{v}^\wedge\boldsymbol{\tau}\):
+@@ 65
+The second one is immediate because the action is linear in \(\mathbf{v}\). These two matrices are the core of every reprojection-error Jacobian in bundle adjustment.
+@@ 66
+The widget's fourth option is the planar version: a pose \(\boldsymbol{\chi} = (\mathbf{R}, \mathbf{t})\in\SE(2)\) acting on a point, \(\boldsymbol{\chi}\cdot\mathbf{p} = \mathbf{R}\mathbf{p} + \mathbf{t}\). The same steps give the \(2\times3\) Jacobian \(\mathbf{R}\,[\,\mathbf{I}\;\;\mathbf{p}^{\perp}\,]\) with \(\mathbf{p}^{\perp} = (-p_2, p_1)\T\). Unlike composition, the action is not exactly linear in \(\boldsymbol{\tau}\): a finite rotation moves the point along an arc, and the Jacobian predicts the tangent to that arc.
+@@ 67
+5. Using the Jacobians: a gradient step on the manifold
+@@ 68
+Example 4.4 fuses two noisy orientation measurements, from an IMU and a camera, by minimizing <span class="src">Example 4.4 · p. 111</span>
+@@ 69
+over \(\mathbf{R}\in\SO(3)\). The gradient (4.29) is \(2\,\mathbf{J}\T\mathbf{r}\) summed over the two residuals \(\mathbf{r} = \Log(\mathbf{R}_{\text{meas}}^{-1}\mathbf{R})\), with \(\mathbf{J} = \partial\mathbf{r}/\partial\mathbf{R}\) a right Jacobian. The update moves in the tangent space and maps back to the group:
+@@ 70
+The step is applied on the right because right Jacobians produce a gradient in the local tangent space at \(\mathbf{R}_k\). By the chain rule, \(\mathbf{J}\) is the Jacobian of \(\Log\) times the Jacobian of composition with respect to the second factor, which is \(\mathbf{I}\); the Jacobian of \(\Log\) is \(\mathbf{J}_r^{-1}(\mathbf{r})\), close to \(\mathbf{I}\) when the residual is small.
+@@ 71
+<strong>The same example on SO(2)</strong>, where \(\Log\) of a rotation is its angle and every Jacobian is 1. Let the IMU say 10° and the camera 30° (degrees are fine here since everything is linear in the angle). Then \(f(\theta) = (\theta-10)^2 + (\theta-30)^2\) and \(\nabla f = 2(\theta-10) + 2(\theta-30)\). From \(\theta_0 = 0\) with \(\alpha = 0.1\):
+@@ 72
+θ (degrees)
+@@ 73
+Next θ = θ − 0.1·∇f
+@@ 74
+The distance to the answer, 20°, shrinks by the factor \(1 - 4\alpha = 0.6\) each step. On SO(3) the arithmetic is the same with 3-vectors and the Jacobians above.
+@@ 75
+The same tangent-space vectors carry uncertainty. With \(\boldsymbol{\tau} = \boldsymbol{\chi}\ominus\boldsymbol{\chi}_1\), the covariance of a random group element around \(\boldsymbol{\chi}_1\) is \(\boldsymbol{\Sigma}_{\boldsymbol{\chi}} \triangleq \E[\boldsymbol{\tau}\boldsymbol{\tau}\T]\), equation (4.26), and it lives in the tangent space at \(\boldsymbol{\chi}_1\). <span class="src">§4.3.1 · pp. 110–111</span> You met this in <a href="#d22">Week 4 · Day 4</a>; to first order, a function \(f\) with Jacobian \(\mathbf{J}\) maps it to \(\mathbf{J}\boldsymbol{\Sigma}_{\boldsymbol{\chi}}\mathbf{J}\T\).
+@@ 76
+<strong>"A Jacobian on SE(3) is a 4 × 4 matrix, or 12 × 12."</strong> It is 6 × 6. Its size is the dimension of the tangent spaces, not the size of the matrices that represent the group.
+@@ 77
+<strong>"Right and left Jacobians are interchangeable."</strong> They differ by adjoints. A gradient from right Jacobians must be applied with right-⊕, as in (4.30).
+@@ 78
+<strong>"J_R of a function and J_r of the group are the same thing."</strong> \(\mathbf{J}_R\) in (4.24) is the Jacobian of some function \(f\). \(\mathbf{J}_r(\boldsymbol{\tau})\) in (4.35) is the specific Jacobian of \(\Exp\).
+@@ 79
+<strong>"The derivative of χ⁻¹ is −I, as for −x."</strong> Only on a commutative group. In general it is \(-\Ad_{\boldsymbol{\chi}}\).
+@@ 80
+Q1. In Example 4.5 let R₂ be a rotation by 90° about the z-axis. The first joint R₁ is perturbed on the right by τ = (0.01, 0, 0). What perturbation does the end-effector R₁ ∘ R₂ see in its own frame?
+@@ 81
+The Jacobian is R₂ᵀ. R₂ has columns (0,1,0), (−1,0,0), (0,0,1), so R₂ᵀ·(0.01, 0, 0) = (0, −0.01, 0): the old x-axis is the new frame's negative y-axis.
+@@ 82
+Q2. What is the right Jacobian of f(χ) = χ ∘ χ₁ ∘ χ₂ with respect to χ?
+@@ 83
+Ad of χ₁⁻¹ only
+@@ 84
+Ad of (χ₁ ∘ χ₂)⁻¹
+@@ 85
+Treat χ₁ ∘ χ₂ as one fixed element and apply (4.33). By the chain rule this equals Ad of χ₂⁻¹ times Ad of χ₁⁻¹.
+@@ 86
+Q3. On SO(2), the IMU reads 0° and the camera 40°. Starting from θ = 10°, take one step of (4.30) with α = 0.25. Where do you land?
+@@ 87
+∇f = 2(10 − 0) + 2(10 − 40) = −40. θ ← 10 − 0.25·(−40) = 20°, the mean of the two measurements. With α = 1/4 the factor 1 − 4α is zero, so one step suffices.
+@@ 88
+Q4. Why is ∂(χ ∘ χ₁)/∂χ₁ the identity while ∂(χ ∘ χ₁)/∂χ is not?
+@@ 89
+Because χ₁ is constant
+@@ 90
+Because the second factor is always a rotation
+@@ 91
+A right perturbation of χ₁ is already at the right end of the product; a perturbation of χ must be moved past χ₁
+@@ 92
+Because the left Jacobian was used for χ₁
+@@ 93
+χ ∘ (χ₁ ∘ Exp(τ)) = (χ ∘ χ₁) ∘ Exp(τ): the output is perturbed by exactly τ. For the first factor, χ ∘ Exp(τ) ∘ χ₁ = (χ ∘ χ₁) ∘ Exp(Ad of χ₁⁻¹ times τ).
+@@ 94
+Q5. A planar pose is at (2, 0) with heading 90°. Apply the tangent vector (1, 0, 0), one unit forward and no rotation, with right-⊕. Where is the pose now?
+@@ 95
+Right-⊕ applies the increment in the robot's own frame, whose forward axis points along world y. (3, 0) is what left-⊕ would give.
+@@ 96
+⊕ and ⊖ replace + and − on a group; the right versions use the local frame, the left versions the global frame, equations (4.21)–(4.22).
+@@ 97
+The Jacobian (4.23) is the matrix with \(f(\boldsymbol{\chi}\oplus\boldsymbol{\tau}) \approx f(\boldsymbol{\chi})\oplus\mathbf{J}\boldsymbol{\tau}\). Its size is set by the tangent spaces.
+@@ 98
+Inversion: \(-\Ad_{\boldsymbol{\chi}}\). Composition: \(\Ad_{\boldsymbol{\chi}_1^{-1}}\) for the first factor, \(\mathbf{I}\) for the second. Rotation of a point: \(-\mathbf{R}\mathbf{v}^\wedge\) and \(\mathbf{R}\).
+@@ 99
+The chain rule (4.31) combines these blocks, which is how AutoDiff differentiates through poses.
+@@ 100
+A manifold gradient step moves in the tangent space and maps back with \(\Exp\), equation (4.30).
+@@ 101
+<em>SLAM Handbook</em>, §4.3 "Differentiation on Manifold", pp. 109–113; equations (4.19)–(4.39); Examples 4.4 and 4.5.
+@@ 102
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (the ⊕/⊖ definition of Jacobians, the completed Jacobians of inversion, composition, Exp, Log, and group action, and the relation between left and right Jacobians).
+@@ 103
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (adjoints and the Jacobians of SO(3) and SE(3)). The SE(2) arm and the SO(2) numbers are this app's own examples.

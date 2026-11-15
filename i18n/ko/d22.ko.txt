@@ -1,0 +1,148 @@
+@@ 1
+<span class="eyebrow">4주차 · Day 4</span>
+@@ 2
+Lie group 위의 불확실성과 banana distribution
+@@ 3
+오늘이 끝나면 회전이나 pose 위의 Gaussian을 group 위의 평균과 tangent space의 noise로 쓰고, 누적된 heading noise가 왜 바나나 모양의 구름을 만들며 그런 Gaussian이 왜 그 구름을 따라갈 수 있는지 설명할 수 있습니다.
+@@ 4
+약 60분 · §2.1.4, pp. 59–60 읽기 (1쪽) · 1주차 Day 2와 4주차 Day 2 필요
+@@ 5
+먼저 읽기: §2.1.4, pp. 59–60
+@@ 6
+절이 짧습니다. 읽으면서 찾아볼 것:
+@@ 7
+p. 60의 식 (2.21): 평균 <em>더하기</em> 평균이 0인 noise로 쓴 확률 벡터.
+@@ 8
+rotation matrix에 noise를 더하지 않는 이유로 책이 드는 것.
+@@ 9
+식 (2.22)와 (2.23): 무엇이 평균인지, noise \(\boldsymbol{\delta}\)는 어디에 있는지, 그리고 둘을 어떻게 합치는지.
+@@ 10
+이것이 <em>induced</em> 분포라는 마지막 언급, 그리고 6장에서는 다른 종류를 쓴다는 점.
+@@ 11
+Gaussian에는 평균과, 평균에 noise를 더하는 방법이 필요합니다. pose의 경우 평균은 group 원소 \(\bar{\mathbf{T}}\)이고, noise는 tangent space의 평범한 Gaussian 벡터 \(\boldsymbol{\delta}\)이며, "더한다"는 \(\bar{\mathbf{T}}\,\Exp(\boldsymbol{\delta})\)를 뜻합니다. Exp가 직선을 원호로 휘기 때문에, 이 분포족은 실제 로봇 움직임이 만드는 휘어진 구름을 나타낼 수 있습니다. \((x, y)\)의 Gaussian으로는 어떤 것도 그렇게 할 수 없습니다.
+@@ 12
+1. Gaussian은 평균 더하기 noise
+@@ 13
+책은 벡터의 Gaussian 확률 변수를 다음과 같이 씁니다 <span class="src">§2.1.4 · p. 60, eq. (2.21)</span>
+@@ 14
+이것은 <a href="#d2">1주차 · Day 2</a>의 Gaussian을 두 재료로 나눈 것입니다: 중심 \(\boldsymbol{\mu}\)와, covariance가 \(\boldsymbol{\Sigma}\)이고 평균이 0인 퍼짐 \(\boldsymbol{\delta}\)입니다. 이렇게 나누는 것이 중요한 이유는 회전에서 통하지 않는 부분이 바로 "+"이기 때문입니다. \(\mathbf{R}\)에 noise 행렬을 더하면 Day 1에서 평균을 냈을 때와 똑같이 \(\mathbf{R}\T\mathbf{R} = \mathbf{I}\)가 깨집니다.
+@@ 15
+2. +를 ⊕로 바꾸기
+@@ 16
+해결책은 어제의 perturbation입니다. noise는 평범한 Gaussian 벡터로 두고, exponential map을 거쳐 적용합니다: <span class="src">§2.1.4 · p. 60, eqs. (2.22)–(2.23)</span>
+@@ 17
+closure 덕분에 모든 샘플은 올바른 회전이나 pose입니다. 이제 평균과 covariance는 서로 다른 곳에 있습니다:
+@@ 18
+평균
+@@ 19
+noise \(\boldsymbol{\delta}\)
+@@ 20
+covariance \(\boldsymbol{\Sigma}\)
+@@ 21
+2 × 2 회전
+@@ 22
+각도 하나
+@@ 23
+1 × 1 (분산)
+@@ 24
+3 × 3 회전
+@@ 25
+=
+@@ 26
+=
+@@ 27
+샘플을 뽑으려면 다른 Gaussian 벡터처럼 \(\boldsymbol{\delta}\)를 뽑은 다음 \(\bar{\mathbf{T}}\,\Exp(\boldsymbol{\delta})\)를 만듭니다. 가장 간단한 경우는 heading입니다. \(\bar{\mathbf{R}}\)이 30° 회전이고 표준편차가 5°일 때, \(\delta = -10^\circ\)를 뽑으면 20° 회전이 됩니다. 평면 회전은 교환 가능하므로, \(\SO(2)\)에서 이것은 각도 위의 Gaussian일 뿐입니다.
+@@ 28
+\(\boldsymbol{\delta}\)는 오른쪽에 곱해지므로, 평균 pose에 붙은 frame에서 표현됩니다. 로봇 pose라면 \(\rho_1\)은 로봇이 world에서 어느 쪽을 보든 로봇 자신의 앞 방향을 따른 오차입니다.
+@@ 29
+빈틈 채우기: "surjective-only"의 뜻과, 그것이 중요해지는 때
+@@ 30
+책은 exponential을 "surjective-only mapping"이라고 부릅니다. <strong>Surjective</strong>(전사)는 모든 group 원소에 도달한다는 뜻입니다. "Only"는 일대일이 아니라는 뜻입니다: 각도 \(\delta\)와 \(\delta + 2\pi\)는 같은 회전을 줍니다 (Day 2). Gaussian의 꼬리는 무한히 뻗으므로, 확률의 일부가 \(|\delta| \gt \pi\)에 떨어져 더 작은 각도로도 도달하는 회전 위로 감겨 들어갑니다.
+@@ 31
+얼마나 될까요? 표준편차가 10°이면 감기는 지점 180°는 표준편차의 18배 떨어져 있어, 감기는 확률은 신경 쓸 필요가 없을 만큼 작습니다. 표준편차가 90°라면 문제가 되고, 이런 불확실성 표현은 좋은 모델이 아니게 됩니다. 이 표현은 <em>집중된</em> 불확실성을 위한 것이며, 추적 중인 로봇에서는 보통 그렇습니다.
+@@ 32
+3. 바나나
+@@ 33
+로봇이 길이 1인 step \(K\)번으로 곧장 앞으로 간다고 합시다. 각 step은 pose 증분이며, 그 tangent vector는 명령 \(\mathbf{u} = (1, 0, 0)\)에 작은 Gaussian noise(주로 heading)를 더한 것입니다: \(\mathbf{T}_{k+1} = \mathbf{T}_k\,\Exp(\mathbf{u} + \boldsymbol{\delta}_k)\). \(K\) step 뒤 로봇은 어디에 있을 수 있을까요? 500번 시뮬레이션해 봅니다.
+@@ 34
+눈여겨볼 점: 구름은 휘어 있습니다. (x, y)에서 가장 잘 맞춘 Gaussian인 분홍색 타원은 구름 앞쪽의 빈 땅을 덮고 뒤로 말린 양 끝을 놓치지만, 초록색 등고선은 구름을 따라 휩니다. 기본 설정(15 step, step마다 heading noise 6°)에서 (x, y)의 평균은 약 (14.4, −0.1)로 noise 없는 끝점 (15, 0)보다 0.6 뒤에 있고, tangent space 평균은 (15.0, −0.1)로 옮겨집니다. x좌표의 skewness는 약 −2.2인데, Gaussian의 skewness는 0입니다.
+@@ 35
+초록색 등고선은 책의 정의가 시사하는 대로 계산합니다. \(\bar{\mathbf{T}}\)를 noise 없는 끝 pose로 잡고, 모든 샘플을 tangent vector \(\boldsymbol{\xi}_j = \Log(\bar{\mathbf{T}}^{-1}\mathbf{T}_j)\)로 바꾸고, 그 벡터들에 평범한 평균과 covariance를 맞춘 다음, 그 fit의 2σ 타원을 \(\bar{\mathbf{T}}\,\Exp(\cdot)\)로 다시 옮깁니다. (fit은 3차원이고, 위젯은 가장 큰 두 주축 방향이 펼치는 타원을 그립니다.) tangent space의 타원이 땅 위에서는 바나나가 됩니다.
+@@ 36
+눈을 감고 스무 걸음을 걸으면, <em>얼마나 멀리</em> 걸었는지는 꽤 잘 알지만 <em>어느 방향으로</em> 걸었는지는 잘 몰라요. 내가 있을 수 있는 곳은 덩어리가 아니라, 출발점을 둘러싼 고리의 한 조각이에요. "약 스무 걸음, 방향은 불확실"이라는 설명은 그 고리에 잘 맞아요. 동쪽과 북쪽 좌표로 쓴 설명은 그렇지 않아요.
+@@ 37
+4. 왜 바나나가 생기고, 왜 tangent space가 그것을 펴는가
+@@ 38
+빈틈 채우기: 손으로 풀 수 있는 한 step 모델
+@@ 39
+시뮬레이션을 핵심만 남깁니다. 로봇은 먼저 불확실한 각도 \(\delta_\theta\sim\N(0,\sigma^2)\)만큼 돈 다음, 알려진 거리 \(L\)만큼 갑니다. 로봇이 끝나는 곳은
+@@ 40
+<strong>(x, y)에서.</strong> 옆 방향 좌표는 noise에 대해 선형이므로 표준편차 \(L\sigma\)인 Gaussian에 가깝습니다. 앞 방향 좌표는 noise에 대해 <em>2차</em>입니다: 로봇이 어느 쪽으로 돌든 \(L\)에 못 미치고, 넘어서는 일은 없습니다. 이 한쪽으로 치우친 부족분이 바나나의 말림입니다. 그 평균은 \(\E[x] \approx L(1-\tfrac12\sigma^2)\)입니다. \(L = 10\), \(\sigma = 0.3\) rad (17°)이면 평균은 \(x \approx 9.55\)로, 로봇이 거의 있지 않은, 휘어진 곳 안쪽의 점입니다. Gaussian은 가장 높은 밀도를 평균에 둡니다.
+@@ 41
+<strong>tangent space에서.</strong> 평균 pose \(\bar{\mathbf{T}}\)를 heading 0으로 \((L, 0)\)에 두고 tangent vector \(\boldsymbol{\delta} = \delta_\theta\,(0, L, 1)\)을 넣어 봅니다. \(\boldsymbol{\rho} = (0, L\delta_\theta)\), \(\theta = \delta_\theta\)이므로, Day 2의 행렬 \(\mathbf{V}\)로 다음을 얻습니다
+@@ 42
+\(\bar{\mathbf{T}}\)는 이것을 \((L, 0)\)만큼 옮기기만 하므로, \(\bar{\mathbf{T}}\,\Exp(\boldsymbol{\delta})\)는 heading \(\delta_\theta\)로 \((L\cos\delta_\theta,\ L\sin\delta_\theta)\)에 있습니다. 이것이 근사 없이 <em>정확히</em> 실제 끝 pose입니다. tangent vector는 고정된 방향 \((0, L, 1)\)에 Gaussian 수 \(\delta_\theta\)를 곱한 것이므로 정확히 Gaussian이며, covariance는
+@@ 43
+가능한 끝 pose들의 원호 전체는 tangent space의 직선 하나를 Exp로 옮긴 상입니다. 비대각 원소 \(L\)은 옆 방향 오차와 heading 오차가 함께 움직인다는 뜻입니다: 왼쪽에 도착한 로봇은 왼쪽을 바라보고 있기도 합니다.
+@@ 44
+위젯의 시뮬레이션은 noise가 매 step 들어오므로 이 모델보다 복잡하고, 그 tangent space 구름은 근사적으로만 Gaussian입니다. 그래도 그림은 그대로 유효합니다: 휘어짐은 group에서 오고, group을 존중하는 표현은 그것을 흡수합니다. 전체 논의는 책이 가리키는 Long et al.과 Barfoot and Furgale의 문헌에 있습니다. <span class="src">§2.1.4 · p. 60</span>
+@@ 45
+5. 이런 covariance가 나타나는 곳
+@@ 46
+<strong>factor의 noise model.</strong> 그 자체가 pose인 odometry나 loop closure 측정은 이런 종류의 covariance를 가지며, 그 residual은 어제의 식 (2.20)처럼 Lie algebra에서 만듭니다.
+@@ 47
+<strong>추정값의 불확실성.</strong> 어제의 Gauss-Newton은 \(\boldsymbol{\xi}\)를 구했습니다. 최종 information matrix \(\sum_i\mathbf{H}_i\T\boldsymbol{\Sigma}_i^{-1}\mathbf{H}_i\)의 역행렬이 그 \(\boldsymbol{\xi}\)의 근사 covariance입니다. 따라서 solver가 pose에 대해 보고하는 covariance는 (2.23)의 의미에서 추정값 주변의 tangent space covariance입니다.
+@@ 48
+<strong>왼쪽 또는 오른쪽.</strong> 책의 noise는 오른쪽에 곱해집니다. 왼쪽에 \(\Exp(\boldsymbol{\delta})\,\bar{\mathbf{T}}\)로 두어도 똑같이 올바르지만, 같은 구름에 대해 다른 \(\boldsymbol{\Sigma}\)를 줍니다. 내일의 adjoint가 한쪽을 다른 쪽으로 바꿉니다.
+@@ 49
+책은 단서를 달며 마무리합니다: (2.22)는 tangent space Gaussian을 Exp로 밀어서 회전 위의 분포를 <em>induce</em>합니다. group 위에서 분포를 직접 정의할 수도 있으며, 6장은 그쪽이 계산상 이점이 있어서 그렇게 합니다. <span class="src">§2.1.4 · p. 60</span>
+@@ 50
+<strong>"pose의 covariance는 행렬 원소들의 covariance다."</strong> tangent vector \(\boldsymbol{\delta}\)의 covariance입니다: 3D pose라면 16 × 16이 아니라 6 × 6입니다.
+@@ 51
+<strong>"Σ의 첫 블록은 world 좌표에서의 위치 불확실성이다."</strong> 오른쪽에 곱한 noise라면 평균 pose의 frame에서 표현되며, 회전 오차가 있으면 \(\boldsymbol{\rho}\)는 위치 오차가 아닙니다.
+@@ 52
+<strong>"평균 pose는 샘플 행렬들의 평균이다."</strong> 행렬을 평균하면 group을 벗어납니다 (Day 1). 평균은 그 주변에서 tangent vector들의 평균이 0이 되는 \(\bar{\mathbf{T}}\)입니다.
+@@ 53
+<strong>"tangent space의 Gaussian은 언제나 좋은 모델이다."</strong> 퍼짐이 반 바퀴보다 충분히 작을 때만 그렇습니다. heading이 아주 불확실하면 꼬리가 감겨 들어갑니다.
+@@ 54
+Q1. 3D pose 추정값 \(\bar{\mathbf{T}}\in\SE(3)\)에 식 (2.23)의 의미의 covariance가 함께 주어집니다. 그 크기는 무엇입니까?
+@@ 55
+covariance는 자유도마다 원소 하나씩인 \(\boldsymbol{\delta}\in\R^6\)에 속하므로 6 × 6입니다.
+@@ 56
+Q2. 한 step 모델: 로봇이 \(\sigma = 0.2\) rad인 \(\delta_\theta\sim\N(0,\sigma^2)\)만큼 돈 다음 \(L = 10\) m를 갑니다. x좌표의 평균은 대략 어디입니까?
+@@ 57
+\(\E[x]\approx L(1-\tfrac12\sigma^2) = 10\,(1 - 0.02) = 9.8\) m. 왼쪽이든 오른쪽이든 모든 회전은 앞으로 나아간 거리를 줄이므로, 평균은 noise 없는 끝점보다 뒤에 떨어집니다.
+@@ 58
+Q3. 같은 모델에서 \(L = 10\) m입니다. 로봇이 우연히 \(\delta_\theta = 0.1\) rad만큼 돌았습니다. \(\bar{\mathbf{T}}\)에서 그 끝 pose를 나타내는 tangent vector \(\boldsymbol{\delta} = (\rho_1,\rho_2,\theta)\)는 무엇입니까?
+@@ 59
+\(\boldsymbol{\delta} = \delta_\theta\,(0, L, 1) = (0, 1, 0.1)\). 선택지 (−0.05, 1, 0.1)은 대략 위치 차이 \((x - L,\ y)\)에 heading을 붙인 것이지만, tangent vector는 위치가 아니라 \(\boldsymbol{\rho}\)를 담습니다: 앞 방향 부족분은 Exp가 만들어 냅니다.
+@@ 60
+Q4. \((x, y)\)의 Gaussian이 시뮬레이션한 로봇들의 끝 위치에 잘 맞지 않는 이유는 무엇입니까?
+@@ 61
+step마다의 noise가 Gaussian이 아니기 때문
+@@ 62
+샘플 500개로는 covariance를 추정하기에 부족하기 때문
+@@ 63
+위치가 누적된 heading 오차에 비선형으로 의존해 구름이 휘기 때문
+@@ 64
+x와 y가 상관이 없기 때문
+@@ 65
+각 step의 noise는 Gaussian입니다. 그러나 위치는 heading 오차의 사인과 코사인이고, Gaussian의 비선형 함수는 Gaussian이 아닙니다. 평균 pose에서의 tangent 좌표에서는 관계가 거의 선형이므로 Gaussian 모양이 거의 유지됩니다.
+@@ 66
+Lie group 위의 Gaussian은 \(\boldsymbol{\delta}\sim\N(\mathbf{0},\boldsymbol{\Sigma})\)인 \(\mathbf{T} = \bar{\mathbf{T}}\,\Exp(\boldsymbol{\delta})\)입니다: 평균은 group 위에, covariance는 tangent space에 있습니다.
+@@ 67
+\(\boldsymbol{\Sigma}\)는 \(\SO(3)\)와 \(\SE(2)\)에서 3 × 3, \(\SE(3)\)에서 6 × 6입니다. 오른쪽에 곱한 noise라면 평균의 frame에서 표현됩니다.
+@@ 68
+heading 오차 때문에 앞 방향 좌표가 약 \(\tfrac12 L\delta_\theta^2\)만큼, 언제나 한쪽으로 모자랍니다. 이것이 위치 구름을 바나나 모양으로 휩니다.
+@@ 69
+한 step 모델에서 바나나는 정확히 tangent space의 직선 \(\delta_\theta(0, L, 1)\)을 따르는 Gaussian입니다.
+@@ 70
+Exp는 전사이지만 일대일이 아니므로, 이 모델은 집중된 불확실성을 가정합니다.
+@@ 71
+<em>SLAM Handbook</em>, §2.1.4 "Uncertainty and Lie Groups", pp. 59–60, 식 (2.21)–(2.23).
+@@ 72
+Long, Wolfe, Mashner, Chirikjian, <em>The Banana Distribution is Gaussian: A Localization Study with Exponential Coordinates</em>, 2012 (휘어진 위치 구름에 대해 책이 인용하는 문헌).
+@@ 73
+Barfoot and Furgale, <em>Associating Uncertainty with Three-Dimensional Poses for Use in Estimation Problems</em>, 2014 (책이 인용), 그리고 Barfoot, <em>State Estimation for Robotics</em>, 2017 (SO(3)와 SE(3) 위의 Gaussian).
+@@ 74
+한 step 모델은 Day 2의 SE(2) exponential로부터 이 코스에서 직접 유도한 것입니다.

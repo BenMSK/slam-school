@@ -1,0 +1,246 @@
+@@ 1
+<span class="eyebrow">20주차 · Day 3</span>
+@@ 2
+Field 저장하기: MLP, grid, point, 그리고 SLAM에 필요한 것
+@@ 3
+오늘이 끝나면 neural field의 MLP, grid, point 표현을 압축, 속도, scene completion, dynamic allocation, forgetting 측면에서 비교하고, 이 성질들이 SLAM에 왜 중요한지 말할 수 있습니다.
+@@ 4
+약 60분 · §14.2.2–14.2.4, pp. 403–408 읽기 (6쪽) · 20주차 Day 2 필요
+@@ 5
+먼저 읽기: §14.2.2–14.2.4, pp. 403–408
+@@ 6
+MLP 하나가 왜 느린지, 그리고 voxel feature grid가 MLP query를 무엇으로 대체하는지 (p. 403).
+@@ 7
+§14.2.3의 두 가지 표면 표현과, 거기서 mesh를 추출하는 방법 (pp. 404–405).
+@@ 8
+고전적인 dense SLAM에 비해 neural-field map이 갖는 세 가지 장점 (pp. 405–406), 그리고 iMAP과 NICE-SLAM이 각각 도입한 것 (p. 406).
+@@ 9
+p. 407의 Table 14.1, 그리고 그 행들을 설명하는 주변의 네 문단 (pp. 406–408).
+@@ 10
+Day 2의 rendering 식은 density와 색이 어떻게 저장되는지 상관하지 않습니다. 둘을 network 하나에 넣으면 map은 간결하고 구멍을 메우지만, 느리고, 커질 수 없고, 잊어버립니다. grid나 point에 넣으면 map은 빠르고 국소적이지만 더 큽니다. SLAM은 실행 중에 map을 갱신해야 하므로, 책은 neural-field SLAM 시스템이 무엇을 할 수 있는지를 다른 어떤 구성 요소보다 자료 구조가 결정한다고 결론짓습니다.
+@@ 11
+1. MLP 하나는 왜 느린가, 그리고 무엇이 그것을 대체했나
+@@ 12
+원래 NeRF는 모든 ray의 모든 샘플에 대해 MLP 하나에 색과 density를 묻습니다. 답 하나마다 network 전체가 실행되므로, forward와 backward 모두에서 모든 weight가 모든 query에 참여합니다. 그 결과 학습이 느립니다. 이후 방법들은 scene의 일부 또는 전부를 빠르게 접근할 수 있는 명시적인 자료 구조로 옮겼습니다. <span class="src">§14.2.2 · p. 403</span>
+@@ 13 attr
+한 점에서 query에 답하는 세 가지 방법. MLP 하나: 점이 network를 통과하며 모든 weight가 쓰입니다. grid: 점을 담은 cell의 꼭짓점에 있는 node만 읽습니다. point: query 근처에 저장된 point만 읽으며, 빈 공간에는 아무것도 저장하지 않습니다.
+@@ 14
+MLP 하나
+@@ 15
+모든 weight가
+@@ 16
+모든 query에 쓰임
+@@ 17
+Voxel 또는 hash grid
+@@ 18
+한 cell의 꼭짓점만
+@@ 19
+읽고 갱신함
+@@ 20
+Point 또는 surfel
+@@ 21
+근처 point만 읽고,
+@@ 22
+빈 공간에는 저장하지 않음
+@@ 23
+검은 점은 query 위치입니다. 셋의 차이는 query 하나, 그리고 gradient step 하나가 저장된 숫자를 몇 개나 건드리느냐입니다.
+@@ 24
+구조
+@@ 25
+Query에 답하는 방법
+@@ 26
+책의 보고
+@@ 27
+=
+@@ 28
+grid node에 있는 학습 가능한 값을 index lookup과 trilinear interpolation으로 읽음
+@@ 29
+학습 시간이 며칠에서 약 10분으로 줄어듦
+@@ 30
+=
+@@ 31
+여러 해상도의 grid feature를 hash table에 담고, 작은 MLP로 decode
+@@ 32
+최적화된 GPU 구현으로 몇 초 만에 학습
+@@ 33
+=
+@@ 34
+point cloud에 붙은 feature를 작은 MLP로 decode하고, volume rendering으로 rendering
+@@ 35
+point를 자유롭게 배치할 수 있어 빈 공간을 건너뜀: 원래 NeRF 대비 3배
+@@ 36
+<span class="src">§14.2.2 · pp. 403–404</span> Surfel(방향을 가진 작은 원판, <a href="#d46">8주차 · Day 4</a>)도 point와 같은 방식으로 radiance field를 실을 수 있습니다. sparse grid를 저장하는 방법으로서의 hash table은 <a href="#d45">8주차 · Day 3</a>의 아이디어입니다.
+@@ 37
+빈틈 채우기: trilinear interpolation, 그리고 그것이 갱신을 국소적으로 만드는 이유
+@@ 38
+grid는 node에서만 값을 저장합니다. 그 사이는 <strong>linear interpolation</strong>(선형 보간)이 채웁니다. 1D에서, node \(i\)에서 node \(i+1\)까지 \(s \in [0, 1]\)만큼 간 지점에서는
+@@ 39
+2D(bilinear)에서는 이것을 \(x\)를 따라 한 번, 그다음 \(y\)를 따라 한 번 합니다. 네 꼭짓점 값은 1D weight의 곱을 weight로 받습니다. \(f_{00} = 1\), \(f_{10} = 3\), \(f_{01} = 2\), \(f_{11} = 6\), \((s_x, s_y) = (0.25, 0.5)\)이면:
+@@ 40
+<strong>Trilinear</strong> interpolation은 3D 버전입니다: 꼭짓점 여덟 개가 각각 그런 인자 세 개의 곱으로 weight를 받습니다. 여기서 두 가지가 따라 나옵니다. weight는 음이 아니고 합이 1이므로, 결과는 꼭짓점 값들의 매끄러운 평균입니다. 그리고 node 값에 대한 \(f\)의 미분은 그 node의 weight이며, cell 밖의 모든 node에서는 0입니다. 그러므로 샘플 하나에 대한 loss는 map 전체가 아니라 숫자 여덟 개만 바꿉니다.
+@@ 41
+2. Neural field: radiance 이외의 출력
+@@ 42
+위치를 색과 density로 보내는 field는 출력의 한 가지 선택일 뿐입니다. 다른 것을 출력하는 field를 <strong>neural field</strong>라고 부릅니다. <span class="src">§14.2.3 · p. 404</span>
+@@ 43
+<strong>표면.</strong> RGB 이미지로부터 정확한 geometry를 얻기 위해, field는 signed distance function(NeuS, VolSDF)이나 occupancy field(UNISURF)가 될 수 있으며, 여전히 volume rendering으로 학습합니다. 그런 다음 marching cubes로 mesh를 추출합니다 (<a href="#d46">8주차 · Day 4</a>). <span class="src">§14.2.3 · pp. 404–405</span> 식 (14.2)를 쓰려면 이런 방법에는 signed distance나 occupancy를 opacity로 바꾸는 규칙이 필요합니다. 책은 그 규칙을 주지 않으므로, 인용된 논문을 참고하십시오.
+@@ 44
+<strong>Semantics.</strong> network에 semantic label을 위한 출력을 하나 더 주고, 여러 시점의 2D label 이미지로 학습시킵니다. 그 결과 3D에서 일관된 labelling을 얻습니다. 더 일반적으로 field는 사전 학습된 foundation network의 2D feature map을 융합할 수 있으며, 이로써 scene 분해와, 언어 prompt나 클릭을 통한 편집이 가능해집니다. <span class="src">§14.2.3 · pp. 405–406 · Fig. 14.9</span>
+@@ 45
+3. SLAM 시스템 속의 neural field
+@@ 46
+지금까지는 모두 pose를 아는 이미지와 offline 최적화를 가정했습니다. Visual SLAM은 카메라 pose와 scene을 real-time으로 함께 추정해야 합니다. 그래도 책은 neural field로 이를 시도할 세 가지 이유를 듭니다. <span class="src">§14.2.4 · pp. 405–406</span>
+@@ 47
+<strong>여러 fusion 단계 대신 하나의 최적화.</strong> Differentiable rendering은 2D 데이터를 3D로 end-to-end 융합합니다. TSDF pipeline(<a href="#d44">8주차 · Day 2</a>)은 일관성이 보장되지 않는, 손으로 설계한 단계들을 이어 붙입니다.
+@@ 48
+<strong>복잡한 빛.</strong> radiance field는 투명한 물체와 반사를 모델링할 수 있으며, 최소화하는 오차가 photometric일 때 도움이 됩니다.
+@@ 49
+<strong>Completion과 압축.</strong> 자료 구조에 따라, 표현에 내장된 prior가 관측되지 않은 영역을 채우고 map을 작게 유지합니다.
+@@ 50
+Map 표현
+@@ 51
+책의 설명
+@@ 52
+=
+@@ 53
+원래 NeRF처럼 MLP 하나
+@@ 54
+최초의 neural-field SLAM 시스템. RGB-D 비디오로부터 카메라 pose와 geometry를 real-time으로 함께 추정. MLP의 smoothness prior가 압축과 scene completion을 제공.
+@@ 55
+=
+@@ 56
+다중 해상도 voxel feature grid + 작은 MLP
+@@ 57
+SLAM 최초의 hybrid 표현. 이후 여러 시스템이 비슷한 grid를 사용.
+@@ 58
+=
+@@ 59
+=
+@@ 60
+DROID-SLAM의 depth로 복원 속도를 높임 (<a href="#d112">19주차 · Day 4</a>).
+@@ 61
+=
+@@ 62
+Point primitive
+@@ 63
+point를 재할당할 수 있어 loop closure를 더 쉽게 처리.
+@@ 64
+=
+@@ 65
+여러 개의 국소 neural-field submap
+@@ 66
+Submap은 grid 계열 field가 loop closure에 따른 pose 갱신에 대처하는 방법.
+@@ 67
+4. 다섯 가지 성질, 세 가지 자료 구조
+@@ 68
+Table 14.1은 세 계열을 다섯 가지 성질로 평가합니다. 모든 행에서 "제한적"은 약점을 뜻합니다. <span class="src">Table 14.1 · p. 407</span>
+@@ 69
+=
+@@ 70
+=
+@@ 71
+=
+@@ 72
+압축
+@@ 73
+좋음
+@@ 74
+보통
+@@ 75
+Inference 속도
+@@ 76
+제한적
+@@ 77
+=
+@@ 78
+=
+@@ 79
+Forgetting 문제
+@@ 80
+<strong>압축 대 속도.</strong> MLP는 field 전체를 weight에 담아 간결하지만 해석하기 어렵습니다. grid는 해석할 수 있고, 빨리 읽히며, 국소적으로 갱신할 수 있지만, 그 대가로 메모리가 듭니다. 이는 흔한 시간 대 공간의 trade-off이며, SLAM은 real-time으로 돌아야 하므로 보통 명시적인 구조가 이깁니다. <span class="src">pp. 406–407</span>
+@@ 81
+<strong>Scene completion.</strong> MLP는 연속 함수이므로, 관측하지 못한 작은 영역에서도 그럴듯한 값을 줍니다. multi-resolution grid도 마찬가지입니다. 이 smoothing이 미치는 범위는 positional encoding의 주파수나 grid의 cell 크기가 허락하는 만큼입니다. point는 이산적이어서 이런 전역 smoothing이 없습니다. <span class="src">p. 407 · Fig. 14.11</span>
+@@ 82
+<strong>Dynamic allocation.</strong> SLAM은 진행하면서 scene의 범위를 알아가고, loop가 닫히면 map의 일부를 옮겨야 합니다 (<a href="#d1">1주차 · Day 1</a>). MLP나 voxel grid는 경계가 고정되어 있고 encoding이나 해상도도 고정되어 있으므로, 이런 시스템은 여러 개의 국소 모델에 의존합니다. point는 자유롭게 추가하고 옮길 수 있습니다. <span class="src">pp. 407–408 · Fig. 14.12</span>
+@@ 83
+<strong>Forgetting.</strong> 전역 함수에서는 한 장소를 위한 parameter 갱신이 모든 곳의 출력을 바꿉니다. 시스템은 과거 관측을 학습 신호로 계속 다시 넣어 줘야 하며, 이를 위해 명시적인 keyframe 데이터베이스가 필요합니다. 전역 함수에 덜 의존하거나 아예 없애면 문제가 줄어듭니다. <span class="src">p. 408</span>
+@@ 84
+직접 해 보기: 위젯은 1D field를 세 가지 방식으로 맞춥니다. 전역 함수로 시작해 공백을 본 다음, "새 영역 탐색"을 누르십시오. "이전 keyframe replay"를 켜십시오. 그다음 grid와 point로 바꿔 보십시오.
+@@ 85
+눈여겨볼 점: 전역 함수는 공백을 본 적이 없는데도 거의 정확히 지나갑니다 (오차 0.002). 탐색 후에는 새 영역을 맞추지만 (0.031), 이전 영역의 오차가 0.000에서 0.197로 뜁니다. replay를 켜면 0.004에 머뭅니다. 해상도 24의 grid는 거의 잊지 않지만 (0.003에서 0.005로) 공백에 구멍을 남깁니다 (0.355). 해상도 8에서는 cell이 공백을 건널 만큼 넓습니다 (0.013). point는 결코 잊지 않고 공백을 비워 둡니다.
+@@ 86
+위젯의 두 학습 모델은 이렇습니다: "전역 함수"는 구간 전체에 걸친 sine과 cosine의 합입니다. 여기서 중요한 단 한 가지 측면, 즉 모든 parameter가 모든 곳의 출력에 영향을 준다는 점에서 MLP를 대신합니다. grid는 node 값 사이의 1D linear interpolation입니다. replay 없는 탐색은 새 샘플에 대한 least-squares 맞춤 가운데 parameter를 가장 적게 바꾸는 것을 적용하며, 이는 이전 parameter에서 출발해 새 샘플만으로 gradient descent를 할 때 향하는 곳입니다.
+@@ 87
+빈틈 채우기: 왜 전역 함수는 잊고 grid는 잊지 않는가
+@@ 88
+두 모델 모두 \(f(x) = \sum_k \theta_k\,\phi_k(x)\)로 씁니다: parameter \(\theta_k\) 곱하기 고정된 basis function \(\phi_k\). 새 위치 \(x_n\)에서 residual이 \(r = f(x_n) - y_n\)인 제곱 오차에 대해 크기 \(\eta\)의 gradient descent step을 한 번 밟으면, 각 parameter는 \(\Delta\theta_k = -2\eta\,r\,\phi_k(x_n)\)만큼 바뀝니다. 따라서 <em>이전</em> 위치 \(x_o\)에서의 예측은 다음만큼 움직입니다.
+@@ 89
+이 합은 두 위치가 parameter를 얼마나 공유하는지를 잽니다.
+@@ 90
+<strong>Grid.</strong> \(\phi_k(x)\)는 node \(k\)의 interpolation weight이며, \(x\)가 그 node에 인접한 cell 안에 있지 않으면 0입니다. cell 폭이 0.1이면 \(x_n = 0.83\)과 \(x_o = 0.31\)은 공통 node가 없으므로, 합은 0이고 이전 예측은 움직이지 않습니다.
+@@ 91
+<strong>전역 함수.</strong> basis function을 세 개만 씁니다: \(1\), \(\sin\pi x\), \(\cos\pi x\). 합은 \(1 + \sin(0.83\pi)\sin(0.31\pi) + \cos(0.83\pi)\cos(0.31\pi) = 1 + \cos(0.52\pi) = 0.937\)입니다. \(r = 0.5\), \(\eta = 0.1\)이면 이전 예측은 \(-2 \times 0.1 \times 0.5 \times 0.937 = -0.094\)만큼 이동합니다. 거기서는 아무것도 관측하지 않았는데도 말입니다.
+@@ 92
+이전 keyframe을 replay하면 이전 영역을 되돌려 놓는 gradient step이 추가됩니다. 이것이 책이 이런 map에 필요하다고 말하는 keyframe 데이터베이스입니다.
+@@ 93
+<strong>"grid는 촘촘할수록 항상 좋다."</strong> 촘촘한 grid는 더 많이 저장하고 덜 smoothing합니다: 거친 cell보다 작은 구멍은 메워지지만, 촘촘한 cell보다 큰 구멍은 메워지지 않습니다. multi-resolution grid는 둘 다 갖습니다.
+@@ 94
+<strong>"Hybrid grid에는 forgetting이 없다."</strong> Table 14.1은 이를 "보통"으로 평가합니다. hybrid도 여전히 작은 공유 MLP로 feature를 decode하며, 거친 cell은 이웃한 영역끼리 공유됩니다.
+@@ 95
+<strong>"간결하면 빠르다."</strong> MLP는 가장 간결하면서 query는 가장 느린데, 모든 weight가 모든 query에 참여하기 때문입니다.
+@@ 96
+Q1. 2D grid cell의 꼭짓점 값이 f₀₀ = 2, f₁₀ = 4, f₀₁ = 6, f₁₁ = 8입니다 (첫 번째 index가 x 방향). (sₓ, s_y) = (0.5, 0.25)에서 bilinear interpolation 값은 얼마입니까?
+@@ 97
+아래쪽에서 x 방향으로: 0.5 × 2 + 0.5 × 4 = 3. 위쪽에서 x 방향으로: 0.5 × 6 + 0.5 × 8 = 7. y 방향으로: 0.75 × 3 + 0.25 × 7 = 4.0.
+@@ 98
+Q2. loop closure 후 map의 일부를 옮겨야 합니다. 책은 이 작업에 어떤 표현을 가장 좋게 평가하며, 그 이유는 무엇입니까?
+@@ 99
+Point 또는 surfel: 이산 primitive는 자유롭게 재할당할 수 있으므로
+@@ 100
+MLP 하나: 연속이므로
+@@ 101
+Voxel grid: lookup이 빠르므로
+@@ 102
+Hash grid: 해상도가 여러 개이므로
+@@ 103
+MLP와 grid는 경계와 해상도가 고정되어 있어, pose 갱신을 여러 개의 국소 submap으로 처리합니다. point는 직접 옮기고, 추가하고, 제거할 수 있습니다.
+@@ 104
+Q3. MLP 기반 SLAM map에는 왜 keyframe 데이터베이스가 필요합니까?
+@@ 105
+MLP의 weight를 초기화하기 위해
+@@ 106
+MLP는 depth를 rendering할 수 없기 때문에
+@@ 107
+카메라 intrinsics를 저장하기 위해
+@@ 108
+새 시점만으로 학습하면 이전 영역의 출력이 바뀌므로, 과거 시점을 계속 replay해야 하기 때문에
+@@ 109
+모든 weight가 field 전체에 영향을 줍니다. 과거 관측이 최적화에 들어가지 않으면, 현재 시점을 위한 갱신이 전에 학습한 것을 덮어씁니다: 이것이 forgetting 문제입니다.
+@@ 110
+Q4. 위젯에서 grid는 해상도 8에서는 관측되지 않은 공백을 메우지만 해상도 24에서는 메우지 못합니다. 그 이유는 무엇입니까?
+@@ 111
+거친 grid의 parameter가 더 많습니다
+@@ 112
+interpolation은 한 cell 범위에서만 smoothing합니다: 공백 근처의 거친 node는 모두 관측된 샘플에 닿지만, 촘촘한 node 중 일부는 하나에도 닿지 않습니다
+@@ 113
+촘촘한 grid는 이전 영역을 잊습니다
+@@ 114
+거친 grid를 더 오래 학습했습니다
+@@ 115
+공백의 폭은 0.12입니다. 해상도 8에서 cell 폭은 0.125이므로, 공백 근처의 모든 node는 관측된 샘플도 담은 cell에 속합니다. 해상도 24에서 cell 폭은 약 0.04이고, 일부 node는 주변에 관측되지 않은 cell만 있어서 무엇도 그 값을 정하지 않습니다.
+@@ 116
+MLP 하나는 모든 query에 모든 weight를 씁니다. grid는 lookup과 trilinear interpolation으로, point는 근처 primitive를 읽어서 query에 답합니다.
+@@ 117
+Neural field는 radiance field를 일반화합니다: 출력은 signed distance, occupancy, semantic label, 또는 feature vector일 수 있습니다.
+@@ 118
+SLAM에서 neural field는 end-to-end fusion, 복잡한 빛 모델링, completion과 압축을 제공합니다. iMAP은 MLP 하나를, NICE-SLAM은 작은 MLP를 곁들인 grid를 썼습니다.
+@@ 119
+Table 14.1: MLP는 압축과 completion이 좋지만 느리고, 경직되어 있고, 잘 잊습니다. grid는 빠릅니다. point는 재할당이 가장 쉽습니다.
+@@ 120
+Forgetting은 공유된 parameter에서 옵니다. 해결책은 keyframe을 replay하거나 표현을 국소적으로 만드는 것입니다.
+@@ 121
+=
+@@ 122
+Press, Teukolsky, Vetterling, Flannery, <em>Numerical Recipes</em>, 3판, 2007 (bilinear와 trilinear interpolation).
+@@ 123
+forgetting 계산은 parameter에 대해 선형인 모델에서 gradient descent step을 한 번 밟은 것이며, <a href="#d10">2주차 · Day 4</a>와 같습니다.

@@ -1,0 +1,206 @@
+@@ 1
+<span class="eyebrow">7주차 · Day 3</span>
+@@ 2
+Implicit differentiation: optimality condition에서 얻는 gradient
+@@ 3
+오늘이 끝나면 back-end 해의 sensitivity를 optimality condition에서 유도하고, Hessian-vector product로 구성한 linear solve 한 번으로 upper-level gradient를 계산하고, unrolled differentiation과 implicit differentiation 가운데 알맞은 것을 고를 수 있습니다.
+@@ 4
+약 60분 · §4.2.3, pp. 107–108 읽기 (2쪽) · 7주차 Day 2 필요
+@@ 5
+먼저 읽기: §4.2.3, pp. 107–108
+@@ 6
+p. 107의 미적분 복습: 함수를 정의하는 방정식을 먼저 풀지 않고 미분하기.
+@@ 7
+p. 107의 식 (4.11)과 (4.12): \(\mathbf{x}^*\)에 관한 어떤 사실을 미분하는지.
+@@ 8
+p. 107의 Example 4.3: 4 MB 대 4 TB.
+@@ 9
+p. 108의 식 (4.15)와 Algorithm 2: Hessian은 벡터와 곱해진 형태로만 나타납니다.
+@@ 10
+해에서는 lower-level cost의 gradient가 모든 \(\mathbf{y}\)에 대해 0입니다. 이 방정식 하나를 미분하면 \(\partial\mathbf{x}^*/\partial\mathbf{y}\)를 <em>해에서만</em> 계산한 \(\mathcal{L}\)의 2차 도함수로 나타낼 수 있습니다. solver가 어떻게 거기에 도달했는지는 상관없고, 도중에 아무것도 저장할 필요가 없으며, upper-level gradient 전체가 Hessian으로 선형 시스템을 한 번 푸는 비용으로 끝납니다.
+@@ 11
+1. 공식 없는 미분
+@@ 12
+어떤 함수는 명시적인 공식이 아니라 방정식으로 정의됩니다. 책의 복습은 \(x + y + 5 = 0\)을 예로 듭니다. <span class="src">§4.2.3 · p. 107</span> 조금 덜 뻔한 예로, \(x(y)\)를 다음과 같이 정의합시다.
+@@ 13
+각 \(y\)에 대해 실수 \(x\)는 하나뿐이지만, 깔끔한 공식은 없습니다. \(x\)가 \(y\)에 의존한다는 점을 기억하면서 방정식 자체를 \(y\)에 대해 미분합니다:
+@@ 14
+\(y = 2\)에서 해는 \(x = 1\)이므로(확인: \(1 + 1 - 2 = 0\)) \(dx/dy = 1/4\)입니다. 필요했던 것은 곡선 위의 <em>점</em>(어떤 방법으로 찾든 상관없음)과 그 점에서 계산한 \(F\)의 도함수뿐입니다. 이것이 <strong>implicit differentiation</strong>(음함수 미분)입니다.
+@@ 15
+빈틈 채우기: implicit function theorem
+@@ 16
+"\(x\)가 \(y\)에 의존한다는 점을 기억하면서"라는 단계는 미분 가능한 함수 \(x(y)\)가 존재한다고 가정합니다. 언제 존재하는지 알려 주는 것이 <strong>implicit function theorem</strong>(음함수 정리)입니다. \(F:\R^n\times\R^m\to\R^n\)이 연속 미분 가능하고 \(F(\mathbf{x}_0,\mathbf{y}_0) = \mathbf{0}\)이라 합시다. \(n\times n\) 행렬 \(\partial F/\partial\mathbf{x}\)가 \((\mathbf{x}_0,\mathbf{y}_0)\)에서 가역이면, \(\mathbf{y}_0\) 근처에서 \(\mathbf{x}(\mathbf{y}_0)=\mathbf{x}_0\)이고 \(F(\mathbf{x}(\mathbf{y}),\mathbf{y}) = \mathbf{0}\)인 연속 미분 가능한 함수 \(\mathbf{x}(\mathbf{y})\)가 정확히 하나 존재하며,
+@@ 17
+이 공식은 \(F(\mathbf{x}(\mathbf{y}),\mathbf{y}) = \mathbf{0}\)을 chain rule로 미분한 \(\frac{\partial F}{\partial\mathbf{x}}\frac{\partial\mathbf{x}}{\partial\mathbf{y}} + \frac{\partial F}{\partial\mathbf{y}} = \mathbf{0}\)을 풀면 나옵니다. 이 정리는 국소적입니다. \((\mathbf{x}_0,\mathbf{y}_0)\)를 지나는 해의 가지만 설명하며, 그 이상은 말하지 않습니다.
+@@ 18
+2. optimality condition에 적용하기
+@@ 19
+\(\mathbf{x}^*(\mathbf{y})\)를 정의하는 방정식은 무엇입니까? lower-level 해는 \(\mathcal{L}\)의 stationary point이므로 (\(\mathcal{L}\)이 두 인자 모두에 대해 두 번 미분 가능하다고 가정하면) <span class="src">§4.2.3 · p. 107</span>
+@@ 20
+정리에서 \(F = \partial\mathcal{L}/\partial\mathbf{x}\)로 둡니다. 양변을 \(\mathbf{y}\)에 대해 미분하면
+@@ 21
+요약하면 \(\partial\mathbf{x}^*/\partial\mathbf{y} = -\mathbf{H}^{-1}\,\mathbf{H}_{xy}\)입니다. 여기서 \(\mathbf{H} = \partial^2\mathcal{L}/\partial\mathbf{x}\partial\mathbf{x}\)는 lower-level cost의 \(n\times n\) <strong>Hessian</strong>이고, \(\mathbf{H}_{xy} = \partial^2\mathcal{L}/\partial\mathbf{x}\partial\mathbf{y}\)는 \(n\times m\) 혼합 2차 도함수 행렬이며, 둘 다 해에서 계산합니다. 간접 gradient가 Hessian 역행렬을 대가로 \(\mathcal{L}\)의 직접 도함수들로 바뀌었습니다. <span class="src">§4.2.3 · p. 107</span>
+@@ 22
+<strong>Toy problem.</strong> <a href="#d38">Day 2</a>에서 \(\partial^2\mathcal{L}/\partial x^2 = 6x^2 - 2y + 1\), \(\partial^2\mathcal{L}/\partial x\,\partial y = -2x\)였습니다. \(y = 2\), \(x^* = (1+\sqrt3)/2 = 1.3660\)에서:
+@@ 23
+이것이 <a href="#d37">Day 1</a>에서 추가 solve 두 번으로 finite difference를 써서 얻은 0.333이며, Day 2의 unrolled sensitivity 0.2000, 0.3272, 0.3491이 수렴해 가던 값입니다. 추가 solve도, 저장한 iterate도 필요하지 않았습니다.
+@@ 24
+직접 해 보기: y를 곡선을 따라 움직인 다음, upper-level step 버튼을 여러 번 눌러 보세요.
+@@ 25
+눈여겨볼 점: y = 2에서 tangent의 기울기는 0.3333이고 dU/dy = −0.0447입니다. upper-level step마다 y가 오른쪽으로 움직여, 곡선이 ground truth 선과 만나고 U가 0이 되는 y ≈ 2.417 쪽으로 갑니다. 그다음 초기화를 누르고 Algorithm 2 step size를 0.30으로 두면 q의 iteration이 발산합니다. 0.30이 2/H = 0.244보다 크기 때문입니다(§4 참고).
+@@ 26
+lower-level cost를 \(\mathbf{y}\)가 바뀌면 바닥이 옮겨 가는 골짜기로 떠올려 보세요. \(\mathbf{H}_{xy}\)는 \(\mathbf{y}\)의 변화가 공을 옆으로 얼마나 세게 미는지를 나타냅니다(기울기 \(\partial\mathcal{L}/\partial\mathbf{x}\)의 변화입니다). \(\mathbf{H}\)는 골짜기의 강성입니다. 변위 = 미는 힘 나누기 강성. 단단하고 잘 구속된 SLAM 문제는 측정값이 바뀌어도 조금만 움직이고, 헐거운 문제는 많이 움직입니다.
+@@ 27
+정리의 조건이 중요합니다. \(\mathbf{H}\)가 가역이어야 합니다. strict minimum에서는 positive definite이므로 이 조건이 성립합니다. lower-level 문제에 측정값이 전혀 구속하지 않는 방향이 있으면 \(\mathbf{H}\)는 singular이고, minimizer가 유일하지 않으며, 그 방향을 고정하기 전까지 "해의 미분"은 의미가 없습니다.
+@@ 28
+3. 큰 행렬은 절대 만들지 않기
+@@ 29
+(4.12)를 gradient (4.3)에 대입합니다: <span class="src">§4.2.3 · p. 107</span>
+@@ 30
+세 인자의 곱은 두 가지로 묶을 수 있고, 어느 쪽을 고르느냐가 비용을 결정합니다.
+@@ 31 attr
+나란히 놓인 블록 세 개: 크기 1 × n인 얇은 행벡터 v 전치, 크기 n × n인 정사각 행렬 H 역행렬, 크기 n × m인 매우 넓은 혼합 2차 도함수 행렬. 앞의 두 블록 아래의 괄호는 H q = v를 먼저 풀어 길이 n인 벡터 하나를 얻으라고 말합니다. 넓은 블록 아래의 메모는 마지막 단계가 벡터-행렬 곱 한 번이라고 말합니다.
+@@ 32
+n × m, m은 수백만
+@@ 33
+먼저: H q = v 풀기 (벡터 하나)
+@@ 34
+다음: 곱 한 번 qᵀ × (n × m)
+@@ 35
+왼쪽부터 묶으면 linear solve 한 번이면 됩니다. 오른쪽부터, 곧 H⁻¹ 곱하기 넓은 행렬로 묶으면 solve가 m번 들고, 아무도 요청하지 않은 dense n × m 행렬 ∂x*/∂y가 만들어집니다.
+@@ 36
+그래서 \(\mathbf{v} = (\partial\mathcal{U}/\partial\mathbf{x}^*)\T\)일 때 \(\mathbf{H}\mathbf{q} = \mathbf{v}\)의 해를 \(\mathbf{q}\)로 정의합니다. (Hessian은 대칭이므로 \(\mathbf{H}\T = \mathbf{H}\)입니다.) Day 1의 reverse mode와 같은 요령입니다. 모든 parameter의 영향을 앞으로 밀어 보내는 대신, 출력 하나의 sensitivity를 뒤로 밀어 보냅니다. 벡터 \(\mathbf{q}\)를 <strong>adjoint</strong>, 이 절차를 <strong>adjoint method</strong>라 부릅니다.
+@@ 37
+\(\mathbf{H}\)를 저장해야 한다면 solve 한 번도 너무 많을 수 있습니다. Example 4.3에서 32-bit float로 된 parameter \(10^6\)개짜리 모델은 \(10^6\times 4\) bytes \(= 4\) MB를 차지하고, 그 Hessian은 \((10^6)^2\times 4\) bytes \(= 4\) TB를 차지합니다. <span class="src">Example 4.3 · p. 107</span> 해결책은 곱 \(\mathbf{H}\mathbf{q}\)만 요구하는 방법으로 \(\mathbf{H}\mathbf{q}=\mathbf{v}\)를 푸는 것입니다.
+@@ 38
+4. Hessian-vector product로 Hq = v 풀기
+@@ 39
+책은 선형 시스템을 최소화 문제로 바꾸고 <span class="src">§4.2.3 · p. 108</span>
+@@ 40
+gradient descent(Algorithm 2)나 conjugate gradient로 풉니다:
+@@ 41
+곱 \(\mathbf{H}\mathbf{q}\)는 \(\mathbf{H}\) 없이 "gradient-vector product의 gradient"로 계산합니다:
+@@ 42
+마지막으로 \(\nabla_{\mathbf{y}}\,\mathcal{U} = \partial\mathcal{U}/\partial\mathbf{y} - (\mathbf{H}_{yx}\,\mathbf{q})\T\)이고 \(\mathbf{H}_{yx} = \partial^2\mathcal{L}/\partial\mathbf{y}\,\partial\mathbf{x}^* = \mathbf{H}_{xy}\T\)입니다. 식 (4.17)이며, 같은 종류의 곱이 한 번 더 필요합니다.
+@@ 43
+빈틈 채우기: 책이 증명 없이 말하는 세 단계
+@@ 44
+<strong>Q를 최소화하면 왜 시스템이 풀리는가.</strong> (\(\mathbf{H}\)의 대칭성을 쓰면) \(\partial Q/\partial\mathbf{q} = \mathbf{H}\mathbf{q} - \mathbf{v}\)입니다. 최솟값에서는 gradient가 0이므로 \(\mathbf{H}\mathbf{q} = \mathbf{v}\)입니다. \(\mathbf{H}\)가 positive definite이면 \(Q\)는 최솟값이 정확히 하나인 그릇 모양입니다.
+@@ 45
+<strong>(4.15)가 왜 성립하는가.</strong> \(\mathbf{q}\)를 상수로 둡니다. 스칼라 \(s(\mathbf{x}) = \frac{\partial\mathcal{L}}{\partial\mathbf{x}}\cdot\mathbf{q} = \sum_j \frac{\partial\mathcal{L}}{\partial x_j}q_j\)의 \(i\)번째 편미분은 \(\sum_j \frac{\partial^2\mathcal{L}}{\partial x_i\partial x_j}q_j\)이고, 이것이 \(\mathbf{H}\mathbf{q}\)의 \(i\)번째 원소입니다. 실제로는 gradient를 위한 reverse pass 한 번, \(\mathbf{q}\)와의 내적, 그 계산을 거슬러 가는 reverse pass 한 번이면 됩니다. 비용은 gradient 한 번의 작은 배수이고, 메모리는 벡터 수준입니다.
+@@ 46
+<strong>(4.16)은 언제 수렴하는가.</strong> 정확한 해 \(\mathbf{q}^*\)를 빼면 오차는 \(\mathbf{q}_k - \mathbf{q}^* = (\mathbf{I} - \eta\mathbf{H})(\mathbf{q}_{k-1} - \mathbf{q}^*)\)를 따릅니다. eigenvalue가 \(\lambda\)인 \(\mathbf{H}\)의 eigenvector 방향으로 오차는 step마다 \(1 - \eta\lambda\)배가 되므로, 모든 eigenvalue에 대해 \(|1-\eta\lambda| \lt 1\)일 때, 곧 \(0 \lt \eta \lt 2/\lambda_{\max}\)일 때, 그리고 그때만 줄어듭니다. eigenvalue가 넓게 퍼져 있으면(ill-conditioned Hessian) 작은 eigenvalue 방향은 느리게 수렴합니다. conjugate gradient는 이런 경우를 훨씬 잘 처리합니다.
+@@ 47
+<strong>Toy 숫자.</strong> \(v = x^* - 1.5 = -0.1340\), \(H = 8.196\), \(\eta = 0.1\), \(q_0 = 0\):
+@@ 48
+오차는 step마다 \(|1 - 0.1\times 8.196| = 0.18\)배로 줄어듭니다. 그러면 \(\nabla_y\,\mathcal{U} = 0 - q\,H_{xy} = -(-0.01635)(-2.732) = -0.0447\)입니다.
+@@ 49
+더 깊이 (선택): SLAM back-end가 이미 가진 것
+@@ 50
+least-squares cost \(\mathcal{L} = \tfrac12\norm{\mathbf{r}}^2\)의 Hessian은 \(\mathbf{J}\T\mathbf{J}\)에 residual과 그 2차 도함수를 곱한 항을 더한 것입니다. Gauss-Newton은 둘째 항을 버립니다. 방금 수렴한 back-end는 \(\mathbf{J}\T\mathbf{J}\)와 보통 그 분해(factorization)를 들고 있으므로, 근사 adjoint solve \(\mathbf{J}\T\mathbf{J}\,\mathbf{q} = \mathbf{v}\)는 거의 공짜입니다. toy problem에서 \(\mathbf{J}\T\mathbf{J} = 4x^{*2}+1 = 8.464\)이고 정확한 값은 \(H = 8.196\)입니다. 기울기는 정확한 값 0.333 대신 \(2.732/8.464 = 0.323\)으로 나옵니다. 해에서 residual이 작을 때 이 근사가 좋습니다.
+@@ 51
+5. Unrolled인가 implicit인가?
+@@ 52
+=
+@@ 53
+Implicit (오늘)
+@@ 54
+무엇이 미분 가능해야 하는가?
+@@ 55
+solver의 모든 step
+@@ 56
+cost L만, 두 번. solver는 무엇이든 됨
+@@ 57
+solver가 수렴해야 하는가?
+@@ 58
+아니오: 만들어 낸 T에서의 x가 무엇이든 그에 대해 정확
+@@ 59
+예: 공식이 ∂L/∂x = 0을 가정
+@@ 60
+메모리
+@@ 61
+step 수 T (또는 M)에 따라 증가
+@@ 62
+T와 무관
+@@ 63
+추가 작업
+@@ 64
+step들을 거슬러 가는 backward sweep
+@@ 65
+H로 linear solve 한 번
+@@ 66
+실패하는 경우
+@@ 67
+T가 크거나 step이 미분 불가능할 때
+@@ 68
+H가 singular이거나 ill-conditioned일 때, 또는 solver가 일찍 멈췄을 때
+@@ 69
+p. 105의 Algorithm 1은 implicit 공식을 solver가 실제로 반환한 iterate인 \(\mathbf{x}_T\)에서 적용합니다. Day 2의 위젯은 \(T\)가 작을 때 이것이 어떤 결과를 내는지 보여 줍니다:
+@@ 70
+눈여겨볼 점: 보라색 곡선은 x_K에서 계산한 implicit 공식입니다(K = 0과 1에서의 값은 차트 아래로 한참 벗어나 있으며, 타일에 표시됩니다). K = 2에서 그 값은 −0.0662로, unrolled 값 −0.0607보다 기준값 −0.0447에서 더 멉니다. x₂가 stationary point가 아니어서 공식의 가정이 깨지기 때문입니다. inner solver가 수렴하면 둘은 일치합니다.
+@@ 71
+<strong>근사.</strong> 가장 싼 방법은 implicit 부분을 무시하고 직접 항만 남기는 것입니다: \(\hat\nabla_{\mathbf{y}}\,\mathcal{U} \approx \partial\mathcal{U}/\partial\mathbf{y}\,|_{\mathbf{x}_T}\). upper-level 문제에서 solver의 출력을 상수로 취급하는 셈입니다. 오차는 버린 항의 크기만큼입니다. <span class="src">§4.2.3 · p. 108</span>
+@@ 72
+책은 implicit 부분이 작은 2차 도함수들의 곱을 포함할 때 이 근사가 유용하다고 말합니다. \(\mathcal{U}\)가 \(\mathbf{y}\)에 직접 의존하지 않으면 쓸모가 없습니다. toy problem에서는 정확히 0을 돌려줍니다.
+@@ 73
+<strong>"Implicit differentiation에는 Hessian 역행렬이 필요하다."</strong> 필요한 것은 선형 시스템 \(\mathbf{H}\mathbf{q}=\mathbf{v}\) 하나의 해이고, 그것은 곱 \(\mathbf{H}\mathbf{q}\)만 있으면 구할 수 있습니다.
+@@ 74
+<strong>"정확한 방법이니 inner solver를 일찍 멈춰도 안전하다."</strong> 정확한 것은 stationary point에서입니다. 다른 곳에서 계산하면 특별히 무엇의 미분도 아닙니다.
+@@ 75
+<strong>"혼합 항의 부호 규약은 Hessian과 같다."</strong> (4.12)의 마이너스 부호에 주의해야 합니다. toy problem에서 \(H_{xy} = -2x\)는 음수이고 기울기 \(dx^*/dy\)는 양수입니다.
+@@ 76
+Q1. L(x, y) = ½(x − y)² + (3/2)x²라 합시다. (4.12)로 구한 dx*/dy는 무엇입니까?
+@@ 77
+∂L/∂x = (x − y) + 3x이므로 H = 4, ∂²L/∂x∂y = −1입니다. dx*/dy = −(1/4)(−1) = 1/4. 확인: minimizer는 x* = y/4입니다.
+@@ 78
+Q2. toy problem에서 y = 1일 때 해는 x* = 1입니다. 그곳에서 dx*/dy는 무엇입니까?
+@@ 79
+H = 6x² − 2y + 1 = 6 − 2 + 1 = 5이고 ∂²L/∂x∂y = −2x = −2이므로 dx*/dy = 2/5 = 0.4입니다.
+@@ 80
+Q3. H = 4인 스칼라 문제에서 Algorithm 2를 실행합니다. 어떤 step size에서 iteration이 발산합니까?
+@@ 81
+오차는 step마다 1 − ηH배가 됩니다: 0.6, 0, −0.6, −1.4. |−1.4|만 1보다 큽니다. 한계는 η = 2/H = 0.5입니다.
+@@ 82
+Q4. back-end 변수가 n = 600개, network 가중치가 m = 1,000,000개일 때, 왜 ∂x*/∂y = −H⁻¹·∂²L/∂x∂y를 먼저 계산하지 않고 Hq = v를 풉니까?
+@@ 83
+H가 가역이 아니기 때문
+@@ 84
+∂x*/∂y는 열이 m개이고 열마다 solve가 따로 필요하지만, q는 한 번이면 되기 때문
+@@ 85
+두 방법이 서로 다른 gradient를 주기 때문
+@@ 86
+v를 구할 수 없기 때문
+@@ 87
+두 묶음 방식은 같은 gradient를 줍니다. q를 구하는 데는 linear solve 한 번이 들고, ∂x*/∂y를 만드는 데는 parameter마다 한 번이 들며 600 × 1,000,000 dense 행렬을 저장해야 합니다.
+@@ 88
+Q5. lower-level 문제의 변수가 n = 100,000개입니다. 8-byte float로 dense Hessian을 저장하면 메모리가 얼마나 필요합니까?
+@@ 89
+=
+@@ 90
+=
+@@ 91
+=
+@@ 92
+=
+@@ 93
+(10⁵)² × 8 bytes = 8 × 10¹⁰ bytes = 80 GB. 벡터 자체는 0.8 MB입니다. Example 4.3을 다른 숫자로 바꾼 것입니다.
+@@ 94
+해는 모든 \(\mathbf{y}\)에 대해 \(\partial\mathcal{L}/\partial\mathbf{x} = \mathbf{0}\)을 만족합니다. 이것을 미분하면 \(\partial\mathbf{x}^*/\partial\mathbf{y} = -\mathbf{H}^{-1}\mathbf{H}_{xy}\), 곧 식 (4.12)가 나옵니다.
+@@ 95
+implicit function theorem이 이 단계를 정당화하며, \(\mathbf{H}\)가 가역이어야 합니다.
+@@ 96
+upper-level gradient에는 \(\mathbf{q} = \mathbf{H}^{-1}\mathbf{v}\)만 필요합니다. adjoint solve 한 번, 식 (4.13)입니다.
+@@ 97
+이 solve는 Hessian-vector product (4.15)를 쓰므로 \(\mathbf{H}\)를 만들지 않습니다. \(Q\)에 대한 gradient descent는 \(\eta \lt 2/\lambda_{\max}\)일 때 수렴합니다.
+@@ 98
+implicit differentiation은 solver step 수가 늘어도 메모리가 늘지 않지만 수렴을 가정합니다. unrolling은 그 반대입니다.
+@@ 99
+<em>SLAM Handbook</em>, §4.2.3 "Implicit Differentiation", pp. 107–108; Example 4.3; Algorithm 2; 식 (4.11)–(4.18). Algorithm 1, p. 105.
+@@ 100
+Rudin, <em>Principles of Mathematical Analysis</em>, 3rd ed., 1976 (implicit function theorem에 대하여).
+@@ 101
+Pearlmutter, <em>Fast exact multiplication by the Hessian</em>, 1994 (gradient-vector product를 미분해 구하는 Hessian-vector product).
+@@ 102
+Nocedal, Wright, <em>Numerical Optimization</em>, 2006 (이차 함수 최소화와 선형 시스템, gradient descent의 step size 조건, conjugate gradient, Hessian의 Gauss-Newton 근사).
+@@ 103
+Griewank, Walther, <em>Evaluating Derivatives</em>, 2nd ed., 2008 (adjoint method).

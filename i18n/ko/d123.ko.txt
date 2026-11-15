@@ -1,0 +1,192 @@
+@@ 1
+<span class="eyebrow">21주차 · Day 3</span>
+@@ 2
+Long-term 변화: localization 유지, map 정리, 변한 것 검출
+@@ 3
+오늘이 끝나면 장소가 변하는 동안 lifelong SLAM 시스템이 어떻게 계속 localization하는지 설명하고, free-space 증거로 map에서 ghost trail을 지우고, 두 volumetric map에서 무엇이 나타나고 무엇이 사라졌는지 판정할 수 있습니다.
+@@ 4
+약 60분 · §15.3 도입부, §15.3.1, 그리고 Figure 15.11까지의 §15.3.2, pp. 432–439 읽기 (7쪽) · 8주차 Day 1과 3주차 Day 3 필요
+@@ 5
+먼저 읽기: §15.3 도입부부터 §15.3.2.2까지, pp. 432–439
+@@ 6
+long-term dynamics가 short-term dynamics보다 어려운 세 가지 이유 (p. 432).
+@@ 7
+experience 기반 map이 새 데이터를 추가하는 때 (p. 433), 그리고 marginalization이 "굳혀 버리는(bakes in)" 것 (p. 435).
+@@ 8
+구석의 의자 (p. 435).
+@@ 9
+change detection이 occupancy map이나 TSDF map을 선호하는 이유 (p. 437), 그리고 반쯤 제거된 테이블 (p. 438).
+@@ 10
+시야 밖에서 일어난 변화는 추적할 수 없습니다. 로봇은 장소가 달라 보여도 계속 localization해야 하고, 있어서는 안 되는 것을 map에서 지워야 하며, 방문 사이에 무엇이 변했는지 알아내야 합니다. 셋 모두 "나는 거기를 보지 않았다"와 "보았는데 사라졌다"를 구별하는 데 달려 있고, volumetric map이 free space로 간직하는 것이 바로 그 정보입니다.
+@@ 11
+1. long-term 변화가 더 어려운 이유
+@@ 12
+책은 세 가지 이유를 듭니다. <span class="src">§15.3 · p. 432</span> 첫째, 변화가 갑작스럽고 임의로 클 수 있어서, data association을 더 이상 tracking으로 할 수 없고 global re-identification이 필요할 수 있습니다. 움직인 landmark 하나가 여러 위치에서 보이므로 perceptual aliasing도 심해집니다. 둘째, 무시할 만했던 효과들이 이제 중요해집니다. 추가되거나 옮겨지거나 제거된 물체, 구조적 변화(공사 현장), 그리고 날씨, 시간대, 계절에 따른 외형 변화입니다. 셋째, 시간과 이동 거리가 늘어나면 시점이 크게 바뀌고 센서가 열화되거나 교체됩니다.
+@@ 13
+2. 평생 localization 유지하기
+@@ 14
+변한 장소에서 localization하는 것은 place recognition과 가깝습니다. place recognition도 두 view가 변화에도 불구하고 같은 장소를 보여 주는지 묻기 때문입니다. 책은 세 묶음의 아이디어를 설명합니다. <span class="src">§15.3.1 · p. 433</span>
+@@ 15
+<strong>Parallel map과 summary map.</strong> 각 방문은 하나의 <strong>experience</strong>(또는 <strong>session</strong>)이며, 로봇이 그 안에서 tracking할 수 있을 만큼 짧습니다. 현재 experience가 저장된 것들에 대해 잘 localization되면 아무것도 추가하지 않습니다. localization이 약하거나 실패하면 새 데이터를 추가하므로, map은 장소의 외형이 달라지는 곳에서만 커집니다. experience는 사슬처럼 이을 수 있습니다. \(E_A\)가 \(E_C\)에 대해 localization할 수 없어도 둘 다 \(E_B\)에 대해서는 할 수 있다면, \(E_C \to E_B \to E_A\)로 여전히 서로 묶입니다. map은 때때로 offline으로 <strong>요약</strong>(summarization)됩니다. 모든 experience에 걸친 전체 bundle adjustment를 하고, 나중에 도움이 될 가능성이 가장 높은 feature만 남깁니다. <span class="src">§15.3.1.1 · p. 433</span>
+@@ 16
+<strong>Appearance-invariant 표현.</strong> 학습된 detector, descriptor, matcher는 하나의 feature가 여러 외형에 걸쳐 매칭되게 합니다. 이들은 많은 조건에서 학습하며 이미지 전체까지의 context를 사용합니다. semantics는 특수한 경우입니다. 의자는 의자로 남으므로 물체들의 배치로 로봇을 localization할 수 있고, 항공 view와 지상 view 사이에서도 가능합니다. 옮겨진 물체에 대한 매칭은 여전히 걸러 내야 합니다. <span class="src">§15.3.1.2 · p. 434</span>
+@@ 17
+<strong>메모리, 규모 확장, marginalization.</strong> 멈추지 않는 로봇은 데이터를 끝없이 모읍니다. <span class="src">§15.3.1.3 · pp. 434–435</span>
+@@ 18
+전략
+@@ 19
+=
+@@ 20
+각 map point에는 시간에 따라 감쇠하는 weight 또는 persistence 확률이 있고, 오래된 점은 pruning됨. Summarization은 점들에 순위를 매겨 상위 N개가 메모리 예산에 맞게 함.
+@@ 21
+정보가 버려짐
+@@ 22
+메모리 관리
+@@ 23
+map 데이터가 처리 중인 부분으로 들어오고 나감; RTAB-Map은 short-term, working, long-term memory를 사용함
+@@ 24
+추가 계산; 그래도 용량이 바닥날 수 있음
+@@ 25
+=
+@@ 26
+오래된 node들을 그 marginal distribution을 담은 node 하나로 대체함
+@@ 27
+marginalize된 부분은 더 이상 바꿀 수 없음
+@@ 28
+빈틈 채우기: "굳혀 버린다(baking in)"는 것의 의미, 숫자 두 개로
+@@ 29
+스칼라 pose 두 개를 생각합시다. 새 pose \(x_n\)은 자기 information 1을, 오래된 pose \(x_o\)는 3을 가지며, 둘 사이의 loop closure는 2를 가집니다. \((x_n, x_o)\) 순서로:
+@@ 30
+두 번째 식은 <a href="#d15">3주차 · Day 3</a>의 Schur complement로 \(x_o\)를 marginalize합니다. 이제 graph에는 information 2.2를 가진 node 하나가 있습니다. 자기 자신의 1에 loop closure를 거쳐 들어온 1.2를 더한 값입니다. 나중의 측정이 그 loop closure가 잘못된 매칭이었음을 보여 주면 올바른 값은 1이지만, 그 factor는 더 이상 끌 수 있는 별개의 것으로 존재하지 않습니다. marginalization은 정보를 보존하는 대신 inlier와 outlier 결정을 고칠 자유를 잃습니다. 언제 marginalize할지는 아직 열린 문제입니다. <span class="src">§15.3.1.3 · p. 435</span>
+@@ 31
+3. 증거의 부재, 그리고 map cleaning
+@@ 32
+반응한 detector는 무언가가 거기 있다는 증거입니다. 그 반대는 성립하지 않습니다. 로봇이 구석에서 의자를 보았고, 다음 방문에서는 보지 못합니다. <span class="src">§15.3.2 · p. 435</span>
+@@ 33
+일어난 일
+@@ 34
+이름
+@@ 35
+올바른 결론
+@@ 36
+로봇이 구석을 보지 않았음
+@@ 37
+<strong>증거의 부재</strong> (absence of evidence)
+@@ 38
+없음; 의자는 아직 거기 있을 수 있음
+@@ 39
+로봇이 보았고 구석이 비어 있었음
+@@ 40
+<strong>부재의 증거</strong> (evidence of absence, 즉 negative detection)
+@@ 41
+의자가 사라짐
+@@ 42
+로봇이 보았지만 detector가 의자를 놓침
+@@ 43
+detector 오류
+@@ 44
+"사라짐"은 틀린 결론
+@@ 45
+그래서 positive detection으로 만든 map에는 낡은 측정값이 쌓입니다. <strong>Map cleaning</strong>(map 정리)은 dynamic하거나 가짜인 측정값을 제거해 scene의 정적이고 지속되는 부분만 남기며, 대개 한 session에서 움직이는 물체의 흔적을 걸러 내는 데 씁니다. 주로 offline으로 두 단계에 걸쳐 합니다. 먼저 robust bundle adjustment로 전역적으로 일관된 pose를 얻으며, 이때 dynamic 점은 outlier로 무시합니다. 다음으로 pose를 고정한 채 모든 측정값의 일관성을 다시 검사합니다. Volumetric 방법은 모든 것을 ray-casting으로 occupancy grid나 TSDF grid에 fusion하고 각 cell을 검사하는데, 메모리와 시간이 듭니다. Visibility 기반 방법은 근처 측정값의 부분집합을 비교하며, 흔히 센서 데이터 위에서 직접 비교합니다. <span class="src">§15.3.2.1 · p. 436</span>
+@@ 46
+빈틈 채우기: ray-casting이 trail을 지우는 방식
+@@ 47
+<a href="#d43">8주차 · Day 1</a>의 log-odds 갱신을 떠올려 보세요. beam이 끝나는 cell은 \(l_{\text{hit}}\)를 얻고, beam이 지나간 모든 cell은 \(l_{\text{miss}}\)를 잃습니다. 뒤쪽 절반이 부재의 증거입니다. 먼 벽에 닿은 beam은 그 경로 위의 모든 cell이 <em>지금</em> 비어 있음을 증명합니다. 전에 거기 무엇이 기록되어 있었든 상관없습니다.
+@@ 48
+위젯의 숫자를 씁시다: \(l_{\text{hit}} = 0.85\), \(l_{\text{miss}} = 0.40\), log-odds는 \(-2\)와 \(+3.5\) 사이로 유지되며, log-odds가 0보다 크면 cell은 점유 상태입니다.
+@@ 49
+오랫동안 비어 있는 것으로 보인 cell은 \(-2\)에 있습니다. 물체가 도착합니다: \(-2 \to -1.15 \to -0.30 \to +0.55\). 점유가 되려면 <strong>hit 3번</strong>이 필요합니다.
+@@ 50
+물체가 떠납니다: \(+0.55 \to +0.15 \to -0.25\). <strong>miss 2번</strong> 뒤에 다시 비게 됩니다.
+@@ 51
+물체가 cell이 \(+3.5\)에서 포화될 때까지 머물렀다면, 지우는 데 \(\lceil 3.5 / 0.40 \rceil = 9\)번의 miss가 필요합니다.
+@@ 52
+따라서 scan당 한 cell씩 움직이는 물체는 약 한 cell 길이의 꼬리를 남기고, 세 scan보다 짧게 cell을 덮는 방문자는 map에 아예 들어가지 않습니다. 모든 hit 점을 저장하는 map에는 두 메커니즘이 모두 없어서, 그 trail은 영구적입니다.
+@@ 53
+직접 해 보기: 재생을 누르세요. 그다음 "Miss 갱신"을 0으로 두고, 그 뒤에 물체를 느리게 해 보세요.
+@@ 54
+눈여겨볼 점: 30 scan 뒤 point map에는 물체 경로를 따라 ghost cell 30개가 있고, occupancy grid에는 1개, 즉 상자가 한 scan 전에 떠난 cell만 있습니다. 둘 다 같은 86개의 벽과 기둥 cell을 담고 있으므로, 지우는 데 드는 비용은 없었습니다. miss 갱신을 0으로 두면 grid는 ghost 30개를 모두 유지합니다. free-space 증거가 없으면 grid가 곧 point map입니다. scan당 0.2 cell에서는 상자가 자기 cell을 포화시키고 짧은 분홍색 꼬리를 끌고 다니는데, 그 일부는 아직 어떤 beam도 지나갈 수 없는 상자 자신의 그림자 안에 있습니다. 기둥 뒤의 쐐기 모양 영역은 "관측된 적 없음"으로 남습니다. grid는 그곳이 비어 있다고 주장하지 않습니다.
+@@ 55
+4. Session 간 change detection
+@@ 56
+<strong>Change detection</strong>(변화 검출)은 negative observation과 그 밖의 차이를 확립합니다. mapping 로봇은 이를 submap이나 session 사이에서 3D로 할 수 있습니다. 전형적으로 로봇은 아침에 방을 scan하고 저녁에 다시 scan하며, 각 session은 내부적으로 일관된 map을 주고, 목표는 그 사이에 무엇이 변했는지 알아내는 것입니다. 유용한 단위는 물체, 즉 일관되게 변하는 scene의 조각입니다. 물체는 추가되거나, 제거되거나, 옮겨집니다. <span class="src">§15.3.2.2 · p. 437</span>
+@@ 57
+Occupancy map과 TSDF map이 가장 유용한 것으로 입증되었습니다. 표면만 있는 모델과 달리 <em>관측되지 않은</em> 공간과 <em>비어 있다고 관측된</em> 공간을 구별하기 때문입니다. 둘을 비교하는 것을 <strong>scene differencing</strong>이라고 합니다. <span class="src">§15.3.2.2 · pp. 437–438</span>
+@@ 58
+아침
+@@ 59
+저녁
+@@ 60
+판정
+@@ 61
+비어 있다고 관측됨
+@@ 62
+표면
+@@ 63
+무언가 나타남
+@@ 64
+무언가 사라짐
+@@ 65
+변화 없음; 정확도를 위해 둘을 fusion함
+@@ 66
+표면 또는 비어 있음
+@@ 67
+관측 안 됨
+@@ 68
+판정 없음 (증거의 부재); 아침 데이터를 유지
+@@ 69
+판정 없음; 저녁 데이터가 map을 완성함
+@@ 70
+먼저 session들을 하나의 frame으로 registration해야 합니다. session마다 자기 drift가 있으므로 rigid 정렬 하나로는 부족한 경우가 많습니다. 가장 좋은 결과는 session 간 constraint와 bundle adjustment로 정렬을 함께 최적화할 때 나옵니다. <span class="src">§15.3.2.2 · p. 438</span>
+@@ 71
+<strong>Semantics</strong>를 더하는 이유는 세 가지입니다. label은 외형에 따라 바뀌지 않습니다 (외형 문제는 detection network에 넘겨집니다). label은 geometry에 없는 것을 담습니다. 테이블에서 치운 종이 한 장은 어떤 표면도 바꾸지 않습니다. 그리고 물체, 즉 한 단위로 움직이는 것들은 머그컵이나 의자 같은 detector class와 대체로 일치합니다. <span class="src">§15.3.2.2 · p. 438</span>
+@@ 72
+<strong>Semantic consistency</strong>(의미적 일관성)는 scene은 일관된 단위로 변하지만 로봇은 부분만 본다는 문제입니다. 테이블 하나가 치워졌고, 두 번째 방문에서 그 자리의 절반이 가려져 있습니다. cell 단위로 differencing하면 관측된 절반만 제거되어 map에 테이블 절반이 떠 있게 됩니다. 선택지는 이렇습니다. 매번 map을 처음부터 다시 만들기: 일관되지만 더 완전한 모델을 쌓아 가지 못합니다. 물체나 semantic class 단위로 변화를 검출하기: 보통 이것을 택합니다. 또는 이후의 관측이 남은 조각을 제거할 때까지 기다리기. <span class="src">§15.3.2.2 · p. 438, Figure 15.11</span>
+@@ 73
+<strong>"보이지 않으니 사라졌다."</strong> 보았을 때만 그렇습니다. 시야 밖에 있거나 가려진 cell이나 물체는 어느 쪽으로도 증거를 만들지 않았습니다.
+@@ 74
+<strong>"point cloud map은 scan을 더 넣으면 정리된다."</strong> scan을 더 넣으면 점이 더 늘어날 뿐입니다. 제거에는 free-space 추론이 필요합니다. 저장된 점을 관통하는 ray가 그 점과 모순됩니다.
+@@ 75
+Q1. occupancy cell의 log-odds가 +2.55입니다. 그 cell을 지나가는 beam마다 0.40을 뺍니다. 몇 번 지나간 뒤에 cell이 더 이상 점유 상태가 아니게 됩니까 (log-odds가 0 이하)?
+@@ 76
+2.55 / 0.40 = 6.4: 여섯 번 지나가면 +0.15가 남고, 일곱 번째에 −0.25가 됩니다.
+@@ 77
+Q2. 영역 1은 아침에 비어 있다고 관측되었고 저녁에는 표면을 담고 있습니다. 영역 2는 아침에 표면이 있었고 저녁에는 관측되지 않았습니다. scene differencing은 무엇이라고 결론 내립니까?
+@@ 78
+영역 1: 무언가 나타남. 영역 2: 변화를 주장할 수 없음; 표면을 유지.
+@@ 79
+두 영역 모두 변함
+@@ 80
+영역 1: 센서 noise. 영역 2: 표면이 사라짐.
+@@ 81
+어느 쪽에 대해서도 결론을 낼 수 없음
+@@ 82
+비어 있음 다음 표면은 새 표면입니다. 표면 다음 관측 안 됨은 증거의 부재이므로 예전 표면을 유지합니다.
+@@ 83
+Q3. experience 기반 map에 복도의 experience 다섯 개가 저장되어 있습니다. 오늘 로봇은 그것들에 대해 잘 localization됩니다. map에 무엇이 추가됩니까?
+@@ 84
+여섯 번째 experience, 항상
+@@ 85
+옮겨진 물체 위의 feature만
+@@ 86
+여섯 개 모두의 요약
+@@ 87
+없음: map은 이미 충분히 표현력이 있음
+@@ 88
+새 데이터는 localization이 약하거나 실패할 때만 추가되므로, map은 방문 횟수가 아니라 장소의 변화에 따라 커집니다.
+@@ 89
+Q4. information 4를 가진 node가 information 3인 factor로 오래된 node(자기 information 6)와 연결되어 있습니다. 오래된 node를 marginalize합니다. 남은 node의 information은 얼마입니까?
+@@ 90
+행렬은 [[4+3, −3], [−3, 6+3]]이고, Schur complement는 7 − 9/9 = 6입니다. node 자신의 4에 factor를 거쳐 온 2를 더한 값입니다.
+@@ 91
+long-term 변화는 갑작스럽고 크므로, short-term 움직임이라면 tracking으로 충분할 곳에서 re-identification이 필요합니다.
+@@ 92
+Lifelong localization은 한 장소의 experience를 여러 개 저장하거나 appearance-invariant feature를 쓰며, forgetting, 메모리 관리, 또는 이전 결정을 고정해 버리는 marginalization으로 메모리를 제한합니다.
+@@ 93
+무언가를 보지 못한 것은 로봇이 보았을 때만 부재의 증거입니다. free-space ray-casting이 바로 그것을 기록하며, 움직이는 물체의 trail을 지웁니다.
+@@ 94
+Change detection은 registration된 volumetric map들을 비교합니다. 비어 있다가 표면이면 나타난 것이고, 표면이다가 비어 있으면 사라진 것입니다. 물체 단위로 추론하면 결과가 semantic하게 일관됩니다.
+@@ 95
+<em>SLAM Handbook</em>, §15.3 도입부, §15.3.1 "Lifelong SLAM for Localization", §15.3.2.1–15.3.2.2, pp. 432–439, Figures 15.10–15.11.
+@@ 96
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (beam을 따른 log-odds occupancy 갱신, ray-casting 설명과 위젯에서 사용).

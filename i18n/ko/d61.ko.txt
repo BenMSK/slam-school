@@ -1,0 +1,218 @@
+@@ 1
+<span class="eyebrow">11주차 · Day 1</span>
+@@ 2
+Part II의 시작: 센서, front-end 모듈, 그리고 SLAM의 평가 방법
+@@ 3
+오늘이 끝나면 모든 SLAM front-end가 갖춘 모듈을 말하고, 각 센서가 graph에 어떤 종류의 factor를 더하는지 설명하고, 표준 trajectory 오차 지표 두 가지를 계산할 수 있습니다.
+@@ 4
+약 60분 · Prelude II, pp. 185–192 읽기 (8쪽) · 1주차 Day 1, 2주차 Day 1 필요
+@@ 5
+먼저 읽기: Prelude to Part II, pp. 185–192
+@@ 6
+"대부분의 SLAM front-end가 의존하는" 두 모듈과, 세 번째의 선택적인 측정값 종류 (p. 185, 이어서 pp. 186–187의 §II.1.1–II.1.3).
+@@ 7
+loop closure 안에 있는 두 하위 문제 (p. 186)와 place recognition 방법에 필요한 두 성질 (p. 187).
+@@ 8
+p. 188의 Figure II.1: unary factor 하나와, 시간상 멀리 떨어진 node를 잇는 factor 하나를 찾아보십시오.
+@@ 9
+calibration의 두 종류 (p. 190)와 평가 대상 세 가지 (pp. 191–192).
+@@ 10
+Part I에서는 back-end, 즉 factor graph와 이를 최적화하는 방법을 만들었습니다. Part II는 front-end, 즉 각 센서가 원시 데이터를 factor로 바꾸는 과정을 다룹니다. 센서가 무엇이든 factor는 세 종류입니다. 연속된 state 사이의 <strong>odometry</strong>(주행 거리 측정), 멀리 떨어진 state 사이의 <strong>loop closures</strong>, 단일 state에 걸리는 <strong>unary factors</strong>입니다.
+@@ 11
+1. Part II의 위치
+@@ 12
+지난 10주 동안 측정값은 주어진 것이었습니다. 상대 pose나 landmark 관측이 covariance와 함께 그냥 나타났고, 문제는 이를 어떻게 처리하느냐였습니다. Part II는 그 측정값이 어디에서 오는지 묻습니다. front-end는 센서마다 다른 작업을 맡습니다. 전처리, time synchronization, noise 필터링, measurement 모델링입니다. <span class="src">Prelude II · p. 185</span>
+@@ 13
+장은 센서별로 나뉘어 있고, 모두 같은 흐름을 따릅니다. odometry, place recognition, 그리고 전체 시스템 순서입니다. 책은 visual SLAM부터 시작하기를 권합니다. 다른 장들이 다시 쓰는 용어를 이 장이 정의하기 때문입니다. <span class="src">§II.4 · p. 192</span>
+@@ 14
+카메라 (visual SLAM)
+@@ 15
+11–12주차
+@@ 16
+13주차
+@@ 17
+14주차
+@@ 18
+Event camera
+@@ 19
+15주차
+@@ 20
+관성 측정 장치 (IMU)
+@@ 21
+16–17주차
+@@ 22
+Leg odometry (로봇 kinematics)
+@@ 23
+18주차
+@@ 24
+2. 세 종류의 factor
+@@ 25
+<a href="#d7">2주차 · Day 1</a>에서 보았듯이 factor graph에는 variable node(미지의 state)와 factor(그 state를 제약하는 측정값)가 있습니다. 두 variable에 닿는 factor는 <strong>binary</strong>(이항), 하나에 닿는 factor는 <strong>unary</strong>(단항)입니다.
+@@ 26 attr
+p1부터 p5까지 다섯 state node가 한 줄로 놓인 factor graph. 연속된 두 node마다 odometry factor가 잇습니다. loop-closure factor가 p1에서 p5로 호를 그립니다. p1 아래에 prior가, p3 아래에 GPS unary factor가 달려 있고, 아래쪽의 landmark node 하나가 관측 factor로 p4, p5와 연결됩니다.
+@@ 27
+loop closure (binary, 시간상 멀리)
+@@ 28
+=
+@@ 29
+=
+@@ 30
+=
+@@ 31
+Part II의 모든 센서는 이 세 모양 가운데 하나의 factor를 보탭니다. factor마다 만든 센서가 표시된 Figure II.1 (p. 188)과 비교해 보십시오.
+@@ 32
+<strong>Odometry</strong>는 연속된 두 node 사이의 상대 변환을 추정합니다. 보통 자유도가 여섯인 상대 pose입니다(6-DOF: 회전 셋, 이동 셋). 이를 얻는 방법은 세 가지입니다. <span class="src">§II.1.1 · p. 186</span>
+@@ 33
+<strong>Matching으로</strong>: 연속된 두 센서 frame을 픽셀 대 픽셀, 점 대 점, feature 대 feature로 맞춥니다. 대부분의 visual 시스템과 LiDAR 시스템이 이렇게 합니다.
+@@ 34
+<strong>속도를 적분해서.</strong> radar는 radial velocity를 측정하고, 여기서 센서 자신의 속도가 나옵니다. legged robot은 joint encoder, contact 센서, 자신의 kinematics로 움직임을 얻습니다.
+@@ 35
+관성 측정값의 <strong>preintegration으로</strong>: 두 node 사이의 많은 IMU 샘플을 factor 하나로 요약합니다 (16주차).
+@@ 36
+모듈 이름은 주 센서를 따릅니다. visual odometry, LiDAR odometry, visual-inertial odometry, leg odometry가 그 예입니다.
+@@ 37
+<strong>Loop closure</strong>는 두 문제를 차례로 풉니다. <span class="src">§II.1.2 · pp. 186–187</span>
+@@ 38
+<strong>Detection</strong>(검출). <strong>place recognition</strong>이라고도 합니다. 현재 측정값이 <strong>query</strong>이고, 이전 장소들은 원시 데이터 그대로, 또는 간결한 <strong>descriptors</strong>(장소를 요약하는 짧은 벡터)로 <strong>database</strong>에 저장됩니다. 할 일은 검색(retrieval)입니다. 저장된 장소 가운데 query와 가장 비슷한 것을 찾습니다.
+@@ 39
+<strong>Relative pose 추정.</strong> 후보 match는 "이 두 장소는 똑같아 보인다"는 것만 알려 줍니다. back-end에는 수치가 필요하므로, 두 측정값을 정밀하게 registration해서 상대 변환을 구합니다. 이것이 query node와 매칭된 node 사이의 binary factor입니다.
+@@ 40
+Detection에는 두 성질이 필요합니다. <strong>Discernibility</strong>(구별력): 비슷해 보이지만 서로 다른 장소를 구별해야 합니다. 이를 혼동하는 것을 <strong>perceptual aliasing</strong>이라 하며, 잘못된 loop closure를 만듭니다. <strong>Scalability</strong>(확장성): 로봇이 달리는 동안 database가 계속 커지므로, 검색이 계속 빨라야 합니다. <span class="src">§II.1.2 · p. 187</span>
+@@ 41
+<strong>Unary factor와 prior</strong>는 node 하나를 제약합니다. 지상의 GPS, 수중의 수심 센서, radar의 순간 속도가 그 예입니다. prior는 첫 node를 원점에 고정하거나, 특정 node에서 로봇이 정지해 있었다고 명시할 수 있습니다. <span class="src">§II.1.3 · p. 187</span>
+@@ 42
+Odometry는 "조금 전부터 이만큼 움직였어"라고 말해요. loop closure는 "여기 전에 와 봤어. 그때 서 있던 곳에서 지금 이만큼 떨어져 있어"라고 말하고요. unary factor는 "바깥의 무언가가 지금 내가 어디 있는지 알려 줘"라고 말해요. back-end는 어느 센서가 말했는지 신경 쓰지 않아요.
+@@ 43
+3. 센서 고르기와 조합하기
+@@ 44
+Part II의 exteroceptive 센서(바깥 세계를 관측하는 센서) 네 가지는 다음과 같이 장단점이 갈립니다. <span class="src">§II.2.1 · pp. 188–189</span>
+@@ 45
+장점
+@@ 46
+한계
+@@ 47
+RGB 카메라
+@@ 48
+저렴하고 작음; 외관과 semantic 정보를 담음
+@@ 49
+빛이 필요함; 눈부심, 반사, motion blur, 그림자, 안개, 연기에 약함; depth를 직접 측정하지 못함
+@@ 50
+거리를 직접 측정; 정확한 2D/3D 기하; 어둠에서도 작동
+@@ 51
+비용, 크기, 전력, 메모리; 큰 point cloud; 폭우, 안개, 눈에서 성능 저하
+@@ 52
+극한 환경에서 강건함; Doppler로 속도를 얻음
+@@ 53
+noise가 많고 매우 sparse함; LiDAR보다 낮은 정확도; 무거운 신호 처리
+@@ 54
+마이크로초 단위 시간 분해능, motion blur 없음, 높은 dynamic range, 저전력
+@@ 55
+noise; 미세한 texture와 절대 intensity가 없음
+@@ 56
+약점이 서로 다르기 때문에 시스템은 센서를 조합합니다. 가장 흔한 짝은 IMU입니다. 어디에나 있고 크기, 무게, 전력 소모가 작으며, 카메라, LiDAR, radar frame 사이의 빈틈을 메워 줍니다. 카메라와 LiDAR를 함께 쓰면 semantic 정보와 직접 측정한 거리를 짝지을 수 있습니다. radar의 속도 측정값은 움직이는 물체를 즉시 검출합니다. 로봇 자신의 kinematics도 또 하나의 정보원입니다. factor graph의 관점에서 fusion은 간단히 말할 수 있습니다. 각 센서가 같은 graph에 자기 factor를 더하고, optimizer가 covariance에 따라 가중치를 줍니다. <span class="src">§II.2.2 · pp. 189–190</span>
+@@ 57
+4. Calibration과 time synchronization
+@@ 58
+<strong>Intrinsic calibration</strong>은 카메라의 focal length와 distortion 계수처럼, 센서 하나의 자체 모델 파라미터를 찾습니다. <strong>Extrinsic calibration</strong>은 두 센서 사이의 강체 변환을 찾아, 두 센서의 데이터를 한 frame에서 표현할 수 있게 합니다. 둘 다 보통 배치 전에 calibration target으로 수행합니다. targetless 방법은 대신 주변 환경을 이용합니다. 또 calibration 파라미터를 SLAM factor graph에 추가 variable로 넣어, 로봇이 움직이는 동안 정제할 수도 있습니다. <span class="src">§II.2.3 · pp. 190–191</span>
+@@ 59
+센서마다 샘플링 주기와 시점도 다르고, 그 사이에 로봇은 움직입니다. 하드웨어 synchronization을 쓸 수 없으면, 흔히 IMU 같은 빠른 센서의 도움을 받아 측정값을 공통 시각으로 interpolation합니다. <span class="src">§II.2.3 · p. 191</span>
+@@ 60
+빈틈 채우기: timestamp 오차는 얼마나 큰 문제일까?
+@@ 61
+책은 synchronization을 "신중하게 관리해야 한다"고만 할 뿐 수치는 제시하지 않습니다. 어떤 측정값의 timestamp가 \(\delta t\)만큼 늦게 찍혔다고 합시다. back-end는 이 측정값을 \(\delta t\) 뒤의 로봇 pose에 붙입니다. 로봇이 속도 \(v\)로 움직이며 각속도 \(\omega\)로 회전한다면, 측정값이 붙은 pose는 대략 다음만큼 틀립니다.
+@@ 62
+\(v = 10\) m/s, \(\delta t = 20\) ms이면 \(\delta p = 0.2\) m입니다. \(\omega = 90^\circ\)/s이면 \(\delta\theta = 1.8^\circ\)이고, 20 m 떨어진 점은 옆으로 \(20\tan 1.8^\circ \approx 0.63\) m 밀려 보입니다. 위험한 쪽은 회전입니다. <a href="#d1">1주차 · Day 1</a>에서 heading 오차가 drift를 지배한 것과 같은 이유로, 각도 오차에는 거리가 곱해지기 때문입니다.
+@@ 63
+5. SLAM의 평가 방법
+@@ 64
+평가는 모듈별로 합니다. odometry, place recognition, mapping입니다. 가장 흔한 점수는 훨씬 정밀한 장비로 얻은 <strong>ground-truth</strong>(참값) trajectory에 대한 trajectory 정확도입니다. ground truth는 얻기 비싸고, 실내에서는 측량한 점 몇 개뿐일 수도 있습니다. place recognition은 분류기처럼 precision과 recall로 평가합니다. map은 평가하기가 가장 어렵습니다. 기준 map을 만들려면 지상 레이저 스캐너 같은 장비가 필요하고, global 정확도뿐 아니라 메모리 사용량과 세밀한 구조도 중요합니다. <span class="src">§II.3 · pp. 191–192</span>
+@@ 65
+빈틈 채우기: ATE와 RPE
+@@ 66
+책은 trajectory 지표를 문헌에 맡깁니다. 거의 어디서나 쓰이는 지표가 두 가지 있습니다. \(\mathbf{P}_i\)를 추정 pose, \(\mathbf{Q}_i\)를 ground-truth pose라 하고, 각각의 위치를 \(\mathbf{p}_i\), \(\mathbf{q}_i\)라 합시다(\(i = 1,\dots,n\)).
+@@ 67
+<strong>Absolute trajectory error (ATE).</strong> 두 trajectory는 서로 다른 frame에 있습니다(추정값은 자기만의 원점에서 출발합니다). 그래서 먼저 추정값을 ground truth에 가장 잘 겹치는 강체 변환 \((\mathbf{R},\mathbf{t})\)를 찾고, 위치 차이의 root-mean-square를 구합니다.
+@@ 68
+정렬에는 closed-form 해가 있습니다(13주차에 직접 유도합니다). scale을 관측할 수 없는 monocular 카메라에서는 scale factor도 함께 추정합니다.
+@@ 69
+<strong>Relative pose error (RPE).</strong> 위치 대신 움직임을 비교합니다. \(\Delta\)개 pose 구간에서 추정한 움직임은 \(\mathbf{P}_i^{-1}\mathbf{P}_{i+\Delta}\)이고 실제 움직임은 \(\mathbf{Q}_i^{-1}\mathbf{Q}_{i+\Delta}\)입니다. 둘의 불일치는 다음 pose입니다.
+@@ 70
+여기서 \(\operatorname{trans}(\cdot)\)는 이동 부분을 꺼내고, \(m = n - \Delta\)입니다. \(\mathbf{E}_i\)의 회전 부분으로 같은 방식으로 회전 RPE를 얻습니다. 상대 움직임은 frame에 의존하지 않으므로 정렬이 필요 없습니다.
+@@ 71
+ATE는 global consistency를 잽니다. loop closure가 얻어 주는 것이 바로 이것입니다. RPE는 이동 거리당 drift를 잽니다. odometry 모듈은 바로 이것으로 평가해야 합니다.
+@@ 72
+직접 해 보기: 추정값에는 작은 random noise와, step 10에서 갑자기 생긴 10° heading 오차 하나가 있습니다. 일회성 오차를 0°로 했다가 되돌려 보십시오. 그다음 구간 Δ를 늘려 보십시오.
+@@ 73
+눈여겨볼 점: 기본 설정에서 한 step 구간의 RPE는 약 0.03 m입니다. 60 step 중 59 step이 거의 완벽하기 때문입니다. 반면 ATE는 약 0.6 m입니다. 나쁜 step 하나가 그 뒤 전부를 휘게 합니다. 일회성 오차를 없애면 ATE가 약 0.24 m로 떨어집니다. Δ = 10이면 같은 trajectory의 RPE가 약 0.5 m이므로, RPE 값은 구간 없이는 아무 의미가 없습니다.
+@@ 74
+place recognition에서는 제안된 match 가운데 맞는 것(true positive, TP), 제안됐지만 틀린 것(false positive, FP), 실제 재방문인데 놓친 것(false negative, FN)을 셉니다. 그러면
+@@ 75
+예: 제안 50개, 그중 정답 45개, 실제 재방문 90곳. precision은 \(45/50 = 0.9\), recall은 \(45/90 = 0.5\), \(F_1 = 0.9/1.4 \approx 0.64\)입니다. detector에는 threshold가 있습니다. threshold를 바꿔 가며 훑으면 precision-recall curve가 그려지고, 그 곡선 아래 면적(AUC)이 곡선을 숫자 하나로 요약합니다. <span class="src">§II.3 · p. 191</span>
+@@ 76
+<strong>"Place recognition이 loop-closure factor를 준다."</strong> place recognition이 주는 것은 후보 쌍입니다. factor는 두 번째 단계, 즉 두 측정값을 registration해 relative pose를 얻는 단계에서 나옵니다.
+@@ 77
+<strong>"RPE가 낮으면 map이 global하게 맞다."</strong> 짧은 구간의 RPE는 느린 drift를 보지 못합니다. RPE가 아주 좋은데도 끝에서는 수 미터 어긋난 trajectory가 있을 수 있습니다.
+@@ 78
+<strong>"Fusion은 센서 출력을 평균 내는 것이다."</strong> factor graph에서는 각 센서가 자기 noise model과 함께 자기 factor를 보태고, 한 번의 최적화가 그 모두를 사용합니다.
+@@ 79
+Q1. 다음 중 factor graph에 unary factor로 들어가는 것은 무엇입니까?
+@@ 80
+연속된 두 frame 사이의 visual odometry
+@@ 81
+IMU preintegration factor
+@@ 82
+GPS 위치 측정값
+@@ 83
+LiDAR loop closure
+@@ 84
+GPS 측정값은 node 하나의 위치를 제약합니다. 나머지 셋은 두 node를 잇기 때문에 binary factor입니다.
+@@ 85
+Q2. place recognition 모듈이 loop closure 40개를 제안합니다. 30개가 맞습니다. 로봇이 실제로 재방문한 곳은 60곳입니다. precision과 recall은 무엇입니까?
+@@ 86
+=
+@@ 87
+=
+@@ 88
+=
+@@ 89
+=
+@@ 90
+Precision = 30/40 = 0.75 (제안 가운데 맞은 비율). Recall = 30/60 = 0.50 (실제 재방문 가운데 찾아낸 비율).
+@@ 91
+Q3. loop closure가 없는 visual odometry 시스템이 frame 간에는 매우 정확합니다. 이 시스템이 2 km 경로를 달립니다. 어떤 결과가 예상됩니까?
+@@ 92
+ATE와 RPE 모두 작음
+@@ 93
+RPE는 크고 ATE는 작음
+@@ 94
+둘 다 큼
+@@ 95
+짧은 구간의 RPE는 작고 ATE는 큼
+@@ 96
+step마다의 작은 오차는 RPE를 작게 유지하지만 한없이 누적되며, ATE는 그 누적 오차를 잽니다. 누적 오차에 한계를 지우는 것은 loop closure나 절대 측정값뿐입니다.
+@@ 97
+Q4. 로봇이 100°/s로 회전하는 동안 카메라 timestamp가 10 ms 늦습니다. 10 m 떨어진 점은 옆으로 대략 얼마나 밀려 보입니까?
+@@ 98
+=
+@@ 99
+=
+@@ 100
+밀리지 않음: time offset은 로봇이 평행 이동할 때만 영향을 줌
+@@ 101
+heading 오차는 100°/s × 0.01 s = 1°이고, 10 m × tan 1° ≈ 0.17 m입니다.
+@@ 102
+Part II는 front-end이며, 센서마다 한 장씩입니다. 카메라, LiDAR, radar, event camera, IMU, leg.
+@@ 103
+Odometry는 matching, 속도 적분, preintegration으로 연속된 node 사이의 binary factor를 줍니다. 그리고 drift가 생깁니다.
+@@ 104
+Loop closure = place recognition (후보 검색) + relative pose 추정 (factor 생성). discernibility와 scalability가 필요합니다.
+@@ 105
+Unary factor와 prior는 단일 node를 제약합니다. fusion된 factor들이 서로 일관되는지는 calibration(intrinsic, extrinsic)과 time synchronization이 결정합니다.
+@@ 106
+ATE는 정렬 후의 global consistency를, RPE는 명시한 구간에 대한 drift를 평가합니다. place recognition은 precision과 recall로 평가합니다.
+@@ 107
+=
+@@ 108
+ATE와 RPE의 정의는 Sturm, Engelhard, Endres, Burgard, Cremers, <em>A Benchmark for the Evaluation of RGB-D SLAM Systems</em>, 2012와 Zhang, Scaramuzza, <em>A Tutorial on Quantitative Trajectory Evaluation for Visual(-Inertial) Odometry</em>, 2018을 따릅니다.
+@@ 109
+Precision, recall, F1은 information retrieval의 표준 정의입니다.

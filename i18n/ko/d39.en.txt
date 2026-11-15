@@ -1,0 +1,206 @@
+@@ 1
+<span class="eyebrow">Week 7 · Day 3</span>
+@@ 2
+Implicit differentiation: the gradient from the optimality condition
+@@ 3
+After today you can derive the sensitivity of the back-end solution from its optimality condition, compute the upper-level gradient with one linear solve built from Hessian-vector products, and choose between unrolled and implicit differentiation.
+@@ 4
+About 60 min · Read §4.2.3, pp. 107–108 (2 pages) · Needs Week 7 Day 2
+@@ 5
+Read first: §4.2.3, pp. 107–108
+@@ 6
+The calculus reminder on p. 107: differentiating an equation that defines a function, without solving it first.
+@@ 7
+Equations (4.11) and (4.12) on p. 107: which fact about \(\mathbf{x}^*\) is being differentiated.
+@@ 8
+Example 4.3 on p. 107: 4 MB against 4 TB.
+@@ 9
+Equation (4.15) and Algorithm 2 on p. 108: the Hessian appears only multiplied by a vector.
+@@ 10
+At the solution the gradient of the lower-level cost is zero, for every \(\mathbf{y}\). Differentiating that one equation gives \(\partial\mathbf{x}^*/\partial\mathbf{y}\) in terms of second derivatives of \(\mathcal{L}\) <em>at the solution only</em>. How the solver got there does not matter, nothing has to be stored along the way, and the whole upper-level gradient costs one linear solve with the Hessian.
+@@ 11
+1. A derivative without a formula
+@@ 12
+Some functions are defined by an equation, not by an explicit formula. The book's reminder uses \(x + y + 5 = 0\). <span class="src">§4.2.3 · p. 107</span> A less trivial case: let \(x(y)\) be defined by
+@@ 13
+For each \(y\) there is one real \(x\), but no pleasant formula for it. Differentiate the equation itself with respect to \(y\), remembering that \(x\) depends on \(y\):
+@@ 14
+At \(y = 2\) the solution is \(x = 1\) (check: \(1 + 1 - 2 = 0\)), so \(dx/dy = 1/4\). We needed the <em>point</em> on the curve, found any way we like, and derivatives of \(F\) at that point. This is <strong>implicit differentiation</strong>.
+@@ 15
+Filling the gap: the implicit function theorem
+@@ 16
+The step "remembering that \(x\) depends on \(y\)" assumes a differentiable function \(x(y)\) exists. The <strong>implicit function theorem</strong> says when. Let \(F:\R^n\times\R^m\to\R^n\) be continuously differentiable with \(F(\mathbf{x}_0,\mathbf{y}_0) = \mathbf{0}\). If the \(n\times n\) matrix \(\partial F/\partial\mathbf{x}\) is invertible at \((\mathbf{x}_0,\mathbf{y}_0)\), then near \(\mathbf{y}_0\) there is exactly one continuously differentiable function \(\mathbf{x}(\mathbf{y})\) with \(\mathbf{x}(\mathbf{y}_0)=\mathbf{x}_0\) and \(F(\mathbf{x}(\mathbf{y}),\mathbf{y}) = \mathbf{0}\), and
+@@ 17
+The formula is what you get by differentiating \(F(\mathbf{x}(\mathbf{y}),\mathbf{y}) = \mathbf{0}\) with the chain rule, \(\frac{\partial F}{\partial\mathbf{x}}\frac{\partial\mathbf{x}}{\partial\mathbf{y}} + \frac{\partial F}{\partial\mathbf{y}} = \mathbf{0}\), and solving. The theorem is local: it describes the solution branch through \((\mathbf{x}_0,\mathbf{y}_0)\), nothing more.
+@@ 18
+2. Apply it to the optimality condition
+@@ 19
+Which equation defines \(\mathbf{x}^*(\mathbf{y})\)? The lower-level solution is a stationary point of \(\mathcal{L}\), so (assuming \(\mathcal{L}\) is twice differentiable in both arguments) <span class="src">§4.2.3 · p. 107</span>
+@@ 20
+Take \(F = \partial\mathcal{L}/\partial\mathbf{x}\) in the theorem. Differentiating both sides with respect to \(\mathbf{y}\) gives
+@@ 21
+In short: \(\partial\mathbf{x}^*/\partial\mathbf{y} = -\mathbf{H}^{-1}\,\mathbf{H}_{xy}\), where \(\mathbf{H} = \partial^2\mathcal{L}/\partial\mathbf{x}\partial\mathbf{x}\) is the \(n\times n\) <strong>Hessian</strong> of the lower-level cost and \(\mathbf{H}_{xy} = \partial^2\mathcal{L}/\partial\mathbf{x}\partial\mathbf{y}\) is the \(n\times m\) matrix of mixed second derivatives, both at the solution. The indirect gradient has become direct derivatives of \(\mathcal{L}\), at the cost of inverting a Hessian. <span class="src">§4.2.3 · p. 107</span>
+@@ 22
+<strong>Toy problem.</strong> From <a href="#d38">Day 2</a>: \(\partial^2\mathcal{L}/\partial x^2 = 6x^2 - 2y + 1\) and \(\partial^2\mathcal{L}/\partial x\,\partial y = -2x\). At \(y = 2\), \(x^* = (1+\sqrt3)/2 = 1.3660\):
+@@ 23
+That is the 0.333 that two extra solves gave by finite differences on <a href="#d37">Day 1</a>, and the value the unrolled sensitivities 0.2000, 0.3272, 0.3491 of Day 2 were converging to. It took no extra solve and no stored iterates.
+@@ 24
+Try it: move y along the curve, then press the upper-level step button repeatedly.
+@@ 25
+Notice that at y = 2 the tangent slope is 0.3333 and dU/dy = −0.0447. Each upper-level step moves y to the right, toward y ≈ 2.417 where the curve crosses the ground-truth line and U reaches zero. Then press Reset and set the Algorithm 2 step size to 0.30: the iteration for q diverges, because 0.30 is above 2/H = 0.244 (see §4).
+@@ 26
+Picture the lower-level cost as a valley whose floor shifts when \(\mathbf{y}\) changes. \(\mathbf{H}_{xy}\) says how hard a change in \(\mathbf{y}\) pushes the ball sideways (it is the change in the slope \(\partial\mathcal{L}/\partial\mathbf{x}\)). \(\mathbf{H}\) is the stiffness of the valley. Displacement = push divided by stiffness: a stiff, well-constrained SLAM problem moves little when a measurement changes; a floppy one moves a lot.
+@@ 27
+The theorem's condition matters: \(\mathbf{H}\) must be invertible. At a strict minimum it is positive definite, so this holds. If the lower-level problem has directions that the measurements do not constrain at all, \(\mathbf{H}\) is singular, the minimizer is not unique, and "the derivative of the solution" has no meaning until those directions are fixed.
+@@ 28
+3. Never build the big matrices
+@@ 29
+Substitute (4.12) into the gradient (4.3): <span class="src">§4.2.3 · p. 107</span>
+@@ 30
+The product of three factors can be grouped in two ways, and the choice decides the cost.
+@@ 31 attr
+Three blocks side by side: a thin row vector v transpose of size 1 by n, a square matrix H inverse of size n by n, and a very wide matrix of mixed second derivatives of size n by m. A bracket under the first two says to solve H q equals v first, giving one vector of length n. A note under the wide block says the last step is one vector-matrix product.
+@@ 32
+n × m, with m in the millions
+@@ 33
+first: solve H q = v (one vector)
+@@ 34
+then: one product qᵀ × (n × m)
+@@ 35
+Grouping from the left costs one linear solve. Grouping from the right, H⁻¹ times the wide matrix, would cost m solves and produce the dense n × m matrix ∂x*/∂y, which nobody asked for.
+@@ 36
+So define \(\mathbf{q}\) as the solution of \(\mathbf{H}\mathbf{q} = \mathbf{v}\), with \(\mathbf{v} = (\partial\mathcal{U}/\partial\mathbf{x}^*)\T\). (The Hessian is symmetric, so \(\mathbf{H}\T = \mathbf{H}\).) This is the same trick as reverse mode on Day 1: push the single output's sensitivity backward instead of pushing every parameter's influence forward. The vector \(\mathbf{q}\) is called the <strong>adjoint</strong>, and the procedure the <strong>adjoint method</strong>.
+@@ 37
+Even one solve can be too much if \(\mathbf{H}\) must be stored. In Example 4.3, a model with \(10^6\) parameters as 32-bit floats takes \(10^6\times 4\) bytes \(= 4\) MB, and its Hessian \((10^6)^2\times 4\) bytes \(= 4\) TB. <span class="src">Example 4.3 · p. 107</span> The way out is to solve \(\mathbf{H}\mathbf{q}=\mathbf{v}\) with a method that only ever asks for products \(\mathbf{H}\mathbf{q}\).
+@@ 38
+4. Solving Hq = v with Hessian-vector products
+@@ 39
+The book turns the linear system into a minimization, <span class="src">§4.2.3 · p. 108</span>
+@@ 40
+and solves it by gradient descent (Algorithm 2) or conjugate gradient:
+@@ 41
+The product \(\mathbf{H}\mathbf{q}\) is computed without \(\mathbf{H}\), as "the gradient of a gradient-vector product":
+@@ 42
+Finally \(\nabla_{\mathbf{y}}\,\mathcal{U} = \partial\mathcal{U}/\partial\mathbf{y} - (\mathbf{H}_{yx}\,\mathbf{q})\T\) with \(\mathbf{H}_{yx} = \partial^2\mathcal{L}/\partial\mathbf{y}\,\partial\mathbf{x}^* = \mathbf{H}_{xy}\T\), equation (4.17), which is one more product of the same kind.
+@@ 43
+Filling the gap: three steps the book states without proof
+@@ 44
+<strong>Why minimizing Q solves the system.</strong> \(\partial Q/\partial\mathbf{q} = \mathbf{H}\mathbf{q} - \mathbf{v}\) (using the symmetry of \(\mathbf{H}\)). At a minimum the gradient is zero, so \(\mathbf{H}\mathbf{q} = \mathbf{v}\). With \(\mathbf{H}\) positive definite, \(Q\) is a bowl with exactly one minimum.
+@@ 45
+<strong>Why (4.15) holds.</strong> Hold \(\mathbf{q}\) constant. The scalar \(s(\mathbf{x}) = \frac{\partial\mathcal{L}}{\partial\mathbf{x}}\cdot\mathbf{q} = \sum_j \frac{\partial\mathcal{L}}{\partial x_j}q_j\) has \(i\)-th partial derivative \(\sum_j \frac{\partial^2\mathcal{L}}{\partial x_i\partial x_j}q_j\), which is the \(i\)-th entry of \(\mathbf{H}\mathbf{q}\). In practice: one reverse pass for the gradient, a dot product with \(\mathbf{q}\), and one more reverse pass through that computation. The cost is a small multiple of one gradient, and the memory is that of vectors.
+@@ 46
+<strong>When (4.16) converges.</strong> Subtract the exact solution \(\mathbf{q}^*\): the error obeys \(\mathbf{q}_k - \mathbf{q}^* = (\mathbf{I} - \eta\mathbf{H})(\mathbf{q}_{k-1} - \mathbf{q}^*)\). Along an eigenvector of \(\mathbf{H}\) with eigenvalue \(\lambda\) the error is multiplied by \(1 - \eta\lambda\) each step, so it shrinks if and only if \(|1-\eta\lambda| \lt 1\) for every eigenvalue, that is \(0 \lt \eta \lt 2/\lambda_{\max}\). If the eigenvalues are spread widely (an ill-conditioned Hessian), the small ones converge slowly; conjugate gradient copes with that much better.
+@@ 47
+<strong>Toy numbers.</strong> \(v = x^* - 1.5 = -0.1340\), \(H = 8.196\), \(\eta = 0.1\), \(q_0 = 0\):
+@@ 48
+The error shrinks by the factor \(|1 - 0.1\times 8.196| = 0.18\) per step. Then \(\nabla_y\,\mathcal{U} = 0 - q\,H_{xy} = -(-0.01635)(-2.732) = -0.0447\).
+@@ 49
+Going deeper (optional): what a SLAM back-end already has
+@@ 50
+For a least-squares cost \(\mathcal{L} = \tfrac12\norm{\mathbf{r}}^2\) the Hessian is \(\mathbf{J}\T\mathbf{J}\) plus a term that multiplies the residuals by their second derivatives. Gauss-Newton drops the second term. A back-end that has just converged holds \(\mathbf{J}\T\mathbf{J}\) and usually a factorization of it, so an approximate adjoint solve \(\mathbf{J}\T\mathbf{J}\,\mathbf{q} = \mathbf{v}\) is nearly free. In the toy problem \(\mathbf{J}\T\mathbf{J} = 4x^{*2}+1 = 8.464\) against the exact \(H = 8.196\); the slope would come out as \(2.732/8.464 = 0.323\) where the exact value is 0.333. The approximation is good when the residuals at the solution are small.
+@@ 51
+5. Unrolled or implicit?
+@@ 52
+Unrolled (Day 2)
+@@ 53
+Implicit (today)
+@@ 54
+What must be differentiable?
+@@ 55
+every step of the solver
+@@ 56
+only the cost L, twice; the solver can be anything
+@@ 57
+Must the solver have converged?
+@@ 58
+no: exact for whatever x at T it produced
+@@ 59
+yes: the formula assumes ∂L/∂x = 0
+@@ 60
+Memory
+@@ 61
+grows with the number of steps T (or M)
+@@ 62
+independent of T
+@@ 63
+Extra work
+@@ 64
+a backward sweep through the steps
+@@ 65
+one linear solve with H
+@@ 66
+Breaks down when
+@@ 67
+T is large, or steps are not differentiable
+@@ 68
+H is singular or badly conditioned, or the solver stopped early
+@@ 69
+Algorithm 1 on p. 105 applies the implicit formula at \(\mathbf{x}_T\), the iterate the solver actually returned. The widget from Day 2 shows what that does when \(T\) is small:
+@@ 70
+Notice the violet curve, the implicit formula evaluated at x_K (its values at K = 0 and 1 are far below the chart; the tile shows them). At K = 2 it reads −0.0662, further from the reference −0.0447 than the unrolled value −0.0607, because x₂ is not a stationary point and the formula's assumption fails. Once the inner solver has converged the two coincide.
+@@ 71
+<strong>Approximations.</strong> The cheapest option of all ignores the implicit part and keeps only the direct term, \(\hat\nabla_{\mathbf{y}}\,\mathcal{U} \approx \partial\mathcal{U}/\partial\mathbf{y}\,|_{\mathbf{x}_T}\). It treats the solver's output as a constant in the upper-level problem. The error is of the size of the dropped term, <span class="src">§4.2.3 · p. 108</span>
+@@ 72
+The book notes it is useful when the implicit part contains products of small second-order derivatives. It is useless when \(\mathcal{U}\) has no direct dependence on \(\mathbf{y}\): in the toy problem it returns exactly zero.
+@@ 73
+<strong>"Implicit differentiation needs the inverse Hessian."</strong> It needs the solution of one linear system \(\mathbf{H}\mathbf{q}=\mathbf{v}\), and that needs only products \(\mathbf{H}\mathbf{q}\).
+@@ 74
+<strong>"It is exact, so it is safe to stop the inner solver early."</strong> It is exact at a stationary point. Evaluated elsewhere it is the derivative of nothing in particular.
+@@ 75
+<strong>"The mixed term has the same sign convention as the Hessian."</strong> Watch the minus sign in (4.12). In the toy problem \(H_{xy} = -2x\) is negative and the slope \(dx^*/dy\) is positive.
+@@ 76
+Q1. Let L(x, y) = ½(x − y)² + (3/2)x². Use (4.12) to find dx*/dy.
+@@ 77
+∂L/∂x = (x − y) + 3x, so H = 4 and ∂²L/∂x∂y = −1. dx*/dy = −(1/4)(−1) = 1/4. Check: the minimizer is x* = y/4.
+@@ 78
+Q2. In the toy problem at y = 1 the solution is x* = 1. What is dx*/dy there?
+@@ 79
+H = 6x² − 2y + 1 = 6 − 2 + 1 = 5 and ∂²L/∂x∂y = −2x = −2, so dx*/dy = 2/5 = 0.4.
+@@ 80
+Q3. Algorithm 2 runs on a scalar problem with H = 4. Which step size makes the iteration diverge?
+@@ 81
+The error is multiplied by 1 − ηH each step: 0.6, 0, −0.6, −1.4. Only |−1.4| exceeds 1. The limit is η = 2/H = 0.5.
+@@ 82
+Q4. With n = 600 back-end variables and m = 1,000,000 network weights, why solve Hq = v rather than first computing ∂x*/∂y = −H⁻¹·∂²L/∂x∂y?
+@@ 83
+Because H is not invertible
+@@ 84
+Because ∂x*/∂y has m columns and each needs its own solve, while q needs one
+@@ 85
+Because the two give different gradients
+@@ 86
+Because v is not available
+@@ 87
+Both groupings give the same gradient. Solving for q costs one linear solve; forming ∂x*/∂y costs one per parameter and stores a 600 × 1,000,000 dense matrix.
+@@ 88
+Q5. A lower-level problem has n = 100,000 variables. How much memory would its dense Hessian take in 8-byte floats?
+@@ 89
+800 kB
+@@ 90
+8 GB
+@@ 91
+80 GB
+@@ 92
+800 MB
+@@ 93
+(10⁵)² × 8 bytes = 8 × 10¹⁰ bytes = 80 GB. The vector itself takes 0.8 MB. This is Example 4.3 with other numbers.
+@@ 94
+The solution satisfies \(\partial\mathcal{L}/\partial\mathbf{x} = \mathbf{0}\) for every \(\mathbf{y}\); differentiating this gives \(\partial\mathbf{x}^*/\partial\mathbf{y} = -\mathbf{H}^{-1}\mathbf{H}_{xy}\), equation (4.12).
+@@ 95
+The implicit function theorem justifies the step and requires \(\mathbf{H}\) to be invertible.
+@@ 96
+The upper-level gradient needs only \(\mathbf{q} = \mathbf{H}^{-1}\mathbf{v}\): one adjoint solve, equation (4.13).
+@@ 97
+The solve uses Hessian-vector products (4.15), so \(\mathbf{H}\) is never formed; gradient descent on \(Q\) converges for \(\eta \lt 2/\lambda_{\max}\).
+@@ 98
+Implicit differentiation is memory-free in the number of solver steps but assumes convergence; unrolling is the reverse.
+@@ 99
+<em>SLAM Handbook</em>, §4.2.3 "Implicit Differentiation", pp. 107–108; Example 4.3; Algorithm 2; equations (4.11)–(4.18). Algorithm 1, p. 105.
+@@ 100
+Rudin, <em>Principles of Mathematical Analysis</em>, 3rd ed., 1976 (the implicit function theorem).
+@@ 101
+Pearlmutter, <em>Fast exact multiplication by the Hessian</em>, 1994 (Hessian-vector products by differentiating a gradient-vector product).
+@@ 102
+Nocedal and Wright, <em>Numerical Optimization</em>, 2006 (quadratic minimization and linear systems, step-size condition for gradient descent, conjugate gradient, the Gauss-Newton approximation of the Hessian).
+@@ 103
+Griewank and Walther, <em>Evaluating Derivatives</em>, 2nd ed., 2008 (the adjoint method).

@@ -1,0 +1,174 @@
+@@ 1
+<span class="eyebrow">7주차 · 복습</span>
+@@ 2
+7주차 복습: optimizer를 거치는 gradient
+@@ 3
+오늘이 끝나면 bilevel 문제를 세우고, 그 upper-level gradient를 unrolling과 implicit differentiation으로 손으로 계산하고, Lie group 위의 간단한 식을 미분하고, 미분 가능한 optimizer 라이브러리가 무엇을 제공해야 하는지 말할 수 있습니다.
+@@ 4
+parameter가 \(\mathbf{y}\)인 학습된 front-end가 back-end에 입력을 주고, back-end는 nonlinear least squares 문제를 풀어 \(\mathbf{x}^*\)를 구합니다. 최종 추정값으로 front-end를 학습시키는 것은 bilevel 문제이며, 그 gradient에는 \(\partial\mathbf{x}^*/\partial\mathbf{y}\)가 필요합니다. unrolled differentiation은 solver의 iteration을 거슬러 backpropagation해서 이것을 얻습니다. 실행된 iteration에 대해서는 정확하지만, backward pass를 truncate하지 않으면 메모리가 iteration 수에 따라 커집니다. implicit differentiation은 optimality condition에서 이것을 얻습니다. 해에서 Hessian으로 linear solve를 한 번 하면 되고 iterate를 저장하지 않지만, 수렴했을 때만 유효합니다. 두 방법 모두 AutoDiff에 기대며, SLAM 변수에 AutoDiff를 쓰려면 Lie group 위에서 ⊕와 ⊖로 정의한 Jacobian, 수치적으로 안전한 \(\Exp\)와 \(\Log\), 미분 가능한 부품으로 만든 second-order robust optimizer가 필요합니다.
+@@ 5
+=
+@@ 6
+=
+@@ 7
+Bilevel 문제
+@@ 8
+=
+@@ 9
+=
+@@ 10
+=
+@@ 11
+Unrolled solver와 그 sensitivity
+@@ 12
+=
+@@ 13
+Gradient-descent step: 두 편미분
+@@ 14
+(4.5), (4.9)에서, pp. 105–106 · Day 2
+@@ 15
+마지막 M step으로 truncation (스칼라, 수렴 근처)
+@@ 16
+빠지는 비율 \(\approx A^M\)
+@@ 17
+=
+@@ 18
+Implicit 미분
+@@ 19
+=
+@@ 20
+Adjoint 형태
+@@ 21
+=
+@@ 22
+Hessian-vector product; q의 iteration
+@@ 23
+=
+@@ 24
+Lie group 위의 Jacobian
+@@ 25
+=
+@@ 26
+Inversion과 composition
+@@ 27
+=
+@@ 28
+LM step; robust 보정
+@@ 29
+=
+@@ 30
+여기서 \(\mathbf{H} = \partial^2\mathcal{L}/\partial\mathbf{x}\partial\mathbf{x}\), \(\mathbf{H}_{xy} = \partial^2\mathcal{L}/\partial\mathbf{x}\partial\mathbf{y}\), \(\mathbf{v} = (\partial\mathcal{U}/\partial\mathbf{x}^*)\T\)입니다.
+@@ 31
+퀴즈 전에 실험 하나. 먼저 예측한 다음 확인해 보세요. inner solver가 Gauss-Newton일 때 unrolled gradient가 기준값과 소수점 넷째 자리까지 일치하려면 inner step이 몇 번 필요합니까? 그리고 M = 1에서 truncated gradient는 어떻게 됩니까?
+@@ 32
+눈여겨볼 점: Gauss-Newton이면 두 step으로 충분하고(−0.0447), 마지막 step만 거슬러 backpropagation해도(M = 1, K = 5) −0.0432로 전체 gradient의 약 3% 이내입니다. η = 0.1인 gradient descent라면 같은 truncation으로 18%를 잃습니다. 빠른 inner solver는 unrolling과 truncation을 모두 싸게 만듭니다.
+@@ 33
+Q1. 입력이 3개, 출력이 500개인 함수가 있습니다. 전체 Jacobian을 가장 적은 pass로 계산하는 AutoDiff mode는 무엇이고, 몇 번입니까?
+@@ 34
+Reverse mode, pass 3번
+@@ 35
+Forward mode, pass 3번
+@@ 36
+Reverse mode, pass 1번
+@@ 37
+Forward mode, pass 500번
+@@ 38
+forward mode는 입력마다 pass가 한 번 필요하고(3), reverse mode는 출력마다 한 번 필요합니다(500).
+@@ 39
+Q2. back-end 변수가 n개, network parameter가 m개일 때, upper-level gradient (4.3)의 어느 인자가 n × m 행렬입니까?
+@@ 40
+U 자체의 gradient
+@@ 41
+∂U/∂y는 1 × m, ∂U/∂x*는 1 × n, ∂x*/∂y는 n × m입니다. 실제로는 이것을 만들지 않으며, ∂U/∂x*와의 곱만 있으면 됩니다.
+@@ 42
+Q3. unroll한 스칼라 solver에서 A = 0.5, B = 0.3이 일정하고, initial guess는 y에 의존하지 않습니다. 두 step 후 sensitivity S₂는 무엇입니까?
+@@ 43
+S₁ = 0.5·0 + 0.3 = 0.3이고 S₂ = 0.5·0.3 + 0.3 = 0.45입니다. 극한 B/(1 − A) = 0.6이 수렴값입니다.
+@@ 44
+Q4. 해 근처에서 inner solver가 backward step마다 adjoint에 A = 0.9를 곱합니다. truncation 손실을 1% 아래로 유지하려면 backward step M이 대략 몇 번 필요합니까?
+@@ 45
+빠지는 비율은 0.9^M입니다. 0.9^M ≤ 0.01이려면 M ≥ ln(0.01)/ln(0.9) = 43.7이어야 합니다. 느리게 수렴하는 solver에는 긴 backward pass가 필요합니다.
+@@ 46
+Q5. L(x, y) = ½(2x − y)² + ½x²라 합시다. implicit differentiation으로 구한 dx*/dy는 무엇입니까?
+@@ 47
+∂L/∂x = 2(2x − y) + x = 5x − 2y이므로 H = 5, ∂²L/∂x∂y = −2입니다. dx*/dy = −(−2)/5 = 0.4. 확인: x* = 2y/5.
+@@ 48
+Q6. inner solver의 각 step에 accept/reject 판정이 있어 미분 불가능하지만, solver는 수렴합니다. 어떤 방법이 여전히 올바른 gradient를 줍니까?
+@@ 49
+=
+@@ 50
+=
+@@ 51
+=
+@@ 52
+=
+@@ 53
+implicit differentiation은 해에서 cost L의 도함수만 씁니다. solver가 어떻게 거기에 도달했는지는 상관없습니다.
+@@ 54
+Q7. f(χ) = χ⁻¹ ∘ χ₁의 χ에 대한 right Jacobian은 무엇입니까?
+@@ 55
+=
+@@ 56
+=
+@@ 57
+=
+@@ 58
+chain rule: inversion이 −Ad of χ를 주고, 이어서 첫째 인자에 대한 composition이 Ad of χ₁⁻¹을 줍니다. 둘의 곱은 −Ad of χ₁⁻¹ 곱하기 Ad of χ = −Ad of (χ₁⁻¹ ∘ χ)입니다.
+@@ 59
+Q8. Cauchy kernel ρ(c) = log(1 + c), Σ = 1일 때, residual r = 1은 보정된 least-squares 문제 (4.46)에 어떤 값으로 들어갑니까?
+@@ 60
+c = 1, ρ′ = 1/2, 그리고 √(1/2) × 1 = 0.707.
+@@ 61
+\(f(a, b) = (ab + a)^2\)라 합시다. 이를 기본 연산으로 나누고 \(a = 2\), \(b = 3\)에서 reverse-mode AutoDiff를 손으로 실행합니다. 두 편미분을 공식과 비교해 확인합니다.
+@@ 62
+Forward 계산: \(v_1 = ab = 6\), \(v_2 = v_1 + a = 8\), \(f = v_2^2 = 64\).
+@@ 63
+Backward: \(\bar f = 1\); \(\bar v_2 = 2v_2\cdot\bar f = 16\); \(\bar v_1 = \bar v_2 = 16\). 입력 \(a\)는 두 번 쓰이므로 adjoint는 합입니다: \(\bar a = \bar v_1\cdot b + \bar v_2\cdot 1 = 48 + 16 = 64\). \(\bar b = \bar v_1\cdot a = 32\).
+@@ 64
+확인: \(f = a^2(b+1)^2\)이므로 \(\partial f/\partial a = 2a(b+1)^2 = 64\), \(\partial f/\partial b = 2a^2(b+1) = 32\)입니다.
+@@ 65
+lower level \(\mathcal{L}(x, y) = \tfrac12(x-y)^2 + \tfrac12x^2\), upper level \(\mathcal{U} = \tfrac12(x-1)^2\)입니다. \(y = 4\)에서 \(x_0 = 0\)부터 \(\eta = 0.25\)로 gradient descent를 두 step 실행합니다. \(x_1, x_2\), sensitivity \(S_1, S_2\), unrolled gradient \(d\,\mathcal{U}(x_2)/dy\)를 계산하고, 실제 해에서의 gradient와 비교하고, 일반적인 \(T\)에 대한 \(S_T\)를 구합니다.
+@@ 66
+\(\partial\mathcal{L}/\partial x = 2x - y\), \(H = 2\), \(H_{xy} = -1\). 따라서 모든 step에서 \(A = 1 - 2\eta = 0.5\), \(B = \eta = 0.25\)입니다.
+@@ 67
+=
+@@ 68
+실제 해: \(x^* = y/2 = 2\), \(dx^*/dy = -H^{-1}H_{xy} = 0.5\), gradient \((2-1)\times0.5 = 0.5\). 두 step으로는 그 절반에도 못 미칩니다. \(x_2\)가 \(x^*\)에 못 미치고, \(S_2\)도 0.5에 못 미치기 때문입니다.
+@@ 69
+일반적인 \(T\): \(S_T = B(1 + A + \dots + A^{T-1}) = 0.5\,(1 - 0.5^T)\)이며, 0.5로 수렴합니다.
+@@ 70
+\(y = 1\)에서 이번 주의 toy problem: \(\mathcal{L} = \tfrac12(x^2-y)^2 + \tfrac12(x-1)^2\), \(\mathcal{U} = \tfrac12(x^*-1.5)^2\). (a) \(x^* = 1\)임을 확인합니다. (b) \(H\), \(H_{xy}\), \(v\), adjoint \(q\), \(\nabla_y\,\mathcal{U}\)를 계산합니다. (c) \(q_0 = 0\)부터 \(\eta = 0.1\)로 Algorithm 2를 세 iteration 실행하고, 오차가 줄어드는 비율을 말합니다. (d) step size 2로 upper-level step을 한 번 밟습니다.
+@@ 71
+(a) \(x = 1, y = 1\)에서 \(\partial\mathcal{L}/\partial x = 2x(x^2 - y) + (x-1) = 2(0) + 0 = 0\).
+@@ 72
+(c) \(q_k = q_{k-1} - 0.1(5q_{k-1} + 0.5)\): \(q_1 = -0.05\), \(q_2 = -0.075\), \(q_3 = -0.0875\). 오차 \(q_k - (-0.1)\)은 \(0.05, 0.025, 0.0125\)로 step마다 절반이 되며, 이 비율은 \(1 - \eta H = 0.5\)입니다.
+@@ 73
+(d) \(y \leftarrow 1 - 2(-0.2) = 1.4\). 측정값이 올라가고, 그러면 \(x^*\)가 목표 1.5 쪽으로 올라갑니다.
+@@ 74
+pose \(\boldsymbol{\chi}_a\)와 \(\boldsymbol{\chi}_b\) 사이의, 측정값이 \(\mathbf{Z}\)인 pose-graph factor는 error element \(\mathbf{E} = \mathbf{Z}^{-1}\circ\boldsymbol{\chi}_a^{-1}\circ\boldsymbol{\chi}_b\)를 가집니다. Day 4의 블록과 chain rule로 \(\boldsymbol{\chi}_b\)와 \(\boldsymbol{\chi}_a\)에 대한 \(\mathbf{E}\)의 right Jacobian을 구합니다. 둘째 것은 정의에서 직접 검증하고, 둘 다 SO(2)에서 확인합니다.
+@@ 75
+\(\boldsymbol{\chi}_b\)에 대해: 곱의 마지막 인자이므로 Jacobian은 \(\mathbf{I}\)입니다 (4.34).
+@@ 76
+\(\boldsymbol{\chi}_a\)에 대해서는 세 단계입니다. Inversion: \(-\Ad_{\boldsymbol{\chi}_a}\) (4.32). 다음으로 \(\boldsymbol{\chi}_a^{-1}\circ\boldsymbol{\chi}_b\)의 첫째 인자에 대해: \(\Ad_{\boldsymbol{\chi}_b^{-1}}\) (4.33). 마지막으로 왼쪽에서 \(\mathbf{Z}^{-1}\)와 합성하는데, 우리가 다루는 양은 둘째 인자이므로 \(\mathbf{I}\)입니다. 곱:
+@@ 77
+직접 계산: \(\mathbf{Z}^{-1}(\boldsymbol{\chi}_a\Exp(\boldsymbol{\tau}))^{-1}\boldsymbol{\chi}_b = \mathbf{Z}^{-1}\Exp(-\boldsymbol{\tau})\,\boldsymbol{\chi}_a^{-1}\boldsymbol{\chi}_b\). \(\mathbf{D} = \boldsymbol{\chi}_a^{-1}\boldsymbol{\chi}_b\)라 쓰면 \(\Exp(-\boldsymbol{\tau})\,\mathbf{D} = \mathbf{D}\,\big(\mathbf{D}^{-1}\Exp(-\boldsymbol{\tau})\mathbf{D}\big) = \mathbf{D}\,\Exp(-\Ad_{\mathbf{D}^{-1}}\boldsymbol{\tau})\)이므로 출력은 \(\mathbf{E}\circ\Exp(-\Ad_{\mathbf{D}^{-1}}\boldsymbol{\tau})\)이고, Jacobian은 앞에서와 같이 \(-\Ad_{\mathbf{D}^{-1}} = -\Ad_{\boldsymbol{\chi}_b^{-1}\boldsymbol{\chi}_a}\)입니다.
+@@ 78
+SO(2): 각도가 더해지므로 \(E = \theta_b - \theta_a - z\)이고 도함수는 \(+1\)과 \(-1\)입니다. SO(2)에서 adjoint는 1이므로 공식도 \(1\)과 \(-1\)을 줍니다.
+@@ 79
+cost에 쓰는 residual은 \(\Log(\mathbf{E})\)입니다. 그 Jacobian은 이 값들에 \(\Log\)의 Jacobian을 곱한 것이며, 뒤의 Jacobian은 오차가 작으면 \(\mathbf{I}\)에 가깝습니다.
+@@ 80
+학습된 front-end를 쓰는 SLAM 시스템에서 어떤 변수와 어떤 cost가 upper level과 lower level에 속하는지 말할 수 있습니다.
+@@ 81
+다섯 node짜리 graph에서 forward와 reverse AutoDiff를 실행하고, 각각 pass 한 번이 무엇을 내놓는지 말할 수 있습니다.
+@@ 82
+\(\mathbf{S}_t = \mathbf{A}_t\mathbf{S}_{t-1} + \mathbf{B}_t\)로 unrolled sensitivity를 계산하고 truncation의 bias를 추정할 수 있습니다.
+@@ 83
+optimality condition에서 \(\partial\mathbf{x}^*/\partial\mathbf{y} = -\mathbf{H}^{-1}\mathbf{H}_{xy}\)를 유도하고, 이를 adjoint solve 한 번으로 바꿀 수 있습니다.
+@@ 84
+inversion과 composition의 right Jacobian을 쓰고 chain rule로 연결할 수 있습니다.
+@@ 85
+Lie group 코드가 0 근처에서 Taylor 갈래를 쓰는 이유와 robust kernel이 LM 시스템을 바꾸는 방식을 설명할 수 있습니다.
+@@ 86
+<em>SLAM Handbook</em>, 4장 "Differentiable Optimization", pp. 101–118.
+@@ 87
+Griewank, Walther, <em>Evaluating Derivatives</em>, 2nd ed., 2008; Nocedal, Wright, <em>Numerical Optimization</em>, 2006; Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (문제에 쓴 방법들).

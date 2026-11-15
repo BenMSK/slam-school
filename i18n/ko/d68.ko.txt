@@ -1,0 +1,218 @@
+@@ 1
+<span class="eyebrow">12주차 · Day 2</span>
+@@ 2
+Direct image alignment: Lucas-Kanade, pyramid, photometric BA
+@@ 3
+오늘이 끝나면 direct SLAM의 photometric loss를 항별로 읽고, Lucas-Kanade update를 Gauss-Newton step으로 유도하고, direct alignment를 image pyramid 위에서 coarse-to-fine으로 돌리는 이유를 설명할 수 있습니다.
+@@ 4
+약 60분 · §7.4.2, pp. 209–211, Figures 7.8, 7.9와 함께 읽기 (본문 약 2쪽) · 12주차 Day 1 필요
+@@ 5
+먼저 읽기: §7.4.2, pp. 209–211
+@@ 6
+p. 210의 식 (7.6)에 있는 세 겹의 합, 그리고 식 바로 뒤에 나오는 두 종류의 미지수.
+@@ 7
+(7.6) 아래 문단에서 warp \(\omega\)가 하는 일.
+@@ 8
+LSD-SLAM과 DSO가 함께 최적화하는 대상의 차이 (p. 210과 Figure 7.8의 caption).
+@@ 9
+p. 211에 나오는 global consistency를 향한 세 단계.
+@@ 10
+Direct method는 keypoint를 건너뛰고 이렇게 묻습니다. 어떤 카메라 움직임과 어떤 depth일 때, 한 이미지의 픽셀을 다른 이미지로 옮기면 같은 밝기가 보일까? residual은 밝기 차이이고, 그 Jacobian은 image gradient에 Day 1의 기하학적 Jacobian을 곱한 것입니다. 이미지는 국소적으로만 linear하므로 solver는 답 가까이에서 출발해야 하고, pyramid가 바로 그 역할을 합니다.
+@@ 11
+1. Photometric loss, 항별로 보기
+@@ 12
+Keypoint 방법은 먼저 각 이미지를 match된 point 수백 개로 줄인 뒤 기하학적 오차를 최소화합니다. LSD-SLAM이나 DSO 같은 direct method는 밝기 값 자체를 써서 원시 데이터로부터 structure와 motion을 추정합니다. correspondence는 더 이상 별도 단계가 아닙니다. 다음을 최소화하면서 SLAM과 함께 풀립니다. <span class="src">§7.4.2 · pp. 209–210, eq. (7.6)</span>
+@@ 13
+기호
+@@ 14
+keyframe 집합
+@@ 15
+keyframe \(i\)에서 선택한 픽셀 \(z\) (direct method의 "point")
+@@ 16
+그 point가 보이는 frame들
+@@ 17
+픽셀 \(z\)에서 이미지 \(i\)의 밝기
+@@ 18
+픽셀 \(z\)에서 장면의 depth: 선택한 픽셀마다 미지수 하나
+@@ 19
+frame \(i\)의 point를 frame \(j\)로 옮기는 rigid-body motion을 나타내는 책의 기호: 나머지 미지수
+@@ 20
+<strong>warp</strong>: 이미지 \(i\)의 픽셀 \(z\)가 이미지 \(j\)에서 떨어지는 위치
+@@ 21
+robust loss
+@@ 22
+warp는 11주차에서 이미 아는 세 연산입니다. 픽셀을 ray로 un-project하고 depth를 곱해 frame \(i\)의 3-D point를 얻고, 그 point를 frame \(j\)로 옮긴 뒤 project합니다.
+@@ 23
+여기서 \(\pi^{-1}(z)\)는 세 번째 좌표가 1인 ray입니다. depth와 motion이 맞고 표면이 두 시점에서 똑같이 밝아 보이면 두 밝기 값은 일치합니다. 이 가정을 <strong>photometric consistency</strong>(brightness constancy)라고 합니다. <span class="src">§7.3.5 · p. 207</span>
+@@ 24 attr
+두 카메라, 왼쪽은 keyframe i, 오른쪽은 frame j이며 각각 image plane이 있습니다. ray 하나가 카메라 i에서 픽셀 z를 지나 depth d의 3-D point에 닿습니다. 두 번째 ray가 그 point를 카메라 j와 잇고, warp된 픽셀에서 j의 image plane을 지납니다. 두 카메라 사이의 화살표가 rigid-body motion T입니다.
+@@ 25
+=
+@@ 26
+픽셀 z
+@@ 27
+warp된 픽셀 ω
+@@ 28
+=
+@@ 29
+이미지 I<tspan baseline-shift="sub" font-size="10">i</tspan>
+@@ 30
+이미지 I<tspan baseline-shift="sub" font-size="10">j</tspan>
+@@ 31
+=
+@@ 32
+=
+@@ 33
+=
+@@ 34
+=
+@@ 35
+warp. 아무도 match를 찾지 않습니다. depth와 motion이 픽셀이 떨어질 곳을 정하고, 거기서의 밝기 차이가 그 값들이 얼마나 틀렸는지 알려 줍니다.
+@@ 36
+2. Lucas-Kanade: 1차원의 경우
+@@ 37
+이런 loss를 어떻게 최소화하는지 보려고 문제를 최소한으로 줄입니다. 이미지 한 행 \(I_1(x)\)와, 같은 내용을 미지의 이동량 \(d\)만큼 옮긴 두 번째 행 \(I_2(x) = I_1(x - d)\)를 생각합니다. warp는 \(x \mapsto x + s\)이고, 다음을 최소화하는 이동량 \(s\)를 찾습니다.
+@@ 38
+\(s = d\)에서 모든 residual이 0입니다. 이것이 <strong>direct image alignment</strong>의 가장 작은 예이고, 이를 푸는 고전 알고리즘에는 Lucas와 Kanade의 이름이 붙어 있습니다.
+@@ 39
+빈틈 채우기: Lucas-Kanade는 Gauss-Newton입니다
+@@ 40
+이미지가 nonlinear하므로 residual도 \(s\)에 대해 nonlinear합니다. 현재 추정값 주변에서, 작은 추가 이동량 \(\delta\)에 대해 이미지를 1차로 linearize합니다.
+@@ 41
+따라서 \(r_x(s + \delta) \approx r_x(s) + g_x \delta\)입니다. residual의 Jacobian은 warp된 위치의 <em>image gradient</em>입니다. 이를 \(E\)에 넣고 \(\delta\)에 대한 미분을 0으로 두면
+@@ 42
+이것은 <a href="#d10">2주차 · Day 4</a>의 Gauss-Newton step이며, "Hessian"은 \(1 \times 1\) 크기의 \(\sum g_x^2\)입니다. 여기서 곧바로 두 가지가 나옵니다.
+@@ 43
+<strong>gradient가 없으면 정보도 없습니다.</strong> 평평한 영역의 픽셀은 \(g_x = 0\)이라 아무것도 기여하지 않습니다. 2차원에서는 스칼라 \(\sum g^2\)가 \(2 \times 2\) 행렬 \(\sum \nabla I\, \nabla I\T\)가 되고, 이 행렬은 역행렬이 있어야 합니다. 이것은 11주차의 Harris와 Shi-Tomasi detector가 살펴보는 second-moment matrix입니다. corner란 Lucas-Kanade가 tracking할 수 있는 patch입니다.
+@@ 44
+<strong>step은 linearization이 좋은 만큼만 좋습니다.</strong> 순수한 줄무늬 패턴 \(I_1(x) = \sin(2\pi x / \lambda)\)를 쓰면 이를 정확히 계산할 수 있습니다. 여러 주기에 걸쳐 평균하면 픽셀당 cost와 step은 다음과 같습니다.
+@@ 45
+cost는 \(s = d\)에서 최소점을 갖고, 모든 \(s = d + k\lambda\)에서도 최소점을 갖습니다. step은 항상 가장 가까운 최소점 쪽으로 움직입니다. 그래서 iteration은 반 주기 안에서, 즉 \(|s_0 - d| \lt \lambda/2\)에서 출발할 때 정확히 실제 이동량에 도달합니다. \(\lambda = 16\) px, \(d = 3\) px이고 \(s = 0\)에서 시작하면, 첫 step은 \(\tfrac{16}{2\pi}\sin(2\pi \cdot 3/16) = 2.35\)이고 오차 0.65 px가 남으며, 두 번째 step 뒤에는 0.007 px가 남습니다. \(d = 9\) px이면 같은 iteration이 틀린 최소점인 \(s = -7\)로 걸어갑니다.
+@@ 46
+3. Basin of convergence와 pyramid
+@@ 47
+iteration이 올바른 답에 도달하는 시작값의 집합이 <strong>basin of convergence</strong>(수렴 영역)입니다. direct alignment에서는 이미지에서 가장 미세한 주요 구조 크기의 약 절반이며, 흔히 몇 픽셀에 불과합니다. 두 frame 사이에 빠르게 움직이는 카메라는 이미지를 이보다 훨씬 많이 이동시킵니다.
+@@ 48
+해결책은 <strong>image pyramid</strong>입니다. 이미지를 blur하고 한 픽셀씩 건너뛰어 남기는 일을 반복합니다. level \(\ell\)에서 이미지는 \(2^\ell\)배 작고, 미세한 디테일은 blur로 사라졌으며, 원본 픽셀 기준 \(d\)의 이동량은 \(d / 2^\ell\) 픽셀에 불과합니다. <strong>Coarse-to-fine</strong> alignment는 가장 거친 level에서 먼저 풀고, 결과에 2를 곱해 한 level 아래의 initial guess로 씁니다. 각 level은 위 level이 풀지 못한 부분만 고치면 됩니다. 책의 §7.7은 RGB-D tracking에 바로 이 "coarse-to-fine Gauss-Newton optimization"을 씁니다. <span class="src">§7.7 · p. 219</span>
+@@ 49
+직접 해 보기: 실제 이동량은 20 px입니다. "수렴할 때까지 실행"을 누르세요. 그다음 pyramid를 켜고 다시 실행해 보세요. level이 바뀌는 모습을 보려면 한 step씩 진행해도 됩니다.
+@@ 50
+눈여겨볼 점: 원본 해상도에서 cost는 실제 이동량에 좁은 골짜기가 있고 다른 곳에는 얕은 오목한 곳들이 있습니다. 추정값은 시작점 근처의 오목한 곳인 약 −2.6 px에서 멈추며, 20 px와는 거리가 멉니다. 곡선 아래의 띠를 보면 실제값에서 대략 13 px 이내의 시작값만 성공합니다. pyramid를 쓰면 처음 step들은 32 픽셀짜리 이미지에서 돌고, 그 cost에는 넓은 골짜기가 하나뿐입니다. 그래서 20 px 가까이에 도달하고, 더 고운 level은 결과를 다듬기만 합니다. basin이 이제 몇 배 넓어졌습니다.
+@@ 51
+자세한 그림 두 장을 하나를 다른 하나 위에서 밀어 맞추는 건, 이미 거의 맞춰져 있을 때만 돼요. 그렇지 않으면 작은 디테일마다 엉뚱한 짝을 찾아 버려요. 먼저 눈을 가늘게 떠 보세요. 디테일이 흐려지면 큰 모양만 남고, 큰 모양은 딱 맞는 위치가 하나뿐이에요. 그다음 눈을 조금씩 뜨면서 남은 부분을 맞추면 돼요.
+@@ 52
+4. 이동량에서 카메라 pose로
+@@ 53
+카메라의 direct tracking은 스칼라 \(s\)를 pose perturbation \(\boldsymbol{\xi} \in \R^6\)로, 이동 \(x + s\)를 warp \(\omega\)로 바꿉니다. chain rule에 따라 픽셀 하나의 residual의 Jacobian은 다음과 같습니다.
+@@ 54
+여기서 \(\mathbf{x} = d_z \pi^{-1}(z)\)는 frame \(i\)의 point이고, 부호는 residual을 어떻게 쓰느냐에 따라 달라집니다. 이것은 <a href="#d67">Day 1</a>의 pose Jacobian 앞에 인수 하나가 더 붙은 것입니다. keypoint tracking은 point가 떨어지는 위치를 측정하고, direct tracking은 그 위치의 밝기를 측정합니다. 그래서 픽셀 단위의 움직임을 밝기 단위로 바꾸어 주는 gradient가 필요합니다. 픽셀마다 행이 하나씩 생기고, normal equations는 이번에도 \(6 \times 6\)입니다.
+@@ 55
+Keypoint 기반 (indirect)
+@@ 56
+reprojection error, 픽셀 단위
+@@ 57
+photometric error, 밝기 단위
+@@ 58
+=
+@@ 59
+descriptor matching으로 미리 찾음
+@@ 60
+warp를 통해 depth와 motion이 정함
+@@ 61
+corner만
+@@ 62
+gradient가 있는 모든 픽셀 (edge와 약한 texture 포함)
+@@ 63
+필요한 것
+@@ 64
+반복해서 검출되는 keypoint
+@@ 65
+가까운 initial guess와 일관된 밝기
+@@ 66
+Figure 7.8의 caption이 direct method를 지지하는 논거를 줍니다. 중간 추상화가 없으므로 아주 미묘한 밝기 변화까지 카메라 움직임에 대한 정보가 됩니다. <span class="src">Figure 7.8 · p. 211</span>
+@@ 67
+5. 두 direct 시스템과 세 단계의 consistency
+@@ 68
+<strong>LSD-SLAM</strong>은 번갈아 합니다. 현재 depth map에 대해 카메라를 tracking하고, 카메라가 주어지면 depth map을 갱신하며, global consistency를 위해 pose-graph optimization을 돌립니다. <strong>DSO</strong>는 하나의 <strong>photometric bundle adjustment</strong>에서 structure와 motion을 함께 최적화합니다. 그 robust loss는 각 point 주변의 작은 patch에 대한 제곱 차이의 가중합이며, 알 수 없는 노출 시간에 적응할 수 있습니다. CPU에서 real-time으로 돌기 위해 keyframe의 sliding window만 유지하고 오래된 keyframe은 marginalize합니다(marginalization은 <a href="#d15">3주차 · Day 3</a>에서, 그리고 내일 다룰 Schur complement입니다). <span class="src">§7.4.2 · pp. 210–211</span>
+@@ 69
+책은 real-time direct method가 global consistency에 이르는 세 단계를 제시합니다. <span class="src">§7.4.2 · p. 211</span>
+@@ 70
+DSO처럼 마지막 \(k\)개 keyframe에 대한 <strong>Sliding-window photometric BA</strong>. window 안에서는 consistent합니다.
+@@ 71
+그 위에 <strong>Pose-graph optimization</strong>: 모든 쌍별 image alignment와 가장 잘 맞는 trajectory를 찾습니다(Figure 7.9).
+@@ 72
+<strong>Pose graph bundle adjustment (PGBA)</strong>: BA의 photometric 불확실성 전체를 함께 담는 pose-graph optimization의 변형입니다. 여전히 pose만 갱신하므로 비용은 같습니다.
+@@ 73
+<strong>"Direct method는 correspondence가 전혀 필요 없다."</strong> 필요 없는 것은 <em>matching 단계</em>입니다. residual마다 correspondence는 여전히 쓰입니다. warp가 현재 depth와 pose로 그것을 계산하며, depth와 pose가 맞기 전까지는 그 correspondence도 틀려 있습니다.
+@@ 74
+<strong>"거친 이미지는 흐리므로 pyramid를 쓰면 결과가 덜 정확해진다."</strong> 거친 level은 시작점만 제공합니다. 최종 답은 원본 해상도 level에서 나옵니다.
+@@ 75
+<strong>"texture는 많을수록 항상 좋다."</strong> 미세하고 반복적인 texture는 서로 가까운 local minimum을 많이 만듭니다. 최종 추정은 날카로워지지만 basin은 줄어듭니다.
+@@ 76
+Q1. 세 픽셀의 image gradient가 \(g = (2, -1, 2)\)이고 residual이 \(r = (1, 1, -2)\)입니다. Lucas-Kanade update \(\delta\)는 얼마입니까?
+@@ 77
+=
+@@ 78
+=
+@@ 79
+=
+@@ 80
+=
+@@ 81
+Σ g·r = 2 − 1 − 4 = −3이고 Σ g² = 4 + 1 + 4 = 9이므로 δ = −(−3)/9 = +1/3 px입니다.
+@@ 82
+Q2. 이미지 한 행에 주기 12 px의 줄무늬 패턴만 있습니다. 원본 해상도에서 \(s = 0\)으로 시작할 때 Lucas-Kanade가 실제 이동량을 찾으려면, 이동량이 대략 얼마보다 작아야 합니까?
+@@ 83
+=
+@@ 84
+=
+@@ 85
+=
+@@ 86
+=
+@@ 87
+cost가 12 px마다 반복되고 iteration은 가장 가까운 최소점으로 가므로, 시작점이 실제값에서 반 주기, 즉 6 px 이내여야 합니다.
+@@ 88
+Q3. pyramid level 3에서 iteration이 그 level 픽셀로 2.5 픽셀의 이동량에 수렴했습니다. level 2가 받는 initial guess는 level 2 픽셀로 얼마입니까?
+@@ 89
+level 2는 level 3보다 해상도가 두 배이므로 같은 움직임이 두 배의 픽셀이 됩니다: 5. 원본 해상도 픽셀로는 20입니다.
+@@ 90
+Q4. direct method에 descriptor matcher가 필요 없는 이유는 무엇입니까?
+@@ 91
+이미지마다 픽셀 하나만 tracking합니다
+@@ 92
+frame 사이에 카메라가 움직이지 않는다고 가정합니다
+@@ 93
+depth와 카메라 움직임이 주어지면, warp가 각 픽셀이 다른 이미지에서 나타나야 할 위치를 계산합니다
+@@ 94
+robust loss 안에서 keypoint를 match합니다
+@@ 95
+correspondence는 (7.6)의 미지수의 함수입니다. depth와 motion을 최적화하면 correspondence도 SLAM과 함께 풀립니다.
+@@ 96
+Q5. §7.4.2에 따르면 DSO에 맞는 설명은 무엇입니까?
+@@ 97
+tracking과 depth map 추정을 번갈아 하고, 그다음 pose-graph optimization을 돌립니다
+@@ 98
+keyframe의 sliding window에서 structure와 motion을 함께 최적화하고, 오래된 keyframe은 marginalize합니다
+@@ 99
+ORB keypoint를 match하고 covisibility window에서 local BA를 돌립니다
+@@ 100
+frame rate로 모든 frame에 full BA를 돌립니다
+@@ 101
+첫 번째 보기는 LSD-SLAM, 세 번째는 ORB-SLAM입니다. DSO는 sliding-window photometric BA입니다.
+@@ 102
+photometric loss (7.6)는 한 픽셀의 밝기를 warp가 그 픽셀을 보내는 곳의 밝기와 비교합니다. 미지수는 카메라 motion과 픽셀별 depth입니다.
+@@ 103
+1-D에서 Gauss-Newton update는 \(\delta = -\sum g r / \sum g^2\)이고, \(g\)는 image gradient입니다. 이것이 Lucas-Kanade입니다.
+@@ 104
+iteration은 가장 미세한 주요 구조 크기의 약 절반 이내에서 출발할 때만 수렴합니다. image pyramid를 coarse-to-fine으로 풀면 그 basin이 level마다 최대 두 배까지 넓어집니다.
+@@ 105
+카메라 pose의 경우 residual Jacobian은 image gradient에 Day 1의 기하학적 Jacobian을 곱한 것입니다.
+@@ 106
+LSD-SLAM은 tracking과 mapping을 번갈아 하고, DSO는 sliding-window photometric BA를 합니다. global consistency는 pose-graph optimization이나 PGBA가 더합니다.
+@@ 107
+<em>SLAM Handbook</em>, §7.4.2 "Direct Image Alignment", pp. 209–212, 식 (7.6), Figures 7.8–7.9; §7.3.5, p. 207; §7.7, p. 219 (coarse-to-fine).
+@@ 108
+Szeliski, <em>Computer Vision: Algorithms and Applications</em>, 2판, 2022, Lucas-Kanade alignment와 coarse-to-fine 추정 참고.
+@@ 109
+Hartley and Zisserman, <em>Multiple View Geometry</em>, 2004, projection과 un-projection 참고.

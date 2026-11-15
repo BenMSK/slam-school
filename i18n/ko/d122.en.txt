@@ -1,0 +1,190 @@
+@@ 1
+<span class="eyebrow">Week 21 · Day 2</span>
+@@ 2
+Short-term dynamics: discard moving objects, track them, or reconstruct them
+@@ 3
+After today you can name the cues used to reject moving objects, write the factors that add a rigidly moving object to a SLAM factor graph, and outline how dense dynamic SLAM tracks and reconstructs objects.
+@@ 4
+About 60 min · Read §15.2, pp. 423–432 (9 pages, five of them half figures) · Needs Week 4 Day 2 and Week 11 Day 5
+@@ 5
+Read first: §15.2, pp. 423–432
+@@ 6
+The six families of cues for removing dynamic objects (pp. 424–426), and the weakness named for RANSAC and for semantic segmentation.
+@@ 7
+Figure 15.6 and equations (15.1)–(15.4), pp. 427–428. For each factor, find which variables it touches.
+@@ 8
+The four steps of simultaneous tracking and reconstruction (pp. 430–431).
+@@ 9
+A moving object in view can be handled at three levels. Throw its measurements away and localize on the rest. Or keep them and add the object to the factor graph as a rigid body with its own pose and velocity at every time step. Or build a dense model of it.
+@@ 10
+1. Three levels of ambition
+@@ 11
+The first methods found the measurements explained by the sensor's own motion, with statistical tests, RANSAC, or the Hough transform, and discarded the rest as outliers. Later work also filled in what the moving object had hidden, because a map without holes localizes better. The alternative is to <strong>track</strong> the objects inside SLAM, which computer vision calls <strong>multi-body structure from motion</strong>; it was first judged too expensive, has recently become feasible, and may be needed to avoid collisions. Beyond tracking lies dense <strong>reconstruction</strong> of the objects, which manipulation needs. <span class="src">§15.2 · pp. 423–424</span>
+@@ 12
+2. Removing dynamic objects
+@@ 13
+Discarding is simple and still effective: the persistent parts of the scene are usually what the map is for, and geometric estimation assumes rigidity, so moving parts show up as measurements that do not fit a rigid model. The book groups the cues into six families; current systems combine several. <span class="src">§15.2.1 · pp. 424–426</span>
+@@ 14
+Cue
+@@ 15
+How it separates robot motion from object motion
+@@ 16
+Caveat
+@@ 17
+Proprioceptive sensing
+@@ 18
+An IMU or odometry does not observe the scene, so scene motion cannot affect it
+@@ 19
+Must be fused with the other sensors (Chapters 11, 12)
+@@ 20
+Robust estimation
+@@ 21
+Measurements are redundant. RANSAC takes the largest consensus set at initialization; robust losses damp large residuals afterwards (<a href="#d34">Week 6 · Day 4</a>)
+@@ 22
+For low rates of dynamic content: under large occlusion the largest consensus set may be a moving object
+@@ 23
+Multi-view motion cues
+@@ 24
+A state is removed once its count of high-residual measurements passes a threshold (Figure 15.4)
+@@ 25
+Decides only after evidence has accumulated
+@@ 26
+Semantic information
+@@ 27
+A segmentation network masks classes that can move
+@@ 28
+Closed-set networks miss objects, and "can move" is not "is moving" (parked cars); combine with geometric checks
+@@ 29
+Domain knowledge
+@@ 30
+A car cannot slide sideways, so features implying sideways motion are outliers
+@@ 31
+Only where such knowledge exists
+@@ 32
+Motion-aware sensors
+@@ 33
+Event cameras; radars and some LiDARs measure point velocity by Doppler
+@@ 34
+Still under active investigation
+@@ 35
+3. Tracking: one rigid body per object in the factor graph
+@@ 36
+Tracking objects alongside SLAM is also called <strong>multi-object tracking (MOT)</strong>. The central modelling decision is that <em>each dynamic object is a rigid moving body</em>. The front-end extracts features as before and uses semantic masks to assign points to objects. <span class="src">§15.2.2 · pp. 426–427</span>
+@@ 37
+Variable
+@@ 38
+Camera pose at time \(t_i\) in the world frame \(\mathcal{F}^w\)
+@@ 39
+Static map point \(l\), in the world frame
+@@ 40
+Pose of object \(k\) at \(t_i\): object frame \(\mathcal{F}^k\) to world frame
+@@ 41
+Linear and angular velocity of object \(k\) at \(t_i\), in the object frame
+@@ 42
+Point \(j\) on object \(k\), in the object frame; no time index
+@@ 43
+The reprojection error of an object point is <span class="src">§15.2.2 · p. 427</span>
+@@ 44
+with \(\tilde{\mathbf{x}}^k_j\) the point in homogeneous coordinates, \(\mathbf{z}^i_j\) its pixel in image \(i\), and \(\pi\) the projection. Read it right to left: the object pose takes the point to the world frame, the inverse camera pose takes it to the camera frame, and \(\pi\) takes it to a pixel. Compared with the static reprojection error of <a href="#d65">Week 11 · Day 5</a> there is one extra transform, and it is an unknown that changes with time. The problem stays solvable because the points \(\mathbf{x}^k_j\) are shared by all frames.
+@@ 45
+Two more factors tie the object's poses together over time. Velocity is assumed constant between consecutive observations, and velocity is coupled to pose by comparing where a point is under the next pose with where the motion model puts it: <span class="src">§15.2.2 · pp. 427–428</span>
+@@ 46
+where \(h^{-1} : (x, y, z, \lambda) \mapsto (x/\lambda,\ y/\lambda,\ z/\lambda)\) and \(\Exp\) is the rotation exponential of <a href="#d20">Week 4 · Day 2</a>.
+@@ 47
+Filling the gap: equations (15.3) and (15.4) with numbers
+@@ 48
+<strong>Why the increment multiplies on the right.</strong> The velocities are expressed in the object frame, and a motion described in a body's own frame is applied after the current pose: the predicted pose is \(\mathbf{T}^w_{k,i}\, \Delta\mathbf{T}\).
+@@ 49
+<strong>How to read \(h^{-1}\).</strong> Both \(\mathbf{T}^w_{k,i+1}\tilde{\mathbf{x}}\) and \(\mathbf{T}^w_{k,i}\Delta\mathbf{T}\tilde{\mathbf{x}}\) are homogeneous points with last entry 1, so their difference has last entry 0. Read (15.3) as the difference of the two Euclidean points: a 3-vector, zero when the pose estimate and the motion model agree.
+@@ 50
+<strong>A planar example.</strong> An object is at world position \((4, 2)\) m, heading \(90^\circ\). In its own frame \(\mathbf{v} = (2, 0)\) m/s and \(\omega = 0.5\) rad/s; the time step is 0.2 s. Then \(\Delta\mathbf{T}\) is a rotation by \(0.1\) rad with translation \((0.4, 0)\) m, and the predicted pose has
+@@ 51
+The object point \(\mathbf{x}^k_j = (1, 0)\) is then predicted at \((4 + \cos 95.73^\circ,\ 2.4 + \sin 95.73^\circ) = (3.900,\ 3.395)\). If the current estimate of \(\mathbf{T}^w_{k,i+1}\) is position \((4.05, 2.38)\), heading \(96^\circ\), it puts the point at \((3.945,\ 3.375)\). The residual (15.3) is the difference, \((0.045,\ -0.020)\) m. The optimizer reduces it by changing the two poses, the velocity, or all three.
+@@ 52
+The widget is the same graph reduced to a plane without rotation: positions \(\mathbf{p}_i\) and velocities \(\mathbf{v}_i\), a velocity factor \(\mathbf{v}_{i+1} - \mathbf{v}_i\) as in (15.2), a coupling factor \(\mathbf{p}_{i+1} - \mathbf{p}_i - \mathbf{v}_i \Delta t\) as in (15.3), and position measurements standing in for reprojection. All are linear, so one solve of the normal equations (<a href="#d9">Week 2 · Day 3</a>) gives the answer.
+@@ 53
+Try it: lower "velocity change allowed per step", then switch the motion factors off.
+@@ 54
+Notice: with the default settings the measurements are off by 0.36 m (RMS) and the estimate by 0.19 m, and through the six hidden steps the estimate stays within 0.10 m of the truth with no measurement there. Set the allowed velocity change to 0.02 m/s: the estimate straightens, and its error (0.43 m) is worse than the raw measurements. Constant velocity is a prior, and its weight has to match how the object really moves. With the motion factors off there is no estimate in the gap at all.
+@@ 55
+The book's examples: Multimotion Visual Odometry (MVO) segments tracklets into clusters that each move rigidly. VDO-SLAM, Dynamic SLAM, and DynaSLAM II introduce the factor-graph approach. AirDOS extends it to <strong>articulated objects</strong>, connected rigid bodies such as a human skeleton. <span class="src">§15.2.2 · p. 428</span>
+@@ 56
+4. Dense dynamic SLAM
+@@ 57
+Dense dynamic SLAM also wants a dense reconstruction that includes the moving things. Most systems split the work into a <strong>localization step</strong>, which tracks the robot against the static background with the methods above, and a <strong>mapping step</strong>, which represents the background and the dynamic entities. <span class="src">§15.2.3 · p. 428</span>
+@@ 58
+Notes from the book
+@@ 59
+<strong>Moving object segmentation (MOS)</strong>
+@@ 60
+Label every point or pixel as moving or not; ignore the moving ones or keep them as a low-level record
+@@ 61
+Detection must be dense. Geometric cues: tracking residuals (StaticFusion) or consistency with the fused map (Dynablox). Semantic cues: mask classes such as people. Learned classifiers may not generalize out of domain.
+@@ 62
+<strong>Parametric models</strong>
+@@ 63
+If the kind of object is known, estimate the parameters of a shape model as factor-graph variables
+@@ 64
+Used most for people: skeletons or SMPL meshes
+@@ 65
+<strong>Simultaneous tracking and reconstruction</strong>
+@@ 66
+A separate dense model per moving object, usually assumed rigid, plus one for the background
+@@ 67
+Needs no prior model. Objects are mostly TSDF volumes (<a href="#d44">Week 8 · Day 2</a>).
+@@ 68
+Simultaneous tracking and reconstruction mostly follows four steps per image: detect the objects (segmentation refined by geometry and motion cues), track the camera against the background, track each object against the current image (usually with direct methods), and fuse each object's pixels into its own model. <span class="src">§15.2.3.3 · pp. 430–431</span> The price is computation, and a feedback loop: a tracking error fuses misaligned measurements into the object's model, and the worse model degrades later tracking. The rigid assumption can be relaxed to articulated and deformable objects (Day 5). Finally, the reconstructed objects improve the robot's own pose only in corner cases, for example when more than 70% of the view is occluded and good motion models of the objects exist. <span class="src">§15.2.3.3 · pp. 431–432</span>
+@@ 69
+<strong>"Mask every car and person and the problem is solved."</strong> A parked car is a good landmark, and a closed-set network does not know every movable thing. Semantics says what could move; geometry says what did.
+@@ 70
+Q1. In equation (15.1), which product takes a point from the frame of object k to the camera frame at time i?
+@@ 71
+The object pose times the inverse camera pose
+@@ 72
+The inverse camera pose times the object pose
+@@ 73
+The camera pose times the object pose
+@@ 74
+The inverse object pose times the camera pose
+@@ 75
+Read right to left: object frame to world, then world to camera.
+@@ 76
+Q2. An object is at world position (10, 5) m and faces along world −x. In its own frame v = (3, 0) m/s and ω = 0. Where does the constant-velocity model put it 0.1 s later?
+@@ 77
+The increment is 0.3 m along the object's own x axis, which points along world −x: (10, 5) + (−0.3, 0) = (9.7, 5).
+@@ 78
+Q3. A bus stops in front of the camera and fills 80% of the image, then pulls away. Which cue is least affected?
+@@ 79
+An IMU, because it does not observe the scene
+@@ 80
+RANSAC, because it finds the largest consensus set
+@@ 81
+A robust loss, because it damps large residuals
+@@ 82
+More image features
+@@ 83
+RANSAC's largest consensus set is now the bus, and a robust loss damps whatever disagrees with it. Proprioceptive sensing is not influenced by scene motion.
+@@ 84
+Q4. Why does an object point carry no time index, while the object's pose does?
+@@ 85
+Points are observed only once
+@@ 86
+Points are stored in the world frame
+@@ 87
+On a rigid body a point's coordinates in the object frame never change
+@@ 88
+The time index is hidden in the homogeneous coordinate
+@@ 89
+Rigidity means the shape is constant in the object's own frame. All the motion is carried by the pose.
+@@ 90
+Moving objects can be removed, tracked, or reconstructed, depending on what the task needs.
+@@ 91
+Removal uses six kinds of cue: proprioception, robust estimation, multi-view residuals, semantics, domain knowledge, motion-aware sensors. Each has a failure case, so systems combine them.
+@@ 92
+Tracking models each object as a rigid body: a pose and velocity per time step, points fixed in the object frame, and the factors (15.1), (15.2), and (15.3)–(15.4).
+@@ 93
+Dense dynamic SLAM localizes against the background and maps background and objects, by segmentation, parametric models, or per-object dense models.
+@@ 94
+<em>SLAM Handbook</em>, §15.2 "Short-term Dynamics and Dynamic SLAM", pp. 423–432, equations (15.1)–(15.4), Figures 15.4–15.9.
+@@ 95
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (right composition of body-frame increments).

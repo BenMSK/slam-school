@@ -1,0 +1,272 @@
+@@ w10
+"aria-label":"Map of the range-only cost over the plane. Beacons with their measured range rings, the true position, a draggable start point, the path of a local solver, and the best point on the map."
+==
+"aria-label":"평면 위 range-only cost의 지도. 측정된 range 원이 그려진 beacon들, 실제 위치, 끌어서 옮길 수 있는 시작점, local solver의 경로, 지도에서 가장 좋은 점."
+@@ w10
+stat("Cost where the solver stopped",f3(cE),"at ("+f2(E[0])+", "+f2(E[1])+") after "+(path.length-1)+" steps")
+==
+stat("solver가 멈춘 곳의 cost",f3(cE),"("+f2(E[0])+", "+f2(E[1])+"), "+(path.length-1)+" step 후")
+@@ w10
+stat("Lowest cost on the map",f3(cG),"at ("+f2(G[0])+", "+f2(G[1])+")")
+==
+stat("격자에서 가장 낮은 cost",f3(cG),"위치 ("+f2(G[0])+", "+f2(G[1])+")")
+@@ w10
+stat("Verdict",cE-cG<1e-4?"global minimum":"stuck in a local minimum",
+==
+stat("판정",cE-cG<1e-4?"global minimum":"local minimum에 갇힘",
+@@ w10
+h("div",{class:"vt"},"Where am I, from distances only?")
+==
+h("div",{class:"vt"},"거리만으로 내 위치 찾기")
+@@ w10
+"One unknown position, beacons at known places, one range to each. More strongly coloured cells have lower cost. Drag the hollow orange start point; the solver is Gauss-Newton."
+==
+"모르는 위치 하나, 위치를 아는 beacon들, beacon마다 range 하나. 색이 진한 칸일수록 cost가 낮습니다. 속이 빈 주황색 시작점을 끌어 보세요. solver는 Gauss-Newton입니다."
+@@ w10
+select("Beacons",
+==
+select("beacon 수",
+@@ w10
+"3 beacons"
+==
+"beacon 3개"
+@@ w10
+"2 beacons"
+==
+"beacon 2개"
+@@ w10
+button("New noise",
+==
+button("새 noise",
+@@ w10
+"solver path and end point"
+==
+"solver 경로와 끝점"
+@@ w10
+"lowest-cost point on the map"
+==
+"격자에서 cost가 가장 낮은 점"
+@@ w10
+"true position (ring)"
+==
+"실제 위치 (고리)"
+@@ w10
+"range r along the best unit vector b"
+==
+"최적 단위 벡터 b 방향의 range r"
+@@ w10
+"what is left: the residual"
+==
+"남는 부분: residual"
+@@ w10
+"aria-label":"Graph of the polynomial p(x), a horizontal line at the lower bound from the semidefinite relaxation, the start point, and the point where gradient descent stops."
+==
+"aria-label":"다항식 p(x)의 그래프, semidefinite relaxation이 주는 lower bound 높이의 수평선, 시작점, gradient descent가 멈춘 점."
+@@ w10
+stat("Descent stops at",
+==
+stat("descent가 멈춘 곳",
+@@ w10
+stat("Lower bound d*",f3(gam),"holds for every x")
+==
+stat("lower bound d*",f3(gam),"모든 x에서 성립")
+@@ w10
+stat("Gap p − d*",f3(Math.max(0,gap)),gap<1e-4?"zero: certified global minimum":"positive: no certificate")
+==
+stat("gap p − d*",f3(Math.max(0,gap)),gap<1e-4?"0: certified global minimum":"양수: certificate 없음")
+@@ w10
+"Q is positive semidefinite: eigenvalues "
+==
+"Q는 positive semidefinite입니다. eigenvalue: "
+@@ w10
+"Two of them are zero: the minimum is reached at "
+==
+"그중 두 개가 0입니다. 최솟값을 갖는 곳은 "
+@@ w10
+"two points, x = ±"
+==
+"두 점 x = ±"
+@@ w10
+:"x = 0")+".":"Its null vector is proportional to [1, x, x²] with x = "+f3(xs)+", the global minimizer.");
+==
+:"x = 0")+"입니다.":"null vector는 [1, x, x²]에 비례하며, x = "+f3(xs)+"가 global minimizer입니다.");
+@@ w10
+h("div",{class:"vt"},"A relaxation you can check by hand")
+==
+h("div",{class:"vt"},"손으로 확인할 수 있는 relaxation")
+@@ w10
+"p(x) = x⁴ − a x² + b x. Gradient descent runs from the start you pick. The dashed line is the lower bound from the order-2 semidefinite relaxation."
+==
+"p(x) = x⁴ − a x² + b x. gradient descent는 고른 시작점에서 출발합니다. 점선은 order-2 semidefinite relaxation이 주는 lower bound입니다."
+@@ w10
+range("a (depth of the two wells)",
+==
+range("a (두 우물의 깊이)",
+@@ w10
+range("b (tilt)",
+==
+range("b (기울기)",
+@@ w10
+range("Start x",
+==
+range("시작 x",
+@@ w10
+"start (thin line) and where descent stops (dot)"
+==
+"시작 (가는 선), descent가 멈춘 곳 (점)"
+@@ w10
+["Sample mean","Sample median","0.8 × sample mean"]
+==
+["표본 평균","표본 중앙값","0.8 × 표본 평균"]
+@@ w10
+"aria-label":"Histogram of 2000 estimates from the chosen estimator, with the Gaussian whose variance equals the Cramér-Rao bound drawn on top and a vertical line at the true value."
+==
+"aria-label":"선택한 estimator로 얻은 추정값 2000개의 히스토그램. 분산이 Cramér-Rao bound와 같은 Gaussian이 위에 겹쳐 있고, 실제값 위치에 수직선이 있습니다."
+@@ w10
+"true x = 2"
+==
+"실제 x = 2"
+@@ w10
+["Estimator","Bias","Variance","Variance ÷ bound","MSE"]
+==
+["estimator","bias","분산","분산 ÷ bound","MSE"]
+@@ w10
+"σ² / N, for unbiased estimators"
+==
+"σ² / N, unbiased estimator 대상"
+@@ w10
+stat("Trials",K,"each with "+N+" fresh measurements")
+==
+stat("시행 수",K,"시행마다 새 측정 "+N+"개")
+@@ w10
+h("div",{class:"vt"},"Can any estimator beat the bound?")
+==
+h("div",{class:"vt"},"bound를 이기는 estimator가 있을까?")
+@@ w10
+"True value x = 2. Each trial draws N measurements z = x + noise and computes three estimates. The black curve is a Gaussian with the Cramér-Rao variance σ²/N."
+==
+"실제값 x = 2. 시행마다 측정 N개 z = x + noise를 뽑아 추정값 세 개를 계산합니다. 검은 곡선은 분산이 Cramér-Rao 값 σ²/N인 Gaussian입니다."
+@@ w10
+range("Measurements N",
+==
+range("측정 수 N",
+@@ w10
+range("Noise σ",
+==
+range("noise σ",
+@@ w10
+select("Histogram shows",
+==
+select("히스토그램",
+@@ w10
+button("New trials",
+==
+button("새 시행",
+@@ w10
+"aria-label":"Pose graph with eight poses in a loop. Pose 0 is anchored. Solid lines are odometry, dashed lines are loop closures that can be switched on. A circle around each pose shows its one-sigma position uncertainty from the inverse Fisher information."
+==
+"aria-label":"pose 여덟 개가 loop를 이루는 pose graph. pose 0은 anchor로 고정되어 있습니다. 실선은 odometry, 점선은 켤 수 있는 loop closure입니다. 각 pose 둘레의 원은 역 Fisher information에서 얻은 1σ 위치 불확실성입니다."
+@@ w10
+"0: anchored"
+==
+"0: anchor"
+@@ w10
+button("All off",
+==
+button("모두 끄기",
+@@ w10
+stat("Weighted spanning trees",fm(Math.exp(logdet)),"det of the reduced Laplacian")
+==
+stat("weighted spanning tree 수",fm(Math.exp(logdet)),"reduced Laplacian의 det")
+@@ w10
+"tree connectivity"
+==
+"tree 연결성"
+@@ w10
+stat("Smallest eigenvalue (E)",f3(eg.val[0]),"of the reduced Laplacian")
+==
+stat("가장 작은 eigenvalue (E)",f3(eg.val[0]),"reduced Laplacian에서")
+@@ w10
+stat("Algebraic connectivity",f3(full.val[1]),"λ₂ of the full Laplacian")
+==
+stat("algebraic connectivity",f3(full.val[1]),"전체 Laplacian의 λ₂")
+@@ w10
+stat("Mean variance (A)",
+==
+stat("평균 분산 (A)",
+@@ w10
+"trace of the inverse ÷ 7"
+==
+"역행렬의 trace ÷ 7"
+@@ w10
+stat("Worst variance",f2(vars[worst]),"per axis, at pose "+(worst+1))
+==
+stat("최악의 분산",f2(vars[worst]),"축당, pose "+(worst+1)+"에서")
+@@ w10
+"Reduced weighted Laplacian (row and column of pose 0 removed):"
+==
+"reduced weighted Laplacian (pose 0의 행과 열 제거):"
+@@ w10
+"Eigenvalues of the reduced Laplacian: "
+==
+"reduced Laplacian의 eigenvalue: "
+@@ w10
+h("div",{class:"vt"},"Loop closures, the Laplacian, and uncertainty")
+==
+h("div",{class:"vt"},"loop closure, Laplacian, 불확실성")
+@@ w10
+"Eight 2-D positions with known orientations. Odometry edges have weight 1. Each button switches a loop closure on or off; while it is off, the number on it is how much log det would rise if you added it."
+==
+"방향을 아는 2-D 위치 여덟 개. odometry edge의 weight는 1입니다. 각 버튼은 loop closure 하나를 켜고 끕니다. 꺼져 있을 때 버튼의 숫자는 그 edge를 추가하면 log det이 얼마나 오를지를 나타냅니다."
+@@ w10
+range("Loop-closure weight w (precision)",
+==
+range("loop closure weight w (precision)",
+@@ w10
+"loop closure, on"
+==
+"loop closure, 켜짐"
+@@ w10
+"loop closure, off"
+==
+"loop closure, 꺼짐"
+@@ w10
+"1σ circle of each pose"
+==
+"각 pose의 1σ 원"
+@@ w10
+"aria-label":"Left: a graph on four nodes with the chosen edges. Right: every spanning tree of that graph drawn as a small picture."
+==
+"aria-label":"왼쪽: 선택한 edge로 이루어진 node 네 개짜리 그래프. 오른쪽: 그 그래프의 모든 spanning tree를 작은 그림으로 그린 것."
+@@ w10
+"node 0 is the anchor"
+==
+"node 0이 anchor"
+@@ w10
+"no spanning tree: the graph is disconnected"
+==
+"spanning tree 없음: 그래프가 끊어짐"
+@@ w10
+stat("Edges",act.length,"of 6 possible")
+==
+stat("edge 수",act.length,"가능한 6개 중")
+@@ w10
+stat("Spanning trees, listed",trees.length,"drawn on the right")
+==
+stat("spanning tree (나열)",trees.length,"오른쪽에 그림")
+@@ w10
+stat("det of reduced Laplacian",Math.round(det3(Lr)),"the same number")
+==
+stat("reduced Laplacian의 det",Math.round(det3(Lr)),"같은 숫자")
+@@ w10
+"Reduced Laplacian (nodes 1, 2, 3):  "
+==
+"reduced Laplacian (node 1, 2, 3):  "
+@@ w10
+h("div",{class:"vt"},"Counting spanning trees two ways")
+==
+h("div",{class:"vt"},"spanning tree를 두 가지 방법으로 세기")
+@@ w10
+"Switch edges of a four-node graph on and off. The widget lists every set of three edges that connects all four nodes, and separately computes a 3 × 3 determinant."
+==
+"node 네 개인 그래프의 edge를 켜고 꺼 보세요. 위젯은 네 node를 모두 잇는 edge 세 개짜리 집합을 전부 나열하고, 따로 3 × 3 행렬식을 계산합니다."

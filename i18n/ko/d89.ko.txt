@@ -1,0 +1,246 @@
+@@ 1
+<span class="eyebrow">15주차 · Day 5</span>
+@@ 2
+simulator, dataset, metric, 그리고 열린 문제
+@@ 3
+오늘이 끝나면 simulator가 밝기 sample을 어떻게 event와 noise로 바꾸는지 설명하고, 작업에 맞는 dataset을 고르고, absolute trajectory error와 relative pose error를 계산하고 해석할 수 있습니다.
+@@ 4
+약 60분 · §10.7–10.8, pp. 294–303 읽기 (8쪽, dataset 설명은 훑어보기) · 15주차 Day 1 필요
+@@ 5
+먼저 읽기: §10.7–10.8, pp. 294–303
+@@ 6
+survey 성격의 절입니다. §10.7.1과 §10.7.3은 꼼꼼히 읽고 §10.7.2의 dataset 설명은 훑어보세요. 찾아볼 것:
+@@ 7
+ESIM이 "연속된 두 frame의 차이에 threshold를 적용하는 것"과 어떻게 다른지, 그리고 \(C\)의 noise model(pp. 295–296).
+@@ 8
+V2E가 무엇을 더하는지, V2CE가 이전 simulator의 어떤 약점을 다루는지(p. 297).
+@@ 9
+Table 10.2(p. 299)의 해상도 열과 센서 열.
+@@ 10
+ATE와 RPE를 한 문장으로 설명한 부분, 그리고 depth 오차를 보통 trajectory 오차에 포함시키는 이유(p. 301).
+@@ 11
+젊은 분야는 데이터와 잣대가 발전하는 속도만큼 나아갑니다. simulator는 완벽한 ground truth가 붙은 event를 무제한으로 주는데, noise가 현실적일 때에 한해서입니다. dataset은 측정된 ground truth가 붙은 실제 event를 줍니다. metric은 두 trajectory의 비교를 숫자 하나로 압축합니다. ATE는 경로 전체가 얼마나 벗어났는지를, RPE는 각 step이 얼마나 틀렸는지를 묻습니다.
+@@ 12
+1. simulator
+@@ 13
+event camera는 새로운 센서이고 event 데이터는 부족한데, 이 부족함은 learning-based 방법에 가장 큰 타격을 줍니다. simulator가 그 빈틈을 메웁니다. <span class="src">§10.7.1 · pp. 295–297</span>
+@@ 14
+=
+@@ 15
+출발점
+@@ 16
+핵심 아이디어
+@@ 17
+=
+@@ 18
+렌더링한 가상 장면
+@@ 19
+renderer와 event generator가 긴밀히 결합되어, 시각 신호가 변하는 속도에 맞춰 frame을 적응적으로 렌더링함
+@@ 20
+CARLA의 event sensor
+@@ 21
+주행 simulator
+@@ 22
+풍부한 주행 장면에 ESIM 원리를 적용
+@@ 23
+=
+@@ 24
+기존의 어떤 동영상이든
+@@ 25
+추가 frame을 interpolation(Super SloMo)한 뒤 ESIM 적용. 이상적인 센서를 모델링
+@@ 26
+동영상
+@@ 27
+DVS 회로를 모델링: temporal noise, leak event, 밝기에 따라 달라지는 대역폭, Gaussian threshold
+@@ 28
+=
+@@ 29
+이미지 쌍
+@@ 30
+adversarial loss와 cycle-consistency loss로 학습한 network. polarity별 voxel grid를 출력
+@@ 31
+=
+@@ 32
+실제 주행 데이터, 여러 종류의 센서
+@@ 33
+control policy 학습용으로 만들어짐. event는 ESIM처럼 생성하고 optical flow는 network에서 얻음
+@@ 34
+=
+@@ 35
+network가 voxel grid를 예측하고, 두 번째 단계에서 그로부터 연속적인 event timestamp를 복원
+@@ 36
+가장 초기의 시도는 연속된 두 frame의 차이에 threshold를 적용했을 뿐입니다. 그러면 edge 같은 그림은 나오지만, event의 올바른 개수와 시각은 나오지 않습니다. <span class="src">§10.7.1 · p. 295</span>
+@@ 37
+빈틈 채우기: 밝기 sample에서 event timestamp로
+@@ 38
+책은 simulator가 무엇을 하는지는 말하지만, 밝기 sample 하나가 어떻게 microsecond timestamp가 붙은 event가 되는지는 말하지 않습니다. 표준적인 방법은 짧습니다.
+@@ 39
+simulator는 픽셀의 로그 밝기를 sample 시각에서만 압니다. \(t_a\)에서 \(L_a\), \(t_b\)에서 \(L_b\)입니다. \(L_\text{ref}\)를 픽셀이 마지막 event 때 기억한 수준이라고 합시다. 두 sample 사이에서 \(L\)이 선형으로 변한다고 가정합니다. 밝기가 오르면 \(L_b\)를 넘지 않는 한 수준 \(L_\text{ref} + jC\)(\(j = 1, 2, \dots\))를 차례로 지나고, 교차 시각은 닮은 삼각형에서 나옵니다:
+@@ 40
+교차 하나가 ON event 하나입니다. 신호가 내려가면 \(L_\text{ref} - jC\)를 쓰고 OFF event를 냅니다. 그 뒤 \(L_\text{ref}\)는 마지막으로 지난 수준이 됩니다. 이것은 sample 사이에 식 (10.1)을 적용한 것이며, 이번 주 위젯 뒤의 simulator가 0.05 ms마다 하는 일입니다.
+@@ 41
+<strong>예제.</strong> \(t_a = 0\)에서 \(L_\text{ref} = L_a = -1.0\), \(t_b = 1\) ms에서 \(L_b = -0.2\), \(C = 0.3\)입니다. 수준 \(-0.7\)과 \(-0.4\)는 지나고 \(-0.1\)에는 이르지 못합니다. 따라서 ON event 두 개가 다음 시각에 나오고
+@@ 42
+기억은 \(-0.4\)에서 끝나며, 변화량 \(0.2\)는 다음 구간으로 넘어갑니다. frame 차이에 threshold를 적용하는 방법이었다면 \(t_b\)에 event 하나만 보고했을 것입니다.
+@@ 43
+<strong>sampling이 적응해야 하는 이유.</strong> sample 사이에 너무 많은 일이 일어나면 선형 가정이 깨집니다. 가늘고 밝은 선이 \(t_a\)와 \(t_b\) 사이에 픽셀을 완전히 지나가 버리면 \(L_a = L_b\)가 되어 simulator는 아무것도 내지 않습니다. 합리적인 규칙은 sample 사이에 이미지가 많아야 약 1픽셀만 움직이도록 자주 sampling하는 것입니다. 그러면 2000 px/s로 움직이는 edge는 0.5 ms마다 sample이 필요하고, 20 px/s라면 50 ms마다 하나로 충분합니다. renderer는 아무 시각에나 frame을 만들 수 있으므로 ESIM은 적응할 수 있습니다. 녹화된 30 Hz 동영상은 그럴 수 없습니다. 2000 px/s에서는 frame 사이에 이미지가 67픽셀을 건너뜁니다. 그래서 Vid2E와 V2E는 먼저 중간 frame을 interpolation하고, 책은 그 개수에 주의해야 한다고 말합니다. 너무 적으면 aliasing이 생기고, 너무 많으면 계산 비용이 듭니다. <span class="src">§10.7.1 · p. 296</span>
+@@ 44
+<strong>noise.</strong> 완벽한 시뮬레이션 event에 맞춰 조정한 알고리즘은 실제 event에서 실패할 수 있습니다. 이것이 <strong>simulation-to-real gap</strong>입니다. ESIM과 그 후속 simulator들은 측정에서 얻은 단순한 noise model을 씁니다. contrast threshold를 고정하지 않고 시뮬레이션 step마다 정규분포 \(\N(C, \sigma_C^2)\)에서 뽑으며, 두 polarity에 대해 threshold \(C^+\)와 \(C^-\)를 따로 둡니다. <span class="src">§10.7.1 · p. 296</span> 효과를 보려면 Day 1의 막대를 생각해 보세요. 그 edge는 \(L\)을 \(\ln 10 = 2.30\)만큼 바꿉니다. \(C = 0.30\)이면 픽셀은 event 7개를 냅니다. threshold가 마침 \(0.27\)이면 \(\lfloor 2.30/0.27 \rfloor = 8\)개, \(0.33\)이면 6개를 냅니다. 이웃한 픽셀끼리 더는 일치하지 않는데, 실제 데이터가 바로 이렇게 생겼습니다.
+@@ 45
+V2E는 더 나아가 픽셀 회로를 모델링하고, V2CE는 timestamp를 겨냥합니다. 이전의 동영상 기반 simulator는 이산적인 시각에 event를 내는데, 이는 타이밍에 민감한 방법에 문제가 될 만큼 실제 데이터와 다릅니다. <span class="src">§10.7.1 · p. 297</span>
+@@ 46
+2. dataset
+@@ 47
+Table 10.2에는 dataset 열여섯 개가 있습니다. 그중 일부를, 각각이 쓸모 있는 이유와 함께 고르면 다음과 같습니다: <span class="src">§10.7.2 · pp. 298–301, Table 10.2</span>
+@@ 48
+플랫폼
+@@ 49
+event 픽셀 수
+@@ 50
+제공하는 것
+@@ 51
+=
+@@ 52
+휴대형
+@@ 53
+동기화된 event, IMU, motion capture로 얻은 6-DoF ground truth pose를 갖춘 첫 dataset. 실제 장면 11개와 합성 장면 2개
+@@ 54
+=
+@@ 55
+휴대형, 드론, 자동차, 오토바이
+@@ 56
+LiDAR로 얻은 ground truth depth를 갖춘 첫 dataset. stereo event. 긴 실내외 sequence
+@@ 57
+=
+@@ 58
+레이싱 드론
+@@ 59
+빠른 실내외 비행. 드론 레이싱과 visual-inertial odometry를 겨냥
+@@ 60
+=
+@@ 61
+독립적으로 움직이는 물체와 픽셀 단위 motion mask, 그리고 ground truth egomotion과 depth
+@@ 62
+=
+@@ 63
+자동차
+@@ 64
+stereo event(baseline 60 cm)와 stereo RGB, LiDAR, RTK GPS. 낮, 밤, 직사광선. ground truth depth map
+@@ 65
+=
+@@ 66
+휴대형, 머리 장착형
+@@ 67
+100만 화소 stereo event, 200 Hz IMU, 20 Hz grayscale frame
+@@ 68
+=
+@@ 69
+beamsplitter로 event camera와 RGB 카메라를 같은 광축에 둠
+@@ 70
+=
+@@ 71
+드론, 자동차, 사족 보행 로봇
+@@ 72
+여러 플랫폼에서의 고속 움직임. ground truth pose, depth, semantic label 포함
+@@ 73
+고를 때는 세 가지를 작업에 맞추세요. 움직임(손에 든 카메라로 찍은 사무실 sequence는 레이싱 드론에 대해 알려 주는 것이 거의 없습니다), 필요한 ground truth(pose는 흔하고 depth는 드뭅니다), 해상도(Day 1에서 보았듯 megapixel 센서는 처리하기 어려운 event rate를 만듭니다)입니다.
+@@ 74
+3. metric
+@@ 75
+이상적으로는 localization과 mapping을 따로 평가해야 합니다. 실제로는 depth 오차가 pose 오차를 낳고 그 반대도 마찬가지라 둘이 얽혀 있으며, ground truth pose가 ground truth depth보다 훨씬 얻기 쉽습니다. 그래서 map의 품질은 보통 trajectory를 통해 판단합니다. event-based SLAM은 두 가지 주요 metric을 고전적인 SLAM(<a href="#d61">11주차 · Day 1</a>)에서 물려받았습니다. <span class="src">§10.7.3 · p. 301</span>
+@@ 76
+<strong>absolute trajectory error (ATE)</strong>는 추정 pose와 실제 pose를 하나의 고정된 world frame에서 비교합니다. long-term, global 정확도를 평가합니다.
+@@ 77
+<strong>relative pose error (RPE)</strong>는 가까운 time step 사이의 추정 움직임과 실제 움직임을 비교합니다. local consistency를 평가합니다.
+@@ 78
+둘 다 이동 성분은 위치 사이의 Euclidean 거리이고, 회전 성분은 \(\SO(3)\)에서의 geodesic distance입니다. <span class="src">§10.7.3 · p. 301</span>
+@@ 79
+빈틈 채우기: 식
+@@ 80
+책은 metric을 말로만 설명합니다. 같은 \(n\)개 timestamp에서의 실제 pose와 추정 pose를 \(\SE(3)\)의 원소 \(\mathbf{T}^\text{gt}_i\)와 \(\mathbf{T}^\text{est}_i\)라 하고, 그 위치를 \(\mathbf{t}^\text{gt}_i\)와 \(\mathbf{t}^\text{est}_i\)라고 합시다.
+@@ 81
+<strong>ATE.</strong> 두 trajectory는 보통 서로 다른 world frame에 있으므로, 먼저 least squares 의미에서 추정값을 ground truth에 가장 잘 맞추는 rigid transform \(\mathbf{S}\)를 찾습니다(<a href="#d74">13주차 · Day 2</a>의 closed-form alignment). 그다음 남은 오차의 root mean square를 구합니다:
+@@ 82
+<strong>RPE.</strong> \(\Delta\) step의 간격을 고릅니다. 상대 움직임 \(\Delta\mathbf{T}^\text{gt}_i = (\mathbf{T}^\text{gt}_i)^{-1}\mathbf{T}^\text{gt}_{i+\Delta}\)와 \(\Delta\mathbf{T}^\text{est}_i = (\mathbf{T}^\text{est}_i)^{-1}\mathbf{T}^\text{est}_{i+\Delta}\)를 만들고, 오차를 다음과 같이 정의합니다.
+@@ 83
+추정한 step이 실제 step과 같으면 \(\mathbf{E}_i\)는 항등 변환입니다. 이동 RPE는 \(\mathbf{E}_i\)들의 이동 부분 길이의 root mean square이고, 회전 RPE는 회전 부분의 각도를 씁니다. 상대 움직임은 world frame에 의존하지 않으므로 alignment가 필요 없습니다.
+@@ 84
+<strong>\(\SO(3)\)에서의 geodesic distance.</strong> 회전 \(\mathbf{R}_1\)과 \(\mathbf{R}_2\) 사이의 거리는 하나를 다른 하나로 옮기는 회전의 각도입니다:
+@@ 85
+어떤 축에 대해서든 각도 \(\theta\)만큼의 회전은 trace가 \(1 + 2\cos\theta\)이기 때문입니다. 예: \(\tr(\mathbf{R}_1\T\mathbf{R}_2) = 2.9696\)이면 \(\cos\theta = 0.9848\)이고 두 방향은 \(10^\circ\) 떨어져 있습니다.
+@@ 86
+직접 해 보기: 아래 추정값은 잘못된 회전을 한 번 합니다. 그 회전이 일어나는 step을 옮겨 보세요.
+@@ 87
+눈여겨볼 점: 잘못된 회전이 어디서 일어나든 RPE는 0.028 step입니다. 40개 중 나쁜 step 하나는 어디에 있든 같은 local 오차입니다(크기는 현의 길이 \(2\sin 5^\circ = 0.174\)이고, \(0.174/\sqrt{40} = 0.028\)). ATE는 회전이 step 8에 있으면 0.29, step 20이면 0.69, step 39이면 0.03입니다. 양 끝 근처의 회전은 경로 거의 전체를 rigid하게 돌릴 뿐이라 alignment가 이를 없애지만, 가운데의 회전은 경로를 구부리고 이는 어떤 rigid alignment로도 되돌릴 수 없습니다. alignment가 없으면 회전이 step 8에 있을 때 끝점이 4.47 step만큼 벗어납니다.
+@@ 88
+크기가 다른 장면의 결과를 비교할 수 있도록 위치 오차를 장면의 평균 depth나 이동 거리로 나누는 저자도 있습니다. 50 m 경로에서 ATE 0.20 m는 거리의 0.4%입니다. 다른 변형은 상대 위치 오차와 회전 오차를 평균하며, event camera에서는 선속도와 각속도의 오차도 유익합니다. 빠르고 급격한 움직임이야말로 이 센서가 존재하는 이유이기 때문입니다. <span class="src">§10.7.3 · pp. 301–302</span>
+@@ 89
+depth를 따로 평가할 때 흔히 쓰는 척도는 여러 cutoff 거리까지의 평균 depth 오차, 추정한 각 3D 점에서 가장 가까운 ground truth 표면까지 거리의 root mean square(가장 선호되는 척도), 상대 오차, 그리고 복원된 점의 개수인 completion입니다. <span class="src">§10.7.3 · p. 302</span>
+@@ 90
+4. 열린 문제
+@@ 91
+책은 아직 풀리지 않은 문제로 장을 마칩니다. <span class="src">§10.8 · p. 302</span>
+@@ 92
+<strong>프로세서가 센서와 맞지 않습니다.</strong> 카메라는 asynchronous인데 대부분의 시스템은 평범한 직렬 프로세서에서 돌아갑니다. 완전한 <strong>neuromorphic</strong> 시스템은 event camera를 asynchronous, spike 기반 프로세서와 제어기에 짝지을 것이며, 전력 소비와 latency에서 더 나을 것으로 기대됩니다. 이를 만들려면 센서, 프로세서, 알고리즘을 함께 설계해야 하고, 여러 분야의 전문성이 필요합니다.
+@@ 93
+<strong>새로운 센서.</strong> hybrid 센서는 공간과 시간이 맞춰진 event와 밝기를 함께 내보냅니다. foveated 센서는 눈처럼 이미지의 일부에서만 높은 해상도를 유지해 대역폭을 아낍니다.
+@@ 94
+<strong>fusion.</strong> event camera를 frame camera, structured light, LiDAR, radar와 결합하는 데에는 탐구할 거리가 많습니다.
+@@ 95
+<strong>"RPE가 낮으면 trajectory가 global하게 정확하다."</strong> step마다의 작은 오차가 쌓여 큰 drift가 될 수 있습니다. RPE는 step을, ATE는 그 합을 평가합니다.
+@@ 96
+<strong>"ATE는 주어진 그대로의 두 trajectory 사이 거리다."</strong> alignment 없이 재면 대부분 world frame을 임의로 고른 결과를 재게 됩니다.
+@@ 97
+<strong>"시뮬레이션한 event는 실제 event만큼 좋다."</strong> noise와 타이밍 모델이 맞는 만큼만 그렇습니다. V2E와 V2CE가 존재하는 이유가 그것입니다.
+@@ 98
+Q1. 시뮬레이션 픽셀이 방금 event를 내서 기억이 현재 수준과 같습니다. t = 0에서 L = 0입니다. 다음 sample은 t = 4 ms에서 L = 1.0입니다. C = 0.4이고 선형 interpolation을 쓸 때 어떤 event가 나올까요?
+@@ 99
+4 ms에 ON event 하나
+@@ 100
+1.6 ms와 3.2 ms에 ON event 두 개
+@@ 101
+2 ms와 4 ms에 ON event 두 개
+@@ 102
+1.33, 2.67, 4 ms에 ON event 세 개
+@@ 103
+수준 0.4와 0.8은 지나고 1.2에는 이르지 못합니다. 4 ms 동안 0에서 1.0으로 가는 직선에서 두 수준을 지나는 시각은 0.4 × 4 = 1.6 ms와 0.8 × 4 = 3.2 ms입니다.
+@@ 104
+Q2. 어떤 odometry 시스템이 모든 step을 하나하나 정확하게 추정하지만 loop closure가 없고, 한 시간 동안 작동합니다. 어떤 결과를 예상할 수 있을까요?
+@@ 105
+높은 RPE와 낮은 ATE
+@@ 106
+높은 RPE와 높은 ATE
+@@ 107
+주행 길이와 상관없이 낮은 RPE와 낮은 ATE
+@@ 108
+낮은 RPE, 그리고 주행 길이에 따라 커지는 ATE
+@@ 109
+RPE는 짧은 간격을 보므로 작게 유지됩니다. step마다의 작은 오차는 drift로 쌓이고, ATE는 고정된 world frame에서 이 drift를 잽니다.
+@@ 110
+Q3. 실제 회전의 전치와 추정 회전의 곱의 trace가 2.0입니다. 회전 오차는 얼마일까요?
+@@ 111
+cos θ = (2.0 − 1)/2 = 0.5이므로 θ = 60°입니다.
+@@ 112
+Q4. 자동차에서 밤에 event로 얻은 stereo depth를 ground truth depth map과 비교해 평가하려고 합니다. 표의 dataset 중 무엇이 가장 잘 맞을까요?
+@@ 113
+DSEC는 event camera 두 대를 단 자동차에서 낮, 밤, 직사광선 조건으로 녹화했고 ground truth depth map을 제공합니다. ECDS와 EDS는 event camera 한 대를 손에 들고 찍었고, UZH-FPV는 레이싱 드론입니다.
+@@ 114
+simulator는 interpolation한 로그 밝기가 \(C\) 간격의 수준을 지나는 지점을 찾아 밝기 sample을 event로 바꿉니다. 이미지가 빠르게 움직일 때는 sampling이 촘촘해야 합니다.
+@@ 115
+현실감을 얻으려면 noise가 필요합니다. 최소한 무작위 threshold \(\N(C, \sigma_C^2)\)가 있어야 하고, V2E에서는 픽셀 회로 모델까지 씁니다.
+@@ 116
+dataset은 플랫폼, 해상도, ground truth에서 서로 다릅니다. pose는 흔하고 ground truth depth는 더 드뭅니다.
+@@ 117
+ATE: 추정값을 ground truth에 정렬한 뒤 위치 오차의 root mean square를 구합니다. RPE: 짧은 간격의 상대 움직임을 비교합니다. ATE는 global 정확도를, RPE는 local consistency를 평가합니다.
+@@ 118
+열린 문제: 센서에 맞는 asynchronous(neuromorphic) 처리, hybrid 센서와 foveated 센서, 다른 센서와의 fusion.
+@@ 119
+<em>SLAM Handbook</em>, §10.7 "Datasets, Simulators, and Benchmarks"와 §10.8 "Further Readings &amp; Recent Trends", pp. 294–303, Table 10.2 포함.
+@@ 120
+ATE와 RPE 식은 Sturm, Engelhard, Endres, Burgard, Cremers, <em>A Benchmark for the Evaluation of RGB-D SLAM Systems</em>, 2012를 따릅니다.
+@@ 121
+=
+@@ 122
+trace로부터 회전 각도 구하기, 그리고 \(\SO(3)\)의 \(\Log\): Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018.
+@@ 123
+수준 교차 방법은 sample 사이를 선형 interpolation한 식 (10.1)이며, 1픽셀 sampling 규칙과 수치 예제는 직접 만든 것입니다.

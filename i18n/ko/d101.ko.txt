@@ -1,0 +1,236 @@
+@@ 1
+<span class="eyebrow">17주차 · Day 5</span>
+@@ 2
+실전 visual-inertial odometry
+@@ 3
+오늘이 끝나면 visual-inertial odometry 시스템의 sliding-window factor graph를 설명하고, 그 graph에서 state 하나를 marginalize하고, first-estimate Jacobian이 estimator가 yaw에 대한 정보를 지어내지 못하게 막는 원리를 설명할 수 있습니다.
+@@ 4
+약 60분 · §11.4.1–§11.5, pp. 326–332 읽기 (6쪽, 대부분 산문) · 17주차 Day 3과 16주차 Day 4 필요
+@@ 5
+먼저 읽기: §11.4.1–§11.5, pp. 326–332
+@@ 6
+이 쪽들은 금방 읽힙니다. 읽으면서 찾아볼 것:
+@@ 7
+VIO가 맞춰야 하는 latency와 그 이유 (pp. 326–327).
+@@ 8
+Figure 11.4에서 factor의 네 종류와 각각이 연결하는 변수 (p. 327).
+@@ 9
+fixed-lag smoother가 window를 떠나는 state를 어떻게 처리하는지, 그리고 iSAM2라는 대안의 단점 (p. 327).
+@@ 10
+책이 좋다고 하는 drift 수준, 그리고 KAIST 예제의 숫자 (pp. 327–329).
+@@ 11
+offline calibration 대 online calibration, 그리고 센서를 동기화하는 세 가지 방법 (pp. 329–330).
+@@ 12
+visual-inertial odometry 시스템은 16주차의 preintegration factor graph에 vision factor를 더한 것이며, 답이 수 밀리초 안에 나오도록 짧은 sliding window에서 풉니다. window를 떠나는 state는 marginalize되어 prior가 됩니다. 이 prior는 옛 linearization point에 얼어붙어 있습니다. 같은 변수에 걸린 새 factor를 다른 곳에서 linearize하면, estimator는 어떤 센서도 주지 않은 global yaw 정보를 얻게 됩니다. Day 3의 observability 분석이 바로 이 문제를 찾아내고 고칩니다.
+@@ 13
+1. VIO가 내놓아야 하는 것
+@@ 14
+VIO는 제어 루프 안의 odometry 공급원으로, 그리고 가상현실 헤드셋에서 쓰입니다. 둘 다 아주 낮은 latency, 보통 10–50 ms 안에 추정값이 필요합니다. 책의 예는 초당 72번에서 120번 화면을 갱신하는 헤드셋입니다. frame 하나에 \(1/72 \approx 13.9\) ms에서 \(1/120 \approx 8.3\) ms입니다. pose가 늦으면 사용자에게 머리 움직임보다 뒤처진 세계를 보여 주게 되고, 제어기에서는 긴 지연이 추적을 불안정하게 만들 수 있습니다. <span class="src">§11.4.1 · pp. 326–327</span>
+@@ 15
+그래서 estimator는 frame마다 trajectory 전체를 최적화할 수 없습니다. 작업량에 상한을 두어야 합니다.
+@@ 16
+2. Factor graph
+@@ 17
+Figure 11.4가 그 graph입니다. 각 keyframe에는 variable node가 세 개 있습니다: pose(숫자 6개), 속도(3개), bias 쌍(6개). keyframe마다 15개로, <a href="#d97">Day 1</a>의 IMU error state입니다. landmark는 하나에 3개씩 더합니다. <span class="src">§11.4.1 · p. 327, Fig. 11.4</span>
+@@ 18
+연결하는 것
+@@ 19
+다룬 곳
+@@ 20
+preintegrated IMU
+@@ 21
+keyframe \(i\)의 pose, 속도, bias와 keyframe \(i+1\)의 pose, 속도
+@@ 22
+숫자 9개, (11.31)
+@@ 23
+<a href="#d94">16주차 · Day 4</a>
+@@ 24
+bias \(i\)와 bias \(i+1\)
+@@ 25
+숫자 6개, (11.34)
+@@ 26
+projection (vision)
+@@ 27
+pose 하나와 landmark 하나
+@@ 28
+카메라당 숫자 2개
+@@ 29
+<a href="#d63">11주차 · Day 3</a>
+@@ 30
+=
+@@ 31
+가장 오래된 state
+@@ 32
+제약하는 만큼
+@@ 33
+Day 3의 gauge를 고정하고, marginalize된 정보를 담음
+@@ 34
+<strong>크기.</strong> keyframe 10개에 landmark 100개를 보는 window의 미지수는 \(10 \times 15 + 100 \times 3 = 450\)개입니다. 많은 구현이 Schur complement(<a href="#d69">12주차 · Day 3</a>)로 landmark를 소거하므로, 분해할 dense 시스템의 미지수는 150개뿐입니다. <span class="src">§11.4.1 · p. 327</span>
+@@ 35 attr
+keyframe state x0부터 x5까지 여섯 개가 IMU factor로 이어져 한 줄로 놓여 있습니다. 위쪽의 landmark 세 개는 자기를 보는 keyframe과 연결됩니다. 점선 테두리가 x1부터 x5까지를 감싸며, 이것이 sliding window입니다. state x0는 테두리 밖에 점선으로 그려져 있습니다. 이미 marginalize되었고, x1에 붙은 prior factor가 x0가 알던 것을 담고 있습니다.
+@@ 36
+marginalize됨
+@@ 37
+x0가 남긴 prior
+@@ 38
+=
+@@ 39
+landmark
+@@ 40
+sliding window. 원 하나는 keyframe 하나의 pose, 속도, bias를 나타냅니다. 보라색 사각형은 preintegrated IMU factor, 주황색 선은 projection factor입니다. x0가 window를 떠날 때, 그 factor들이 남은 변수에 대해 알던 것은 모두 prior factor로 보존됩니다.
+@@ 41
+3. Fixed-lag smoothing과 marginalization
+@@ 42
+factor graph 기반 VIO 시스템은 보통 <strong>fixed-lag smoother</strong>, 다른 이름으로 <strong>sliding-window optimization</strong>을 씁니다. 뒤로 물러나는 시간 범위, 예를 들어 최근 5–10초의 state만 최적화합니다. 범위가 길수록 정확하지만 비용이 큽니다. 범위 밖으로 밀려난 state와 factor는 <strong>marginalize</strong>됩니다. <span class="src">§11.4.1 · p. 327</span>
+@@ 43
+빈틈 채우기: state를 marginalize하면 information matrix에 무슨 일이 생기나
+@@ 44
+미지수를 없앨 부분(\(m\))과 남길 부분(\(r\))으로 나눕니다. \(m\)에 닿는 linearize된 factor들은 블록으로 된 information matrix를 줍니다. marginalization은 <a href="#d15">3주차 · Day 3</a>의 Schur complement입니다:
+@@ 45
+<strong>가장 작은 예.</strong> 스칼라 위치 두 개 \(x_0, x_1\). 분산 0.25(information 4)인 \(x_0\)의 prior와 분산 1(information 1)인 odometry factor \(x_1 - x_0 = u\)로부터
+@@ 46
+\(x_1\)의 분산은 \(1/0.8 = 1.25 = 0.25 + 1\)입니다. 사슬을 따라가면 마땅히 그래야 하듯, 두 분산이 더해집니다.
+@@ 47
+<strong>marginalization은 unobservable 방향을 unobservable하게 유지합니다.</strong> \(\mathbf{u} = (\mathbf{u}_m, \mathbf{u}_r)\)에 대해 \(\boldsymbol{\Lambda}\mathbf{u} = \mathbf{0}\)이라고 합시다. 첫 블록 행에서 \(\mathbf{u}_m = -\boldsymbol{\Lambda}_{mm}^{-1}\boldsymbol{\Lambda}_{mr}\mathbf{u}_r\)을 얻습니다. 이를 둘째 블록 행 \(\boldsymbol{\Lambda}_{rm}\mathbf{u}_m + \boldsymbol{\Lambda}_{rr}\mathbf{u}_r = \mathbf{0}\)에 넣으면 \(\boldsymbol{\Lambda}_{\text{prior}}\mathbf{u}_r = \mathbf{0}\)이 됩니다. prior는 같은 null 방향을, 남은 변수로 제한한 형태로 가집니다. 예에서 \(x_0\)의 prior가 없다면 \(\boldsymbol{\Lambda} = \begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}\)는 null vector \((1, 1)\)을 가지고 \(\Lambda_{\text{prior}} = 1 - 1 = 0\)입니다. \(x_1\) 하나만에 대해서는 아무것도 알 수 없습니다.
+@@ 48
+책이 언급하는 대안은 iSAM2(<a href="#d17">3주차 · Day 5</a>) 같은 incremental solver입니다. 전체 이력을 유지하며 이전 계산을 재사용합니다. 매우 정확할 수 있지만, 갱신 한 번의 실행 시간에 상한이 없고 순간적으로 치솟을 수 있어서, latency가 중요한 시스템은 이를 받아들일 수 없습니다. <span class="src">§11.4.1 · p. 327</span>
+@@ 49
+4. Consistency와 first-estimate Jacobian
+@@ 50
+책은 observability 분석을 일부는 "estimation consistency를 개선하는" 도구로 소개하며, 예제 시스템의 이름도 그 기법에서 따왔습니다: First-Estimate Jacobian (FEJ) window bundle adjustment. <span class="src">§11.3 · p. 320; §11.4.1 · p. 328</span> 책은 그 메커니즘을 설명하지 않습니다. 여기서 설명합니다.
+@@ 51
+estimator가 보고하는 covariance가 실제로 내는 오차와 맞으면 그 estimator는 <strong>consistent</strong>(일관적)합니다. inconsistent한 estimator는 대개 과신합니다. covariance를 작게 보고하고는 새 측정값을 너무 적게 믿습니다.
+@@ 52
+빈틈 채우기: sliding window가 정보를 지어내는 방식
+@@ 53
+marginalization prior는 그 순간의 추정값에서 계산한 Jacobian으로 만든 이차식입니다. 이를 추정값 A라고 부릅시다. 원래 factor는 사라졌으므로 prior는 결코 다시 linearize할 수 없습니다. 나중에 같은 변수 일부가 걸린 새 factor가 들어오면, Gauss-Newton은 이를 현재 추정값에서 linearize합니다. 이를 추정값 B라고 부릅시다.
+@@ 54
+이제 Day 3의 yaw null vector를 봅시다. 그 블록은 \(-\mathbf{p}\times\mathbf{g}\)와 \(-\mathbf{p}_f\times\mathbf{g}\)로, 변수 값 자체가 들어 있습니다. prior의 information matrix는 A로 만든 null vector를 가지고, 새 factor는 B로 만든 null vector를 가집니다. A와 B가 다르면 두 nullspace에 동시에 속하는 벡터가 없으므로, 두 information matrix의 합에는 yaw null vector가 전혀 없습니다. rank가 하나 올라간 것입니다. 이제 estimator는 어떤 센서도 재지 않은 global yaw에 대해 유한한 분산을 갖습니다. 아무 데서도 오지 않은 정보이며, estimator를 과신하게 만듭니다.
+@@ 55
+세 이동 벡터에는 단위 블록만 들어 있습니다. linearization point에 의존하지 않으므로 살아남습니다.
+@@ 56
+<strong>해결책.</strong> prior에 참여하는 모든 변수에 대해, 변수 값은 계속 갱신하더라도 Jacobian은 prior를 만들 때 쓴 추정값, 즉 그 변수의 "first estimate"에서 계속 계산합니다. 그러면 모든 factor가 하나의 null vector를 공유하고 yaw는 unobservable하게 남습니다. 대가는 linearization이 약간 덜 정확해진다는 것입니다.
+@@ 57
+직접 해 보기: 첫 pose를 marginalize한 뒤의 2-D pose와 landmark window입니다. 슬라이더를 0으로 옮겼다가 되돌리고, 그다음 first-estimate Jacobian을 켜 보세요.
+@@ 58
+눈여겨볼 점: 슬라이더가 0이면 A와 B가 일치하고 eigenvalue 세 개가 0입니다(x, y, yaw). 추정값이 움직이자마자 0은 두 개만 남고 작은 세 번째 eigenvalue가 나타납니다. 이제 estimator가 자기 global yaw를 "안다"는 것입니다. first-estimate Jacobian을 켜면 슬라이더 값에 상관없이 세 번째 0이 돌아옵니다.
+@@ 59
+5. 얼마나 좋은가?
+@@ 60
+책은 널리 쓰이는 시스템(visual-inertial ORB-SLAM, Direct Sparse Visual-Inertial Odometry, VINS-Mono, OpenVINS, Kimera, BASALT, DM-VIO)을 나열하고 기준을 하나 제시합니다. 좋은 VIO는 이동 거리의 1% 미만으로 drift하고, 어떤 경우에는 0.1%까지 낮습니다. <span class="src">§11.4.1 · pp. 327–328</span>
+@@ 61
+책의 예제는 도시를 36분 동안 11.42 km 달린 주행(KAIST urban dataset, sequence 38)에 sliding-window FEJ 시스템을 돌린 것입니다. 카메라는 10 Hz, IMU는 100 Hz이므로 frame마다 IMU 샘플 열 개를 preintegrate합니다. loop closure 없이 최종 오차는 약 2.05°와 21.2 m이며, 책은 이를 거리의 0.18%라고 적습니다. <span class="src">§11.4.1 · pp. 328–329, Fig. 11.5</span>
+@@ 62
+6. Calibration과 time synchronization
+@@ 63
+<strong>Extrinsic calibration</strong>(외부 파라미터 보정)은 센서 사이의 상대 pose, 예를 들어 IMU에 대한 카메라의 pose를 추정하는 일입니다. 이번 주의 모든 measurement model은 이것을 안다고 가정했습니다. <span class="src">§11.4.2 · p. 329</span>
+@@ 64
+장점
+@@ 65
+단점
+@@ 66
+=
+@@ 67
+배치 전에 거치는 절차: calibration target, 알려진 운동 패턴, 또는 환경에 대한 사전 지식
+@@ 68
+대체로 더 정확
+@@ 69
+시간, 장비, 숙련된 운용자가 필요
+@@ 70
+=
+@@ 71
+extrinsic parameter를 추정할 state에 추가
+@@ 72
+별도 절차가 없음; 센서가 틀어져도 적응
+@@ 73
+덜 정확할 수 있음; 문제가 어려워지고 ill-posed가 될 수 있음
+@@ 74
+"Ill-posed"는 또다시 이번 주의 주제입니다. extrinsics는 추가 미지수이고, 어떤 운동에서는 unobservable합니다.
+@@ 75
+<strong>Temporal synchronization</strong>(시간 동기화)은 모든 센서가 각 측정이 언제 이루어졌는지에 대해 합의하게 만드는 일입니다. 고려하지 않은 time offset은 trajectory 추정을 망가뜨리고 benchmark 결과를 왜곡할 수 있습니다. <span class="src">§11.4.3 · pp. 329–330</span> 그 영향의 크기는 단순한 kinematics로 구합니다. 이미지의 timestamp가 \(t_d\)만큼 늦으면, estimator는 그 이미지를 위치로 약 \(\mathbf{v}\,t_d\), 각도로 \(\boldsymbol{\omega}\,t_d\)만큼 어긋난 pose와 짝짓습니다. 10 m/s에서 \(t_d = 5\) ms이면 5 cm이고, 회전 속도 100°/s에서는 0.5°입니다.
+@@ 76
+책은 선택지를 나열합니다. 하나의 clock으로 모든 센서를 작동시키는 hardware trigger, Ethernet 위의 PTP 같은 clock 동기화 프로토콜, 센서에서 timestamp를 찍고 나중에 정렬하는 방법(덜 정확하고 덜 robust함), 그리고 이 중 어느 것도 불가능할 때 time offset을 state 변수로 하나 더 추정하는 방법입니다. <span class="src">§11.4.3 · p. 330</span>
+@@ 77
+7. 이 분야가 향하는 곳
+@@ 78
+흐름 (§11.5, pp. 330–332)
+@@ 79
+한 줄 아이디어
+@@ 80
+=
+@@ 81
+preintegration을 위한 더 나은 불확실성 모델, 지구 자전(Coriolis 항과 원심력 항) 포함
+@@ 82
+continuous-time state 표현
+@@ 83
+B-spline이나 Gaussian-process prior(<a href="#d27">5주차 · Day 3</a>)가 state 변수를 늘리지 않고 고속 IMU 데이터를 흡수
+@@ 84
+proprioception-only odometry
+@@ 85
+foot contact나 바퀴에 단 IMU 같은 로봇 kinematics 지식이 drift를 제약
+@@ 86
+inertial-only odometry
+@@ 87
+학습한 모델이 vision이 끊길 때 drift를 줄임; 새 센서와 운동에 대한 일반화는 아직 제한적
+@@ 88
+edge의 초고효율 VIO
+@@ 89
+작은 기기에서는 데이터 이동이 계산보다 에너지를 더 씀; quantized filter와 square-root filter가 도움
+@@ 90
+<strong>"window를 떠나는 state는 버려진다."</strong> marginalize됩니다. 그 state가 남은 state에 대해 의미하던 것은 prior factor로 남습니다.
+@@ 91
+<strong>"first-estimate Jacobian은 추정값을 얼린다."</strong> 추정값은 계속 움직입니다. Jacobian을 계산하는 지점만 고정되며, 그것도 prior에 묶인 변수에 대해서만입니다.
+@@ 92
+<strong>"drift 0.18%는 pose가 0.18%까지 정확하다는 뜻이다."</strong> loop closure 없이 최종 위치 오차를 경로 길이로 나눈 값입니다. 오차는 거리와 함께 계속 커집니다.
+@@ 93
+Q1. sliding window에 keyframe 8개와 점 landmark 60개가 있습니다. 소거하기 전 optimizer의 미지수는 몇 개입니까?
+@@ 94
+pose, 속도, bias에 \(8 \times 15 = 120\)개, landmark에 \(60 \times 3 = 180\)개를 더합니다.
+@@ 95
+Q2. 스칼라 state \(x_0, x_1\). \(x_0\)의 prior는 분산 1, 둘 사이의 odometry factor는 분산 1입니다. \(x_0\)를 marginalize한 뒤 \(x_1\)에 대한 information은 얼마입니까?
+@@ 96
+\(\boldsymbol{\Lambda} = \begin{bmatrix} 2 & -1 \\ -1 & 1 \end{bmatrix}\)이므로 \(\Lambda_{\text{prior}} = 1 - (-1)\cdot\tfrac12\cdot(-1) = 0.5\)입니다. 분산은 2로, 두 분산의 합입니다.
+@@ 97
+Q3. latency가 중요한 VIO는 왜 보통 iSAM2보다 fixed-lag smoother를 택합니까?
+@@ 98
+갱신 한 번의 작업량에 상한이 있지만, iSAM2는 실행 시간이 치솟을 수 있다
+@@ 99
+iSAM2보다 정확하다
+@@ 100
+iSAM2는 IMU factor를 쓸 수 없다
+@@ 101
+marginalization이 필요 없다
+@@ 102
+window 크기가 고정이므로 풀 때마다 비용이 거의 같습니다. iSAM2는 매우 정확할 수 있지만 latency를 보장하지 않습니다.
+@@ 103
+Q4. first-estimate Jacobian이 없는 sliding window에서 보통 사라지는 unobservable 방향은 무엇이며, 왜 하필 그 방향입니까?
+@@ 104
+global 위치: null vector가 단위 블록이라서
+@@ 105
+scale: IMU가 재기 때문에
+@@ 106
+yaw: null vector가 linearization point에 의존해서
+@@ 107
+roll과 pitch: gravity가 변해서
+@@ 108
+yaw null vector에는 위치 자체가 들어 있습니다. 한 추정값에서 linearize한 prior와 다른 추정값에서 linearize한 새 factor는 그 벡터를 공유하지 않습니다. 이동 null vector는 어느 linearization point에서나 같습니다.
+@@ 109
+Q5. 20 m/s로 달리는 차량에서 카메라 timestamp가 10 ms 늦습니다. 이미지마다 생기는 위치 오차는 대략 얼마입니까?
+@@ 110
+=
+@@ 111
+VIO는 약 10–50 ms 안에 답해야 하므로, 최근 keyframe의 sliding window를 최적화합니다. keyframe마다 미지수 15개, landmark마다 3개입니다.
+@@ 112
+factor는 preintegrated IMU, bias, projection, prior factor입니다.
+@@ 113
+window를 떠나는 state는 Schur complement로 marginalize하며, 이는 unobservable 방향을 보존합니다.
+@@ 114
+한 변수에 여러 linearization point를 섞으면 yaw null vector가 파괴되고 estimator가 과신하게 됩니다. first-estimate Jacobian이 이를 막습니다.
+@@ 115
+좋은 시스템은 이동 거리의 1%보다 훨씬 적게 drift합니다. 그러려면 extrinsic calibration과 time synchronization이 정확해야 합니다.
+@@ 116
+<em>SLAM Handbook</em>, §11.4.1–§11.4.3과 §11.5, pp. 326–332, Figure 11.4와 11.5.
+@@ 117
+inconsistency 메커니즘과 first-estimate Jacobian은 Huang, Mourikis, Roumeliotis, <em>Observability-based Rules for Designing Consistent EKF SLAM Estimators</em>, 2010을 따릅니다.
+@@ 118
+marginalization 대수는 Barfoot, <em>State Estimation for Robotics</em>, 2017을 따릅니다.

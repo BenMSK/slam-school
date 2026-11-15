@@ -1,0 +1,180 @@
+@@ 1
+<span class="eyebrow">11주차 · Day 5</span>
+@@ 2
+Reprojection error, bundle adjustment, 그리고 두 view의 기하
+@@ 3
+오늘이 끝나면 Gaussian 픽셀 noise로부터 reprojection cost를 유도하고, full bundle adjustment와 실시간 시스템이 이를 줄이는 방법을 설명하고, 두 view를 묶는 epipolar constraint를 유도할 수 있습니다.
+@@ 4
+약 60분 · §7.3.3–7.3.8, pp. 204–207 읽기 (4쪽) · 11주차 Day 3–4, 2주차 Day 2 필요
+@@ 5
+먼저 읽기: §7.3.3–7.3.8, pp. 204–207 (§7.4 앞에서 멈춤)
+@@ 6
+식 (7.1)이 바로 위의 Gaussian likelihood에서 어떻게 나오는지 (p. 204).
+@@ 7
+식 (7.3)의 미지수, 그리고 \(\mathbf{R}^i_w\mathbf{x}^w_j + \mathbf{t}^i_w\)가 무엇을 계산하는지 (p. 205).
+@@ 8
+Figure 7.4 (p. 206)에서 왼쪽 아래 graph는 dense하고 오른쪽 아래 graph는 그렇지 않은 이유.
+@@ 9
+§7.3.7 (p. 207)에서 monocular 카메라의 initialization을 따로 강조하는 이유.
+@@ 10
+feature-based visual SLAM은 하나의 least-squares 문제입니다. 모든 점이 카메라 모델을 거쳐 관측된 픽셀에 떨어질 때까지 카메라와 3D 점을 움직입니다. 그 불일치가 <strong>reprojection error</strong>(재투영 오차)입니다. 나머지는 모두 이 문제를 실시간으로 풀 수 있을 만큼 작게 만들고, 충분히 좋은 출발점을 주는 일입니다.
+@@ 11
+1. Reprojection error
+@@ 12
+관측된 이미지 점 \(\mathbf{z}_j \in \R^2\)와 카메라 좌표의 3D 점 \(\mathbf{x}^c_j\)에 대해, <strong>reprojection error</strong>는 다음과 같습니다. <span class="src">§7.3.3 · p. 204</span>
+@@ 13
+이는 픽셀 단위의 2차원 벡터로, 관측값 빼기 예측값입니다. Day 3의 카메라(\(f = 500\), principal point \((320, 240)\))와 추정한 점 \(\mathbf{x}^c = (0.4, -0.2, 2)\)이면 예측은 \((420, 190)\)입니다. keypoint가 \((423, 186)\)에서 검출되었다면 \(\mathbf{e} = (3, -4)\)이고 그 길이는 5 픽셀입니다.
+@@ 14
+빈틈 채우기: Gaussian noise에서 식 (7.1)까지
+@@ 15
+책은 likelihood에서 (7.1)까지 두 줄 만에 갑니다. 그 단계를 풀어 보면 다음과 같으며, <a href="#d8">2주차 · Day 2</a>를 카메라에 대해 되풀이하는 것입니다. 검출된 픽셀이 실제 projection에 covariance \(\boldsymbol{\Sigma}_j\)인 Gaussian noise가 더해진 것이라고 가정합니다.
+@@ 16
+독립인 관측은 곱해지므로 로그는 더해집니다. 음의 로그를 취하면
+@@ 17
+마지막 합은 미지수에 의존하지 않습니다. squared Mahalanobis norm을 \(\norm{\mathbf{e}}^2_{\boldsymbol{\Sigma}} = \mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\)로 쓰고 상수를 버리면 책의 다음 식이 됩니다.
+@@ 18
+likelihood를 최대화하는 것은 이 합을 최소화하는 것과 같습니다. 가장 단순한 경우는 모든 keypoint가 같은 등방성 noise, 즉 방향마다 표준편차 \(\sigma\) 픽셀인 noise를 갖는 경우이며, 이때 각 항은 \(\norm{\mathbf{e}_j}^2/(2\sigma^2)\)입니다. (책은 이 경우를 \(\boldsymbol{\Sigma}_j = \sigma\mathbf{I}_2\)로 씁니다. 그러면 책의 \(\sigma\)는 분산입니다.) \(\mathbf{e} = (3, -4)\)이면 \(\sigma = 1\)일 때 항은 \(25/2 = 12.5\)이고, \(\sigma = 2\)일 때 \(25/8 \approx 3.1\)입니다. 거친 pyramid 레벨에서 검출된 keypoint는 덜 정밀하므로 더 큰 \(\sigma\)를 받고, 덜 반영됩니다.
+@@ 19
+잘못된 match는 제곱 cost가 흡수할 수 없는 큰 residual을 만듭니다. 그래서 Huber나 Tukey 같은 robust kernel \(\rho\)(<a href="#d34">6주차 · Day 4</a>)로 각 항을 감쌉니다. <span class="src">§7.3.3 · p. 204</span>
+@@ 20
+=
+@@ 21
+이제 카메라를 움직여 봅시다. 점 \(j \in \mathsf{P}\)는 미지의 world 좌표 \(\mathbf{x}^w_j \in \R^3\)를, 이미지 \(i \in \mathsf{C}\)는 미지의 pose \(\mathbf{T}^i_w \in \SE(3)\)를 가집니다. 이 pose는 world 좌표를 카메라 \(i\)의 좌표로 보냅니다: \(\mathbf{x}^c = \mathbf{R}^i_w\mathbf{x}^w_j + \mathbf{t}^i_w\). 이미지 \(i\)에서 점 \(j\)의 관측은 픽셀 \(\mathbf{z}_{ij}\)입니다. 모든 것에 대해 한꺼번에 최소화하는 것이 <strong>full BA</strong>입니다. <span class="src">§7.3.4 · p. 205</span>
+@@ 22
+(여기서부터 intrinsics \(\boldsymbol{\xi}\)는 표기에서 뺍니다.) 크기를 세어 봅시다. 카메라마다 미지수 6개, 점마다 3개이고, 관측마다 방정식 2개가 나옵니다. 이미지 200장과 점 20,000개가 있고 각 점이 이미지 5장에서 보이는 map은 미지수 \(200\cdot6 + 20{,}000\cdot3 = 61{,}200\)개, 방정식 \(2\cdot100{,}000 = 200{,}000\)개를 갖습니다. 새 frame마다 이를 푸는 것은 불가능하며, 책은 시스템들이 어떻게 대처하는지 나열합니다. <span class="src">§7.3.4 · pp. 205–206</span>
+@@ 23
+유지하는 것
+@@ 24
+결과
+@@ 25
+<strong>Batch 최적화</strong>
+@@ 26
+모든 pose, 모든 점, 모든 관측; (7.3)에 Gauss-Newton이나 Levenberg-Marquardt 적용
+@@ 27
+SfM의 gold standard; 이미지마다 실행하기엔 너무 비쌈
+@@ 28
+=
+@@ 29
+최신 카메라 pose만; 과거 pose는 marginalize됨
+@@ 30
+sparsity가 깨져서 map이 feature 수백 개로 제한됨; 과거 관측은 다시 linearize되지 않음
+@@ 31
+<strong>Keyframe 기반</strong>
+@@ 32
+선택된 이미지 몇 장, 즉 <strong>keyframes</strong>; 그 사이의 frame과 그 관측은 mapping에서 버림
+@@ 33
+문제가 sparse하게 유지됨; 같은 계산량으로 filtering보다 길고 정확한 map
+@@ 34
+=
+@@ 35
+위의 모든 것을 표현하는 언어: variable은 pose와 landmark, factor는 reprojection error와 prior
+@@ 36
+Part I이 그대로 적용됨
+@@ 37
+Figure 7.4는 filtering이 sparsity를 잃는 이유를 보여 줍니다. pose를 marginalize하는 것은 <a href="#d15">3주차 · Day 3</a>의 elimination 단계와 같습니다. 그 pose와 연결되어 있던 모든 것을 잇는 새 factor가 남습니다. 그림에서 오래된 pose 세 개를 제거하면 이들이 관측한 landmark 다섯 개가 모두 서로 연결되어, landmark 5개에 대해 10쌍, 일반적으로 \(n\)개에 대해 약 \(n^2/2\)쌍이 생깁니다. keyframe 방법은 사이의 frame을 버려서 이런 연결을 만들지 않습니다.
+@@ 38
+3. 두 view: epipolar constraint
+@@ 39
+문제 (7.3)은 비선형이고 반복적으로 풀기 때문에 적당한 initial guess가 필요합니다. 이는 monocular 카메라에서 가장 중요합니다. frame 하나로는 state가 observable하지 않기 때문입니다. <span class="src">§7.3.7 · p. 207</span> 책은 기하를 문헌에 맡깁니다. 고전적인 출발점은 같은 점을 찍은 두 이미지 사이의 관계로, 여기에는 <em>3D 점이 전혀 등장하지 않습니다</em>.
+@@ 40
+빈틈 채우기: essential matrix와 fundamental matrix 유도
+@@ 41
+어떤 점이 카메라 1에서 좌표 \(\mathbf{x}^1\), 카메라 2에서 \(\mathbf{x}^2\)를 가지며, 강체 운동 \(\mathbf{x}^2 = \mathbf{R}\,\mathbf{x}^1 + \mathbf{t}\)로 연결된다고 합시다. 각 카메라는 이 점을 ray를 따라 봅니다: \(\mathbf{x}^1 = \lambda_1\mathbf{b}_1\), \(\mathbf{x}^2 = \lambda_2\mathbf{b}_2\). 여기서 \(\mathbf{b}_k = \pi^{-1}(\mathbf{z}_k)\)는 Day 3에서 unproject한 픽셀이고 \(\lambda_k \gt 0\)는 미지의 depth입니다. 대입하면
+@@ 42
+1단계: 양변에 \(\mathbf{t}\)와의 외적을 취합니다. \(\mathbf{t}\times\mathbf{t} = \mathbf{0}\)이므로
+@@ 43
+2단계: 양변에 \(\mathbf{b}_2\)와의 내적을 취합니다. \(\mathbf{t}\times\mathbf{b}_2\)는 \(\mathbf{b}_2\)에 수직이므로 좌변은 0입니다. \(\lambda_1\)로 나누면
+@@ 44
+여기서 \([\mathbf{t}]_\times\mathbf{a} = \mathbf{t}\times\mathbf{a}\)는 외적을 행렬로 쓴 것입니다. 이것이 <strong>epipolar constraint</strong>이고, \(\mathbf{E} = [\mathbf{t}]_\times\mathbf{R}\)가 <strong>essential matrix</strong>입니다. 두 depth가 모두 사라졌습니다. 기하학적으로는 두 ray와 두 카메라 중심을 잇는 선이 한 평면 위에 있다는 뜻입니다.
+@@ 45
+pinhole 카메라와 homogeneous 픽셀 \(\mathbf{p}_k = \begin{bmatrix} u_k & v_k & 1 \end{bmatrix}\T\)를 쓰면 픽셀 단위에서 \(\mathbf{b}_k = \mathbf{K}^{-1}\mathbf{p}_k\)이므로
+@@ 46
+이 행렬이 <strong>fundamental matrix</strong>입니다. 고정된 픽셀 \(\mathbf{p}_1\)에 대해 벡터 \(\boldsymbol{\ell}_2 = \mathbf{F}\mathbf{p}_1 = (\alpha, \beta, \gamma)\)는 이미지 2에서 직선 \(\alpha u + \beta v + \gamma = 0\)을 정의하며, 이것이 <strong>epipolar line</strong>입니다. \(\mathbf{p}_1\)의 match는 반드시 이 직선 위에 있습니다.
+@@ 47
+<strong>Stereo로 확인.</strong> 카메라 2가 같은 방향을 향한 채 카메라 1의 1 m 오른쪽에 있습니다: \(\mathbf{R} = \mathbf{I}\), \(\mathbf{t} = (-1, 0, 0)\). 그러면 \(\mathbf{E} = \begin{bmatrix} 0 & 0 & 0 \\ 0 & 0 & 1 \\ 0 & -1 & 0 \end{bmatrix}\)이고, ray \(\mathbf{b}_k = (x'_k, y'_k, 1)\)에 대해 constraint는 \(y'_2 - y'_1 = 0\)이 됩니다. match는 같은 이미지 행에 있으며, 이는 Day 2의 disparity 공식이 놓인 상황입니다.
+@@ 48
+<strong>Scale.</strong> \(\mathbf{t}\)를 \(2\mathbf{t}\)로 바꿔도 constraint는 그대로입니다. 두 이미지는 이동의 방향은 정하지만 길이는 정하지 못합니다. 따라서 monocular 재구성은 전체 scale을 제외하고만 정의됩니다. \(\mathbf{E}\)의 자유도는 5(\(\mathbf{R}\)에 3, \(\mathbf{t}\)의 방향에 2)이므로 추정에는 correspondence 다섯 개가 최소로 필요하며, 일부 match가 틀리므로 RANSAC 루프(<a href="#d32">6주차 · Day 2</a>) 안에서 추정합니다.
+@@ 49
+직접 해 보기: 다음 점 버튼을 몇 번 눌러 보십시오. 위에서 본 그림에서 카메라 2를 드래그하십시오. 그다음 두 오차 slider를 하나씩 움직여 보십시오.
+@@ 50
+눈여겨볼 점은 세 가지입니다. 선택한 점은 항상 이미지 2에서 자기 epipolar line 위에 있지만(0.0 px), 다른 점들은 보통 수십 픽셀 떨어져 있으므로 틀린 match 대부분은 constraint를 위반합니다. 그렇지 않은 경우도 몇 있습니다(다음 점 버튼을 한 번 누르면 다른 점 하나가 직선에서 3 px밖에 떨어져 있지 않습니다). depth 오차는 예측을 직선을 <em>따라</em> 미끄러뜨리며 이미지 1에서는 보이지 않습니다. +1.5 m이면 residual이 15.6 px입니다. 1° yaw 오차는 모든 예측을 5–6 px 옮기고 cost를 0에서 약 125로 올립니다. 카메라 2를 카메라 1 위로 끌어다 놓으면 depth slider가 아무 효과도 내지 못합니다. baseline이 없으면 depth는 unobservable합니다.
+@@ 51
+4. 두 view에서 map으로
+@@ 52
+이 조각들을 이으면 표준적인 monocular initialization이 됩니다. 두 frame 사이에서 keypoint를 매칭합니다(Day 4). RANSAC으로 \(\mathbf{E}\)를 추정하고 이를 \(\mathbf{R}\)과 \(\mathbf{t}\)의 방향으로 분해합니다. 그다음 <strong>triangulate</strong>합니다. \(\mathbf{R}, \mathbf{t}\)를 알면 ray 방정식 \(\lambda_2\mathbf{b}_2 - \lambda_1\mathbf{R}\mathbf{b}_1 = \mathbf{t}\)는 두 depth에 대한 선형 방정식 세 개이며, noise가 있는 ray는 정확히 만나지 않으므로 least squares로 풉니다. 마지막으로 BA (7.3)로 전체를 정제합니다. 그 뒤로는 새 frame마다 기존 3D 점에 대해 위치를 구합니다. 이 문제를 Perspective-n-Point(PnP)라 하며, <a href="#d21">4주차 · Day 3</a>에서 만났고 12주차의 첫 주제입니다.
+@@ 53
+이 절은 짧은 안내 네 가지로 끝납니다. <span class="src">§7.3.5–7.3.8 · p. 207</span>
+@@ 54
+<strong>Photometric error</strong>: direct 방법이 reprojection error 대신 쓰는 오차입니다. 장면의 한 점이 연속된 frame에서 같은 밝기로 보인다고 가정하고 픽셀 intensity를 비교합니다.
+@@ 55
+<strong>Visual place recognition</strong>: 이미지마다 descriptor 하나 \(\mathbf{d} = f(I)\)를 계산하고, 저장된 descriptor 가운데 가장 가까운 것을 검색합니다. <strong>Bag-of-words</strong> 방법은 ORB 같은 local descriptor를 visual word라 부르는 cluster로 양자화해 이를 만듭니다. 학습된 descriptor는 외관 변화에 더 invariant합니다.
+@@ 56
+<strong>Initialization</strong>: 이 절의 주제입니다.
+@@ 57
+<strong>Map representations</strong>: 정확도, 메모리, 계산량 사이의 균형으로, 5장(8주차)에서 다룹니다.
+@@ 58
+<strong>"Reprojection error는 미터 단위의 거리다."</strong> 이 오차는 이미지 안에, 픽셀 단위로 있습니다. 1픽셀 오차는 가까운 점에서는 밀리미터, 먼 점에서는 수 미터를 뜻할 수 있습니다.
+@@ 59
+<strong>"Epipolar constraint가 match를 준다."</strong> 주는 것은 직선입니다. 그 직선 위의 어떤 점이든, 어떤 depth에서든 constraint를 만족합니다.
+@@ 60
+<strong>"Filter는 pose 하나만 유지하므로 더 싸다."</strong> pose를 제거하면 남은 landmark 블록이 dense해지고, 계산 비용이 feature 수에 따라 빠르게 커집니다.
+@@ 61
+Q1. keypoint가 (212, 148)에서 관측되었습니다. 현재 추정은 그 점을 (209, 152)로 투영합니다. \(\boldsymbol{\Sigma} = \mathbf{I}_2\)일 때 이 관측이 \(E_{\text{reproj}}\)에 기여하는 값은 얼마입니까?
+@@ 62
+e = (3, −4)이므로 ‖e‖² = 25이고, 항은 ½·25 = 12.5입니다.
+@@ 63
+Q2. bundle adjustment 문제에 카메라 pose 10개와 점 500개가 있습니다. (7.3)의 스칼라 미지수는 몇 개입니까?
+@@ 64
+SE(3)의 각 pose는 자유도 6, 각 점은 3입니다: 10·6 + 500·3 = 1,560.
+@@ 65
+Q3. 똑같은 pinhole 카메라 두 대가 \(\mathbf{R} = \mathbf{I}\), \(\mathbf{t} = (-1, 0, 0)\)으로 연결됩니다. 이미지 1에서 keypoint가 행 \(v = 130\)에 있습니다. 이미지 2에서 이 점의 epipolar line은 어디입니까?
+@@ 66
+같은 u의 열
+@@ 67
+이미지 중심을 지나는 직선
+@@ 68
+미지의 depth에 따라 달라짐
+@@ 69
+행 v = 130
+@@ 70
+회전 없이 옆으로 이동하면 constraint는 y′₂ = y′₁로 줄어들고, intrinsics가 같으면 y′가 같다는 것은 v가 같다는 뜻입니다. depth는 그 행의 어디에 match가 있는지만 정합니다.
+@@ 71
+Q4. filtering 방식이 feature 수백 개로 제한되는 이유는 무엇입니까?
+@@ 72
+EKF는 reprojection error를 쓸 수 없기 때문에
+@@ 73
+과거 pose를 marginalize하면 그 pose가 관측한 모든 landmark가 연결되어 문제가 dense해지기 때문에
+@@ 74
+filter는 landmark마다 robust kernel이 필요하기 때문에
+@@ 75
+filter는 과거 이미지를 모두 메모리에 보관하기 때문에
+@@ 76
+pose 하나를 소거하면 그 이웃 전체에 걸친 factor가 생깁니다. 많은 pose를 제거하고 나면 landmark가 완전히 연결되며, dense 문제의 비용은 sparse 문제보다 훨씬 빠르게 커집니다.
+@@ 77
+Q5. 움직이는 카메라 한 대로 찍은 이미지 두 장으로는 왜 가까운 작은 장면과 먼 큰 장면을 구별할 수 없습니까?
+@@ 78
+keypoint descriptor가 scale invariant하지 않기 때문에
+@@ 79
+essential matrix의 rank가 2뿐이기 때문에
+@@ 80
+이동과 모든 depth를 같은 배율로 바꿔도 모든 픽셀과 epipolar constraint가 변하지 않기 때문에
+@@ 81
+principal point를 모르기 때문에
+@@ 82
+λ₂b₂ = λ₁Rb₁ + t에서 t, λ₁, λ₂에 같은 수를 곱해도 같은 ray로 등식이 성립합니다. 이미지에는 절대 scale에 대한 정보가 없습니다.
+@@ 83
+Reprojection error: \(\mathbf{e} = \mathbf{z} - \pi(\mathbf{x}^c)\), 픽셀 단위. Gaussian 픽셀 noise를 가정하면 maximum likelihood는 가중 least-squares cost (7.1)이 됩니다.
+@@ 84
+Full BA (7.3)는 모든 pose \(\mathbf{T}^i_w\)와 점 \(\mathbf{x}^w_j\)에 대해 robust reprojection error를 최소화합니다.
+@@ 85
+Batch가 기준이고, filtering은 오래된 pose를 marginalize해 dense해지며, keyframe 방법은 sparse하게 유지되고, factor graph는 이 모두를 표현합니다.
+@@ 86
+한 점의 두 view는 \(\mathbf{E} = [\mathbf{t}]_\times\mathbf{R}\)에 대해 \(\mathbf{b}_2\T\mathbf{E}\,\mathbf{b}_1 = 0\)을, 픽셀 단위로는 \(\mathbf{p}_2\T\mathbf{F}\,\mathbf{p}_1 = 0\)을 만족합니다. match는 epipolar line \(\mathbf{F}\mathbf{p}_1\) 위에 있습니다.
+@@ 87
+Monocular initialization: matching, essential matrix, triangulation, 그리고 BA. 전체 scale은 여전히 알 수 없습니다.
+@@ 88
+<em>SLAM Handbook</em>, 7장, §7.3.3–7.3.8, pp. 204–207, 식 (7.1)–(7.3)과 Figure 7.4.
+@@ 89
+epipolar constraint, essential matrix와 fundamental matrix, 5점 minimal case, triangulation은 Hartley와 Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004를 따릅니다.
+@@ 90
+negative log-likelihood 유도는 표준적인 Gaussian maximum likelihood 논증으로, Barfoot, <em>State Estimation for Robotics</em>, 2017에 있습니다.

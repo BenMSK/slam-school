@@ -1,0 +1,180 @@
+@@ 1
+<span class="eyebrow">Week 17 · Review</span>
+@@ 2
+Week 17 review: what a visual-inertial system can and cannot know
+@@ 3
+After today you can build an observability matrix, list the unobservable directions of an aided inertial system for a given motion and sensor, and explain how a sliding-window estimator keeps them unobservable.
+@@ 4
+An IMU aided by a camera or LiDAR estimates orientation, velocity, position, two biases, and landmarks. Linearize it: the error state evolves through a transition matrix \(\boldsymbol{\Phi}\), and each measurement has a Jacobian that sees features only relative to the sensor. Stacking \(\mathbf{H}_{x_k}\boldsymbol{\Phi}_{(k,1)}\) gives the observability matrix \(\mathbf{M}\), whose nullspace always contains four directions: three shifts and a rotation about gravity. These are a choice of world frame. Some motions add directions that are not: without rotation, tilt hides in the accelerometer bias; with constant acceleration and a monocular camera, scale hides there too; without parallax, feature depth is lost. A practical VIO optimizes a sliding window, marginalizes old states, and uses first-estimate Jacobians so that marginalization does not create information about yaw.
+@@ 5
+Rank test for a linear system
+@@ 6
+\(\mathbf{M} = [\mathbf{H};\ \mathbf{H}\boldsymbol{\Phi};\ \dots;\ \mathbf{H}\boldsymbol{\Phi}^{K-1}]\); \(\mathbf{u}\) unobservable \(\Leftrightarrow \mathbf{M}\mathbf{u} = \mathbf{0}\)
+@@ 7
+background · <a href="#d97">Day 1</a>
+@@ 8
+AINS state
+@@ 9
+\(\mathbf{x} = \{\mathbf{R}^w_b, \mathbf{b}^g, \mathbf{v}^w, \mathbf{b}^a, \mathbf{p}^w, \mathbf{x}^w_f\}\), error state of size \(15 + n_f\)
+@@ 10
+(11.37), p. 320 · Day 1
+@@ 11
+Error-state dynamics
+@@ 12
+(11.40)–(11.41), pp. 321–322 · Day 1
+@@ 13
+Point measurement and its Jacobian
+@@ 14
+(11.42)–(11.43), p. 322 · <a href="#d98">Day 2</a>
+@@ 15
+Plücker line
+@@ 16
+\(\mathbf{n}_\ell = \mathbf{p}_1\times\mathbf{p}_2\), \(\mathbf{v}_\ell = \mathbf{p}_2 - \mathbf{p}_1\), \(d_\ell = \norm{\mathbf{n}_\ell}/\norm{\mathbf{v}_\ell}\), image line \(\boldsymbol{\ell} = \mathbf{K}\mathbf{n}^c_\ell\)
+@@ 17
+(11.44)–(11.46), pp. 322–323 · Day 2
+@@ 18
+Plane in the sensor frame
+@@ 19
+(11.48)–(11.49), pp. 323–324 · Day 2
+@@ 20
+Observability matrix
+@@ 21
+\(\mathbf{M}(\hat{\mathbf{x}}) = [\mathbf{H}_{x_1}\boldsymbol{\Phi}_{(1,1)};\ \dots;\ \mathbf{H}_{x_k}\boldsymbol{\Phi}_{(k,1)}]\); same nullspace as \(\mathbf{M}\T\boldsymbol{\Sigma}^{-1}\mathbf{M}\)
+@@ 22
+(11.50), p. 324 · <a href="#d99">Day 3</a>
+@@ 23
+The four null vectors (point rows)
+@@ 24
+shift: \(\tilde{\mathbf{p}} = \tilde{\mathbf{p}}_f = \mathbf{t}\); yaw: \(\tilde{\boldsymbol{\theta}} = \mathbf{R}^{c_1}_w\mathbf{g}\), \(\tilde{\mathbf{v}} = -\mathbf{v}_1\times\mathbf{g}\), \(\tilde{\mathbf{p}} = -\mathbf{p}_1\times\mathbf{g}\), \(\tilde{\mathbf{p}}_f = -\mathbf{p}_f\times\mathbf{g}\)
+@@ 25
+(11.51), pp. 324–325 · Day 3
+@@ 26
+What the bias can absorb
+@@ 27
+rotation \(\mathbf{Q}\): \(\mathbf{b}' = \mathbf{b}^a + \mathbf{R}\T(\mathbf{Q}\T - \mathbf{I})\mathbf{g}\); scale \(s\): \(\mathbf{b}' = \mathbf{b}^a - (s-1)\mathbf{R}\T\mathbf{a}^w\). Unobservable when the added term is constant.
+@@ 28
+derived; Table 11.1, p. 326 · <a href="#d100">Day 4</a>
+@@ 29
+Marginalization
+@@ 30
+§11.4.1, p. 327 · <a href="#d101">Day 5</a>
+@@ 31
+Q1. The cart of Day 1 has state \((p, v, b)\) and a position sensor. What is the smallest number of readings that makes it fully observable?
+@@ 32
+It never is
+@@ 33
+Each reading adds one row to \(\mathbf{M}\). Three unknowns need rank 3, and the rows \([1, k, -k^2/2]\) for \(k = 0, 1, 2\) are independent.
+@@ 34
+Q2. In \(\boldsymbol{\Phi}\) of (11.41), the column of the position error holds a single identity block, in the position row. What does that say?
+@@ 35
+A position error is copied forward and influences no other state
+@@ 36
+Position is measured directly by the IMU
+@@ 37
+Position errors decay over time
+@@ 38
+Position errors turn into velocity errors
+@@ 39
+Nothing in the IMU kinematics depends on where the robot is. An initial position error stays the same size and feeds nothing else.
+@@ 40
+Q3. A point is at \(\hat{\mathbf{p}}^c_f = (2, 0, 4)\T\). For a pinhole bearing \((x/z, y/z)\), what is the first row of \(\mathbf{H}_b\)?
+@@ 41
+\(\tfrac1z[1,\ 0,\ -x/z] = \tfrac14[1,\ 0,\ -0.5] = [0.25,\ 0,\ -0.125]\). Check: times \((2, 0, 4)\) gives \(0.5 - 0.5 = 0\).
+@@ 42
+Q4. Which part of a line's Plücker coordinates determines its image?
+@@ 43
+The direction \(\mathbf{v}^c_\ell\)
+@@ 44
+The moment \(\mathbf{n}^c_\ell\)
+@@ 45
+Both, equally
+@@ 46
+Their cross product
+@@ 47
+\(\boldsymbol{\ell} = \mathbf{K}\mathbf{n}^c_\ell\). The moment is the normal of the plane through the camera centre and the line, and the image line is where that plane meets the image.
+@@ 48
+Q5. A stereo camera and an IMU move with generic motion among unknown landmarks. How many unobservable directions are there?
+@@ 49
+Global position (3) and yaw (1). A stereo camera measures range as well as bearing, but that does not tie the system to any global frame.
+@@ 50
+Q6. A drone with a monocular camera and an IMU flies in a straight line with constant acceleration and does not rotate. Which extra quantities become unobservable?
+@@ 51
+Only the system scale
+@@ 52
+Only the depth of each feature
+@@ 53
+The global orientation and the system scale
+@@ 54
+The gyroscope bias
+@@ 55
+No rotation is row 1 of Table 11.1 (global orientation). Constant acceleration with a monocular camera is row 2 (system scale).
+@@ 56
+Q7. Scalar states \(x_0, x_1\): a prior on \(x_0\) with information 4, and an odometry factor with information 4. What is the information on \(x_1\) after marginalizing \(x_0\)?
+@@ 57
+\(\boldsymbol{\Lambda} = \begin{bmatrix} 8 & -4 \\ -4 & 4 \end{bmatrix}\), so \(4 - (-4)\cdot\tfrac18\cdot(-4) = 2\). Variance 0.5 = 0.25 + 0.25.
+@@ 58
+Q8. What do first-estimate Jacobians hold fixed?
+@@ 59
+The state estimate of the oldest keyframe
+@@ 60
+The accelerometer bias
+@@ 61
+The size of the sliding window
+@@ 62
+The linearization point of variables that take part in the marginalization prior
+@@ 63
+The estimates keep changing. Only the point where their Jacobians are evaluated is kept, so that the prior and the newer factors share the same yaw null vector.
+@@ 64
+The lab again, for self-testing. Before you change a setting, say how many eigenvalues will be zero and which changes will be invisible. Then check.
+@@ 65
+Notice: every answer follows from three questions. Does the body rotate (if not, tilt joins the list)? Does the body-frame acceleration change (if not, and the camera is bearing-only, scale joins the list)? Does the body translate at all (if not, and the camera is bearing-only, the depth of each landmark joins the list)?
+@@ 66
+The cart of Day 1 has state \((p, v, b)\), \(\boldsymbol{\Phi}^k = \begin{bmatrix} 1 & k & -k^2/2 \\ 0 & 1 & -k \\ 0 & 0 & 1 \end{bmatrix}\), and a velocity sensor \(\mathbf{H} = [0\ 1\ 0]\). (a) Write \(\mathbf{M}\) for three readings and find its rank and nullspace. (b) Show that one extra position reading makes the system observable.
+@@ 67
+(a) The rows are \(\mathbf{H}\boldsymbol{\Phi}^k = [0, 1, -k]\) for \(k = 0, 1, 2\):
+@@ 68
+Row 3 equals \(2\times\) row 2 minus row 1, and rows 1 and 2 are independent, so the rank is 2. The first column is zero, so the nullspace is spanned by \((1, 0, 0)\): the initial position.
+@@ 69
+(b) A position reading at step \(k\) adds the row \([1, k, -k^2/2]\). Its product with \((1, 0, 0)\) is 1, not 0, so that vector is no longer in the nullspace. The nullspace had dimension 1, so it is now \(\{\mathbf{0}\}\) and the rank is 3.
+@@ 70
+A point is at \(\hat{\mathbf{p}}^c_f = (2, -1, 2)\T\) m. (a) Compute \(\mathbf{H}_r\) and the pinhole \(\mathbf{H}_b\). (b) Verify \(\mathbf{H}_b\hat{\mathbf{p}}^c_f = \mathbf{0}\). (c) The point moves by 3 cm along the sensor's \(x\) axis. By how much do the range and the bearing change?
+@@ 71
+(a) \(\norm{\mathbf{p}} = \sqrt{4 + 1 + 4} = 3\), so \(\mathbf{H}_r = [\tfrac23,\ -\tfrac13,\ \tfrac23]\). With \(z = 2\), \(x/z = 1\), \(y/z = -0.5\):
+@@ 72
+(b) First row: \(0.5\cdot 2 - 0.5\cdot 2 = 0\). Second row: \(0.5\cdot(-1) + 0.25\cdot 2 = 0\).
+@@ 73
+(c) \(\delta\mathbf{p} = (0.03, 0, 0)\). Range: \(\tfrac23 \times 0.03 = 0.02\) m. Bearing: \((0.5 \times 0.03,\ 0) = (0.015,\ 0)\) in normalized image coordinates.
+@@ 74
+Work in a horizontal plane, so gravity does not enter. A robot does not rotate (\(\mathbf{R} = \mathbf{I}\)), starts at the origin with velocity \((1, 0)\) m/s, and has constant acceleration \((0.2, 0)\) m/s². Its accelerometer bias is \((0.05, 0)\) m/s². A landmark is at \((4, 2)\) m and the camera measures bearing only. (a) Scale the solution by \(s = 2\). Give the new velocity, landmark, and the bias that keeps the accelerometer reading unchanged. (b) Check that the bearing at \(t = 2\) s is the same in both solutions. (c) Now the acceleration is 0.2 m/s² during the first second and 0.6 m/s² afterwards. Show that no \(s \ne 1\) fits.
+@@ 75
+(a) Velocity \((2, 0)\), acceleration \((0.4, 0)\), landmark \((8, 4)\). The reading is \(\mathbf{a} + \mathbf{b} = (0.25, 0)\). The scaled solution needs \(0.4 + b'_x = 0.25\), so \(\mathbf{b}' = (-0.15, 0)\). This is \(\mathbf{b}' = \mathbf{b} - (s-1)\mathbf{a}\).
+@@ 76
+(b) Original: \(x(2) = 1\cdot 2 + \tfrac12\cdot 0.2\cdot 4 = 2.4\), so the bearing is \(\operatorname{atan2}(2,\ 4 - 2.4) = \operatorname{atan2}(2, 1.6) \approx 51.3^\circ\). Scaled: \(x(2) = 4.8\), bearing \(\operatorname{atan2}(4,\ 8 - 4.8) = \operatorname{atan2}(4, 3.2) \approx 51.3^\circ\).
+@@ 77
+(c) The readings are \(0.25\) and then \(0.65\). A scaled solution needs \(0.2s + b'_x = 0.25\) and \(0.6s + b'_x = 0.65\) with one constant \(b'_x\). Subtracting gives \(0.4s = 0.4\), so \(s = 1\). The change in acceleration fixes the scale; the bias can only absorb a constant.
+@@ 78
+Three scalar positions \(x_0, x_1, x_2\) are linked by two odometry factors, \(x_1 - x_0 = u_1\) and \(x_2 - x_1 = u_2\), each with information 1. There is no prior. (a) Write the \(3\times 3\) information matrix and show that \((1, 1, 1)\) is a null vector. (b) Marginalize \(x_0\) and show that the result still has the null vector \((1, 1)\). (c) Suppose an inconsistent relinearization adds 0.1 to the \((x_1, x_1)\) entry of the result. What variance does the estimator now report for \(x_2\), and what should it be?
+@@ 79
+(a) Each factor contributes \(\begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}\) on its two variables:
+@@ 80
+Shifting all three positions together changes no measurement.
+@@ 81
+(b) \(\Lambda_{mm} = 1\), \(\boldsymbol{\Lambda}_{rm} = (-1, 0)\T\), \(\boldsymbol{\Lambda}_{rr} = \begin{bmatrix} 2 & -1 \\ -1 & 1 \end{bmatrix}\). The Schur complement subtracts \(\boldsymbol{\Lambda}_{rm}\Lambda_{mm}^{-1}\boldsymbol{\Lambda}_{mr} = \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix}\):
+@@ 82
+(c) The matrix becomes \(\begin{bmatrix} 1.1 & -1 \\ -1 & 1 \end{bmatrix}\) with determinant \(1.1 - 1 = 0.1\). It is now invertible, with inverse \(\tfrac{1}{0.1}\begin{bmatrix} 1 & 1 \\ 1 & 1.1 \end{bmatrix}\), so the reported variance of \(x_2\) is 11. The correct answer is "infinite": no measurement says where the chain sits. A small inconsistency has turned an unobservable direction into a confident estimate. This is the one-dimensional picture of what first-estimate Jacobians prevent.
+@@ 83
+Build \(\mathbf{M}\) for a small linear system and read its rank and nullspace.
+@@ 84
+Write the AINS state in the book's order and say what each block of \(\boldsymbol{\Phi}\) and \(\mathbf{H}_f\) means.
+@@ 85
+Name the four unobservable directions and explain why a rotation about gravity is one of them while roll and pitch are not.
+@@ 86
+For each row of Table 11.1, say what is lost and which mechanism (bias absorption or missing parallax) is responsible.
+@@ 87
+Sketch the factor graph of a sliding-window VIO and marginalize a state with a Schur complement.
+@@ 88
+Explain in two sentences why mixing linearization points makes an estimator overconfident about yaw.
+@@ 89
+<em>SLAM Handbook</em>, Chapter 11, §11.3–§11.5, pp. 319–332.
+@@ 90
+Kailath, <em>Linear Systems</em>, 1980 (rank test); Huang, Mourikis, Roumeliotis, <em>Observability-based Rules for Designing Consistent EKF SLAM Estimators</em>, 2010 (consistency); Barfoot, <em>State Estimation for Robotics</em>, 2017 (marginalization).

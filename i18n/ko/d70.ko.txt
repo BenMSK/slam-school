@@ -1,0 +1,180 @@
+@@ 1
+<span class="eyebrow">12주차 · Day 4</span>
+@@ 2
+Bundle adjustment 다시 보기: power series, variable projection, gauge freedom
+@@ 3
+오늘이 끝나면 inverse Schur complement의 power series 근사를 유도하고 언제 빨리 수렴하는지 말하고, variable projection이 문제에서 무엇을 없애는지 설명하고, bundle adjustment가 결정할 수 없는 방향의 개수를 셀 수 있습니다.
+@@ 4
+약 60분 · §7.4.4, pp. 213–215, Figure 7.11 (약 1.5쪽)과 p. 221 윗부분 읽기 · 12주차 Day 3 필요
+@@ 5
+먼저 읽기: §7.4.4, pp. 213–215, p. 221의 첫 문장
+@@ 6
+§7.4.4 첫 문단(p. 213)에 나오는 고전적 BA의 두 가지 약점.
+@@ 7
+식 (7.8)과 (7.9): 무엇을 근사하고, 그 근사를 무엇으로 만드는지.
+@@ 8
+p. 214의 variable projection 접근법의 두 단계와, 카메라 약 100대라는 한계.
+@@ 9
+p. 221에서 vision만 쓰는 시스템이 결정하지 못하고 남기는 미지수 7개.
+@@ 10
+Day 3의 Schur complement trick은 두 문제를 남깁니다. reduced camera system은 여전히 풀어야 하고, 전체 iteration에는 좋은 시작점이 필요합니다. 최근 연구는 첫 번째 문제를 곱셈만 필요한 matrix power series로, 두 번째 문제를 nonlinear 문제 자체에서 point를 소거하는 방법으로 공략합니다. 세 번째 사실은 모든 BA solver에 성립합니다. 이미지만으로는 map이 어디에 있는지, 어느 방향을 향하는지, 얼마나 큰지 알 수 없습니다.
+@@ 11
+1. 고전적 pipeline의 두 약점
+@@ 12
+고전적 BA(Day 3)는 한 세기 동안 다듬어졌고 잘 작동합니다. 책은 두 가지 약점을 짚습니다. <span class="src">§7.4.4 · p. 213</span>
+@@ 13
+<strong>Initialization.</strong> Gauss-Newton과 Levenberg-Marquardt는 local 방법입니다. landmark와 카메라 pose가 이미 대략 맞아야 하며, 그래서 11주차에 initialization을 하루 동안 다뤘습니다.
+@@ 14
+<strong>규모.</strong> 아주 큰 문제에서는 계산량과 메모리가 감당할 수 없을 만큼 커집니다. 병목은 reduced camera system, 즉 식 (7.7)의 두 번째 줄을 푸는 일입니다.
+@@ 15
+2. Power bundle adjustment: 곱셈으로 역행렬 구하기
+@@ 16
+역행렬을 구할 행렬은 Schur complement입니다. <span class="src">§7.4.4 · p. 213, eq. (7.8)–(7.9)</span>
+@@ 17
+큰 규모에서 이 행렬로 시스템을 푸는 흔한 방법은 반복 solver인 conjugate gradient method입니다. Power Bundle Adjustment는 그 대신 잘라 낸 <strong>matrix power series</strong>로 역행렬을 근사합니다.
+@@ 18
+빈틈 채우기: (7.9)는 어디서 왔고 왜 수렴하는가
+@@ 19
+<strong>스칼라의 경우.</strong> \(|q| \lt 1\)인 수에 대해 등비급수는 \(1/(1-q) = 1 + q + q^2 + \dots\)를 줍니다. 곱해서 확인할 수 있습니다. \((1 - q)(1 + q + \dots + q^m) = 1 - q^{m+1}\)이고 \(q^{m+1} \to 0\)입니다.
+@@ 20
+<strong>행렬의 경우.</strong> 정사각 행렬 \(\mathbf{N}\)에도 같은 곱셈이 성립합니다. \((\mathbf{I} - \mathbf{N})(\mathbf{I} + \mathbf{N} + \dots + \mathbf{N}^m) = \mathbf{I} - \mathbf{N}^{m+1}\). \(\mathbf{N}^{m+1} \to \mathbf{0}\)이면 \((\mathbf{I} - \mathbf{N})^{-1} = \sum_{i \ge 0} \mathbf{N}^i\)입니다. 이것이 <strong>Neumann series</strong>입니다. 이 series는 \(\mathbf{N}\)의 모든 eigenvalue의 크기가 1보다 작을 때, 그리고 그때만 수렴합니다. 그 크기 중 가장 큰 값이 <strong>spectral radius</strong> \(\rho(\mathbf{N})\)이며, \(m\)개 항 뒤의 오차는 \(\rho^{m+1}\)처럼 줄어듭니다.
+@@ 21
+<strong>적용하기.</strong> \(\mathbf{E} = \mathbf{H}_{cp}\mathbf{H}_{pp}^{-1}\mathbf{H}_{cp}\T\)로 줄여 쓰고 (7.8)에서 \(\mathbf{H}_{cc}\)를 묶어 냅니다.
+@@ 22
+합을 \(i = m\)에서 자르면 (7.9)입니다.
+@@ 23
+<strong>왜 수렴하는가.</strong> 전체 행렬 \(\mathbf{H}\)가 positive definite라고 가정합시다(이를 위해 무엇이 필요한지는 4절에서 봅니다). 그러면 \(\mathbf{H}_{cc}\)와 그 Schur complement \(\mathbf{H}^{red}_{cc}\)도 positive definite이고, \(\mathbf{E}\)는 positive semidefinite입니다. 행렬 \(\mathbf{N} = \mathbf{H}_{cc}^{-1}\mathbf{E}\)는 대칭 행렬 \(\mathbf{S} = \mathbf{H}_{cc}^{-1/2}\mathbf{E}\,\mathbf{H}_{cc}^{-1/2}\)와 eigenvalue가 같고, 그 eigenvalue는 실수이며 \(\ge 0\)입니다. 또 \(\mathbf{I} - \mathbf{S} = \mathbf{H}_{cc}^{-1/2}\mathbf{H}^{red}_{cc}\mathbf{H}_{cc}^{-1/2}\)가 positive definite이므로 그 eigenvalue는 \(\lt 1\)이기도 합니다. 따라서 \(0 \le \rho \lt 1\)이고, 책의 말대로 series는 수렴합니다.
+@@ 24
+<strong>왜 싼가.</strong> \(\mathbf{H}_{cc}\)와 \(\mathbf{H}_{pp}\)는 block diagonal(Day 3)이므로 그 역행렬은 작고 독립적인 block들입니다. 그러면 (7.9)를 벡터에 적용하는 데는 sparse한 \(\mathbf{H}_{cp}\)와 그 block들과의 곱만 필요합니다. factorization은 하나도 없고, reduced system을 만들 필요조차 없습니다.
+@@ 25
+<strong>숫자로 보기.</strong> Day 3의 손 계산 예에서 \(H_{cc} = 6\), \(E = 5\)이므로 \(N = 5/6\)이고 정확한 역은 \(1/(6-5) = 1\)입니다. 부분합은 \(\tfrac{1}{6}(1 + \tfrac{5}{6} + \dots) = 1 - (5/6)^{m+1}\), 즉 0.167, 0.306, 0.421, …입니다. 수렴하지만 \(\rho = 5/6\)이 1에 가까워 느립니다.
+@@ 26
+직접 해 보기: 위젯은 Day 3 문제의 18 × 18 reduced camera system에서 (7.9)를 계산합니다. slider는 Levenberg-Marquardt damping \(\lambda\)(<a href="#d11">2주차 · Day 5</a>)를 정하며, 이 damping은 \(\mathbf{H}\)의 모든 대각 원소에 \(1 + \lambda\)를 곱합니다.
+@@ 27
+눈여겨볼 점: 로그 축에서 오차는 직선을 따라 떨어지고, 기울기는 \(\rho\)가 정합니다. \(\lambda = 0.1\)에서 spectral radius는 약 0.87이고, 1% 오차에 이르려면 항이 약 16개 더 필요합니다. \(\lambda = 1\)에서는 약 0.36으로 떨어지고 항 10개로 여섯 자리가 맞습니다. \(\lambda = 0.001\)에서는 약 0.998이고 항 40개로도 거의 아무것도 얻지 못합니다. series는 언제나 수렴합니다. 얼마나 빨리 수렴하는지는 카메라의 정보 중 얼마만큼이 미지의 point에 묶여 있는지에 달려 있습니다.
+@@ 28
+3. Variable projection: initialization이 필요 없음
+@@ 29
+두 번째 약점은 시작점에 대한 의존입니다. 책은 <strong>variable projection</strong>에 기반한 해결책을 설명합니다. <span class="src">§7.4.4 · p. 214</span>
+@@ 30
+빈틈 채우기: variable projection이란
+@@ 31
+어떤 least-squares 문제는 일부 미지수에 대해서는 nonlinear하고 나머지에 대해서는 linear합니다. \(y(t) = b\,e^{-a t}\)를 맞추는 것이 대표적인 작은 예입니다. 감쇠율 \(a\)에는 nonlinear하고 진폭 \(b\)에는 linear합니다. \(a\)를 고정하면 가장 좋은 \(b\)는 closed form(평범한 linear least squares)으로 구해집니다.
+@@ 32
+이를 다시 대입하면 cost는 \(a\)만의 함수가 됩니다. \(a\)에 대해 최적화하고, \(b\)는 항상 현재 \(a\)에 대한 최선의 값입니다. \(t = (0, 1)\)에서 데이터가 \(y = (2, 1)\)이라면, \(a = 0\)일 때 \(b^* = 3/2\)이고 fit \((1.5, 1.5)\)는 \(\pm 0.5\)만큼 빗나갑니다. \(a = \ln 2\)일 때 \(b^* = (2 + 0.5)/(1 + 0.25) = 2\)이고 fit \((2, 1)\)은 정확합니다. \(b\)는 추측하는 값이 아니므로, \(b\)를 잘못 추측해 탐색이 엇나가는 일도 없습니다.
+@@ 33
+Day 3과 비교해 봅시다. Schur complement는 각 iteration 안에서 <em>linearize된</em> 시스템으로부터 point를 소거합니다. variable projection은 <em>nonlinear</em> 문제로부터 point를 한 번 소거합니다.
+@@ 34
+bundle adjustment는 그대로는 이런 형태가 아닙니다. perspective division 때문에 projection이 point에 대해 nonlinear하기 때문입니다. 그래서 이 방법은 두 단계로 이루어집니다. 첫 단계에서는 perspective projection을 일반적인 projective matrix로 바꾸는데, 최적의 landmark를 카메라의 함수로 해석적으로 풀 수 있도록 고릅니다. 그러면 optimizer는 카메라만 탐색합니다. 이로써 책이 말하는 landmark와 pose 사이의 닭과 달걀 같은 의존성이 사라지고 basin of attraction이 넓어집니다. 두 번째 단계인 <strong>projective refinement</strong>에서는 그 해로 원래의 perspective 문제를 initialize합니다. <span class="src">§7.4.4 · p. 214</span>
+@@ 35
+Figure 7.11이 결과를 보여 줍니다. 무작위 시작점에서 복원한 pose와 landmark입니다. 대가는 계산량입니다. 이 전략만으로는 카메라가 약 100대를 넘으면 너무 무겁습니다. 2절의 power series와 결합하면 initialization 없이 큰 문제까지 확장됩니다. <span class="src">§7.4.4 · pp. 214–215</span>
+@@ 36
+4. Gauge freedom: 어떤 BA solver도 결정할 수 없는 것
+@@ 37
+2절에서는 \(\mathbf{H}\)가 positive definite라고 가정했습니다. 순수한 BA에서는 그렇지 않으며, 그 이유는 모든 visual SLAM 시스템에서 중요합니다. 책은 이를 한 문장으로 언급합니다. vision만 쓰는 시스템에는 미지수 7개의 <strong>gauge freedom</strong>이 있습니다. global 위치 (3), 방향 (3), scale (1)입니다. <span class="src">§7.8.1 · p. 221</span>
+@@ 38
+빈틈 채우기: 왜 정확히 일곱 개인가
+@@ 39
+아무 해나 잡고 세계 전체에 같은 <strong>similarity transform</strong>을 적용합시다. \(s \gt 0\)으로 scale을 바꾸고, \(\mathbf{Q} \in \SO(3)\)로 회전하고, \(\mathbf{a}\)만큼 평행이동합니다. point는 \(\mathbf{x}' = s\,\mathbf{Q}\mathbf{x}^w + \mathbf{a}\)가 됩니다. 각 카메라에 짝이 맞는 새 pose \(\mathbf{R}' = \mathbf{R}\mathbf{Q}\T\), \(\mathbf{t}' = s\,\mathbf{t} - \mathbf{R}\mathbf{Q}\T\mathbf{a}\)를 주면, camera frame에서의 point는 다음과 같습니다.
+@@ 40
+camera frame에서 모든 것이 \(s\)배가 되고, projection은 depth로 나누므로 \(\pi(s\,\mathbf{x}^c) = \pi(\mathbf{x}^c)\)입니다. 예측된 모든 픽셀이 그대로이므로 모든 reprojection error도 그대로입니다. 이 변환의 parameter는 \(3 + 3 + 1 = 7\)개입니다. cost는 이 7개 방향으로 평평하고, Gauss-Newton 행렬 \(\mathbf{H} = \mathbf{J}\T\mathbf{J}\)는 0인 eigenvalue를 7개 가지므로 \(\mathbf{H}\,\mathbf{d} = \mathbf{b}\)의 해는 유일하지 않습니다.
+@@ 41
+우리 위젯의 평평한 세계에서 similarity는 평행이동 2개, 회전 1개, scale 1개, 즉 방향 4개입니다.
+@@ 42
+직접 해 보기: 이동 방식을 고르고 "크기"를 드래그해 보세요. 그다음 "Anchor prior"를 바꿔 보세요.
+@@ 43
+눈여겨볼 점: <em>모든 것</em>을 평행이동, 회전, scale 변경하면 reprojection error는 0에 머물지만, 카메라 하나만 옮기면 곧바로 커집니다. anchor가 없으면 \(\mathbf{H}\)에는 0인 eigenvalue가 정확히 4개 있습니다. 카메라 1의 pose를 anchor하면 그중 세 개가 사라지고, 남는 하나는 scale입니다. 숫자 하나, 즉 카메라 2의 x 위치를 더 anchor하면 마지막 것도 사라집니다.
+@@ 44
+solver는 gauge를 세 가지 방법 중 하나로 다룹니다. 일부 미지수를 고정하거나(첫 카메라 pose, 그리고 scale을 위한 길이 하나), 같은 일을 부드럽게 하는 prior factor를 더하거나, anchor를 고르지 않아도 시스템을 풀 수 있게 해 주는 Levenberg-Marquardt damping에 기댑니다. 다른 센서는 gauge를 줄여 줍니다.
+@@ 45
+센서
+@@ 46
+여전히 결정되지 않는 것
+@@ 47
+개수
+@@ 48
+카메라 1대
+@@ 49
+위치, 방향, scale
+@@ 50
+Stereo 또는 depth 카메라 (metric depth)
+@@ 51
+위치, 방향
+@@ 52
+카메라와 IMU (gravity와 metric scale이 observable)
+@@ 53
+위치와 yaw
+@@ 54
+첫 행과 마지막 행은 책의 내용이고, 가운데 행은 알려진 baseline이나 metric depth 측정값이 scale을 고정하므로 따라 나옵니다. <span class="src">§7.8.1 · p. 221</span>
+@@ 55
+더 깊이 (선택): sliding window에서의 marginalization
+@@ 56
+DSO는 최근 keyframe의 window를 유지하고 오래된 keyframe은 marginalize합니다(Day 2). marginalization은 빠져나가는 변수에 적용한 Schur complement입니다. 그 결과인 \(\mathbf{H}^{red}\)와 우변은, 빠져나간 변수와 연결되어 있던 변수들에 대한 prior factor로 남습니다. 이 prior는 그 변수들 사이에서 dense합니다(fill-in, <a href="#d15">3주차 · Day 3</a>). 그러므로 sliding window는 과거를 잊는 것이 아니라 factor 하나로 압축하며, 그 factor는 keyframe이 빠져나간 시점에 linearize된 것입니다.
+@@ 57
+<strong>"power series는 몇 항이면 정확하다."</strong> 오차가 \(\rho^{m+1}\)처럼 줄어드는 근사입니다. \(\rho\)가 1에 가까우면 몇 항으로는 형편없는 역행렬밖에 얻지 못합니다.
+@@ 58
+<strong>"variable projection은 Schur complement의 다른 이름이다."</strong> 둘 다 point를 소거하지만 수준이 다릅니다. Schur는 각 선형 풀이 안에서, variable projection은 nonlinear cost 자체에서 소거합니다. basin of attraction을 넓히는 것은 두 번째뿐입니다.
+@@ 59
+<strong>"\(\mathbf{H}\)가 singular라면 데이터가 나쁜 것이다."</strong> BA에서는 완벽한 데이터에서도 singular합니다. 평평한 일곱 방향은 noise가 아니라 측정 자체의 성질입니다.
+@@ 60
+<strong>"Monocular SLAM은 거리를 미터 단위로 잰다."</strong> 그 map은 미지의 scale 배율을 빼고만 맞으며, 무언가 metric한 것(stereo baseline, depth 센서, IMU, GPS)이 그 scale을 고정해야 합니다.
+@@ 61
+Q1. 스칼라 reduced system이 \(H_{cc} = 4\), \(H_{cp}H_{pp}^{-1}H_{cp}\T = 2\)입니다. cut-off \(m = 1\)인 power series (7.9)는 얼마를 주고, 정확한 역은 얼마입니까?
+@@ 62
+0.25와 0.5
+@@ 63
+0.375와 0.5
+@@ 64
+0.5와 0.5
+@@ 65
+0.375와 0.25
+@@ 66
+N = 2/4 = 0.5. 두 항: (1 + 0.5) × 1/4 = 0.375. 정확한 값: 1/(4 − 2) = 0.5. 오차 0.125는 0.5 × 0.5²와 같습니다.
+@@ 67
+Q2. \(\mathbf{H}_{cc}^{-1}\mathbf{H}_{cp}\mathbf{H}_{pp}^{-1}\mathbf{H}_{cp}\T\)의 spectral radius가 0.9입니다. 오차를 10분의 1로 줄이려면 series의 항이 대략 몇 개 더 필요합니까?
+@@ 68
+항 하나마다 오차에 약 0.9가 곱해집니다. 0.9ᵏ = 0.1을 풀면 k = ln 0.1 / ln 0.9 ≈ 21.9입니다.
+@@ 69
+Q3. monocular BA 문제에 카메라 10대와 point 200개가 있고 prior는 없습니다. \(\mathbf{J}\T\mathbf{J}\)의 0인 eigenvalue는 몇 개입니까?
+@@ 70
+similarity transform의 parameter마다 하나씩입니다. 이동 3, 회전 3, scale 1. 이 개수는 문제의 크기와 무관합니다.
+@@ 71
+Q4. 다음 중 BA 해의 reprojection error를 바꾸는 변경은 무엇입니까?
+@@ 72
+모든 point 좌표와 모든 카메라 위치를 두 배로 하기
+@@ 73
+모든 point와 모든 카메라를 수직축에 대해 30° 회전하기
+@@ 74
+카메라는 그대로 두고 모든 point를 북쪽으로 1 m 옮기기
+@@ 75
+모든 point와 모든 카메라를 북쪽으로 1 m 옮기기
+@@ 76
+point와 카메라에 함께 적용한 변환만 gauge 이동입니다. point만 옮기면 모든 카메라가 보아야 할 것이 바뀝니다.
+@@ 77
+Q5. §7.4.4의 두 단계 접근법에서 첫 단계가 이루는 것은 무엇입니까?
+@@ 78
+RANSAC으로 outlier match를 제거합니다
+@@ 79
+projective 카메라 모델을 써서 landmark를 카메라의 함수로 해석적으로 풀므로, 탐색이 카메라에 대해서만 이루어집니다
+@@ 80
+power series로 reduced camera system의 역행렬을 구합니다
+@@ 81
+첫 카메라를 anchor하여 gauge를 고정합니다
+@@ 82
+landmark를 closed form으로 소거하면 landmark와 pose의 상호 의존이 사라집니다. 두 번째 단계는 실제 perspective 모델로 다듬습니다.
+@@ 83
+고전적 BA는 좋은 initialization이 필요하고 큰 규모에서 비싸집니다. 병목은 reduced camera system입니다.
+@@ 84
+Power BA는 그 역행렬을 \(\sum_{i=0}^{m} (\mathbf{H}_{cc}^{-1}\mathbf{H}_{cp}\mathbf{H}_{pp}^{-1}\mathbf{H}_{cp}\T)^i\, \mathbf{H}_{cc}^{-1}\)로 근사합니다. spectral radius가 1보다 작아 수렴하는 Neumann series이며, 수렴 속도는 그 radius가 정합니다.
+@@ 85
+variable projection은 nonlinear 문제 안에서 landmark를 closed form으로 풀어 basin of attraction을 넓힙니다. projective 첫 단계가 이를 가능하게 하고, perspective 두 번째 단계가 다듬습니다.
+@@ 86
+reprojection error는 세계의 similarity transform에 대해 불변입니다. 카메라 하나면 gauge 방향이 7개, IMU가 있으면 4개입니다. anchor, prior, damping이 선형 시스템을 풀 수 있게 만듭니다.
+@@ 87
+<em>SLAM Handbook</em>, §7.4.4 "Bundle Adjustment Revisited", pp. 213–215, 식 (7.8)–(7.9), Figure 7.11; §7.8.1, p. 221 (gauge freedom).
+@@ 88
+Golub and Van Loan, <em>Matrix Computations</em>, 4판, 2013, Neumann series와 spectral radius 참고.
+@@ 89
+Golub and Pereyra, <em>The differentiation of pseudo-inverses and nonlinear least squares problems whose variables separate</em>, 1973, variable projection 참고.
+@@ 90
+Triggs, McLauchlan, Hartley, Fitzgibbon, <em>Bundle Adjustment: A Modern Synthesis</em>, 2000, gauge freedom 참고.

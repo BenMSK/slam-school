@@ -1,0 +1,176 @@
+@@ 1
+<span class="eyebrow">2주차 · Day 2</span>
+@@ 2
+MAP inference에서 nonlinear least squares로
+@@ 3
+오늘이 끝나면 각 factor를 squared Mahalanobis distance로 쓰고 음의 로그를 취해서, Gaussian noise를 가진 factor graph를 nonlinear least-squares cost로 바꿀 수 있습니다.
+@@ 4
+약 60분 · §1.2, pp. 25–29 읽기 (5쪽) · 2주차 Day 1 필요
+@@ 5
+먼저 읽기: §1.2, pp. 25–29
+@@ 6
+p. 26에 있는 식 (1.6)의 세 줄과, 분모가 사라지는 이유.
+@@ 7
+p. 27의 Gaussian density (1.9)와 squared Mahalanobis distance (1.10).
+@@ 8
+p. 28의 bearing 모델 (1.13)과 odometry density (1.16).
+@@ 9
+p. 29에서 (1.17)이 (1.18)로 넘어가는 단계, 그리고 그 뒤에 factor가 "under-specified"라고 말하는 문단.
+@@ 10
+최선의 추정값은 모든 factor의 곱을 가장 크게 만드는 state입니다. 모든 factor가 Gaussian이면 로그가 이 곱을 오차 제곱의 합으로 바꾸고, 각 오차는 자기 표준편차를 단위로 잽니다. posterior를 최대화하는 문제와 가중 제곱합을 최소화하는 문제는 같은 문제입니다.
+@@ 11
+1. MAP 추정값
+@@ 12
+posterior \(p(\mathbf{x}\mid\mathbf{z})\)는 density 전체입니다. 대부분은 답 하나, 즉 최고점에서의 state를 원합니다. 이것이 <strong>maximum a posteriori (MAP) estimate</strong>(최대 사후 확률 추정값)이며, 식 (1.6)입니다: <span class="src">§1.2.1 · p. 26</span>
+@@ 13
+\(\argmax_{\mathbf{x}}\)는 "식이 가장 커지는 \(\mathbf{x}\)의 값"을 뜻하며, 가장 큰 값 자체가 아닙니다. 분모 \(p(\mathbf{z})\)에는 \(\mathbf{x}\)가 없습니다. 함수를 양의 상수로 나누면 높이만 바뀌고 최고점의 위치는 움직이지 않으므로, 분모는 버릴 수 있습니다.
+@@ 14
+어제의 그래프에 여기서 형식적인 정의가 주어집니다. factor graph는 <strong>bipartite graph</strong>(이분 그래프) \(F = (\mathcal{U},\mathcal{V},\mathcal{E})\)입니다: node는 factor \(\phi_i \in \mathcal{U}\)와 변수 \(\mathbf{x}_j \in \mathcal{V}\) 두 종류이고, \(\mathcal{E}\)의 모든 edge는 factor와 변수를 잇습니다. 같은 종류의 두 node를 잇는 edge는 없습니다. factor \(\phi_i\)에 연결된 변수들을 \(\mathbf{x}_i\)로 쓰면, 그래프는 다음 함수를 정의합니다 <span class="src">§1.2.1 · p. 26</span>
+@@ 15
+이 함수는 정규화되지 않은 posterior \(p(\mathbf{z}\mid\mathbf{x})\,p(\mathbf{x})\)입니다. 그러면 MAP inference는 \(\mathbf{x}^{\text{MAP}} = \argmax_{\mathbf{x}} \prod_i \phi_i(\mathbf{x}_i)\), 식 (1.8)입니다. <span class="src">§1.2.1 · p. 27</span> 첨자에 주의해야 합니다: 여기서 \(\mathbf{x}_i\)는 "factor \(i\)의 변수들", 즉 state의 부분집합이며 \(i\)번째 변수가 아닙니다.
+@@ 16
+2. Gaussian과 Mahalanobis distance
+@@ 17
+무엇이든 계산하려면 factor가 무엇인지 정해야 합니다. 보통은 평균 \(\boldsymbol{\mu}\in\R^n\)과 \(n\times n\) covariance 행렬 \(\boldsymbol{\Sigma}\)를 가진 <strong>multivariate Gaussian density</strong>(다변량 정규분포 밀도)를 씁니다: <span class="src">§1.2.2 · p. 27</span>
+@@ 18
+(1.10)의 양이 <strong>squared Mahalanobis distance</strong>(Mahalanobis 거리의 제곱)입니다. 지수 함수 앞의 분수는 density의 적분이 1이 되게 만들며, \(\boldsymbol{\theta}\)에 의존하지 않습니다.
+@@ 19
+빈틈 채우기: Mahalanobis distance가 재는 것
+@@ 20
+1차원에서는 \(\boldsymbol{\Sigma}=\sigma^2\)이고 (1.10)은 \((\theta-\mu)^2/\sigma^2\)입니다: 평균으로부터의 거리 제곱을 표준편차 단위로 센 것입니다. 대각 covariance \(\boldsymbol{\Sigma}=\diag(\sigma_1^2,\dots,\sigma_n^2)\)이면 역행렬은 \(\diag(1/\sigma_1^2,\dots,1/\sigma_n^2)\)이므로
+@@ 21
+각 성분은 제곱하기 전에 자기 표준편차로 나뉩니다. 예: \(\boldsymbol{\Sigma}=\diag(0.09,\,0.01)\)이므로 \(\sigma_1=0.3\), \(\sigma_2=0.1\)입니다. 오프셋 \(\mathbf{e}_A=(0.24,\,0)\)은 \(\norm{\mathbf{e}_A}^2_{\boldsymbol{\Sigma}} = 0.0576/0.09 = 0.64\)로, 표준편차 \(0.8\)개만큼의 거리입니다. 오프셋 \(\mathbf{e}_B=(0,\,0.24)\)는 보통의 길이는 같지만 \(\norm{\mathbf{e}_B}^2_{\boldsymbol{\Sigma}} = 0.0576/0.01 = 5.76\)으로, 거리는 \(2.4\)입니다. \(B\)에서의 density는 \(A\)에서의 \(\exp(-\tfrac12(5.76-0.64)) \approx 0.08\)배로 낮습니다.
+@@ 22
+\(\boldsymbol{\Sigma}\)가 대각이 아니면 같은 일이 좌표축 대신 타원의 축을 따라 일어납니다. 평균에서 Mahalanobis distance가 같은 점들은 한 타원 위에 놓이고 density도 같습니다.
+@@ 23 attr
+평균 mu를 중심으로 한 타원 두 개: 가로로 넓고 세로로 좁은 Gaussian의 1 sigma 등고선과 2 sigma 등고선. 점 A는 평균의 오른쪽, 1 sigma 타원 안에 있습니다. 점 B는 평균의 위쪽으로 보통 거리는 같지만 2 sigma 타원 밖에 있습니다.
+@@ 24
+B: μ에서 0.24, 즉 2.4σ
+@@ 25
+A: μ에서 0.24, 즉 0.8σ
+@@ 26
+실선: 1σ 등고선 · 점선: 2σ 등고선
+@@ 27
+Σ = diag(0.09, 0.01). 자로 재면 A와 B는 평균에서 같은 거리에 있습니다. Mahalanobis distance로는 B가 세 배 멀리 있습니다. Gaussian이 좁은 방향에 놓여 있기 때문입니다.
+@@ 28
+3. factor를 식으로 쓰기
+@@ 29
+<strong>측정.</strong> 측정은 예측 더하기 noise로 모델링합니다. 식 (1.11): <span class="src">§1.2.2 · p. 27</span>
+@@ 30
+\(\mathbf{h}\)는 <strong>measurement prediction function</strong>(측정 예측 함수)입니다: pose가 \(\mathbf{p}\)이고 landmark가 \(\boldsymbol{\ell}\)일 때 noise가 없다면 센서가 읽을 값입니다. \(\mathbf{z}-\mathbf{h}(\mathbf{p},\boldsymbol{\ell})\)가 noise이고 noise가 Gaussian이므로, 측정의 density는 예측값을 중심으로 한 Gaussian입니다. 식 (1.12):
+@@ 31
+2D bearing에 대해 책은 식 (1.13)을 씁니다. <span class="src">§1.2.2 · p. 28</span>
+@@ 32
+여기서 \(\operatorname{atan2}(a,b)\)는 원점에서 본 점 \((b,a)\)의 각도이며 범위는 \((-\pi,\pi]\)입니다. 사분면까지 가려 준 \(a/b\)의 arctangent입니다.
+@@ 33
+<em>예제.</em> pose 위치 \((1,1)\), landmark \((4,5)\). 예측값은 \(\operatorname{atan2}(4,3) = 0.927\) rad (53.1°)입니다. 센서가 \(\sigma=0.05\) rad로 \(z=0.950\) rad를 보고했다고 합시다. 오차는 \(0.950-0.927=0.023\) rad로 \(0.023/0.05 = 0.45\) 표준편차이며, squared Mahalanobis distance는 \(0.45^2 \approx 0.21\)입니다.
+@@ 34
+<strong>움직임.</strong> trajectory의 prior는 \(p(\mathbf{p}_1)\)에 conditional density \(p(\mathbf{p}_{t+1}\mid\mathbf{p}_t)\)들을 곱한 것입니다. 현재 pose와 알려진 control input \(\mathbf{u}_t\)로 다음 pose를 예측하는 <strong>motion model</strong>(운동 모델) \(\mathbf{g}\)를 쓰면, Gaussian 버전은 식 (1.15)이고 그 지수는 \(-\tfrac12\norm{\mathbf{p}_{t+1}-\mathbf{g}(\mathbf{p}_t,\mathbf{u}_t)}^2_{\boldsymbol{\Sigma}_{\mathbf{Q}}}\)입니다. 대신 움직임을 odometry 측정값 \(\mathbf{o}_t\)로 <em>측정</em>하고 odometry가 pose의 차이를 잰다고 보면, 지수는 \(-\tfrac12\norm{\mathbf{o}_t-(\mathbf{p}_{t+1}-\mathbf{p}_t)}^2_{\boldsymbol{\Sigma}_{\mathbf{S}}}\)이며 식 (1.16)입니다. <span class="src">§1.2.2 · p. 28</span>
+@@ 35
+<em>예제.</em> \(\mathbf{p}_t=(1.0,\,2.0,\,0.10)\), \(\mathbf{p}_{t+1}=(1.9,\,2.1,\,0.15)\), odometry \(\mathbf{o}_t=(1.0,\,0.0,\,0.05)\), 그리고 \(\boldsymbol{\Sigma}_{\mathbf{S}}=\diag(0.1^2,\,0.1^2,\,0.05^2)\). 오차는 \(\mathbf{o}_t-(\mathbf{p}_{t+1}-\mathbf{p}_t) = (0.1,\,-0.1,\,0)\)이고, squared Mahalanobis distance는 \(1+1+0=2\)입니다.
+@@ 36
+"측정 빼기 예측" 역할을 하는 것
+@@ 37
+=
+@@ 38
+식
+@@ 39
+변수에 대한 Gaussian prior
+@@ 40
+prior의 \(\boldsymbol{\Sigma}\)
+@@ 41
+landmark 측정
+@@ 42
+알려진 control이 있는 motion model
+@@ 43
+odometry 측정
+@@ 44
+네 가지 모두 모양이 같고, 그래서 다음 단계가 가능합니다. Gaussian noise는 모델링상의 선택이지 법칙이 아닙니다. 잘못된 data association은 어떤 Gaussian도 허용하지 않을 만큼 큰 오차를 만들며, 책은 3장에서 이런 경우를 위해 꼬리가 더 두꺼운 density를 씁니다. <span class="src">§1.2.2 · p. 28</span>
+@@ 45
+빈틈 채우기: 각도에 관한 실용적 세부 사항 두 가지
+@@ 46
+식 (1.13)은 world frame에서의 bearing을 줍니다. 로봇에 장착된 센서는 로봇의 heading \(\theta\)에 대한 상대 bearing을 재므로, 실제로 쓰는 모델은 \(\operatorname{atan2}(\ell_y-p_y,\ell_x-p_x)-\theta\)입니다. Day 1 위젯이 이 형태를 씁니다. 책은 회전 처리를 2장으로 미루기 때문에 더 단순한 형태를 유지합니다.
+@@ 47
+둘째, 각도는 한 바퀴 돌면 제자리로 돌아옵니다. 예측이 \(3.10\) rad이고 측정이 \(-3.10\) rad이면 단순한 차이는 \(-6.20\)이지만, 두 방향은 \(0.083\) rad밖에 떨어져 있지 않습니다. 각도인 오차는 제곱하기 전에 반드시 \((-\pi,\pi]\) 범위로 되돌려야 합니다.
+@@ 48
+4. 곱에서 제곱합으로
+@@ 49
+모든 factor가 자기 오차에 대한 Gaussian에 비례한다고 가정합니다. 식 (1.17): <span class="src">§1.2.3 · p. 29</span>
+@@ 50
+책은 이어서 "음의 로그를 취하고 인수 ½을 버리면" (1.18)이 된다고 말합니다. 그 단계를 모두 풀어 보면 다음과 같습니다.
+@@ 51
+빈틈 채우기: 음의 로그 단계
+@@ 52
+로그는 순증가 함수입니다: \(a\gt b\gt 0\)이면 \(\log a\gt\log b\)입니다. 따라서 양의 함수와 그 로그는 같은 곳에서 최대가 됩니다. 그리고 함수의 최대는 그 음수의 최소입니다. 따라서
+@@ 53
+여기서 \(c_i\)는 \(\propto\) 기호 속에 숨은 상수의 로그입니다. 함수에 상수 \(c_i\)를 더해도 최솟값의 위치는 움직이지 않습니다. 함수에 2를 곱해도 마찬가지입니다. 남는 것은
+@@ 54
+이것이 <strong>nonlinear least-squares problem</strong>(비선형 최소제곱 문제)입니다. cost가 제곱의 합이라서 "least squares"이고, \(\mathbf{h}_i\)가 state의 선형 함수가 아니라서 "nonlinear"입니다. 이 cost를 최소화하면 모든 factor가 하나의 답으로 합쳐지며, 책은 이를 <strong>sensor fusion</strong>(센서 융합)이라고 부릅니다. <span class="src">§1.2.3 · p. 29</span>
+@@ 55
+<em>Fusion 예제.</em> 두 센서가 같은 스칼라 \(x\)를 직접 잽니다: \(\sigma_1=1\)인 \(z_1=10\)과 \(\sigma_2=2\)인 \(z_2=12\). cost는 \((10-x)^2/1+(12-x)^2/4\)입니다. 도함수를 0으로 두면 \(-2(10-x)-\tfrac12(12-x)=0\)이므로 \(2.5\,x=26\), \(x=10.4\)입니다. 답은 중간값 11이 아닙니다. \(\sigma\)가 작은 측정은 \(1/\sigma^2\)의 가중치, 즉 네 배 무겁게 반영됩니다.
+@@ 56
+단서마다 추정값이 자기와 맞지 않으면 불평해요. 정확한 단서는 흐릿한 단서보다 더 크게 불평하고요. MAP 추정값은 불평을 제곱해서 모두 더한 값이 가장 작아지는 state예요.
+@@ 57
+5. factor 하나로는 대개 부족한 이유
+@@ 58
+책은 놓치기 쉬운 점을 짚습니다: 대부분의 factor는 "under-specified"입니다. 측정에 담긴 숫자는 보통 그 측정이 닿는 미지수보다 적기 때문에, factor 하나만으로는 무한히 많은 state에 같은 값을 줍니다. 2D 픽셀 측정 하나는 3D 점들이 이루는 반직선 전체와 들어맞습니다. <span class="src">§1.2.3 · p. 29</span> bearing은 좌표가 두 개인 landmark에 대한 숫자 하나입니다. 여러 factor를 곱해야 비로소 최고점이 하나가 됩니다.
+@@ 59
+직접 해 보기: 위젯은 landmark 하나에 닿는 factor들의 곱을 격자 위 모든 landmark 위치에서 보여 줍니다. bearing factor 하나로 시작합니다. "p₂의 bearing"을 켜고, 이어서 prior를 켠 다음, bearing noise를 올립니다.
+@@ 60
+눈여겨볼 점: bearing factor 하나는 쐐기 모양으로 시선을 따라 어디서나 똑같이 높으므로 MAP 추정값이 유일하지 않습니다. bearing factor 두 개를 곱하면 두 시선이 만나는 곳에 덩어리 하나가 생기고, 최고점은 (2.03, 1.71)입니다. 측정된 bearing이 각각 조금씩 틀렸기 때문에 실제 landmark에서 0.11 떨어져 있습니다. prior를 켜고 bearing noise를 15°로 올리면 최고점이 prior 평균 쪽인 (2.21, 1.41)로 움직입니다: factor가 당기는 힘은 그 σ에 달려 있습니다.
+@@ 61
+cost (1.18)은 convex가 아니므로 local minimum이 여러 개 있을 수 있습니다. 이 장의 방법들은 괜찮은 initial guess에서 출발하면 global minimum을 찾고, initial guess가 나쁘면 잘못된 local minimum에서 멈출 수 있습니다. global optimum임을 보증(certify)할 수 있는 solver는 6장의 주제입니다. <span class="src">§1.2.3 · p. 29</span> local minimum이 실제로 생기는 모습은 Day 5에 보게 됩니다.
+@@ 62
+<strong>"MAP은 참 state를 준다."</strong> 모델 아래에서 가장 확률이 높은 state를 줄 뿐입니다. 측정에 noise가 있으면 위젯에서처럼 참값 근처에 있을 뿐, 참값과 일치하지는 않습니다.
+@@ 63
+<strong>"least squares에서는 모든 오차가 똑같이 중요하다."</strong> 각 오차는 먼저 자기 표준편차로 나뉩니다. 0.1 m의 오차는 σ = 0.01 m인 센서에서는 cost가 100이고, σ = 1 m인 센서에서는 0.01입니다.
+@@ 64
+<strong>"½과 정규화 상수가 답에 영향을 준다."</strong> 이들은 cost의 값을 바꿀 뿐 최솟값의 위치는 바꾸지 않습니다. 실제 확률이 필요할 때는 중요합니다.
+@@ 65
+Q1. Σ = diag(4, 1)이고 오차가 e = (2, 2)입니다. e의 squared Mahalanobis distance는 얼마입니까?
+@@ 66
+각 성분을 제곱해서 그 분산으로 나눕니다: 4/4 + 4/1 = 5. (8은 보통의 길이 제곱입니다.)
+@@ 67
+Q2. 두 센서가 같은 스칼라 x를 직접 잽니다: σ1 = 1인 z1 = 4와 σ2 = 2인 z2 = 10. x의 MAP 추정값은 얼마입니까(prior 없음)?
+@@ 68
+(4 − x)² + (10 − x)²/4를 최소화합니다. 도함수에서 2(x − 4) + (x − 10)/2 = 0이므로 2.5x = 13, x = 5.2입니다. 더 정밀한 센서의 가중치는 1/σ² = 1이고, 다른 센서는 0.25입니다.
+@@ 69
+Q3. pose가 (0, 0), landmark가 (1, 1)에 있습니다. 측정된 bearing은 σ = 0.1 rad로 0.885 rad입니다. 모델 (1.13)을 쓰면 이 factor가 cost (1.18)에 더하는 값은 얼마입니까?
+@@ 70
+약 0.01
+@@ 71
+약 0.1
+@@ 72
+약 10
+@@ 73
+약 1
+@@ 74
+예측값은 atan2(1, 1) = π/4 = 0.785 rad입니다. 오차는 0.100 rad로 표준편차 하나만큼이고, 그 제곱은 약 1입니다.
+@@ 75
+Q4. landmark가 알려진 pose에서의 bearing factor 하나에만 닿아 있고 다른 것은 없습니다. 그 factor를 최대로 만드는 landmark 위치는 어디입니까?
+@@ 76
+정확히 한 점
+@@ 77
+측정된 bearing을 따라가는 시선 위의 모든 점
+@@ 78
+pose 주위의 원 위의 모든 점
+@@ 79
+평면의 모든 점
+@@ 80
+그 반직선 위의 모든 점은 bearing 오차가 0이므로 모두 factor에 가장 큰 값을 줍니다. 원은 range 측정일 때의 답입니다.
+@@ 81
+MAP 추정값은 정규화되지 않은 posterior p(z | x) p(x), 즉 그래프에 있는 모든 factor의 곱을 최대화합니다.
+@@ 82
+Gaussian factor는 exp(−½ × 오차의 squared Mahalanobis distance)이며, Mahalanobis distance는 오차를 표준편차 단위로 잽니다.
+@@ 83
+prior, landmark 측정, motion model, odometry 모두 covariance를 가진 "측정 빼기 예측" 꼴입니다.
+@@ 84
+음의 로그를 취하면 곱이 nonlinear least-squares cost (1.18)로 바뀝니다.
+@@ 85
+factor 하나는 under-specified입니다. cost는 non-convex이므로 initial guess가 중요합니다.
+@@ 86
+=
+@@ 87
+로봇 heading에 대한 상대 bearing 모델은 Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005를 따릅니다.
+@@ 88
+Mahalanobis distance와 역분산 가중의 예제는 Barfoot, <em>State Estimation for Robotics</em>, 2017을 따릅니다.

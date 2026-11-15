@@ -1,0 +1,250 @@
+@@ 1
+<span class="eyebrow">20주차 · Day 5</span>
+@@ 2
+Gaussian splatting SLAM, 그리고 아직 어려운 것
+@@ 3
+오늘이 끝나면 Gaussian splat map이 SLAM에서 tracking과 mapping 모두에 어떻게 쓰이는지 설명하고, 책이 주장하는 NeRF 대비 장점을 말하고, rendering 기반 SLAM의 열린 문제를 나열할 수 있습니다.
+@@ 4
+약 60분 · §14.3.2–14.4, pp. 410–416 읽기 (7쪽, 그중 절반은 그림) · 20주차 Day 4 필요
+@@ 5
+먼저 읽기: §14.3.2, §14.3.3, §14.4, pp. 410–416
+@@ 6
+정확한 표면을 얻기 위해 SuGAR와 2DGS가 더하는 것, 그리고 splat scene을 편집하는 것이 NeRF를 편집하는 것보다 쉬운 이유 (p. 411).
+@@ 7
+SLAM에서 3DGS가 NeRF보다 나은 두 가지 장점 (p. 412).
+@@ 8
+MonoGS의 RGB-D 경로와 monocular 경로, 그리고 이산 primitive가 loop closure에 도움이 되는 이유 (p. 413).
+@@ 9
+3DGS를 ORB-SLAM, ICP, 또는 LiDAR와 결합한 시스템들 (p. 414).
+@@ 10
+§14.4의 네 가지 과제와 각각에 제안된 해결책 (pp. 415–416).
+@@ 11
+splat map은 rendering하는 대상이면서 동시에 localization의 기준이 될 수 있습니다. Gaussian을 고정하고 카메라 pose에 대해 gradient descent를 하면 그것이 tracking입니다. pose를 고정하고 Gaussian에 대해 descent를 하면 그것이 mapping입니다. 이 map은 빠르게 rendering되고 primitive를 추가하고, 옮기고, 제거할 수 있어서 SLAM에 잘 맞습니다. 하지만 최적화는 여전히 느리고, photometric error만으로 하는 tracking은 아직 고전적인 sparse 방법만큼 정확하지 않습니다.
+@@ 12
+1. View synthesis 너머: 표면과 semantics
+@@ 13
+NeRF가 그랬듯이 3DGS도 다른 3D 작업에 맞게 응용되어 왔습니다. 책은 두 가지를 고릅니다. <span class="src">§14.3.2 · pp. 410–412</span>
+@@ 14
+목표
+@@ 15
+기본 3DGS의 문제
+@@ 16
+인용된 방법들이 하는 일
+@@ 17
+=
+@@ 18
+3DGS는 사실적인 view synthesis를 위해 만들어졌고 정확한 geometry를 보장하지 않음
+@@ 19
+SuGAR는 기하 regularizer를 더합니다: 각 Gaussian에 surface normal을 정의하고 이웃 Gaussian들이 평평해지도록 유도하여, mesh를 추출할 수 있게 합니다. 2DGS는 3D Gaussian을 2D 원판으로 바꾸는데, 원판은 구조상 normal을 가지며, normal과 depth consistency loss를 더합니다.
+@@ 20
+=
+@@ 21
+Gaussian은 색만 가짐
+@@ 22
+각 Gaussian에 semantic feature를 주고 differentiable renderer를 통해 2D segmentation으로 학습합니다. LangSplat과 FMGS는 2D foundation model feature(CLIP, DINO)를 Gaussian에 융합하여 open-vocabulary segmentation을 가능하게 합니다.
+@@ 23
+Gaussian은 명시적이고 이산적이어서, 물체를 옮기거나 지우는 것 같은 scene 편집이 연속적인 NeRF에서보다 더 직접적입니다. <span class="src">§14.3.2 · p. 411</span>
+@@ 24
+2. Tracking과 mapping을 위한 하나의 loss
+@@ 25
+neural field(<a href="#d117">Day 3</a>)와 마찬가지로, SLAM에서의 매력은 renderer를 통한 end-to-end 최적화입니다: localization과 mapping이 하나의 목적 함수를 공유하고, 손으로 설계한 단계의 사슬이 없으며, map이 투명한 물체를 포함한 복잡한 빛을 표현할 수 있습니다. 여기에 더해 책은 3DGS에 고유한 두 가지 장점을 듭니다. <span class="src">§14.3.3 · pp. 411–412</span>
+@@ 26
+<strong>빠른 rendering.</strong> Rasterization은 ray marching보다 훨씬 빠르며, 로봇 navigation처럼 real-time으로 map과 상호작용해야 하는 모든 일에서 이것이 중요합니다.
+@@ 27
+<strong>유연한 primitive.</strong> 이산적이고 point 같은 Gaussian은 자유롭게 할당하고 갱신할 수 있습니다. 이는 scene의 경계가 커지고 loop closure가 map의 일부를 옮기는 SLAM에 맞습니다. 이것이 Table 14.1의 "dynamic allocation" 행입니다.
+@@ 28
+renderer가 어떻게 pose를 추정할까요? 카메라 pose는 Figure 14.2의 parameter 중 하나입니다. pose는 \(\mathbf{W}\)와 카메라 frame 평균 \(\boldsymbol{\mu}_c\)를 통해 식 (14.5)에 들어가므로, rendering된 이미지는 pose의 미분 가능한 함수이고, loss는 pose에 대한 gradient를 갖습니다.
+@@ 29
+빈틈 채우기: 카메라 위치에 대한 픽셀의 gradient
+@@ 30
+<a href="#d118">Day 4</a>의 2D 세계를 씁니다: \((x, z)\)에 있는 Gaussian 하나와, 옆 방향 위치 \(c_x\)에서 \(z\) 방향을 보는 카메라. footprint 중심은
+@@ 31
+카메라를 오른쪽으로 옮기면 모든 footprint가 왼쪽으로 미끄러지는데, 가까운 것이 먼 것보다 더 많이 움직입니다. 이것이 parallax입니다. footprint 폭의 더 작은 변화를 무시하면 픽셀 \(u\)에서 opacity는 \(\alpha = o\,\exp\bigl(-(u - \mu')^2 / 2\sigma'^2\bigr)\)이므로, chain rule에 따라
+@@ 32
+숫자로: \(o = 0.8\), \(\sigma' = 0.25\), \(z = 2\). 중심에서 \(\sigma'\) 하나만큼 떨어진 픽셀에서는 \(u - \mu' = 0.25\)이고, \(\alpha = 0.8\,e^{-0.5} = 0.485\), \(\partial\alpha/\partial c_x = 0.485 \times 0.25 / 0.0625 \times (-0.5) = -0.97\)입니다. \(\sigma'\) 네 개만큼 떨어진 픽셀에서는 \(u - \mu' = 1\)이고, \(\alpha = 0.8\,e^{-8} = 0.0003\), 미분은 \(-0.002\)입니다.
+@@ 33
+두 번째 숫자가 함정입니다. 픽셀은 footprint가 이미 닿아 있을 때만 카메라에게 어디로 움직일지 알려 줍니다. rendering된 이미지와 기록된 이미지가 겹치지 않으면 gradient에는 정보가 거의 없고, 추정값은 엉뚱한 곳에 자리 잡을 수 있습니다.
+@@ 34
+직접 해 보기: Day 4의 세 Gaussian이 이제 완성된 map입니다. 카메라는 x = 0에서 이미지 하나를 기록했습니다. "실행"을 누르십시오. 그다음 "시작 추정 x"를 −2.0으로 놓고 다시 실행하십시오. 그다음 "이미지 noise"를 올려 보십시오.
+@@ 35
+눈여겨볼 점: 기본 추정 0.8에서 시작하면 추정값은 약 10 step 만에 0.000에 도달합니다. −2.0에서는 반대쪽으로 미끄러져 −2.82 근처에서 멈추는데, 이곳은 rendering된 이미지가 기록된 이미지와 거의 겹치지 않는 local minimum입니다. +2.0에서는 여전히 수렴합니다: loss 곡선은 대칭이 아닙니다. 이미지 noise가 0.30이면 최솟값이 0.015로 옮겨 가고, loss는 더는 0에 도달하지 못합니다 (0.051).
+@@ 36
+3. 책이 설명하는 시스템들
+@@ 37 attr
+두 가지 설계. End-to-end: Gaussian map과 카메라 pose를 이미지로 rendering하고, photometric loss와 depth loss로 카메라 이미지와 비교하며, gradient가 map과 pose를 모두 갱신합니다. Hybrid: ORB feature나 ICP를 쓰는 고전적인 tracker가 카메라 pose를 공급하고, Gaussian map을 rendering해 비교하며, gradient는 map을 갱신합니다.
+@@ 38
+=
+@@ 39
+Gaussian map + 카메라 pose
+@@ 40
+Rendering된 이미지
+@@ 41
+=
+@@ 42
+rendering
+@@ 43
+사진과 비교
+@@ 44
+gradient
+@@ 45
+map과 pose로
+@@ 46
+=
+@@ 47
+Tracker: ORB feature 또는 ICP
+@@ 48
+=
+@@ 49
+카메라 pose
+@@ 50
+rendering, 비교
+@@ 51
+map으로
+@@ 52
+SLAM에서 splat map을 쓰는 두 방식. End-to-end 시스템은 rendering loss로 pose를 얻습니다. Hybrid 시스템은 tracking을 검증된 고전적 방법에 맡기고 Gaussian을 map으로 씁니다.
+@@ 53
+책의 설명
+@@ 54
+<strong>RGB-D</strong> (초기 시스템 여러 개)
+@@ 55
+depth 카메라가 dense depth를 공급하여 Gaussian의 위치를 초기화하고 depth rendering loss로 regularize합니다. tracking이 정확하고 rendering이 빠르지만, 추가 하드웨어가 필요합니다.
+@@ 56
+=
+@@ 57
+컬러 이미지만 씁니다. Gaussian은 무작위 위치에서 시작해 depth supervision 없이 multi-view 최적화로 다듬어집니다.
+@@ 58
+=
+@@ 59
+이산적인 Gaussian이 시간과 시점을 넘어 registration할 수 있는 feature 역할을 하므로, scene의 조각들을 matching하고 정렬할 수 있습니다.
+@@ 60
+=
+@@ 61
+rendering 모델에 motion blur와 tone mapping을 더하고, 카메라를 tracking하면서 high-dynamic-range map을 복원합니다.
+@@ 62
+<strong>Keypoint 또는 ICP와의 hybrid</strong>
+@@ 63
+Photo-SLAM은 ORB-SLAM의 sparse tracking과 3DGS map을 결합합니다. GS-ICP SLAM과 RTG-SLAM은 ICP로 tracking하며, RTG-SLAM은 ORB keypoint 기반 back-end 최적화를 더합니다.
+@@ 64
+=
+@@ 65
+Hybrid framework는 Gaussian을 여러 센서 종류가 공유하는 하나의 map으로 씁니다.
+@@ 66
+<span class="src">§14.3.3 · pp. 412–414 · Figs. 14.17–14.20</span> Hybrid가 작동하는 것은, 추가 속성을 뺀 Gaussian 집합이 곧 point cloud이므로 기존의 point 기반 알고리즘을 바로 쓸 수 있기 때문입니다: <a href="#d74">13주차 · Day 2</a>의 ICP, <a href="#d71">12주차 · Day 5</a>의 ORB-SLAM pipeline. <span class="src">p. 414</span>
+@@ 67
+4. 아직 어려운 것
+@@ 68
+이 장은 NeRF 및 3DGS 기반 SLAM의 네 가지 한계로 끝납니다. <span class="src">§14.4 · pp. 414–416</span>
+@@ 69
+과제
+@@ 70
+문제
+@@ 71
+책이 제안하는 방향
+@@ 72
+<strong>Real-time 성능</strong>
+@@ 73
+End-to-end 시스템은 매우 느립니다. 책은 2015년 GPU에서 real-time으로 tracking, mapping, rendering을 해낸 ElasticFusion과, 최신 GPU에서도 초당 5프레임을 넘기기 어려운 대부분의 NeRF·3DGS SLAM 방법을 대비합니다. rendering은 빠르고, 병목은 최적화입니다.
+@@ 74
+Gaussian 수 줄이기(compact 표현). 1차 gradient descent 대신 고차 optimizer. 한 번의 forward pass로 pose와 Gaussian을 예측하는 network.
+@@ 75
+<strong>Tracking 정확도</strong>
+@@ 76
+고전적인 sparse SLAM보다 뒤처지는 경우가 많습니다. 이 방법들은 프레임 간 photometric consistency를 가정하는데, 이는 Replica 같은 합성 데이터에서는 성립하지만 실제 scene에서는 센서 noise와 rolling shutter 같은 모델링되지 않은 효과 때문에 깨집니다.
+@@ 77
+light field와 이미징 과정을 더 정밀하게 모델링. 색 이외의 영역에서 matching. robust한 feed-forward 예측 모델 사용.
+@@ 78
+<strong>4D scene</strong>
+@@ 79
+대부분의 방법은 정적인 세계를 가정하고, 움직일 수 있는 물체는 흔히 mask로 가립니다.
+@@ 80
+non-rigid 및 4D 복원과 point tracking에서 3DGS가 거둔 성공을 바탕으로, 완전한 4D SLAM으로.
+@@ 81
+<strong>대규모 및 실외 scene</strong>
+@@ 82
+대부분의 방법은 방 규모의 sequence에 머뭅니다. 실외에서는 날씨와 시간대에 따라 조명이 바뀝니다.
+@@ 83
+adaptive resolution 같은 효율적인 map 갱신, 그리고 긴 거리에 걸친 drift 보정.
+@@ 84
+feed-forward 방향에 대해서는 책이 구체적입니다. PixelSplat과 MVSplat은 test 시점에 최적화 없이 pose가 있는 이미지로부터 Gaussian parameter를 예측합니다. DUSt3R(<a href="#d113">19주차 · Day 5</a>)는 network가 pose 입력 없이 pointmap을 예측할 수 있음을 보였고, NoPoSplat은 이를 pose가 없는 두 시점에서 Gaussian을 예측하는 것으로 확장합니다. 이런 predictor를 점진적인 multi-view SLAM 환경에서 쓰는 것은 향후 과제로 남아 있습니다. <span class="src">§14.4 · pp. 415–416 · Fig. 14.21</span>
+@@ 85
+"고차 optimizer"는 <a href="#d10">2주차 · Day 4</a>를 다시 가리킵니다. gradient descent는 기울기만 알기 때문에, 어떤 방향으로는 가파르고 다른 방향으로는 평평한 loss에서 작은 step을 많이 밟습니다. 위젯이 먼 시작점에서 그렇게 하는 것을 보았을 것입니다. Gauss-Newton은 곡률도 쓰므로 같은 거리를 몇 step 만에 갈 수 있습니다. 대가는 매우 많은 Gaussian parameter에 대한 선형 시스템을 만들고 푸는 것입니다.
+@@ 86
+<strong>"3DGS는 real-time으로 rendering하므로 3DGS SLAM도 real-time으로 돈다."</strong> 이미지 한 장을 rendering하는 것은 빠릅니다. SLAM은 프레임마다 많은 최적화 step을 돌려야 하고, 그것이 느린 부분입니다. <span class="src">p. 415</span>
+@@ 87
+<strong>"사실적인 map은 정확한 geometry를 뜻한다."</strong> 3DGS는 외관을 최적화합니다. 정확한 표면에는 SuGAR나 2DGS처럼 추가 regularization이 필요합니다. <span class="src">p. 411</span>
+@@ 88
+<strong>"Rendering 기반 tracking이 feature 기반 tracking을 대체했다."</strong> 책은 그 정확도가 고전적인 sparse SLAM보다 뒤처지는 경우가 많다고 말하며, 여러 실용 시스템은 여전히 ORB feature나 ICP로 tracking합니다. <span class="src">pp. 414–415</span>
+@@ 89
+Q1. 2D 세계에서 카메라가 오른쪽으로 0.2 움직입니다. depth z = 4에 있는 Gaussian은 그대로 있습니다. 이미지 선 z = 1 위에서 footprint 중심은 어떻게 움직입니까?
+@@ 90
+왼쪽으로 0.2
+@@ 91
+오른쪽으로 0.05
+@@ 92
+왼쪽으로 0.05
+@@ 93
+왼쪽으로 0.8
+@@ 94
+∂μ′/∂cₓ = −1/z = −0.25이므로 중심은 −0.25 × 0.2 = −0.05만큼 움직입니다. z = 1에 있는 Gaussian은 네 배 멀리 움직일 것입니다: parallax.
+@@ 95
+Q2. 위젯에서 시작 추정 −2.0에서는 왜 tracking이 실패합니까?
+@@ 96
+rendering된 이미지와 기록된 이미지가 너무 적게 겹쳐서, gradient가 실제 pose를 가리키지 않고 추정값이 local minimum에 자리 잡습니다
+@@ 97
+map의 왼쪽 부분이 틀렸습니다
+@@ 98
+gradient descent는 카메라를 오른쪽으로 옮길 수 없습니다
+@@ 99
+이미지 noise가 너무 큽니다
+@@ 100
+픽셀은 footprint가 이미 어느 정도 opacity를 가진 곳에서만 쓸모 있는 gradient를 줍니다. 실제값에서 멀리 떨어진 곳에서는 loss 곡선에 언덕이 있고, descent는 그 언덕의 잘못된 쪽으로 내려갑니다.
+@@ 101
+Q3. 책에 따르면 MonoGS가 depth 센서 없이 monocular SLAM을 할 수 있는 이유는 무엇입니까?
+@@ 102
+ICP로 tracking합니다
+@@ 103
+LiDAR prior를 씁니다
+@@ 104
+feed-forward network로 Gaussian을 예측합니다
+@@ 105
+Gaussian은 어디에나 놓을 수 있으므로 무작위로 초기화한 뒤 multi-view 최적화로 다듬습니다
+@@ 106
+Gaussian을 어디에 할당할지가 유연하기 때문에 컬러 이미지만으로 위치를 점진적으로 추정할 수 있습니다.
+@@ 107
+Q4. 3DGS를 ORB-SLAM이나 ICP와 그렇게 직접 결합할 수 있는 이유는 무엇입니까?
+@@ 108
+둘 다 spherical harmonics를 씁니다
+@@ 109
+추가 속성을 빼면 Gaussian 집합은 point cloud이고, point 기반 알고리즘은 이미 이를 다룹니다
+@@ 110
+ICP는 미분 가능합니다
+@@ 111
+ORB feature는 Gaussian입니다
+@@ 112
+Gaussian의 평균은 3D 점입니다. 고전적인 tracking이 pose를 공급하고, Gaussian은 dense하고 rendering 가능한 map을 공급합니다.
+@@ 113
+Q5. 실제 데이터에서 tracking 정확도가 고전적인 sparse SLAM보다 뒤처지는 이유로 책이 드는 것은 무엇입니까?
+@@ 114
+Gaussian은 평면을 표현할 수 없습니다
+@@ 115
+rasterizer가 pose에 대해 미분 가능하지 않습니다
+@@ 116
+센서 noise와 rolling shutter 같은 모델링되지 않은 효과 때문에 photometric consistency가 깨집니다
+@@ 117
+실제 scene에는 Gaussian이 너무 적습니다
+@@ 118
+loss는 한 점이 모든 프레임에서 똑같이 보인다고 가정합니다. 이는 합성 sequence에서는 성립하지만, 이미징 과정을 모델링하지 않으면 실제 sequence에서는 깨집니다.
+@@ 119
+3DGS는 정확한 표면(SuGAR, 2DGS)과 foundation model feature를 쓰는 semantic map(LangSplat, FMGS)으로 확장되었습니다.
+@@ 120
+SLAM에서 splat map은 neural field처럼 end-to-end 최적화를 제공하고, 거기에 빠른 rendering과 자유롭게 할당되는 primitive를 더합니다.
+@@ 121
+Tracking은 renderer를 통해 pose에 대해 하는 gradient descent입니다. rendering된 이미지와 기록된 이미지가 겹쳐야 합니다.
+@@ 122
+시스템은 end-to-end(RGB-D, monocular MonoGS)부터 ORB feature, ICP, LiDAR로 tracking하는 hybrid까지 다양합니다.
+@@ 123
+열린 문제: 최적화 속도, 실제 데이터에서의 tracking 정확도, 동적인 scene, 대규모 실외 scene.
+@@ 124
+=
+@@ 125
+"빈틈 채우기"의 pose gradient는 Day 4의 2D 설정에서 식 (14.5)와 (14.7)에 chain rule을 적용한 것입니다. tracking 위젯은 이 코스가 직접 만든 장난감이며, 책에 나오는 시스템이 아닙니다.

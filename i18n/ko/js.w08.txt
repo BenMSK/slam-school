@@ -1,0 +1,324 @@
+@@ w08
+"Top view of a room. Each grid cell is coloured by its fused truncated signed distance, and a line marks the zero crossing"
+==
+"방의 평면도. 각 격자 cell은 융합된 truncated signed distance로 색칠되고, 선은 zero crossing을 표시합니다"
+@@ w08
+"Top view of a room. Each grid cell is shaded by its occupancy probability: solid occupied, clear free, half tone unknown"
+==
+"방의 평면도. 각 격자 cell은 점유 확률에 따라 음영이 들어갑니다: 진하면 점유, 투명하면 비어 있음, 중간 톤이면 알 수 없음"
+@@ w08
+stat("Scans fused",
+==
+stat("융합한 scan",
+@@ w08
+"Probe cell (green square)"
+==
+"probe cell (초록 사각형)"
+@@ w08
+"no data"
+==
+"데이터 없음"
+@@ w08
+"weight "+Wt[k]+" · true distance "
+==
+"가중치 "+Wt[k]+" · 실제 거리 "
+@@ w08
+stat("Zero crossing: typical error",
+==
+stat("zero crossing 대표 오차",
+@@ w08
+"median distance to the true surface"
+==
+"실제 표면까지 거리의 중앙값"
+@@ w08
+stat("Raw end points: typical error",
+==
+stat("원래 끝점 대표 오차",
+@@ w08
+"median, last scan alone"
+==
+"중앙값, 마지막 scan만"
+@@ w08
+stat("Occupied / free / unknown",
+==
+stat("점유 / 비어 있음 / 알 수 없음",
+@@ w08
+"of "+N+" cells"
+==
+"전체 "+N+"개 cell"
+@@ w08
+"Auto tour"
+==
+"자동 투어"
+@@ w08
+pb.textContent="Pause"
+==
+pb.textContent="일시정지"
+@@ w08
+"TSDF fusion in a small room"
+==
+"작은 방의 TSDF fusion"
+@@ w08
+"Occupancy grid in a small room"
+==
+"작은 방의 occupancy grid"
+@@ w08
+"Each scan adds one truncated projective distance to every cell it sees, by a running average. "
+==
+"scan마다, 보이는 모든 cell에 truncated projective distance 하나를 running average로 더합니다. "
+@@ w08
+"Each scan adds log-odds to the cells its beams cross (free) and end in (occupied). "
+==
+"scan마다, beam이 지나는 cell(비어 있음)과 끝나는 cell(점유)에 log-odds를 더합니다. "
+@@ w08
+"Drag the robot (dot) to scan as it moves; drag the green square to inspect a cell. Cells are "+D*100+" cm."
+==
+"로봇(점)을 드래그하면 움직이며 scan합니다. 초록 사각형을 드래그하면 cell 하나를 살펴볼 수 있습니다. cell 크기는 "+D*100+" cm입니다."
+@@ w08
+range("Beams per scan",
+==
+range("scan당 beam 수",
+@@ w08
+range("Range noise σ",
+==
+range("range noise σ",
+@@ w08
+range("Truncation τ",
+==
+range("truncation τ",
+@@ w08
+range("p(occupied | beam ends here)",
+==
+range("p(점유 | beam이 여기서 끝남)",
+@@ w08
+range("p(occupied | beam passes)",
+==
+range("p(점유 | beam이 지나감)",
+@@ w08
+button("Scan here",
+==
+button("여기서 scan",
+@@ w08
+button("Reset map",
+==
+button("map 초기화",
+@@ w08
+"positive: in front of a surface"
+==
+"양수: 표면 앞"
+@@ w08
+"negative: behind it"
+==
+"음수: 표면 뒤"
+@@ w08
+"never updated"
+==
+"갱신된 적 없음"
+@@ w08
+"true surfaces (dashed)"
+==
+"실제 표면 (점선)"
+@@ w08
+"solid: occupied · clear: free · half tone: unknown"
+==
+"진함: 점유 · 투명: 비어 있음 · 중간 톤: 알 수 없음"
+@@ w08
+"beams of the last scan"
+==
+"마지막 scan의 beam"
+@@ w08
+"A grid of signed distance samples, the outline that marching squares extracts from them, and the true outline dashed"
+==
+"signed distance 샘플의 격자, marching squares가 그 샘플에서 추출한 윤곽선, 그리고 점선으로 그린 실제 윤곽선"
+@@ w08
+stat("Samples",
+==
+stat("샘플 수",
+@@ w08
+", spacing "+s+" m"
+==
+", 간격 "+s+" m"
+@@ w08
+stat("Line segments",
+==
+stat("선분 수",
+@@ w08
+stat("Mean vertex error",
+==
+stat("평균 vertex 오차",
+@@ w08
+"distance of the vertices to the true outline"
+==
+"vertex에서 실제 윤곽선까지의 거리"
+@@ w08
+stat("Outline length",
+==
+stat("윤곽선 길이",
+@@ w08
+"true circle: "
+==
+"실제 원: "
+@@ w08
+"true outlines: "
+==
+"실제 윤곽선: "
+@@ w08
+button("Interpolation: on",
+==
+button("interpolation: 켬",
+@@ w08
+lb.textContent="Interpolation: "+(lerp?"on":"off")
+==
+lb.textContent="interpolation: "+(lerp?"켬":"끔")
+@@ w08
+"A signed distance function is sampled at the grid corners (filled dot: negative, inside). Each cell with mixed signs gets a line piece; the number is the cell's case, 1 + 2 + 4 + 8 for the inside corners taken clockwise from the top left."
+==
+"signed distance function을 격자 꼭짓점에서 샘플링합니다(채운 점: 음수, 안쪽). 부호가 섞인 cell마다 선분 하나가 생깁니다. 숫자는 그 cell의 case로, 왼쪽 위부터 시계 방향으로 안쪽 꼭짓점마다 1 + 2 + 4 + 8을 더한 값입니다."
+@@ w08
+select("Shape",[["disk","Disk"],["room","Room of Days 1–2"]]
+==
+select("모양",[["disk","원판"],["room","Day 1–2의 방"]]
+@@ w08
+range("Grid spacing",
+==
+range("격자 간격",
+@@ w08
+range("Disk radius",
+==
+range("원판 반지름",
+@@ w08
+"extracted outline"
+==
+"추출한 윤곽선"
+@@ w08
+"true outline (dashed)"
+==
+"실제 윤곽선 (점선)"
+@@ w08
+"sample inside (negative)"
+==
+"안쪽 샘플 (음수)"
+@@ w08
+"The room divided by a quadtree: large squares in open space and inside walls, small squares only along the surfaces"
+==
+"quadtree로 나눈 방: 빈 공간과 벽 속에는 큰 정사각형, 표면을 따라서만 작은 정사각형"
+@@ w08
+stat("Finest cell",
+==
+stat("가장 작은 cell",
+@@ w08
+"depth "+depth+" below two 6 m roots"
+==
+"6 m root 두 개 아래 깊이 "+depth
+@@ w08
+stat("Quadtree leaves",
+==
+stat("quadtree leaf 수",
+@@ w08
+"× "+(L.length/prev).toFixed(2)+" from depth "+(depth-1)+" · plus "+(L.length-2)/3+" inner nodes"
+==
+"깊이 "+(depth-1)+" 대비 × "+(L.length/prev).toFixed(2)+" · 내부 node "+(L.length-2)/3+"개 추가"
+@@ w08
+stat("Dense grid cells",
+==
+stat("dense grid cell 수",
+@@ w08
+"× 4.00 from depth "+(depth-1)
+==
+"깊이 "+(depth-1)+" 대비 × 4.00"
+@@ w08
+stat("Leaves ÷ dense cells",
+==
+stat("leaf ÷ dense cell",
+@@ w08
+"Quadtree refinement"
+==
+"quadtree 세분화"
+@@ w08
+"The 2-D version of an octree. A square is split into four only while a surface can pass through it, down to the chosen depth."
+==
+"octree의 2-D 버전입니다. 정사각형은 표면이 지나갈 수 있을 때만 넷으로 나뉘며, 고른 깊이까지 내려갑니다."
+@@ w08
+range("Maximum depth",
+==
+range("최대 깊이",
+@@ w08
+"finest cells that may contain a surface"
+==
+"표면이 있을 수 있는 가장 작은 cell"
+@@ w08
+["var(--muted)","solid"]
+==
+["var(--muted)","물체 내부"]
+@@ w08
+"free (no fill)"
+==
+"빈 공간 (채움 없음)"
+@@ w08
+"A curve with noisy samples, the Gaussian process mean through them, and a band of two standard deviations that widens where there are no samples"
+==
+"noise가 섞인 샘플이 있는 곡선, 샘플을 지나는 Gaussian process 평균, 그리고 샘플이 없는 곳에서 넓어지는 ±2 표준편차 띠"
+@@ w08
+"no samples here"
+==
+"샘플 없음"
+@@ w08
+"Training points J"
+==
+"training 점 수 J"
+@@ w08
+"one "+J+" × "+J+" matrix to invert"
+==
+"역행렬을 구할 "+J+" × "+J+" 행렬 하나"
+@@ w08
+stat("RMS error of the mean",
+==
+stat("평균의 RMS 오차",
+@@ w08
+"against the true curve"
+==
+"실제 곡선 대비"
+@@ w08
+stat("Largest predicted std. dev.",
+==
+stat("예측 표준편차 최댓값",
+@@ w08
+"at x = "+xmax.toFixed(1)+" m · prior σ is "+(100*SF).toFixed(0)+" cm"
+==
+"x = "+xmax.toFixed(1)+" m 지점 · prior σ는 "+(100*SF).toFixed(0)+" cm"
+@@ w08
+"The kernel matrix is numerically singular for these settings. Raise the noise."
+==
+"이 설정에서는 kernel 행렬이 수치적으로 singular합니다. noise를 키우세요."
+@@ w08
+"Gaussian process regression of a wall profile"
+==
+"벽 단면의 Gaussian process 회귀"
+@@ w08
+"Noisy samples of an unknown curve, a squared-exponential kernel, and the predictive mean and ±2σ band from equations (5.10) and (5.11)."
+==
+"모르는 곡선에서 얻은 noise 섞인 샘플, squared-exponential kernel, 그리고 식 (5.10)과 (5.11)로 구한 예측 평균과 ±2σ 띠."
+@@ w08
+range("Kernel length-scale ℓ",
+==
+range("kernel length-scale ℓ",
+@@ w08
+range("Measurement noise σ",
+==
+range("측정 noise σ",
+@@ w08
+button("New samples",
+==
+button("새 샘플",
+@@ w08
+"GP mean, band = ±2σ"
+==
+"GP 평균, 띠 = ±2σ"
+@@ w08
+"true curve (dashed)"
+==
+"실제 곡선 (점선)"
+@@ w08
+["var(--ink)","samples"]
+==
+["var(--ink)","샘플"]

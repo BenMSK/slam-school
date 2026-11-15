@@ -1,0 +1,172 @@
+@@ 1
+<span class="eyebrow">Week 23 · Day 2</span>
+@@ 2
+Features, generators, and masks: three model families a map builder uses
+@@ 3
+After today you can compute a cosine similarity, build a zero-shot classifier from text prompts, and say what a feature model, a generative model, and a class-agnostic segmenter each return.
+@@ 4
+About 60 min · Read §17.2, pp. 495–499 (5 pages) · Needs Week 23 Day 1
+@@ 5
+Read first: §17.2, pp. 495–499
+@@ 6
+The definition of a feature as the output of an encoder, \(\mathbf{f}_x = f_{\mathcal{X}}(x) \in \R^d\) (p. 496).
+@@ 7
+Equation (17.1), the zero-shot classifier, and the sentence after it about redefining the class set (p. 497).
+@@ 8
+The caveat about patch-level CLIP features at the end of §17.2.1 (p. 497).
+@@ 9
+What the function \(\texttt{Seg}(\cdot)\) returns, and why its masks must be class-agnostic (p. 499).
+@@ 10
+Open-world mapping uses three kinds of pretrained model. A <strong>feature-based</strong> model turns an image or a text into a vector, and everything is done by comparing vectors. A <strong>generative</strong> model produces new text from a prompt. A <strong>class-agnostic segmenter</strong> cuts an image into object-shaped regions without naming them. Tomorrow's maps are built by combining the three.
+@@ 11
+1. A feature is a vector, and similarity is an angle
+@@ 12
+A <strong>feature</strong> (also called an embedding, representation, or code) is the real-valued vector a deep network outputs for one input. The book hides the network behind a function: an <strong>encoder</strong> \(f_{\mathcal{X}}\) for inputs of modality \(\mathcal{X}\) (text, image, sound) maps an input \(x\) to a \(d\)-dimensional feature \(\mathbf{f}_x = f_{\mathcal{X}}(x) \in \R^d\). The property that matters is that distances in feature space measure meaningful similarity, so that "how similar is this caption to this image?" becomes a calculation. <span class="src">§17.2.1 · p. 496</span>
+@@ 13
+The standard measure is <strong>cosine similarity</strong>, the cosine of the angle between two features drawn as arrows from the origin: <span class="src">§17.2.1 · p. 496</span>
+@@ 14
+<strong>Numbers.</strong> \(\mathbf{a} = (3, 4)\), \(\mathbf{b} = (4, 3)\): \(\langle \mathbf{a}, \mathbf{b} \rangle = 12 + 12 = 24\), both norms are 5, so \(\cos\theta = 24/25 = 0.96\), an angle of about 16°. It ranges from 1 (same direction) through 0 (perpendicular, unrelated) to −1 (opposite), and ignores length.
+@@ 15 attr
+Part of a unit circle with three unit vectors from its centre. The image feature of a dog photo and the text feature of a photo of a dog are 16 degrees apart, cosine 0.96. The text feature of a photo of a car is 70 degrees away from the image feature, cosine 0.34.
+@@ 16
+text
+@@ 17
+image
+@@ 18
+image feature: a dog photo
+@@ 19
+“a photo of a dog”: 16°, cos 0.96
+@@ 20
+“a photo of a car”: 70°, cos 0.34
+@@ 21
+unit circle: every feature has length 1
+@@ 22
+An aligned feature space, drawn in two dimensions. A matching image and text point almost the same way. Real spaces have hundreds of dimensions, but the comparison is the same angle.
+@@ 23
+Filling the gap: unit vectors, dot products, and distances
+@@ 24
+CLIP outputs <strong>unit-norm</strong> features, \(\norm{\mathbf{f}} = 1\). <span class="src">§17.2.1 · p. 497</span> Then the denominator above is 1 and cosine similarity is just the inner product \(\langle \mathbf{a}, \mathbf{b} \rangle\). That is why every formula in this chapter is written with \(\langle \cdot, \cdot \rangle\).
+@@ 25
+For unit vectors, "close in angle" and "close in distance" are the same statement. Expand the squared distance:
+@@ 26
+Check with the example: \(\mathbf{a}/5 = (0.6, 0.8)\), \(\mathbf{b}/5 = (0.8, 0.6)\), difference \((-0.2, 0.2)\), squared length \(0.08 = 2 - 2 \times 0.96\). So ranking by largest cosine and ranking by smallest Euclidean distance give the same order. Vectors that are not unit length (after averaging, as tomorrow) must be divided by their norm first.
+@@ 27
+2. Three feature extractors
+@@ 28
+Model (as described in the book)
+@@ 29
+Input
+@@ 30
+How it is trained
+@@ 31
+What you get
+@@ 32
+BERT, SentenceBERT
+@@ 33
+Text
+@@ 34
+Predict masked words; SentenceBERT adds pooling and fine-tuning
+@@ 35
+BERT: one feature per token. SentenceBERT: one per sentence, compared by cosine similarity
+@@ 36
+DINO, DINOv2
+@@ 37
+Image
+@@ 38
+A student network matches a teacher's predictions. The teacher sees global crops (more than 50% of the image); the student sees local crops (less than 50%) too. DINOv2 adds a curated set of 142M images
+@@ 39
+An image-level feature, and a patch-level feature for each small patch (for example every 8×8 pixels)
+@@ 40
+CLIP
+@@ 41
+Image and text
+@@ 42
+Contrastive loss on 400M image–caption pairs from the internet
+@@ 43
+Unit features \(\mathbf{f}_I = f_{\text{image}}(\mathbf{I})\) and \(\mathbf{f}_T = f_{\text{text}}(T)\) in one aligned space
+@@ 44
+<span class="src">§17.2.1 · pp. 496–497</span> DINO's features serve vision tasks directly: nearest neighbours in its feature space classify or retrieve images. But DINO has no text encoder, so you cannot type a word at it. CLIP's defining property is the <strong>aligned feature space</strong>: two encoders, trained so that an image and its caption land close together (yesterday's loss).
+@@ 45
+How many patch features is that? For a 224×224 image and 8×8 patches (our example sizes), \(224/8 = 28\) patches per side, so \(28 \times 28 = 784\) vectors instead of one. One warning the book gives: you can pull patch-level features out of CLIP's image encoder too, but you should not expect them to be language-aligned, and studies have found them weaker than DINO's for vision and 3D tasks. <span class="src">§17.2.1 · p. 497</span>
+@@ 46
+3. A classifier made of sentences
+@@ 47
+With aligned features, a classifier needs no training. Write each class as text, possibly in a template ("a picture of a dog", "a picture of a cat"), encode each prompt to get \(\mathbf{f}_c\), and predict
+@@ 48
+This is a <strong>zero-shot classifier</strong>: it never saw a labeled example of these classes. Changing the problem means changing the list \(\mathsf{C}\). <span class="src">§17.2.1 · p. 497</span>
+@@ 49
+Try it: the image is an armchair and the class set has no "chair". Add "chair". Then choose the soda can and see what the classifier says before and after you add "drink".
+@@ 50
+Notice that with {sofa, television, plant} the armchair is called a sofa (0.95), and adding "chair" (0.99) flips the answer with no retraining. The soda can scores 0.00 against all three starting classes, yet arg max still returns one of them: a class set is a closed set, however you obtained the classifier.
+@@ 51
+4. Generative models: one token at a time
+@@ 52
+A <strong>large language model (LLM)</strong> is a transformer trained to generate text. Text is first cut into <strong>tokens</strong> (words, sub-words, characters, or bytes from a fixed vocabulary), each with a learnable embedding. The training objective is <strong>next-token prediction</strong>: given the first \(T-1\) tokens, output the probabilities \(p(w_T \mid w_{1:T-1})\) of the next one. <span class="src">§17.2.2 · p. 498</span>
+@@ 53
+Filling the gap: why predicting one token is enough to write paragraphs
+@@ 54
+The chain rule of probability factors any joint distribution into next-item conditionals:
+@@ 55
+So a model of the next token is a model of whole texts. Generation runs the factorization forward, which the book calls <strong>autoregressive</strong>:
+@@ 56
+Each new token costs one pass through a very large network. Compare CLIP: one pass per image, then dot products. This is the book's remark that generative inference "tends to be more computationally expensive than extracting features". <span class="src">§17.2 · p. 495</span>
+@@ 57
+An LLM can be applied to any task whose instructions, inputs, and outputs fit in text, and the wording of the prompt matters. The book names two prompt techniques: <strong>chain-of-thought</strong> (ask the model to reason step by step) and <strong>in-context learning</strong> (put input–output examples in the prompt). <span class="src">§17.2.2 · p. 498</span> A <strong>vision language model (VLM)</strong> is an LLM that also accepts image tokens. The book's example, LLaVA, connects the CLIP vision encoder to an LLM and trains on vision-and-language data. Given the right prompt a VLM can classify, caption, or answer questions about an image. <span class="src">§17.2.2 · p. 499</span> As of the book's April 2026 edition it lists the LLaMa family and the GPT models as widely used, and notes that newer models appear frequently.
+@@ 58
+5. Masks without names
+@@ 59
+The third tool answers "which pixels belong together?" For an RGB image \(\mathbf{I}\) of width \(W\) and height \(H\), a segmenter returns a set of binary masks \(\mathbf{Z}_i \in \{0,1\}^{H \times W}\), one per likely object: \(\mathbf{Z}_i[u,v] = 1\) where pixel \((u,v)\) belongs to region \(i\). The book writes this function \(\texttt{Seg}(\cdot)\). The masks must be <strong>class-agnostic</strong>, meaning proposed without any class list, or the segmenter would bring the closed set back in. <span class="src">§17.2.3 · p. 499</span>
+@@ 60
+The main tool is the Segment Anything Model (SAM). It is <strong>promptable</strong>: give it pixel coordinates, a bounding box, or another mask, and it predicts a mask. It can also process a whole image and return masks for the instances in it. Unlike the models above, SAM is trained by large-scale <em>supervised</em> learning. It can also refine the boxes of an open-vocabulary detector, which gives better object outlines and shorter inference time. <span class="src">§17.2.3 · p. 499</span>
+@@ 61
+<strong>"CLIP gives a language-aligned feature for every pixel."</strong> Its aligned feature describes the whole image. Patch features can be extracted, but the book warns not to expect them to be language-aligned.
+@@ 62
+<strong>"A higher dot product always means more similar."</strong> Only for unit vectors. Without normalizing, a long vector wins by length alone.
+@@ 63
+Q1. What is the cosine similarity of a = (1, 2, 2) and b = (2, 1, 2)?
+@@ 64
+The inner product is 2 + 2 + 4 = 8 and both norms are √9 = 3, so the cosine is 8/9 = 0.89.
+@@ 65
+Q2. An image has unit feature (0.6, 0.8). The class prompts encode to dog (1, 0), cat (0, 1), fox (0.8, 0.6). What does equation (17.1) predict?
+@@ 66
+dog, score 0.6
+@@ 67
+cat, score 0.8
+@@ 68
+None, because no score reaches 1
+@@ 69
+fox, score 0.96
+@@ 70
+Scores: dog 0.6, cat 0.8, fox 0.48 + 0.48 = 0.96. Arg max picks the largest, whatever its size.
+@@ 71
+Q3. Two unit features are at squared Euclidean distance 0.5. What is their cosine similarity?
+@@ 72
+For unit vectors the squared distance is 2 − 2·cos, so cos = (2 − 0.5)/2 = 0.75.
+@@ 73
+Q4. Why does the book require the segmentation masks to be class-agnostic?
+@@ 74
+Class-agnostic masks are binary and the others are not
+@@ 75
+SAM cannot be trained with supervision
+@@ 76
+A segmenter tied to a class list would miss objects outside it and undo the open vocabulary of the features
+@@ 77
+Masks with class names cannot be converted to bounding boxes
+@@ 78
+The masks decide which regions get features at all. If only listed classes get masks, everything else never enters the map.
+@@ 79
+An encoder maps an input to a feature vector; cosine similarity (the inner product, for unit features) measures how related two inputs are.
+@@ 80
+DINO gives strong vision-only features, including per-patch ones. CLIP aligns images and text in one space.
+@@ 81
+Equation (17.1) builds a classifier from text prompts: encode the class names and take the arg max of the similarities.
+@@ 82
+LLMs generate text by repeated next-token prediction; VLMs also take images. They are more capable and more expensive than feature extraction.
+@@ 83
+\(\texttt{Seg}(\cdot)\), usually SAM, returns class-agnostic binary masks.
+@@ 84
+<em>SLAM Handbook</em>, §17.2 "Foundation Models for Spatial AI" (§17.2.1–17.2.3), pp. 495–499, including equation (17.1) and Figure 17.4.
+@@ 85
+Cosine similarity, the unit-vector distance identity, and the chain rule of probability are standard; see Goodfellow, Bengio, Courville, <em>Deep Learning</em>, 2016.
+@@ 86
+The widget's 8-dimensional features are hand-built for this lesson and are not outputs of CLIP.

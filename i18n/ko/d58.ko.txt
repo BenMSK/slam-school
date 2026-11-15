@@ -1,0 +1,146 @@
+@@ 1
+<span class="eyebrow">10주차 · Day 4</span>
+@@ 2
+Fisher information과 graph Laplacian
+@@ 3
+오늘이 끝나면 위치만 있는 pose graph의 Fisher information을 reduced weighted Laplacian으로 쓰고, 그 역행렬에서 각 pose의 불확실성을 읽고, loop closure가 이를 어떻게 바꾸는지 예측할 수 있습니다.
+@@ 4
+약 60분 · §6.2.2, pp. 175–178 읽기 (식 6.53까지) · 10주차 Day 3과 Box 6.1 (pp. 157–158) 필요
+@@ 5
+먼저 읽기: §6.2.2, pp. 175–178, 식 (6.53)까지
+@@ 6
+측정이 많아서 손해 볼 일은 없다는 p. 176의 주장과 각주 11, 그리고 loop가 클수록 더 도움이 된다는 언급.
+@@ 7
+p. 176의 measurement model (6.46) 뒤에 있는 단순화 가정: 무엇을 안다고 보는지, noise가 어떤 모양인지.
+@@ 8
+p. 177의 다섯 줄짜리 연쇄 (6.52a)–(6.52e). 등호마다 그것을 정당화하는 사실을 찾아보세요.
+@@ 9
+p. 177의 각주 12: "reduced"가 무슨 뜻이고 왜 필요한지.
+@@ 10
+방향을 알고 noise가 isotropic이면, pose graph의 Fisher information은 \(\mathbf{L}_w\otimes\mathbf{I}_3\)입니다: pose 하나를 anchor로 고정한 그래프의 weighted Laplacian을 축마다 한 번씩 복사한 것입니다. 따라서 달성할 수 있는 최선의 정확도는 로봇이 어디에 있었는지가 아니라, 누가 누구를 얼마나 잘 측정했는지라는 그래프의 성질입니다.
+@@ 11
+1. edge는 많아서 손해 볼 일이 없지만, 도움의 크기는 제각각
+@@ 12
+어제의 공식 \(\mathcal{I}=\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{J}\)는 측정들에 대한 합이고, 측정 하나하나가 positive semidefinite 행렬을 더합니다. 그래서 새 측정은 Loewner order \(\succeq\)에서 FIM을 크게 만들 수만 있고, 그 역행렬인 covariance bound는 작게 만들 수만 있습니다. 책은 이것을 "정보는 결코 해가 되지 않는다"라고 표현합니다. <span class="src">§6.2.2 · p. 176</span>
+@@ 13
+얼마나 도움이 되는지는 새 edge가 <em>어느</em> 두 변수를 잇는지에 달려 있습니다. 큰 loop를 닫는 것이 작은 loop를 닫는 것보다 더 도움이 됩니다. 그 이유를 보이기 위해 책은 Jacobian을 그래프만으로 적을 수 있는 단순화된 문제의 FIM을 계산합니다. <span class="src">§6.2.2 · p. 176</span>
+@@ 14
+2. 행렬로 본 그래프
+@@ 15
+단순화된 문제: 회전 \(\mathbf{R}_i\)를 이미 아는 3-D pose graph에서 위치 \(\mathbf{t}_i\in\R^3\)를 추정합니다. 측정 \(k\)는 pose \(i_k\)가 자기 frame에서 pose \(j_k\)를 측정한 것이며, precision이 \(w_k\)인 isotropic noise를 가집니다: <span class="src">§6.2.2 · p. 176</span>
+@@ 16
+<strong>incidence matrix</strong>(접속 행렬)는 어떤 edge가 어떤 node를 잇는지 기록합니다. 이 절에서는 <em>node마다 행 하나</em>, <em>edge마다 열 하나</em>입니다: edge \(k=(i,j)\)의 열은 행 \(i\)에 \(-1\), 행 \(j\)에 \(+1\)을 가지고 나머지는 0입니다. (p. 157의 Box 6.1은 전치, 즉 edge를 행으로 씁니다. Laplacian은 어느 쪽이든 같고, 전치가 어느 쪽에 붙는지만 달라집니다.)
+@@ 17
+상대 측정으로는 그래프 전체가 어디에 놓여 있는지 알 수 없습니다: 모든 위치를 같은 벡터만큼 옮겨도 어떤 측정도 바뀌지 않습니다. 이것이 <strong>gauge freedom</strong>입니다. pose 하나(보통 첫 번째)를 원점에 <strong>anchoring</strong>(고정)하고 그 행을 지우면 이 자유도가 없어집니다. 남는 것이 <strong>reduced incidence matrix</strong> \(\mathbf{A}\)입니다. <span class="src">§6.2.2 · p. 177, footnote 12</span>
+@@ 18 attr
+네 pose가 마름모 모양으로 놓인 방향 그래프. pose 0에서 1로 가는 e1, 1에서 2로 가는 e2, 2에서 3으로 가는 e3은 odometry입니다. pose 3에서 pose 0으로 돌아오는 e4는 loop closure입니다. pose 0은 anchor로 고정되어 있습니다.
+@@ 19
+anchor
+@@ 20
+실선: odometry
+@@ 21
+점선: loop closure
+@@ 22
+계속 쓸 예: odometry edge 세 개와 loop closure 하나. pose 0이 anchor입니다.
+@@ 23
+이 그래프에서 행을 pose 1, 2, 3, 열을 \(e_1,\dots,e_4\)로 두면:
+@@ 24
+여기서 \(\mathbf{W}=\diag(w_1,\dots,w_4)\)입니다. \(\mathbf{L}_w\)가 <strong>reduced weighted Laplacian</strong>입니다: 각 대각 원소는 그 pose에 붙은 edge weight의 합이고, 각 비대각 원소는 두 pose 사이 edge weight의 음수이며, anchor의 행과 열은 지워져 있습니다. \(\mathbf{A}\)의 열 하나를 확인해 봅시다: \(e_4\)는 3에서 0으로 가므로 행 3에 \(-1\)이 있고, \(+1\)은 지워진 행 0에 있었습니다.
+@@ 25
+3. measurement model에서 Laplacian으로
+@@ 26
+빈틈 채우기: 규칙 세 개로 보는 Kronecker product
+@@ 27
+\(\mathbf{A}\otimes\mathbf{B}\)는 \(\mathbf{A}\)의 모든 원소 \(a_{ij}\)를 블록 \(a_{ij}\mathbf{B}\)로 바꾼 블록 행렬입니다. 그래서 \(\mathbf{A}\otimes\mathbf{I}_3\)은 "숫자 대신 3-벡터에 작용하는 \(\mathbf{A}\)"입니다. 오늘 필요한 규칙은 세 개뿐입니다:
+@@ 28
+anchor가 아닌 pose들의 위치를 쌓아 \(\mathbf{t}\)로 둡니다. 그러면 \((\mathbf{A}\otimes\mathbf{I}_3)\T\mathbf{t}\)는 edge마다 하나씩인 차이 \(\mathbf{t}_{j_k}-\mathbf{t}_{i_k}\)를 쌓은 것입니다(예에서 확인해 보세요: \(e_2\)의 열은 \(\mathbf{t}_2-\mathbf{t}_1\)을, \(e_4\)의 열은 \(-\mathbf{t}_3=\mathbf{t}_0-\mathbf{t}_3\)을 줍니다). \(\mathbf{R}=\operatorname{BlockDiag}(\mathbf{R}_{i_1},\dots,\mathbf{R}_{i_m})\)이 각 차이를 관측하는 pose의 frame으로 회전시킨다고 하면, 전체 measurement model과 그 Jacobian은 다음과 같습니다: <span class="src">§6.2.2 · p. 177</span>
+@@ 29
+이제 식 (6.52), 즉 \(\mathcal{I}=\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{J}\)를 한 단계씩 적용합니다:
+@@ 30
+가정을 쓰는 단계는 \(\mathbf{R}\boldsymbol{\Sigma}^{-1}\mathbf{R}\T=\boldsymbol{\Sigma}^{-1}\) 하나뿐입니다. 좌변의 블록 \(k\)는 \(\mathbf{R}_{i_k}(w_k\mathbf{I}_3)\mathbf{R}_{i_k}\T=w_k\mathbf{R}_{i_k}\mathbf{R}_{i_k}\T=w_k\mathbf{I}_3\)입니다. isotropic noise는 어느 frame에서 보아도 같으므로 회전이 사라집니다. anisotropic noise라면 Day 2와 같은 이유로 사라지지 않습니다.
+@@ 31
+규칙 3에 따라 Cramér-Rao bound는 \(\cov(\hat{\mathbf{t}})\succeq\mathbf{L}_w^{-1}\otimes\mathbf{I}_3\)입니다. pose \(i\)에 대해 읽으면: 위치 covariance는 적어도 \([\mathbf{L}_w^{-1}]_{ii}\,\mathbf{I}_3\)이며, 이는 축당 분산이 역 Laplacian의 대각 원소 하나인 구입니다.
+@@ 32
+빈틈 채우기: 여기서는 bound가 정확히 달성됨
+@@ 33
+회전을 알면 모델은 \(\mathbf{t}\)에 대해 선형입니다. weighted least-squares 추정값은 \(\hat{\mathbf{t}}=\mathcal{I}^{-1}\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{z}\)이므로 \(\hat{\mathbf{t}}-\mathbf{t}=\mathcal{I}^{-1}\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\boldsymbol{\epsilon}\)입니다. 이 추정값은 unbiased이고, covariance는 \(\mathcal{I}^{-1}\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\boldsymbol{\Sigma}\boldsymbol{\Sigma}^{-1}\mathbf{J}\mathcal{I}^{-1}=\mathcal{I}^{-1}\)입니다. 따라서 이 문제에서 \(\mathbf{L}_w^{-1}\otimes\mathbf{I}_3\)은 bound일 뿐 아니라 최적 추정값의 covariance 그 자체입니다.
+@@ 34
+<strong>계속 쓸 예, 단위 weight.</strong> loop closure가 없을 때(\(w_4=0\))와 있을 때(\(w_4=1\)):
+@@ 35
+odometry만 있으면 chain을 따라 분산이 1, 2, 3입니다: step마다 한 step 분량씩 분산이 커지며, 이는 <a href="#d1">1주차 · Day 1</a>의 random-walk drift입니다. loop closure 하나가 이를 0.75, 1, 0.75로 낮춥니다. 가장 많이 얻는 pose는 chain의 먼 끝인 pose 3이고, 이제 가장 나쁜 pose는 loop 가운데에 있는 pose입니다.
+@@ 36
+직관: 저항 회로
+@@ 37
+각 edge를 conductance가 \(w_k\)(저항 \(1/w_k\))인 저항기로 바꾸고 anchor를 접지에 연결합니다. 그러면 \([\mathbf{L}_w^{-1}]_{ii}\)는 pose \(i\)와 anchor 사이의 <strong>effective resistance</strong>(유효 저항)입니다. 나머지는 학교에서 배운 두 규칙이 해 줍니다. 직렬에서는 저항이 더해집니다: 단위 edge \(k\)개의 chain은 분산 \(k\)를 줍니다. 병렬에서는 \(R=\frac{R_1R_2}{R_1+R_2}\)입니다: 위 예의 pose 2는 저항 2인 경로 두 개로 이어지므로 \(\frac{2\cdot 2}{2+2}=1\), pose 1은 저항 1과 3인 경로로 이어지므로 \(\frac{1\cdot 3}{1+3}=0.75\)입니다. loop closure는 접지로 가는 두 번째 전선입니다. 기존 경로가 길었던 곳에서 가장 도움이 됩니다.
+@@ 38
+4. 더 큰 그래프로 실험하기
+@@ 39
+직접 해 보기: pose 여덟 개이고 처음에는 odometry만 있습니다. chain을 따라 분산을 읽어 보세요. "7–0"을 눌러 큰 loop를 닫아 보세요. 그다음 "모두 끄기"를 누르고, 대신 작은 loop "2–0"을 닫아 보세요.
+@@ 40
+눈여겨볼 점: odometry만 있으면 분산은 1, 2, …, 7이고 spanning tree는 정확히 하나입니다. 큰 loop 7–0을 닫으면 최악의 분산이 7에서 2로 줄고(이제 반 바퀴 지점인 pose 4에서), 평균은 4에서 1.5로 줄어듭니다. 대신 작은 loop 2–0을 닫으면 pose 7이 5.67로 남습니다. 버튼의 숫자도 후보를 같은 순서로 매깁니다: 7–0은 +2.08, 2–0은 +1.10입니다. 이 숫자들과 spanning tree는 내일 설명합니다.
+@@ 41
+위젯은 2-D이므로 FIM은 \(\mathbf{L}_w\otimes\mathbf{I}_2\)이고 불확실성 영역은 원입니다. noise가 isotropic이고 회전을 알기 때문에 타원이 아니라 원입니다.
+@@ 42
+5. 단순화된 문제를 넘어서
+@@ 43
+회전까지 추정하는 완전한 pose-graph optimization에서는 FIM이 더 이상 순수한 Laplacian이 아니지만, 그래프 구조는 여전히 남아 있습니다: <span class="src">§6.2.2 · pp. 177–178</span>
+@@ 44
+여기서 \(\mathbf{a}_k\)는 reduced incidence matrix의 \(k\)번째 열, \(\mathbf{L}_k\)는 edge \(k\)의 <strong>elementary Laplacian</strong>, \(\boldsymbol{\Sigma}_k\)는 그 측정의 \(6\times 6\) noise covariance, \(\Ad\)는 <a href="#d23">4주차 · Day 5</a>의 adjoint입니다. 각 edge는 "그래프에서의 자리" Kronecker "기하와 noise"를 기여합니다. 오늘의 결과는 모든 edge에서 두 번째 인자가 \(w_k\mathbf{I}_3\)인 특수한 경우입니다. \(\sum_k w_k\mathbf{a}_k\mathbf{a}_k\T=\mathbf{A}\mathbf{W}\mathbf{A}\T\)이기 때문입니다. 책은 특정 조건에서 Laplacian만으로 계산한 design criterion이 완전한 FIM으로 계산한 것과 거의 일치한다고 보고합니다. <span class="src">§6.2.2 · p. 178</span>
+@@ 45
+<strong>"pose i의 covariance는 pose i에 붙은 edge에만 의존한다."</strong> \(\mathbf{L}_w\)는 sparse하고 국소적이지만, 그 역행렬은 dense합니다: 그래프의 모든 edge가 모든 pose에 영향을 줍니다.
+@@ 46
+<strong>"pose 0을 anchor로 고정하는 것은 근사다."</strong> 그것은 좌표의 선택입니다. 그러면 모든 covariance가 pose 0에 대한 상대값이 되고, 그래서 pose 0으로부터의 그래프 거리에 따라 커집니다.
+@@ 47
+<strong>"loop closure는 그것이 닿는 pose를 고친다."</strong> loop closure는 loop 위 모든 pose의 불확실성을 낮추며, 기존 경로를 따라 anchor에서 먼 pose일수록 더 많이 낮춥니다.
+@@ 48
+Q1. chain 0–1–2–3–4–5가 단위 weight의 odometry edge로 이어져 있고 pose 0이 anchor입니다. pose 5의 축당 분산은 얼마입니까?
+@@ 49
+단위 저항 다섯 개가 직렬로 이어져 있으므로 anchor까지의 effective resistance는 5입니다. chain을 따라 분산은 선형으로 커집니다.
+@@ 50
+Q2. 그 chain에서 pose 5와 0 사이에 weight 1인 loop closure 하나를 추가합니다. 이제 pose 5의 축당 분산은 얼마입니까?
+@@ 51
+anchor까지 저항 5(chain)와 1(새 edge)인 경로 두 개가 병렬: 5·1/(5+1) = 5/6 ≈ 0.83.
+@@ 52
+Q3. (6.52)의 유도에서 R Σ⁻¹ Rᵀ = Σ⁻¹을 참으로 만드는 가정은 무엇입니까?
+@@ 53
+각 측정의 noise가 isotropic이라 Σ⁻¹의 각 블록이 단위 행렬의 상수배입니다
+@@ 54
+모든 edge weight가 같습니다
+@@ 55
+회전이 모두 단위 행렬입니다
+@@ 56
+그래프에 loop가 없습니다
+@@ 57
+블록 k는 어떤 회전 R에 대해서도 R(wI)Rᵀ = wI입니다. 회전을 알고만 있다면 weight는 edge마다 달라도 되고 회전도 무엇이든 됩니다.
+@@ 58
+Q4. 3-D pose graph에 pose가 10개(하나는 anchor), 측정이 14개 있고 회전을 압니다. reduced incidence matrix A와 FIM의 크기는 각각 얼마입니까?
+@@ 59
+10 × 14와 30 × 30
+@@ 60
+14 × 9와 14 × 14
+@@ 61
+9 × 14와 27 × 27
+@@ 62
+9 × 9와 42 × 42
+@@ 63
+A는 anchor가 아닌 pose마다 행 하나, edge마다 열 하나이므로 9 × 14입니다. Laplacian은 9 × 9이고, FIM L ⊗ I₃는 27 × 27입니다.
+@@ 64
+모든 측정은 FIM에 positive semidefinite 항을 더하므로 bound는 줄어들 수만 있습니다. 얼마나 줄어드는지는 edge가 그래프의 어디에 있는지에 달려 있습니다.
+@@ 65
+회전을 알고 noise가 isotropic인 위치 문제에서는 \(\mathbf{J}=\mathbf{R}\T(\mathbf{A}\otimes\mathbf{I}_3)\T\), \(\mathcal{I}=\mathbf{L}_w\otimes\mathbf{I}_3\)이고 \(\mathbf{L}_w=\mathbf{A}\mathbf{W}\mathbf{A}\T\)입니다.
+@@ 66
+pose \(i\)의 covariance는 \([\mathbf{L}_w^{-1}]_{ii}\mathbf{I}_3\)이고, 그 대각 원소는 pose \(i\)에서 anchor까지의 effective resistance입니다.
+@@ 67
+chain은 직렬 저항처럼 분산을 더하고, loop closure는 병렬 저항처럼 작용하며, loop가 길수록 더 도움이 됩니다.
+@@ 68
+완전한 PGO에서도 FIM (6.53)은 같은 그래프 구조를 유지하며, 각 edge에 기하와 noise의 블록이 붙습니다.
+@@ 69
+=
+@@ 70
+Horn and Johnson, <em>Topics in Matrix Analysis</em>, 1991 (Kronecker product).
+@@ 71
+Godsil and Royle, <em>Algebraic Graph Theory</em>, 2001 (incidence matrix와 Laplacian matrix).
+@@ 72
+Doyle and Snell, <em>Random Walks and Electric Networks</em>, 1984 (effective resistance와 Laplacian).
+@@ 73
+Kay, <em>Fundamentals of Statistical Signal Processing: Estimation Theory</em>, 1993 (linear Gaussian model은 bound를 달성함).

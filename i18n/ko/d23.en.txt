@@ -1,0 +1,160 @@
+@@ 1
+<span class="eyebrow">Week 4 · Day 5</span>
+@@ 2
+Lie group extras: differences, inverses, adjoints, Jacobians
+@@ 3
+After today you can subtract two poses with ⊖, move a perturbation from one side of a transformation to the other with the adjoint, and combine two rotation vectors with the Jacobian of SO(3).
+@@ 4
+About 60 min · Read §2.1.5, pp. 60–62 (3 pages) · Needs Week 4 Day 3
+@@ 5
+Read first: §2.1.5, pp. 60–62
+@@ 6
+Equation (2.25) on p. 60: how the "difference" of two group members is defined, and in which space the answer lives.
+@@ 7
+Equation (2.26) on p. 61: what happens to the side and the sign of a perturbation when you invert.
+@@ 8
+Equations (2.28)–(2.31) on p. 61: the adjoint, and the remark that (2.31) "does not require approximation".
+@@ 9
+Equations (2.34)–(2.35) on p. 62: which of \(\boldsymbol{\theta}_1\), \(\boldsymbol{\theta}_2\) has to be small.
+@@ 10
+The tangent space lets you do vector-style arithmetic on poses, with one complication that vectors do not have: order matters. Three tools deal with it. The operator \(\ominus\) measures a difference. The <strong>adjoint</strong> moves a perturbation across a transformation, exactly. The <strong>Jacobian</strong> says how two tangent vectors combine, approximately.
+@@ 11
+1. ⊕ and ⊖: add and subtract
+@@ 12
+You know \(\oplus\) from Day 3. Its partner answers "which tangent vector takes me from \(\mathbf{T}^0\) to \(\mathbf{T}\)?" <span class="src">§2.1.5.1 · p. 60, eqs. (2.24)–(2.25)</span>
+@@ 13
+The derivation is one line: multiply the left equation by \((\mathbf{T}^0)^{-1}\) and take Log. With the pair in hand, most vector formulas have a group version:
+@@ 14
+Vectors
+@@ 15
+Lie group
+@@ 16
+Add a correction
+@@ 17
+Difference
+@@ 18
+Consistency
+@@ 19
+Interpolate, \(s\in[0,1]\)
+@@ 20
+The interpolation row is not in this section of the book, but it is the standard construction and next week's continuous-time trajectories lean on it. Example in the plane: \(\mathbf{T}^0\) is the identity and \(\mathbf{T}^1\) is at \((1,1)\), turned by 90°. From Day 2, \(\mathbf{T}^1\ominus\mathbf{T}^0 = \Log(\mathbf{T}^1) = (\tfrac{\pi}{2},0,\tfrac{\pi}{2})\). Halfway is \(\Exp(\tfrac{\pi}{4},0,\tfrac{\pi}{4})\): heading 45°, position \(\big(\sin 45^\circ,\ 1-\cos 45^\circ\big) = (0.707, 0.293)\), a point on the quarter circle. Averaging the two positions instead gives \((0.5, 0.5)\), which cuts the corner.
+@@ 21
+2. Inverting a perturbed pose
+@@ 22
+Sometimes the quantity you need is the inverse of the pose you perturbed. <span class="src">§2.1.5.2 · p. 61, eq. (2.26)</span>
+@@ 23
+Two facts are used. The inverse of a product reverses the order. And \(\Exp(\boldsymbol{\xi})^{-1} = \Exp(-\boldsymbol{\xi})\): undoing a constant-velocity motion means running it backward. (Formally, \(\boldsymbol{\xi}^\wedge\) commutes with \(-\boldsymbol{\xi}^\wedge\), so here the exponents may be added, giving \(\exp(\mathbf{0}) = \mathbf{I}\).) The message: a <em>right</em> perturbation of \(\mathbf{T}\) by \(\boldsymbol{\xi}\) is a <em>left</em> perturbation of \(\mathbf{T}^{-1}\) by \(-\boldsymbol{\xi}\). This is the subtlety behind footnote 1 on p. 57: perturbing \(\mathbf{T}^c_w\) on the right is the same as perturbing \(\mathbf{T}^w_c\) on the left.
+@@ 24
+3. The adjoint: carrying a perturbation across a transformation
+@@ 25
+A small motion can be written before a pose or after it. Which \(\boldsymbol{\epsilon}\) on the left equals a given \(\boldsymbol{\xi}\) on the right, \(\Exp(\boldsymbol{\epsilon})\,\mathbf{T} = \mathbf{T}\,\Exp(\boldsymbol{\xi})\)? The book's answer: <span class="src">§2.1.5.3 · p. 61, eqs. (2.28)–(2.31)</span>
+@@ 26
+\(\Ad(\mathbf{T})\) is the <strong>adjoint</strong> of \(\mathbf{T}\): a square matrix that acts on tangent vectors, so it is 6 × 6 for a 3D pose even though \(\mathbf{T}\) is 4 × 4. Think of \(\boldsymbol{\xi}\) as a motion described in the robot's local frame and \(\boldsymbol{\epsilon}\) as the same motion described in the global frame.
+@@ 27
+Filling the gap: why conjugation, and where (2.30) comes from
+@@ 28
+<strong>Why (2.31) is exact.</strong> For any matrices, \((\mathbf{T}\mathbf{A}\mathbf{T}^{-1})^n = \mathbf{T}\mathbf{A}^n\mathbf{T}^{-1}\), because the inner \(\mathbf{T}^{-1}\mathbf{T}\) pairs cancel. Apply this to every term of the exponential series:
+@@ 29
+Multiply by \(\mathbf{T}\) on the right and you have (2.31). No term was dropped.
+@@ 30
+<strong>The matrix (2.30).</strong> Multiply the blocks, with \(\mathbf{T}^{-1}\) from Day 1:
+@@ 31
+Rotating both factors of a cross product rotates the result, which in wedge form reads \(\mathbf{R}\boldsymbol{\theta}^\wedge\mathbf{R}\T = (\mathbf{R}\boldsymbol{\theta})^\wedge\). So the rotational part of \(\boldsymbol{\epsilon}\) is \(\mathbf{R}\boldsymbol{\theta}\), and the translational part is \(\mathbf{R}\boldsymbol{\rho} - (\mathbf{R}\boldsymbol{\theta})\times\mathbf{t} = \mathbf{R}\boldsymbol{\rho} + \mathbf{t}^\wedge\mathbf{R}\boldsymbol{\theta}\). Stack the two and read off the matrix in (2.30).
+@@ 32
+<strong>In the plane</strong> the same multiplication, with \(\boldsymbol{\theta}^\wedge = \theta\mathbf{S}\) and \(\mathbf{R}\mathbf{S}\mathbf{R}\T = \mathbf{S}\), gives a 3 × 3 adjoint, one row and column per degree of freedom:
+@@ 33
+(The book describes \(\Ad(\mathbf{T})\) as \((2d)\times(2d)\). That matches the 6 × 6 matrix of (2.30) for \(d = 3\).)
+@@ 34
+Two planar examples with a robot at \(\mathbf{t} = (2, 0)\), facing 90° (along the global y-axis):
+@@ 35
+<strong>Local "forward one unit"</strong>, \(\boldsymbol{\xi} = (1,0,0)\). Then \(\boldsymbol{\epsilon} = (\mathbf{R}(1,0),\,0) = (0,1,0)\): a global motion along y. Check (2.31): the left side is the robot moved one unit forward, at \((2,1)\). The right side shifts the whole pose by \((0,1)\), also \((2,1)\).
+@@ 36
+<strong>Local "turn on the spot"</strong>, \(\boldsymbol{\xi} = (0,0,\phi)\). Then \(\boldsymbol{\epsilon} = \phi\,(0,-2,1)\). In global terms a turn about the point \((2,0)\) is a turn about the origin <em>plus</em> a translation, because a turn about the origin alone would swing the robot away from where it stands.
+@@ 37
+Going deeper (optional): compounding two uncertain poses
+@@ 38
+Let \(\mathbf{T}_1 = \bar{\mathbf{T}}_1\Exp(\boldsymbol{\delta}_1)\) and \(\mathbf{T}_2 = \bar{\mathbf{T}}_2\Exp(\boldsymbol{\delta}_2)\) be independent, with covariances \(\boldsymbol{\Sigma}_1\), \(\boldsymbol{\Sigma}_2\) as on Day 4. In the product, \(\Exp(\boldsymbol{\delta}_1)\) sits in the middle. Equation (2.31), read from right to left with \(\mathbf{T} = \bar{\mathbf{T}}_2\), moves it to the right:
+@@ 39
+For small noise the two exponentials combine to first order by adding their vectors, so the product has mean \(\bar{\mathbf{T}}_1\bar{\mathbf{T}}_2\) and covariance \(\boldsymbol{\Sigma}\approx\Ad(\bar{\mathbf{T}}_2^{-1})\,\boldsymbol{\Sigma}_1\,\Ad(\bar{\mathbf{T}}_2^{-1})\T + \boldsymbol{\Sigma}_2\). Test it on yesterday's one-step model: \(\boldsymbol{\Sigma}_1 = \diag(0,0,\sigma^2)\) (an uncertain turn), \(\bar{\mathbf{T}}_2\) a drive of length \(L\) with no noise. \(\bar{\mathbf{T}}_2^{-1}\) has \(\mathbf{t} = (-L, 0)\), so the last column of its adjoint is \((0, L, 1)\), and \(\boldsymbol{\Sigma} = \sigma^2(0,L,1)\T(0,L,1)\): the matrix found on Day 4.
+@@ 40
+4. Jacobians: combining two exponentials
+@@ 41
+On Day 2 you saw that \(\Exp(\mathbf{a})\Exp(\mathbf{b})\ne\Exp(\mathbf{a}+\mathbf{b})\). The exact relation is an infinite series, the <strong>Baker-Campbell-Hausdorff (BCH) formula</strong>. For rotation vectors, where the "commutator" of two vectors is their cross product, it starts
+@@ 42
+If the axes are parallel all cross products vanish and the angles add. Otherwise there are corrections. In estimation one of the two is usually a small perturbation. Keeping every term that is linear in the small one, and dropping the rest, gives the book's formula: <span class="src">§2.1.5.4 · p. 62, eqs. (2.34)–(2.35)</span>
+@@ 43
+\(\mathbf{J}\) is the <strong>(left) Jacobian</strong> of \(\SO(3)\). You can see the first terms of the BCH series in it: \(\mathbf{J}(\boldsymbol{\theta}_2)^{-1} = \mathbf{I} - \tfrac12\boldsymbol{\theta}_2^\wedge + \tfrac1{12}(\boldsymbol{\theta}_2^\wedge)^2 - \dots\), and applying that to \(\boldsymbol{\theta}_1\) reproduces \(\boldsymbol{\theta}_1 + \tfrac12\boldsymbol{\theta}_1\times\boldsymbol{\theta}_2 + \tfrac1{12}\boldsymbol{\theta}_2\times(\boldsymbol{\theta}_2\times\boldsymbol{\theta}_1)\).
+@@ 44
+Filling the gap: a closed form for J, and its relatives
+@@ 45
+The series has the same shape as the one for \(\mathbf{V}\) on Day 2. In fact it <em>is</em> that matrix: the translation of \(\Exp(\boldsymbol{\xi})\) in 3D is \(\mathbf{J}(\boldsymbol{\theta})\boldsymbol{\rho}\). Sum it with the same trick, \(\boldsymbol{\theta} = \phi\,\mathbf{a}\) and \((\mathbf{a}^\wedge)^3 = -\mathbf{a}^\wedge\):
+@@ 46
+The odd powers of the series collect into \(\tfrac{\phi}{2!} - \tfrac{\phi^3}{4!} + \dots = \tfrac{1-\cos\phi}{\phi}\) and the even ones into \(\tfrac{\phi^2}{3!} - \tfrac{\phi^4}{5!} + \dots = 1 - \tfrac{\sin\phi}{\phi}\). At \(\phi = 0\) both coefficients vanish and \(\mathbf{J} = \mathbf{I}\): for small rotations, vectors simply add.
+@@ 47
+<strong>Right Jacobian.</strong> If the <em>second</em> rotation is the small one, the mirror-image formula holds: \(\Exp(\boldsymbol{\theta}_1)\Exp(\boldsymbol{\theta}_2)\approx\Exp\big(\boldsymbol{\theta}_1 + \mathbf{J}_r(\boldsymbol{\theta}_1)^{-1}\boldsymbol{\theta}_2\big)\) with \(\mathbf{J}_r(\boldsymbol{\theta}) = \mathbf{J}(-\boldsymbol{\theta}) = \mathbf{J}(\boldsymbol{\theta})\T\).
+@@ 48
+<strong>Kinematics.</strong> The book introduces \(\mathbf{J}\) through \(\dot{\boldsymbol{\theta}} = \mathbf{J}^{-1}(\boldsymbol{\theta})\,\boldsymbol{\omega}\), equation (2.33). In words: the rate of change of the rotation vector is not the angular velocity, unless the axis stays fixed. \(\mathbf{J}\) converts between the two. In the plane \(\mathbf{J} = 1\) and \(\dot\theta = \omega\).
+@@ 49
+Try it: compare the plain sum and equation (2.34) against the exact answer.
+@@ 50
+Notice that at the default settings (θ₁ of size 0.1 rad, θ₂ of 60°, axes at right angles) the plain sum is off by 0.053 rad, about 3°, and equation (2.34) by 0.0009 rad. Each time θ₁ shrinks by a factor of 10, the error of the sum shrinks by 10 and that of (2.34) by 100: first order against second order. Set the angle between the axes to 0° and both errors drop below the bottom of the chart.
+@@ 51
+Poses have a Jacobian too, written \(\mathbf{J}(\boldsymbol{\xi})\), and the book reuses the symbol. <span class="src">§2.1.5.4 · p. 62</span> These Jacobians return in Week 7 when poses are differentiated inside a network.
+@@ 52
+<strong>"\(\mathbf{T}\ominus\mathbf{T}^0\) is \(\mathbf{T}-\mathbf{T}^0\)."</strong> The matrix difference is not in the Lie algebra. ⊖ is Log of a relative transformation.
+@@ 53
+<strong>"\(\Ad(\mathbf{T})\) has the size of \(\mathbf{T}\)."</strong> It multiplies tangent vectors: 6 × 6 in 3D, 3 × 3 in the plane.
+@@ 54
+<strong>"The adjoint identity is a small-angle approximation."</strong> (2.31) is exact for any \(\boldsymbol{\xi}\). The Jacobian formula (2.34) is the approximate one.
+@@ 55
+<strong>"(2.34) treats θ₁ and θ₂ alike."</strong> Only the small one is multiplied by \(\mathbf{J}^{-1}\), and the Jacobian is evaluated at the large one. Left factor small: left Jacobian. Right factor small: right Jacobian.
+@@ 56
+Q1. In \(\SO(2)\), \(\mathbf{R}^0\) is a rotation by 30° and \(\mathbf{R}\) a rotation by 75°. What is \(\mathbf{R}\ominus\mathbf{R}^0\)?
+@@ 57
+The 2 × 2 matrix \(\mathbf{R}-\mathbf{R}^0\)
+@@ 58
+105°, about 1.83 rad
+@@ 59
+45°, about 0.785 rad
+@@ 60
+−45°, about −0.785 rad
+@@ 61
+\(\Log\big((\mathbf{R}^0)\T\mathbf{R}\big)\): the relative rotation is by \(75^\circ - 30^\circ = 45^\circ\), and its Log is that angle. The answer is a tangent vector (here a single number), not a matrix.
+@@ 62
+Q2. A planar robot is at \(\mathbf{t} = (3, 0)\) with heading 0. It turns on the spot: \(\boldsymbol{\xi} = (0, 0, 0.1)\). Which left perturbation \(\boldsymbol{\epsilon} = \Ad(\mathbf{T})\boldsymbol{\xi}\) describes the same motion?
+@@ 63
+With \(\mathbf{R} = \mathbf{I}\): \(\boldsymbol{\epsilon} = (-\theta\,\mathbf{S}\mathbf{t},\ \theta) = (0.1\,(t_2, -t_1),\ 0.1) = (0, -0.3, 0.1)\). A turn about the origin by 0.1 rad would lift the robot by 0.3. The translation −0.3 cancels that, so the robot stays put and only turns.
+@@ 64
+Q3. Which expression equals \(\big(\mathbf{T}^0\,\Exp(\boldsymbol{\xi})\big)^{-1}\)?
+@@ 65
+Equation (2.26). Inverting a product reverses the order, and the inverse of \(\Exp(\boldsymbol{\xi})\) is \(\Exp(-\boldsymbol{\xi})\). The perturbation moves to the left and changes sign.
+@@ 66
+Q4. In the widget, \(\boldsymbol{\theta}_1\) is made 10 times smaller. By about what factors do the errors of \(\boldsymbol{\theta}_1+\boldsymbol{\theta}_2\) and of equation (2.34) shrink?
+@@ 67
+10 and 10
+@@ 68
+10 and 100
+@@ 69
+100 and 100
+@@ 70
+100 and 1000
+@@ 71
+The plain sum misses terms that are linear in \(\boldsymbol{\theta}_1\), such as \(\tfrac12\boldsymbol{\theta}_1\times\boldsymbol{\theta}_2\), so its error scales with \(\norm{\boldsymbol{\theta}_1}\). Equation (2.34) keeps all linear terms and misses only quadratic ones, so its error scales with \(\norm{\boldsymbol{\theta}_1}^2\).
+@@ 72
+\(\mathbf{T}\ominus\mathbf{T}^0 = \Log\big((\mathbf{T}^0)^{-1}\mathbf{T}\big)\) is the tangent vector from \(\mathbf{T}^0\) to \(\mathbf{T}\). With ⊕ it gives differences, errors, and interpolation.
+@@ 73
+\((\mathbf{T}^0\,\Exp(\boldsymbol{\xi}))^{-1} = \Exp(-\boldsymbol{\xi})(\mathbf{T}^0)^{-1}\): inverting swaps the side and flips the sign.
+@@ 74
+\(\mathbf{T}\,\Exp(\boldsymbol{\xi}) = \Exp(\Ad(\mathbf{T})\boldsymbol{\xi})\,\mathbf{T}\), exactly. \(\Ad(\mathbf{T})\) re-expresses a local tangent vector in the global frame.
+@@ 75
+\(\Exp(\boldsymbol{\theta}_1)\Exp(\boldsymbol{\theta}_2)\approx\Exp(\boldsymbol{\theta}_2+\mathbf{J}(\boldsymbol{\theta}_2)^{-1}\boldsymbol{\theta}_1)\) for small \(\boldsymbol{\theta}_1\): the BCH series cut after the terms linear in \(\boldsymbol{\theta}_1\).
+@@ 76
+\(\mathbf{J}(\boldsymbol{\theta}) = \sum(\boldsymbol{\theta}^\wedge)^n/(n+1)!\) equals \(\mathbf{I}\) at zero, and is the same matrix that turns \(\boldsymbol{\rho}\) into a translation.
+@@ 77
+<em>SLAM Handbook</em>, §2.1.5 "Lie Group Extras", pp. 60–62, equations (2.24)–(2.35).
+@@ 78
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (adjoint of SE(3), BCH formula, closed form of the SO(3) Jacobian and its inverse series, left and right Jacobians).
+@@ 79
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (⊕ and ⊖, the SE(2) adjoint, covariance of a composition, interpolation).
+@@ 80
+Barfoot and Furgale, <em>Associating Uncertainty with Three-Dimensional Poses for Use in Estimation Problems</em>, 2014 (compounding uncertain poses).

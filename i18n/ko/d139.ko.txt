@@ -1,0 +1,194 @@
+@@ 1
+<span class="eyebrow">24주차 · Day 1</span>
+@@ 2
+SLAM에서 Spatial AI로: representation과 closed loop
+@@ 3
+오늘이 끝나면 Spatial AI 시스템이 무엇인지 말하고, 이 장의 두 가설을 설명하고, closed loop 안의 persistent world model이 frame-to-frame 추정보다 나은 이유를 설명할 수 있습니다.
+@@ 4
+약 60분 · §18.1–18.2, pp. 521–526 읽기 (6쪽) · 1주차 Day 1과 19주차 Day 1 필요
+@@ 5
+먼저 읽기: §18.1과 §18.2, pp. 521–526
+@@ 6
+두 예시 제품, 그리고 두 번째 제품에 붙은 숫자: 65 g, 1 W 미만 (pp. 521–522).
+@@ 7
+representation의 정의 (p. 522), 그리고 이탤릭체로 쓰인 두 가설 (p. 523).
+@@ 8
+Spatial AI 시스템의 번호 붙은 여섯 가지 성질, 그리고 그 "핵심 계산 특성"을 지목하는 문장 (p. 525).
+@@ 9
+이 장은 Spatial AI를 다 자란 SLAM으로 봅니다. 기기는 주변에 대한 persistent하고 metric에 가까운 모델을 유지하고, 새로 들어오는 모든 센서 데이터를 그 모델과 대조합니다. 어려운 부분은 이 일을 실제 제품의 크기, 비용, 전력 예산 안에서 해내는 것입니다.
+@@ 10
+1. 과제와 예산 사이의 간극
+@@ 11
+Andrew Davison이 쓴 18장에는 수식이 없으며, 이 장은 하나의 입장을 주장합니다. <strong>Spatial AI</strong>는 기기가 주변에 대해 풍부하면서도 효율적인 representation을 만들어 지능적으로 행동할 수 있게 하는 능력입니다. 목표는 real-time 해석과 행동에 알맞은 representation이며, 추상적인 scene understanding 자체가 목표는 아닙니다. <span class="src">§18.1.1 · p. 521</span> 설계는 과제가 요구하는 것과 기기가 감당할 수 있는 것 사이에 끼어 있습니다. <span class="src">§18.1.1 · pp. 521–522</span>
+@@ 12
+기기
+@@ 13
+과제가 요구하는 것
+@@ 14
+조건이 허용하는 것
+@@ 15
+가정용 로봇
+@@ 16
+청소하고 언제 깨끗해졌는지 알기; 물체를 인식하고 옮기고 정리하기; 사람에게 길 비켜 주기
+@@ 17
+소비자 가격, 크기, 안전, 제한된 전력
+@@ 18
+AR 안경 ("IA", intelligence augmentation)
+@@ 19
+만난 모든 장소, 물체, 사람 기억하기; 잃어버린 물건 찾기; 실제 물건에 메모 붙이기
+@@ 20
+평범한 안경의 형태, 65 g, 한 번 충전으로 하루 종일, 1 W 미만
+@@ 21
+깨어 있는 하루 16시간 동안 1 W를 쓰면 카메라, 처리, 디스플레이를 모두 합쳐 \(16\ \text{Wh} = 57.6\ \text{kJ}\)입니다. 오늘날의 로봇 비전 프로세서는 이 수준과 거리가 멀고, 부피 큰 센서와 무제한의 계산 자원이 있어도 robust한 성능을 내기는 어렵습니다. <span class="src">§18.1.1 · p. 522</span>
+@@ 22
+2. representation, 다른 이름으로 world model
+@@ 23
+<strong>representation</strong>(표현)은 기기와 그 주변 세계의 상태를 나타내는, 메모리 속 값들의 집합입니다. representation은 계속 남아 있고, 정보가 들어오거나 세계가 바뀌면 변하며, 자원을 아끼기 위해 일부가 추상화되거나 잊힐 수 있습니다. <span class="src">§18.1.2 · p. 522</span> 머신러닝에서는 이것을 <strong>world model</strong>(세계 모델)이라고 부릅니다. 그쪽에서 이 아이디어가 새로워 보이는 이유는 대부분의 network가 <strong>stateless</strong>(무상태)이기 때문입니다. 입력이 들어가면 출력이 나오고, 아무것도 남지 않습니다. 센서에서 행동까지 <strong>end to end</strong>로 학습한 network는 짧은 과제는 잘하지만 긴 과제에서는 고전합니다. map은 가장 오래된 해법입니다. 로봇 청소기는 어디를 지나왔는지 기억하므로 빠짐없이 청소한다고 보장할 수 있습니다. <span class="src">§18.1.2 · pp. 522–523</span>
+@@ 24
+<strong>가설 1.</strong> 오랫동안 작동하고, 여러 과제(일부는 설계 시점에 알 수 없는 과제)를 수행하고, 사람과 소통해야 하는 기기는 범용적이고, persistent하며, 적어도 국소적으로는 metric 3D 기하에 가깝고, 사람이 이해할 수 있는 scene representation을 유지해야 합니다. 이 가설은 단일 과제용 representation과 불투명한 학습된 state를 배제합니다. 그 이유로는 효율성, 조합 가능성, 해석 가능성, 범용성이 제시됩니다. <span class="src">§18.1.2 · p. 523</span>
+@@ 25
+<strong>가설 2.</strong> 이런 시스템이 여러 과제에 걸쳐 얼마나 쓸모 있는지는 소수의 성능 지표로 포착됩니다. 따라서 드론, 정리하는 로봇, AR 디스플레이는 대체로 같은 시스템을 돌리고, 몇 개의 숫자로만 조정하게 됩니다. <span class="src">§18.1.2 · pp. 523–524</span> 이 가설은 <a href="#d143">Day 5</a>에서 다시 다룹니다.
+@@ 26
+이 장에서 <strong>Spatial AI 시스템</strong>은 그런 representation을 주로 시각 입력으로부터 점진적으로, real-time으로 만들고 유지하며, 성능을 정량화할 수 있는 모듈입니다. <span class="src">§18.1.2 · p. 524</span>
+@@ 27
+3. 이미 이 길을 걸어 온 SLAM
+@@ 28
+real-time visual SLAM은 단계적으로 풍부해져 왔고, 여러분은 그 단계를 하나씩 모두 만나 보았습니다. <span class="src">§18.1.3 · p. 524</span>
+@@ 29
+단계
+@@ 30
+map에 담기는 것
+@@ 31
+배운 곳
+@@ 32
+=
+@@ 33
+카메라 pose와 3D 점
+@@ 34
+<a href="#d65">11주차 · Day 5</a>
+@@ 35
+=
+@@ 36
+표면: distance field, surfel, Gaussian
+@@ 37
+<a href="#d44">8주차 · Day 2</a>, <a href="#d118">20주차 · Day 4</a>
+@@ 38
+=
+@@ 39
+모든 map 원소에 붙은 class 또는 feature
+@@ 40
+22주차와 23주차
+@@ 41
+이 장은 그다음 단계로, segmentation되고 물리적으로 시뮬레이션되는 물체들의 scene graph를 예상합니다 (22주차). 이 단계들은 발전 과정을 설명할 뿐 레시피가 아닙니다. 새 representation이 잘 돌아가는 시스템에 그냥 덧붙여지는 일은 거의 없습니다. 새 representation은 시스템 전체를 바꿉니다. dense map이 생기면 tracker가 이미지 전체를 그 map에 맞춰 정렬할 수 있고 (<a href="#d68">12주차 · Day 2</a>), label이 reconstruction을 개선할 수도 있습니다. <span class="src">§18.1.3 · pp. 524–525</span> 그래서 이 장은 이렇게 가정하고 논의를 이어 갑니다. 오늘의 SLAM 시스템이 내일의 Spatial AI가 가질 구조를 가장 잘 알려 주는 안내자라는 것입니다.
+@@ 42
+4. 전체 계산 구조
+@@ 43
+§18.2는 이런 시스템이라면 갖출 여섯 가지 성질을 나열합니다. <span class="src">§18.2 · p. 525</span>
+@@ 44
+<strong>Embedded:</strong> 카메라와 IMU 같은 보조 센서, 그리고 저전력 처리 장치가 움직이는 몸체 안에 들어 있습니다.
+@@ 45
+<strong>real-time 모델과 pose:</strong> 기하와 semantics를 담으며, 주로 기기에 탑재된 센서로 얻습니다.
+@@ 46
+<strong>무엇이 어디에:</strong> 이상적으로는 주변 모든 것의 정체, 위치, 모양, 움직임.
+@@ 47
+<strong>metric에 가까움:</strong> 적어도 국소적으로는 그렇습니다.
+@@ 48
+<strong>집중된 품질:</strong> 기기가 보고 있고 곧 행동할 곳만 완전한 detail로 두고, 나머지는 낮은 품질로 두었다가 다시 방문할 때 높일 수 있습니다.
+@@ 49
+<strong>깨어 있음:</strong> 들어오는 모든 시각 데이터를 모델의 예측과 대조합니다.
+@@ 50
+이 장이 특히 강조하는 특성은 <strong>closed loop</strong>(폐루프)입니다. 모델은 persistent하고, 조금씩 갱신되며, real-time loop 안에서 data association과 tracking에 쓰입니다. 이와 대비되는 것이 순수 visual odometry 같은 <strong>incremental estimation</strong>(점진적 추정)으로, frame과 frame 사이의 움직임을 추정할 뿐 장기적인 구조는 보관하지 않습니다. closed loop라고 해서 모든 것을 하나의 고정된 주기로 돌린다는 뜻은 아닙니다. 각 결과가 필요할 때 준비되어 있어서 전체가 멈추지 않는다는 뜻입니다. <span class="src">§18.2 · pp. 525–526</span>
+@@ 51 attr
+위는 incremental estimation입니다. frame k−1과 frame k가 상대 움직임 하나로 이어집니다. 아래는 closed loop입니다. 새 이미지를 예측된 view와 비교하고, 그 결과를 persistent world model에 fusion하며, world model을 rendering해서 다음 예측 view를 만듭니다.
+@@ 52
+Incremental: 각 frame을 직전 frame과만 비교
+@@ 53
+=
+@@ 54
+=
+@@ 55
+움직임
+@@ 56
+Closed loop: 각 frame을 world model의 예측과 비교
+@@ 57
+새 이미지
+@@ 58
+비교, tracking
+@@ 59
+=
+@@ 60
+persistent, 제자리에서 갱신
+@@ 61
+예측된 view
+@@ 62
+fusion
+@@ 63
+rendering
+@@ 64
+예측
+@@ 65
+incremental estimation은 상대 움직임을 이어 붙이고 잊어버립니다. closed loop는 모든 frame을 저장된 하나의 모델에 대해 측정합니다.
+@@ 66
+직접 해 보기: 카메라가 복도를 네 번 훑고, 두 estimator가 똑같은 측정값을 받습니다.
+@@ 67
+눈여겨볼 점: map을 만드는 동안인 처음 42 frame에서는 두 곡선이 비슷합니다. 그 뒤 map 기반 오차는 0.04 근처에 머무는 반면, odometry 오차는 이리저리 떠돌다가 마지막 훑기에서 평균 0.14가 됩니다. 새 noise를 눌러 보세요. odometry가 가끔 0 쪽으로 되돌아오기도 하지만, 그 자리에 붙잡아 두는 것은 아무것도 없습니다.
+@@ 68
+빈틈 채우기: 저장된 map이 오차를 제한하는 이유
+@@ 69
+위젯에서 \(l_j\)에 있는 landmark를 위치 \(x_k\)에서 보면 \(z_{kj} = l_j - x_k + n_{kj}\)를 얻습니다. 여기서 noise는 서로 독립이고 분산이 \(\sigma^2\)입니다.
+@@ 70
+<em>Odometry</em>는 frame 간 움직임을 더해 나갑니다. 각 움직임은 두 frame이 공유하는 landmark들에서 \(z\)가 변한 양의 평균입니다. 공유하는 집합이 그대로인 동안에는 합 안에서 noise가 상쇄됩니다. landmark가 시야에 들어오거나 나갈 때마다 한 항이 상쇄되지 못하고, 크기가 \(\sigma\)의 일부인 새 오차가 영영 더해집니다. 이런 교체가 \(h\)번 일어나면 오차 분산은 \(h\)에 비례해 커져 있습니다. <a href="#d1">1주차 · Day 1</a>의 random walk입니다.
+@@ 71
+<em>저장된 map</em>은 landmark \(j\)를 \(\hat{l}_j = l_j + e_j\)로 보관합니다. 여기서 \(e_j\)는 저장하던 순간의 오차입니다. 이후 \(m\)개의 landmark가 시야에 있는 어떤 frame에서든 다음이 성립합니다.
+@@ 72
+첫 번째 오차 항은 얼어붙어 있습니다. 그 landmark들로 돌아올 때마다 똑같습니다. 두 번째 항은 분산이 \(\sigma^2/m\)인 새 noise입니다. 둘 다 시스템이 얼마나 오래 돌았는지와 무관합니다. \(\sigma = 0.05\), \(m \approx 6\)이면 새 부분은 \(0.05/\sqrt{6} \approx 0.02\)이고, 0.04의 나머지는 첫 번째 훑기 동안 얼어붙은 map 오차입니다.
+@@ 73
+§18.2는 효율로 가는 길을 제시하며 끝납니다. 알고리즘 안에 있는 <strong>계산과 데이터 이동의 graph</strong>를 찾고, 같은 graph 구조를 가진 하드웨어를 써서 데이터가 되도록 적게 움직이게 하라는 것입니다. 이번 주의 나머지는 세 가지 질문을 축으로 짜여 있습니다. 무엇을 어디에 저장하는가, 무엇을 어디서 처리하는가, 무엇을 어디로 언제 전송하는가. <span class="src">§18.2 · p. 526</span>
+@@ 74
+Q1. 이 장의 representation에 관한 첫 번째 가설을 만족하는 시스템은 무엇입니까?
+@@ 75
+이미지를 곧바로 모터 명령으로 바꾸는 network
+@@ 76
+hidden state를 기하로 읽어 낼 수 없는 recurrent network
+@@ 77
+방마다 metric이고 사람이 살펴볼 수 있는, 물체와 표면의 persistent 3D map
+@@ 78
+한 종류의 머그잔에 맞춰 학습된 grasp detector
+@@ 79
+이 가설은 범용적이고 persistent하며, 적어도 국소적으로는 metric에 가깝고 사람이 이해할 수 있는 representation을 요구합니다. 과제 전용이거나 불투명한 representation은 배제합니다.
+@@ 80
+Q2. AR 안경은 한 번 충전으로 16시간을 1 W 이하로 버텨야 합니다. 이 기기가 하루에 쓸 수 있는 에너지는 얼마입니까?
+@@ 81
+=
+@@ 82
+=
+@@ 83
+=
+@@ 84
+16 h × 3600 s/h = 57 600 s 동안 초당 1 J를 쓰면 57.6 kJ, 즉 16 Wh입니다.
+@@ 85
+Q3. 카메라가 landmark 4개가 시야에 있는 저장된 map에 대해 tracking하고, 측정 noise는 σ = 0.08입니다. 위치 오차 중 frame마다 새로 생기는 부분의 표준편차는 얼마입니까?
+@@ 86
+새 부분은 독립인 noise 4개의 평균입니다: σ/√m = 0.08/2 = 0.04.
+@@ 87
+Q4. 어떤 시스템이 연속한 frame 사이의 카메라 움직임을 매우 정확하게 추정하지만 그 밖에는 아무것도 저장하지 않습니다. 이 시스템에 가장 분명하게 빠진 것은 무엇입니까?
+@@ 88
+embedded 센서와 처리 장치
+@@ 89
+새 frame마다 대조할 persistent world model
+@@ 90
+real-time 동작
+@@ 91
+주 센서로 쓰는 카메라
+@@ 92
+이것은 순수 visual odometry입니다. 예측의 바탕이 될 모델이 없으므로 변화를 감지하거나 drift를 제한할 수 없습니다.
+@@ 93
+Spatial AI는 제품의 크기, 비용, 전력 한계 안에서 real-time 행동을 위한 representation을 만듭니다.
+@@ 94
+가설 1: 범용적이고 persistent하며 metric에 가깝고 사람이 읽을 수 있는 scene representation을 유지합니다. 가설 2: 소수의 성능 지표가 그 유용성을 설명합니다.
+@@ 95
+핵심 구조는 closed loop입니다. 모든 측정값을 persistent 모델의 예측과 비교한 뒤 모델을 갱신합니다.
+@@ 96
+<em>SLAM Handbook</em>, 18장 (A. J. Davison), §18.1 "From SLAM to Spatial AI"와 §18.2 "Overall Computational Structure", pp. 521–526.
+@@ 97
+"빈틈 채우기"의 오차 모델은 이 앱이 직접 만든 예시입니다.

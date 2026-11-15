@@ -1,0 +1,186 @@
+@@ 1
+<span class="eyebrow">Week 23 · Day 1</span>
+@@ 2
+Foundation models, contrastive learning, and what open-world means
+@@ 3
+After today you can say what a foundation model is, write the contrastive loss that trains models such as CLIP, and tell an open-world map from a closed-set one.
+@@ 4
+About 60 min · Read Ch. 17 opening and §17.1, pp. 490–495 (6 pages, one of them figures) · Needs Week 22
+@@ 5
+Read first: Chapter 17 opening and §17.1, pp. 490–495
+@@ 6
+What "closed-set" means for the semantic maps of Chapter 16 (p. 490), and the two ingredients a foundation model needs (p. 491).
+@@ 7
+How BERT gets labels without human annotators (p. 492), and what "positives" and "negatives" are in contrastive learning (pp. 492–493, Figure 17.2).
+@@ 8
+The two ways "open-world" could enter a SLAM system, and why the first one still gives a closed map (pp. 494–495).
+@@ 9
+The semantic maps of last week could only name things from a list fixed when the detector was trained. Models trained on internet-scale data without human labels produce feature vectors that are not tied to any list. If the map stores those vectors, the choice of what to look for moves from the day the map is built to the moment someone asks.
+@@ 10
+1. From a fixed dictionary to an open one
+@@ 11
+Every map so far stored geometry, and sometimes appearance. Chapter 16 added semantics, but the perception models it used were trained <strong>closed-set</strong>: the dictionary of classes was decided when the model was trained, so it is fixed and finite. <span class="src">Ch. 17 · p. 490</span> A detector trained on 80 classes will never report an 81st.
+@@ 12
+A <strong>foundation model</strong> is a machine-learning model trained on a dataset so vast that we can reasonably expect it to generalize to a wide variety of operating conditions. It needs two things: an architecture that can efficiently update a very large number of parameters, and a very large dataset, for example one of internet scale. <span class="src">§17.1.1 · p. 491</span> Such models can learn <strong>open-world</strong> representations (the book treats open-set and open-vocabulary as synonyms): representations that may generalize to any class, object type, or concept one might meet. <span class="src">Ch. 17 · p. 490</span>
+@@ 13
+2. How labels stopped being the bottleneck
+@@ 14
+The history in §17.1.1 is a sequence of obstacles removed. Read it as a table.
+@@ 15
+Step (book's example)
+@@ 16
+What it removed
+@@ 17
+Human labels?
+@@ 18
+AlexNet, a convolutional network trained on ImageNet (3.2 million labeled images, the book's figure)
+@@ 19
+Showed that a big network plus a big labeled dataset works
+@@ 20
+Yes, every image
+@@ 21
+Residual networks (ResNets)
+@@ 22
+Vanishing gradients in deep networks; these encoders became the base of closed-vocabulary detectors such as YOLO and RCNN
+@@ 23
+BERT: hide a word, predict it (English Wikipedia, about 2.5 billion words; BookCorpus, about 800 million)
+@@ 24
+The need for annotators: the data supplies its own labels
+@@ 25
+Transformer and attention (used by BERT and by the first GPT model)
+@@ 26
+Difficulty capturing long-range dependencies in the input
+@@ 27
+Contrastive learning (SimCLR) and the vision transformer (ViT)
+@@ 28
+The lack of a "hide a word" task for images
+@@ 29
+DINO (teacher–student distillation), CLIP (image–caption pairs)
+@@ 30
+Strong visual features; one shared feature space for images and text
+@@ 31
+<span class="src">§17.1.1 · pp. 491–494</span> The book calls every method that needs no human annotation <strong>unsupervised</strong>, and does not separate "self-supervised" from it (footnote, p. 492). The vision transformer cuts an image into fixed-size patches, turns each into a vector, and feeds the sequence to a standard Transformer, the same way text is fed as a sequence of tokens. <span class="src">Figure 17.3 · p. 493</span>
+@@ 32
+Filling the gap: why gradients vanish, and what a residual connection does
+@@ 33
+Training adjusts each parameter along the gradient of the loss. For a chain of layers \(\mathbf{x}_{l+1} = F_l(\mathbf{x}_l)\), the chain rule gives the gradient at the first layer as a product of one factor per layer:
+@@ 34
+If each factor shrinks a vector by about half, 20 layers shrink it by \(0.5^{20} \approx 10^{-6}\). The early layers get almost no signal: that is the vanishing gradient the book mentions on p. 492. A residual layer computes \(\mathbf{x}_{l+1} = \mathbf{x}_l + F_l(\mathbf{x}_l)\) instead, so each factor becomes \(\mathbf{I} + \partial F_l / \partial \mathbf{x}_l\). The identity term is the "direct pathway from one layer to the next": through it the gradient reaches early layers unshrunk, whatever \(F_l\) does.
+@@ 35
+3. Contrastive learning: pull the pair together, push the rest away
+@@ 36
+Text has an obvious self-made task: hide a word. A random image patch carries no such specific meaning, so images needed another idea. <span class="src">§17.1.1 · p. 492</span> <strong>Contrastive learning</strong> takes an input and a second version of it that should mean the same thing (a <strong>positive</strong>), and writes a loss that moves their representations together while moving all other inputs in the batch (the <strong>negatives</strong>) away. In SimCLR the positive is the same image after an augmentation such as flipping or removing patches. <span class="src">§17.1.1 · pp. 492–493</span> In CLIP the positive pair is an image and its caption, collected from the internet, which puts the two modalities in one feature space. <span class="src">§17.1.1 · p. 494</span>
+@@ 37
+Filling the gap: the loss itself (InfoNCE)
+@@ 38
+The book describes the loss in words. Here it is. Take a batch of \(N\) image–caption pairs. Encode image \(i\) as a unit vector \(\mathbf{u}_i\) and caption \(j\) as a unit vector \(\mathbf{v}_j\), and let \(s_{ij} = \langle \mathbf{u}_i, \mathbf{v}_j \rangle\) be their cosine similarity. For image \(i\), treat "which of the \(N\) captions is mine?" as a classification problem and take its cross-entropy:
+@@ 39
+\(\tau \gt 0\) is the <strong>temperature</strong>: a small \(\tau\) makes the comparison sharper. CLIP-style training averages this over all images and adds the mirror-image term for captions choosing among images. SimCLR uses the same form with two augmented views in place of image and caption.
+@@ 40
+<strong>Numbers.</strong> \(N = 4\), \(\tau = 0.2\), true pair \(s_{ii} = 0.8\), three wrong captions at \(0.2\). Then \(\exp(0.8/0.2) = e^{4} = 54.60\) and \(\exp(0.2/0.2) = e = 2.718\), so
+@@ 41
+If all four similarities were equal, the fraction would be \(1/4\) and the loss \(\log 4 = 1.386\). That is the value for a model that has learned nothing.
+@@ 42
+<strong>Which way does it push?</strong> Write \(p_{ij}\) for the fraction inside the log with \(s_{ij}\) on top (a softmax over row \(i\)). Since \(\ell_i = -s_{ii}/\tau + \log \sum_j \exp(s_{ij}/\tau)\),
+@@ 43
+with \(\delta_{ij} = 1\) if \(i = j\) and 0 otherwise. For the true pair the derivative is \((p_{ii} - 1)/\tau \le 0\): gradient descent raises \(s_{ii}\). For a wrong pair it is \(p_{ij}/\tau \ge 0\): descent lowers \(s_{ij}\), and hardest for the wrong captions that currently look most similar.
+@@ 44
+Try it: press Play and watch the similarity matrix. Then press New start once and play again.
+@@ 45
+Notice that the loss falls from 5.22 to about 0.01 in 120 steps while the diagonal of the matrix goes to 1 and the four pairs spread around the circle. The first New start stalls near 0.35 with two pairs on the same spot: a circle has very little room, which is one reason real feature spaces have hundreds of dimensions.
+@@ 46
+Shuffle four photos and four captions on a table. The training game is to slide each photo next to its own caption and away from the other three. Nobody ever says what a "dog" is. After hundreds of millions of rounds, photos and captions about the same thing end up in the same place.
+@@ 47
+4. Open-world at query time, not at mapping time
+@@ 48
+There are at least two ways to bring this into SLAM. <span class="src">§17.1.2 · pp. 494–495</span>
+@@ 49
+Paradigm 1: open-vocabulary detector in the front-end
+@@ 50
+Paradigm 2: open-world features in the map
+@@ 51
+What runs during mapping
+@@ 52
+A detector prompted with a word list (the book names YOLO-World and OV-DETR)
+@@ 53
+A feature encoder, with no word list
+@@ 54
+What the map stores
+@@ 55
+Labels from that list
+@@ 56
+A feature vector per map element
+@@ 57
+When the vocabulary is fixed
+@@ 58
+At map construction
+@@ 59
+At query time
+@@ 60
+The map is
+@@ 61
+Closed-world
+@@ 62
+Open-world
+@@ 63
+The detector of paradigm 1 accepts any text, but the text must be supplied when the detector runs, which in SLAM is while the map is being built. What gets stored is decided then. The chapter is about paradigm 2, where the question is asked when the map is used. <span class="src">§17.1.2 · pp. 494–495</span>
+@@ 64
+Two limits on scope. First, most methods in the chapter are pure <em>mapping</em>: they assume posed camera frames from an upstream SLAM system, so the problem becomes how to embed foundation-model features into the map. Foundation features are also used for place recognition (the book cites AnyLoc, built on DINO features), but that is not this chapter's subject. <span class="src">§17.1.2 · p. 495</span> Second, the power of these models comes from internet-scale data, and as of the book's April 2026 edition sensors such as LiDAR and radar have no readily available data at that scale. <span class="src">§17.1.1 · p. 494</span>
+@@ 65
+<strong>"An open-vocabulary detector gives an open-vocabulary map."</strong> Only if you could re-run it on the original images for every new query. The map itself kept just the words chosen during mapping.
+@@ 66
+<strong>"Unsupervised means the model learns from nothing."</strong> There is still a target: the hidden word, or the identity of the matching caption. It is made from the data instead of by an annotator.
+@@ 67
+Q1. A batch has two image–caption pairs. For image 1 the similarity to its own caption is 1.0 and to the other caption 0.0, with τ = 0.5. What is its loss?
+@@ 68
+The loss is −log(e² / (e² + e⁰)) = log(1 + e⁻²) = log(1.135) = 0.127. It is 0.693 = log 2 only when both similarities are equal.
+@@ 69
+Q2. A team builds a map with an open-vocabulary detector prompted with 50 words while mapping. Later a user asks for a 51st word. According to §17.1.2 the map is
+@@ 70
+closed-world, because the concepts were fixed when the map was created
+@@ 71
+open-world, because the detector accepts any text
+@@ 72
+open-world, because 50 words is a large vocabulary
+@@ 73
+neither, because detectors cannot be used in SLAM
+@@ 74
+The detector is open-vocabulary, but its text conditioning happened at map construction. The stored map can only answer for those 50 words.
+@@ 75
+Q3. In the gradient of the contrastive loss, which wrong caption is pushed away from image i the hardest?
+@@ 76
+All wrong captions equally
+@@ 77
+The one with the lowest similarity to image i
+@@ 78
+A randomly chosen one
+@@ 79
+The one with the highest similarity to image i
+@@ 80
+The derivative with respect to a wrong pair's similarity is p divided by τ, and p (the softmax weight) is largest for the wrong caption that currently scores highest.
+@@ 81
+Q4. A plain 30-layer network scales the gradient by 0.5 at every layer. Roughly what fraction of it reaches the first layer, and what changes with residual connections?
+@@ 82
+About 1/60; nothing changes
+@@ 83
+About 10⁻⁹; each factor becomes identity plus a term, so an unshrunk copy gets through
+@@ 84
+About 10⁻⁹; the factors become 0.5 + 0.5 = 1 exactly
+@@ 85
+Exactly zero; residual connections make it infinite
+@@ 86
+0.5³⁰ ≈ 9 × 10⁻¹⁰. A residual layer's factor is the identity plus the layer's own derivative, so the product always contains a path of pure identities.
+@@ 87
+Closed-set perception has a dictionary fixed at training time. Foundation models, trained on vast data, aim at open-world representations.
+@@ 88
+Self-made training tasks (predict a hidden word, match two views, match image and caption) removed the need for human labels.
+@@ 89
+The contrastive loss is a cross-entropy over "which item in the batch is my partner"; its gradient raises the true pair's similarity and lowers the others in proportion to how confusing they are.
+@@ 90
+A map is open-world only if the vocabulary is chosen at query time. Storing features, not detections, is what makes that possible.
+@@ 91
+<em>SLAM Handbook</em>, Chapter 17 "Towards Open-World Spatial AI", opening and §17.1 "Background and Terminology", pp. 490–495.
+@@ 92
+The loss in "Filling the gap" follows van den Oord, Li, Vinyals, <em>Representation Learning with Contrastive Predictive Coding</em>, 2018 (InfoNCE); Chen, Kornblith, Norouzi, Hinton, <em>A Simple Framework for Contrastive Learning of Visual Representations</em>, 2020; and Radford et al., <em>Learning Transferable Visual Models From Natural Language Supervision</em>, 2021.
+@@ 93
+Vanishing gradients and residual connections: Goodfellow, Bengio, Courville, <em>Deep Learning</em>, 2016; He, Zhang, Ren, Sun, <em>Deep Residual Learning for Image Recognition</em>, 2016.

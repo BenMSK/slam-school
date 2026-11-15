@@ -1,0 +1,238 @@
+@@ 1
+<span class="eyebrow">14주차 · Day 3</span>
+@@ 2
+Radar odometry: Doppler로 구하는 ego-velocity와 scan matching
+@@ 3
+오늘이 끝나면 radar scan 하나의 Doppler 측정값으로 least squares를 풀어 센서 속도를 추정하고, 움직이는 물체를 걸러 내고, Doppler, direct, feature-based, registration-based radar odometry 계열을 비교할 수 있습니다.
+@@ 4
+약 60분 · §9.2, pp. 261–268 읽기 (8쪽) · 6주차 Day 2 필요
+@@ 5
+먼저 읽기: §9.2, pp. 261–268
+@@ 6
+spinning radar odometry의 전형적인 drift와 "correspondence-free"라는 말 (p. 261).
+@@ 7
+pp. 263–264의 Doppler factor 예: state vector에 무엇이 들어 있는지, 그리고 식 (9.11)–(9.14).
+@@ 8
+§9.2.2, §9.2.3, §9.2.4 (pp. 265–268) 각각에서 두 scan 사이에 정확히 무엇을 match하는지.
+@@ 9
+motion compensation으로 얻는 개선의 크기 (p. 268).
+@@ 10
+radar scan의 static 점은 저마다 센서가 그 점에 얼마나 빨리 다가오는지 알려 줍니다. 이는 센서 속도에 대한 선형 방정식 하나이고, scan 하나에 이런 식이 수십 개 있으므로, scan 사이의 matching 없이 작은 least-squares 문제 하나로 속도가 나옵니다. 이 방법으로는 회전이 보이지 않고 위치는 여전히 적분해야 하므로, radar는 LiDAR에서 배운 scan matching 방법도 더 sparse하고 noise가 많은 데이터에 맞게 고쳐 씁니다.
+@@ 11
+1. scan 하나, 속도 하나
+@@ 12
+<strong>Radar odometry</strong>는 연속된 radar 측정값으로 센서 자신의 움직임, 즉 <strong>egomotion</strong>(자체 운동)을 추정합니다. 모든 odometry가 그렇듯 drift가 생깁니다. spinning radar 방법들은 100 m당 1–2% 정도의 translation drift가 쌓입니다. <span class="src">§9.2 · p. 261</span>
+@@ 13
+radar 고유의 방법은 각 점의 Doppler 측정값을 씁니다. sensor frame으로 나타낸 센서의 속도를 \(\mathbf{v}^s\), 센서에서 target까지의 벡터를 \(\mathbf{r}^s\)라고 합시다. target이 static이면 그 Doppler 측정값은 target 방향으로 투영한 센서 속도입니다: <span class="src">§9.2.1 · p. 264</span>
+@@ 14
+빈틈 채우기: 내적은 어디서 오고 부호는 어떻게 되는가
+@@ 15
+센서가 위치 \(\mathbf{s}(t)\)에, static target이 \(\mathbf{p}\)에 있다고 합시다. range는 \(r = \norm{\mathbf{p} - \mathbf{s}}\)이므로 \(r^2 = (\mathbf{p}-\mathbf{s})\T(\mathbf{p}-\mathbf{s})\)입니다. \(\dot{\mathbf{p}} = \mathbf{0}\)과 \(\dot{\mathbf{s}} = \mathbf{v}\)를 써서 양변을 시간으로 미분하면:
+@@ 16
+range는 \(\mathbf{u}\T\mathbf{v}\)의 비율로 줄어듭니다. 따라서 식 (9.13)은 센서와 target이 서로 다가갈 때 양수인 Doppler 측정값, 즉 <strong>closing speed</strong>(접근 속도)를 나타냅니다. range 변화율 \(\dot r\)(range가 늘 때 양수, Day 1의 규약)을 보고하는 센서는 부호만 반대인 같은 수를 줍니다. 무엇이든 fit하기 전에 센서가 어느 쪽을 쓰는지 확인하세요.
+@@ 17
+2D scan에서 azimuth \(\theta\)에 있는 점의 방향은 \(\mathbf{u} = (\cos\theta, \sin\theta)\)이므로 점 \(i\)의 측정값은 다음과 같습니다
+@@ 18
+여기서 \(\beta\)는 진행 방향입니다. azimuth에 대해 그리면 모든 static 점의 측정값은 하나의 cosine 위에 놓입니다. 그 높이는 속력이고 피크는 진행 방향에 있습니다. elevation \(\phi\)가 있는 3D에서는 방향이 \(\mathbf{u} = (\cos\phi\cos\theta,\ \cos\phi\sin\theta,\ \sin\phi)\)이고 미지수가 세 개입니다.
+@@ 19
+방향을 행렬 \(\mathbf{A}\)의 행으로 쌓고 측정값을 벡터 \(\mathbf{y}\)에 모읍니다. 속도는 <a href="#d4">1주차 · Day 4</a>의 least-squares 해입니다:
+@@ 20
+여기서 \(\sigma\)는 Doppler noise의 표준편차입니다.
+@@ 21
+<strong>계산 예제.</strong> azimuth 0°, 60°, −60°에 있는 static 점 세 개가 10.000, 6.732, 3.268 m/s를 읽습니다. \(\mathbf{A}\)의 행은 \((1, 0)\), \((0.5, 0.866)\), \((0.5, -0.866)\)입니다.
+@@ 22
+센서는 전방 10 m/s, 좌측 2 m/s로 움직입니다. 이제 같은 세 점을 좁은 시야, 즉 0°와 ±10°로 몰아 봅시다. 그러면 \(\mathbf{A}\T\mathbf{A} = \diag(1 + 2\cos^2 10°,\ 2\sin^2 10°) = \diag(2.94,\ 0.060)\)입니다. 옆 방향 분산은 전방 분산의 \(2.94/0.060 = 49\)배이므로, 옆 방향 속도는 7배 덜 확실합니다. 좁은 field of view는 전방 속도는 잘 보지만 옆 방향 속도는 잘 보지 못합니다.
+@@ 23
+2. 움직이는 물체는 outlier
+@@ 24
+이 모델은 모든 target이 static이라고 가정합니다. 움직이는 차 위의 점은 이 가정을 깹니다. 그 측정값에는 차의 속도도 들어 있어서 cosine에서 벗어납니다. least squares는 이런 점에 무방비입니다 (<a href="#d31">6주차 · Day 1</a>). 책은 두 가지 해결책을 듭니다. 하나는 RANSAC(<a href="#d32">6주차 · Day 2</a>) 뒤에 inlier로 least squares를 푸는 것입니다. 3D에서는 미지수가 세 개이고 점 하나가 식 하나를 주므로 sample 하나는 점 세 개입니다. <span class="src">§9.2.1 · p. 262</span> 다른 하나는 Doppler residual에 robust loss를 쓰는 것으로, 책의 예에서는 Cauchy loss입니다 (<a href="#d34">6주차 · Day 4</a>). <span class="src">§9.2.1 · p. 265</span>
+@@ 25
+직접 해 보기: 오른쪽 패널은 각 점의 closing speed를 azimuth에 대해 그립니다. "outlier 제거"를 누른 다음, field of view를 60°로 좁혀 보세요.
+@@ 26
+눈여겨볼 점: 처음에 실제 속도는 (9.40, 3.42) m/s이고, 단순 least squares는 약 (10.79, 7.36)을 내놓아 4 m/s 넘게 틀립니다. 점의 4분의 1이 움직이는 차 두 대 위에 있기 때문입니다. outlier를 제거하면 60개 중 45개의 점이 남고 추정값은 0.1 m/s 이내로 맞습니다. field of view가 60°이면 좌측 성분의 1σ 불확실성은 대략 두 배(0.029에서 0.056 m/s)가 되지만 전방 성분은 거의 그대로입니다. 계산 예제와 같습니다.
+@@ 27
+RANSAC이 버리는 점들도 그 자체로 쓸모가 있습니다. 움직이는 물체를 표시해 주기 때문입니다. 여러 pipeline은 Doppler fit을 filter로 써서 registration이나 place recognition 전에 그 점들을 제거합니다. <span class="src">§9.2.4 · p. 268</span>
+@@ 28
+3. Doppler가 볼 수 없는 것, 그리고 factor graph 버전
+@@ 29
+radar를 제자리에서 돌려 봅시다. 어떤 static 점까지의 range도 바뀌지 않으므로 모든 Doppler 측정값은 0입니다. 차량의 움직임에 대해 무언가를 가정하지 않는 한, radar 하나의 점별 속도로는 <strong>회전 속도가 observable하지 않습니다</strong>. <span class="src">§9.2.1 · pp. 262–263</span> 보통은 gyroscope로 해결합니다. 3+1D radar에 대한 비교에서 registration 없이 Doppler와 IMU를 결합한 방법이 가장 낮은 오차를 냈고, 4.5 km에서 drift가 0.3%까지 낮았습니다. <span class="src">§9.2.1 · p. 263</span>
+@@ 30
+빈틈 채우기: 장착 offset이 회전을 보이게 만드는 방법
+@@ 31
+다른 해결책은 강체 kinematics를 씁니다. 차량이 기준점에서 속도 \(\mathbf{v}_b\)를 갖고 각속도 \(\boldsymbol{\omega}\)로 돈다면, 그 점에서 offset \(\boldsymbol{\ell}\)만큼 떨어져 장착된 센서는 다음 속도로 움직입니다
+@@ 32
+평면에서 yaw rate \(\omega\)와 \(\boldsymbol{\ell} = (\ell_x, \ell_y)\)이면 추가 항은 \(\omega\,(-\ell_y,\ \ell_x)\)입니다. 따라서 기준점에서 떨어진 radar는 회전을 추가 속도로 느낍니다.
+@@ 33 attr
+자동차를 위에서 본 그림. 뒷축 중심은 속력 v로 곧장 앞으로 움직입니다. radar는 그보다 거리 l만큼 앞에 장착되어 있습니다. 차가 yaw rate omega로 돌고 있으므로, radar는 같은 전방 속력 v에 더해 omega 곱하기 l의 옆 방향 속력을 가집니다.
+@@ 34
+뒷축 중심
+@@ 35
+=
+@@ 36
+전방 v
+@@ 37
+옆 방향 ω·ℓ
+@@ 38
+=
+@@ 39
+미끄러지지 않는 차는 뒷축에서 옆 방향 속도가 없습니다. 그러면 radar가 측정하는 옆 방향 속도는 모두 회전에서 온 것입니다.
+@@ 40
+이것이 장착 위치를 알 때 Ackermann steering 차량에서 radar 하나로 yaw rate를 추정하는 아이디어입니다. <span class="src">§9.2.1 · p. 263</span> radar가 뒷축에서 2 m 앞에 있고 fit한 옆 방향 속도가 0.4 m/s면 yaw rate는 \(\omega = 0.4/2 = 0.2\) rad/s입니다. radar와 IMU가 같은 곳에 있지 않을 때도 같은 결합이 나타납니다. <span class="src">§9.2.1 · p. 265</span>
+@@ 41
+책의 예제는 radar scan \(K\)개의 sliding window에서 속도를 추정하며, IMU 측정값이 연속된 state를 잇습니다. state는 \(\mathbf{x} = \begin{bmatrix}\mathbf{v}^{s\top} & \mathbf{q}^{w\top}_s & \mathbf{b}\T\end{bmatrix}\T\)로, 속도, 방향 quaternion, IMU bias입니다. <span class="src">§9.2.1 · pp. 263–264</span> cost는 다음과 같습니다
+@@ 42
+여기서 scan \(k\)에 있는 target \(d\)의 Doppler 오차와 그 가중치는 다음과 같습니다
+@@ 43
+항목
+@@ 44
+있는 이유
+@@ 45
+e<sub>d,k</sub>, 식 (9.14)
+@@ 46
+측정한 Doppler 빼기 속도 state로 예측한 Doppler: 1절의 residual
+@@ 47
+각 target은 scan k의 속도에 걸린 unary factor입니다. 책은 여기에 Cauchy robust loss를 적용합니다
+@@ 48
+w<sub>d,k</sub>, 식 (9.12)
+@@ 49
+target의 intensity를 scan 전체의 intensity 합으로 나눈 값
+@@ 50
+강한 return을 약한 return보다 더 신뢰합니다
+@@ 51
+관성 항
+@@ 52
+scan k와 k+1 사이의 IMU 오차, W<sub>k</sub>로 가중
+@@ 53
+적분한 accelerometer 측정값이 연속된 속도를 잇습니다
+@@ 54
+state의 bias b
+@@ 55
+IMU의 천천히 변하는 offset
+@@ 56
+radar 속도에는 bias가 없으므로 IMU bias가 observable해집니다
+@@ 57
+state의 방향 q
+@@ 58
+센서의 자세: pitch와 roll이 중요함
+@@ 59
+accelerometer는 gravity도 느끼며, 이를 빼려면 어느 쪽이 아래인지 알아야 합니다
+@@ 60
+이것은 <a href="#d7">2주차 · Day 1</a>에서 말한 의미의 factor graph입니다. state의 사슬, 이웃 사이의 binary IMU factor, 그리고 각 state에 걸린 많은 unary Doppler factor로 이루어집니다 (Figure 9.9).
+@@ 61
+4. scan matching: 세 계열
+@@ 62
+위치를 얻으려면 속도를 적분해야 하고, 회전에는 도움이 필요합니다. 다른 계열들은 가까운 scan들의 공통점을 찾아 그 사이의 상대 pose를 추정합니다. <span class="src">§9.2 · pp. 261–262</span>
+@@ 63
+상대 pose를 찾는 방법
+@@ 64
+주의할 점
+@@ 65
+=
+@@ 66
+raw radargram
+@@ 67
+Correlation. 센서가 회전하면 polar 이미지가 azimuth 축을 따라 shift되므로 phase correlation으로 회전을 구합니다. 이어서 Cartesian 이미지를 correlation하면 이동을 구합니다. 학습 기반 변형은 radargram에서 안정적이지 않은 부분을 mask로 가립니다
+@@ 68
+한 장소에서 돌아오는 전력이 시간이 지나도 같다고 가정합니다. 움직이는 물체와 noise artifact가 이 가정을 깹니다
+@@ 69
+=
+@@ 70
+vision에서처럼 descriptor를 가진 keypoint (SIFT, SURF, ORB, 또는 radar 전용)
+@@ 71
+descriptor를 match하고, RANSAC으로 outlier를 제거한 뒤, match된 점들을 SVD로 closed-form 정렬합니다 (<a href="#d74">13주차 · Day 2</a>)
+@@ 72
+initial guess가 나빠도 견디지만, radar에서는 descriptor의 반복성을 확보하기가 더 어렵습니다. 학습된 feature에는 ground-truth pose가 있는 학습 데이터가 필요합니다
+@@ 73
+=
+@@ 74
+CFAR, BFAR 또는 k-strongest filtering으로 얻은 point cloud
+@@ 75
+ICP 또는 NDT 방식의 registration, 보통 이전 keyframe 여러 개나 submap에 대해
+@@ 76
+점이 너무 적으면 정보를 잃고 너무 많으면 noise가 들어옵니다. 근접성 기반 association에는 좋은 initial guess가 필요합니다
+@@ 77
+왜 마지막 scan 하나가 아니라 여러 keyframe에 대해 registration할까요? radar cloud는 sparse하고 noise가 많아서 한 쌍만으로는 취약합니다. keyframe이 많으면 correspondence가 많아져 feature가 부족한 곳에서 constraint가 늘고, 시간적 중복이 생겨 갑작스러운 가림이나 움직이는 물체의 영향이 줄어듭니다. <span class="src">§9.2.4 · p. 267</span> 책의 주된 예는 CFEAR입니다. CFEAR는 azimuth마다 가장 강한 k개의 return을 남기고, 새 cloud를 최근 \(s\)개의 keyframe에 대해 point-to-point, point-to-line 또는 point-to-distribution 오차로 한꺼번에 registration하며, 각 match에 법선 벡터의 일치도, 평면성, 주변 점의 수로 가중치를 줍니다. <span class="src">§9.2.4 · p. 267</span>
+@@ 78
+3+1D radar에서는 두 세계가 합쳐집니다. 1절의 Doppler least-squares 속도가 초기 추정값이 되고 registration이 이를 다듬습니다. 한 방법은 azimuth와 elevation이 거칠기 때문에(Day 2), 센서에서 멀수록 커지는 covariance로 점에 가중치를 줍니다. 다른 방법은 sparse한 cloud에 대처하려고 각 점을 주변 분포들의 가중 집합에 match합니다. <span class="src">§9.2.4 · p. 268</span>
+@@ 79
+=
+@@ 80
+Day 2에서 4 Hz scan이 차량 자신의 움직임 때문에 번진다는 것을 봤습니다. constant-velocity 모델로 이를 보정하면 이런 센서에서 absolute trajectory error가 29% 줄어든다고 보고되었습니다. <span class="src">§9.2.5 · p. 268</span> 방법은 이렇습니다. 마지막 두 scan 사이의 상대 pose와 두 time stamp를 가져와 나눠서 속도를 구하고, 모든 점을 각자의 time stamp에 맞게 옮깁니다.
+@@ 81
+빈틈 채우기: 점 하나에 대한 보정
+@@ 82
+scan의 기준 시각을 \(t_{\text{ref}}\)로 두고, 점 \(\mathbf{p}_i\)가 그보다 \(\Delta t_i = t_i - t_{\text{ref}}\)만큼 나중에, 그 나중 순간의 sensor frame에서 측정되었다고 합시다. 센서가 일정한 속도 \(\mathbf{v}\)와 yaw rate \(\omega\)로 움직인다면, 시각 \(t_i\)까지 \(\omega\Delta t_i\)만큼 돌고 약 \(\mathbf{v}\Delta t_i\)만큼 움직였습니다. \(t_{\text{ref}}\)의 frame으로 나타내면, \(\Delta t_i\)의 1차까지 점은 다음과 같습니다
+@@ 83
+여기서 \(\mathbf{R}(\cdot)\)는 2D rotation matrix입니다. 4 Hz, 직진 15 m/s에서 sweep의 마지막 점은 \(\Delta t_i = 0.25\) s이고 3.75 m 옮겨집니다. 같은 속도로 다음 scan이 어디일지도 예측할 수 있어, registration의 initial guess가 됩니다. <span class="src">§9.2.5 · p. 268</span>
+@@ 84
+이것은 여전히 discrete-pose 방식입니다. continuous-time trajectory(spline 또는 Gaussian process, <a href="#d25">5주차 · Day 1</a>)는 모든 측정의 정확한 시각에서 조회할 수 있어 더 매끄러운 결과를 줍니다. <span class="src">§9.2.5 · p. 268</span>
+@@ 85
+<strong>"Doppler odometry에는 scan 사이의 matching이 필요하다."</strong> 전혀 필요 없습니다. 속도는 scan 하나에서 나오며, 그래서 책은 이를 correspondence-free라고 부릅니다.
+@@ 86
+<strong>"점이 많으면 나쁜 fit도 언제나 고쳐진다."</strong> 그 점들이 움직이는 물체라면 아닙니다. 위젯에서 outlier 15개가 섞인 점 60개는 4 m/s가 넘는 오차를 냈습니다. 먼저 제거하고, 그다음 fit하세요.
+@@ 87
+<strong>"radar는 Doppler로 6-DoF 움직임 전체를 준다."</strong> Doppler는 선속도를 줍니다. 회전에는 gyroscope, 장착 offset을 아는 kinematic 가정, 또는 scan matching이 필요합니다.
+@@ 88
+<strong>"CFEAR와 CFAR는 같은 것이다."</strong> CFAR는 검출 filter입니다 (Day 2). CFEAR는 odometry 방법입니다.
+@@ 89
+Q1. 센서가 12 m/s로 직진합니다. azimuth 60°에 있는 static 점에 대해 측정하는 closing speed는 얼마입니까?
+@@ 90
+측정값은 점 방향으로의 투영입니다: 12 × cos 60° = 6 m/s.
+@@ 91
+Q2. radar가 차량의 회전 중심에 정확히 있고 차량이 제자리에서 돕니다. Doppler 측정값이 회전에 대해 아무것도 알려 주지 않는 이유는 무엇입니까?
+@@ 92
+회전해도 어떤 static 점까지의 range도 바뀌지 않습니다
+@@ 93
+회전의 Doppler shift가 aliasing 한계를 넘습니다
+@@ 94
+회전하는 동안 static 점의 radar cross section이 0이 됩니다
+@@ 95
+360°에 걸쳐 평균하면 측정값이 상쇄됩니다
+@@ 96
+Doppler는 range의 변화율을 잽니다. 센서를 중심으로 한 순수 회전은 모든 range를 그대로 두므로 모든 측정값이 0입니다.
+@@ 97
+Q3. 전방을 보는 radar의 검출이 모두 정면 ±10° 안에 있습니다. 속도 추정값의 어느 부분이 가장 불확실합니까?
+@@ 98
+전방 속력
+@@ 99
+둘 다 같음
+@@ 100
+둘 다 아님: fit이 정확함
+@@ 101
+옆 방향 속력
+@@ 102
+옆 방향 속도는 sin θ를 통해 각 식에 들어가며, 여기서 sin θ는 최대 0.17입니다. AᵀA의 해당 원소가 작으므로 그 역, 즉 분산이 큽니다.
+@@ 103
+Q4. 3+1D radar scan에서 RANSAC이 sample마다 점 세 개를 뽑는 이유는 무엇입니까?
+@@ 104
+점 세 개가 평면을 정합니다
+@@ 105
+속도에 미지 성분이 세 개 있고 점 하나가 식 하나를 줍니다
+@@ 106
+세 개는 예상되는 움직이는 물체의 수입니다
+@@ 107
+각 점은 좌표가 세 개입니다
+@@ 108
+minimal sample은 미지수만큼의 식을 가집니다. 각 Doppler 측정값은 속도의 세 성분에 대한 선형 방정식 하나입니다.
+@@ 109
+Q5. radar가 20 m/s로 달리는 차량 위에서 4 Hz로 회전합니다. motion compensation이 없다면, scan 하나의 첫 azimuth와 마지막 azimuth를 찍은 위치는 얼마나 떨어져 있습니까?
+@@ 110
+한 바퀴 회전에 1/4 s가 걸립니다. 그동안 차량은 20 × 0.25 = 5 m 움직입니다.
+@@ 111
+static 점의 Doppler 측정값은 점 방향으로 투영한 센서 속도입니다. azimuth에 걸쳐 측정값은 cosine을 이룹니다.
+@@ 112
+방향을 쌓으면 속도에 대한 선형 least-squares 문제가 됩니다. 그 covariance \(\sigma^2(\mathbf{A}\T\mathbf{A})^{-1}\)는 field of view가 어느 성분을 뒷받침하는지 보여 줍니다.
+@@ 113
+움직이는 물체는 outlier입니다. RANSAC이나 robust loss가 이를 제거하고, 제거된 점들은 움직이는 물체를 알려 줍니다.
+@@ 114
+radar 하나의 Doppler만으로는 회전이 observable하지 않습니다. gyroscope, kinematic 모델 또는 scan matching을 더하세요.
+@@ 115
+direct, feature-based, registration-based 방법은 scan을 정렬합니다. radar 버전은 여러 keyframe에 대해 registration하고 scan 동안의 움직임을 보상합니다.
+@@ 116
+<em>SLAM Handbook</em>, 9장, §9.2 "Radar Odometry", pp. 261–268, 식 (9.11)–(9.14), Figures 9.8–9.9.
+@@ 117
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (선형 least squares와 그 covariance).
+@@ 118
+Lynch and Park, <em>Modern Robotics</em>, 2017 (회전하는 강체 위 한 점의 속도).
+@@ 119
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (constant-velocity 보정에 쓰는 velocity motion model).

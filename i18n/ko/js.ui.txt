@@ -1,0 +1,134 @@
+@@ *
+const LOCALE="en-US";
+==
+const LOCALE="ko-KR";
+@@ *
+const dname=n=>dk(n)===PER?"Review":"Day "+dk(n);
+==
+const dname=n=>dk(n)===PER?"복습":"Day "+dk(n);
+@@ *
+const dl=n=>"Week "+wk(n)+" · "+dname(n);
+==
+const dl=n=>wk(n)+"주차 · "+dname(n);
+@@ *
+const T={ start:"Start", overview:"Overview", back:"← All entries", dark:"Dark", light:"Light",
+  markDone:n=>"Mark "+dl(n)+" done", doneOn:(n,d)=>dl(n)+" done ✓ "+d+" · tap to undo", progress:(n,N)=>n+" of "+N+" days done",
+  begin:n=>"Start "+dl(n), cont:n=>"Continue with "+dl(n), allDone:"All done · back to Week 1", next:(n,t)=>"Next: "+dl(n)+" — "+t,
+  cols:["Day","Lesson","You will be able to…"], all:n=>"All ("+n+")", noViz:n=>"(widget "+n+" not available)", vizFail:m=>"This widget failed to load: "+m };
+==
+const T={ start:"시작", overview:"개요", back:"← 전체 목록", dark:"다크", light:"라이트",
+  markDone:n=>dl(n)+" 완료로 표시", doneOn:(n,d)=>dl(n)+" 완료 ✓ "+d+" · 누르면 취소", progress:(n,N)=>N+"일 중 "+n+"일 완료",
+  begin:n=>dl(n)+" 시작", cont:n=>dl(n)+" 이어서 하기", allDone:"모두 완료 · 1주차로 돌아가기", next:(n,t)=>"다음: "+dl(n)+" — "+t,
+  cols:["Day","레슨","배우고 나면 할 수 있는 것"], all:n=>"전체 ("+n+")", noViz:n=>"(위젯 "+n+"을(를) 쓸 수 없습니다)", vizFail:m=>"이 위젯을 불러오지 못했습니다: "+m };
+@@ *
+PARTS=["","Part I · Foundations of SLAM","Part II · SLAM in practice","Part III · From SLAM to Spatial AI"]
+==
+PARTS=["","Part I · SLAM의 기초","Part II · 실전 SLAM","Part III · SLAM에서 Spatial AI로"]
+@@ *
+h("span",{class:"wn"},"Week "+w)
+==
+h("span",{class:"wn"},w+"주차")
+@@ *
+"← Back"
+==
+"← 이전"
+@@ *
+"Next →"
+==
+"다음 →"
+@@ *
+{"t":"What SLAM is, and the math you need","book":"Prelude I"
+==
+{"t":"SLAM이란 무엇이며, 필요한 수학은 무엇인가","book":"Prelude I"
+@@ *
+{"t":"Factor graphs and nonlinear least squares","book":"Ch 1 §1.1–1.4"
+==
+{"t":"Factor graph와 nonlinear least squares","book":"1장 §1.1–1.4"
+@@ *
+{"t":"Sparsity, elimination, and incremental SLAM","book":"Ch 1 §1.5–1.8"
+==
+{"t":"Sparsity, elimination, 그리고 incremental SLAM","book":"1장 §1.5–1.8"
+@@ *
+{"t":"Lie groups and optimization on manifolds","book":"Ch 2 §2.1"
+==
+{"t":"Lie group과 manifold 위의 최적화","book":"2장 §2.1"
+@@ *
+{"t":"Continuous-time trajectories: splines and Gaussian processes","book":"Ch 2 §2.2–2.3"
+==
+{"t":"Continuous-time trajectory: spline과 Gaussian process","book":"2장 §2.2–2.3"
+@@ *
+{"t":"Outliers and robust estimation","book":"Ch 3"
+==
+{"t":"Outlier와 robust estimation","book":"3장"
+@@ *
+{"t":"Differentiable optimization","book":"Ch 4"
+==
+{"t":"Differentiable optimization","book":"4장"
+@@ *
+{"t":"Dense map representations","book":"Ch 5"
+==
+{"t":"Dense map 표현","book":"5장"
+@@ *
+{"t":"Certifiably optimal SLAM: Shor's relaxation and SE-Sync","book":"Ch 6 §6.1.1–6.1.2"
+==
+{"t":"Certifiably optimal SLAM: Shor's relaxation과 SE-Sync","book":"6장 §6.1.1–6.1.2"
+@@ *
+{"t":"Beyond pose graphs, and how accurate SLAM can be","book":"Ch 6 §6.1.3–6.3"
+==
+{"t":"Pose graph를 넘어서, 그리고 SLAM은 얼마나 정확할 수 있는가","book":"6장 §6.1.3–6.3"
+@@ *
+{"t":"Visual SLAM I: cameras, features, and the pipeline","book":"Prelude II + Ch 7 §7.1–7.3"
+==
+{"t":"Visual SLAM I: 카메라, feature, pipeline","book":"Prelude II + 7장 §7.1–7.3"
+@@ *
+{"t":"Visual SLAM II: alignment, bundle adjustment, full systems","book":"Ch 7 §7.4–7.9"
+==
+{"t":"Visual SLAM II: alignment, bundle adjustment, 전체 시스템","book":"7장 §7.4–7.9"
+@@ *
+{"t":"LiDAR SLAM","book":"Ch 8"
+==
+{"t":"LiDAR SLAM","book":"8장"
+@@ *
+{"t":"Radar SLAM","book":"Ch 9"
+==
+{"t":"Radar SLAM","book":"9장"
+@@ *
+{"t":"Event-based SLAM","book":"Ch 10"
+==
+{"t":"Event-based SLAM","book":"10장"
+@@ *
+{"t":"Inertial sensing and IMU preintegration","book":"Ch 11 §11.1–11.2"
+==
+{"t":"관성 센싱과 IMU preintegration","book":"11장 §11.1–11.2"
+@@ *
+{"t":"Observability and visual-inertial odometry","book":"Ch 11 §11.3–11.5"
+==
+{"t":"Observability와 visual-inertial odometry","book":"11장 §11.3–11.5"
+@@ *
+{"t":"Leg odometry, and Part II in review","book":"Ch 12"
+==
+{"t":"Leg odometry, 그리고 Part II 복습","book":"12장"
+@@ *
+{"t":"Boosting SLAM with deep learning","book":"Prelude III + Ch 13"
+==
+{"t":"딥러닝으로 SLAM 강화하기","book":"Prelude III + 13장"
+@@ *
+{"t":"NeRF and 3D Gaussian splatting as maps","book":"Ch 14"
+==
+{"t":"Map으로서의 NeRF와 3D Gaussian splatting","book":"14장"
+@@ *
+{"t":"Dynamic and deformable SLAM","book":"Ch 15"
+==
+{"t":"Dynamic SLAM과 deformable SLAM","book":"15장"
+@@ *
+{"t":"Metric-semantic SLAM","book":"Ch 16"
+==
+{"t":"Metric-semantic SLAM","book":"16장"
+@@ *
+{"t":"Open-world spatial AI and foundation models","book":"Ch 17"
+==
+{"t":"Open-world Spatial AI와 foundation model","book":"17장"
+@@ *
+{"t":"The computational structure of Spatial AI, and the whole course in review","book":"Ch 18 + Epilogue"
+==
+{"t":"Spatial AI의 계산 구조, 그리고 코스 전체 복습","book":"18장 + Epilogue"

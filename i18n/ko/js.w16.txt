@@ -1,0 +1,356 @@
+@@ w16
+"aria-label":"Left, world frame: a tilted body with three arrows from its centre, the acceleration, minus gravity pointing up, and their sum, the specific force. Right, body frame: the same specific force drawn against the body axes, which is the accelerometer reading."
+==
+"aria-label":"왼쪽, world frame: 기울어진 몸체의 중심에서 세 화살표가 나옵니다. 가속도, 위를 향하는 마이너스 gravity, 그리고 둘의 합인 specific force입니다. 오른쪽, body frame: 같은 specific force를 body 축에 대해 그린 것으로, 이것이 accelerometer 측정값입니다."
+@@ w16
+"Body frame: the reading"
+==
+"Body frame: 측정값"
+@@ w16
+stat("Accelerometer reads (x, z)",
+==
+stat("Accelerometer 측정값 (x, z)",
+@@ w16
+"Rᵀ(a − g), equation (11.1) without bias and noise"
+==
+"Rᵀ(a − g), bias와 noise를 뺀 식 (11.1)"
+@@ w16
+stat("Length of the reading",
+==
+stat("측정값의 길이",
+@@ w16
+"9.81 only when the acceleration is zero"
+==
+"가속도가 0일 때만 9.81"
+@@ w16
+stat("Pitch you would infer assuming rest",n<0.05?"undefined":
+==
+stat("정지라고 가정할 때 추정되는 pitch",n<0.05?"정의되지 않음":
+@@ w16
+"true pitch "+th+"°"
+==
+"실제 pitch "+th+"°"
+@@ w16
+range("Horizontal acceleration",
+==
+range("수평 가속도",
+@@ w16
+range("Vertical acceleration",
+==
+range("수직 가속도",
+@@ w16
+h("div",{class:"vt"},"What the accelerometer reads")
+==
+h("div",{class:"vt"},"accelerometer가 측정하는 것")
+@@ w16
+"A body in the vertical plane with a two-axis accelerometer. The reading is the specific force a − g, expressed in the body's own axes."
+==
+"수직 평면 위에서 2축 accelerometer를 단 몸체입니다. 측정값은 specific force a − g를 몸체 자신의 축으로 나타낸 것입니다."
+@@ w16
+button("At rest",
+==
+button("정지",
+@@ w16
+button("Free fall",
+==
+button("자유 낙하",
+@@ w16
+"acceleration a"
+==
+"가속도 a"
+@@ w16
+"−g (up, 9.81)"
+==
+"−g (위, 9.81)"
+@@ w16
+aria:"Log-log plot of Allan deviation against averaging time. It falls with slope minus one half while white noise dominates and rises with slope plus one half once the bias random walk dominates."
+==
+aria:"평균 시간에 대한 Allan deviation의 log-log 그래프. white noise가 우세한 동안은 기울기 마이너스 2분의 1로 내려가고, bias random walk가 우세해지면 기울기 플러스 2분의 1로 올라갑니다."
+@@ w16
+label:"averaging time τ (s), log scale"
+==
+label:"평균 시간 τ (s), log 눈금"
+@@ w16
+name:"measured from the simulated record"
+==
+name:"시뮬레이션 기록에서 측정"
+@@ w16
+name:"model √(N²/τ + K²τ/3)"
+==
+name:"모델 √(N²/τ + K²τ/3)"
+@@ w16
+stat("Allan deviation at τ = 1 s",
+==
+stat("τ = 1 s에서 Allan deviation",
+@@ w16
+"the white-noise line predicts N = "
+==
+"white-noise 직선의 예측: N = "
+@@ w16
+stat("Model curve bottoms out at",K>0?(Math.sqrt(3)*N/K).toFixed(1)+" s":"never"
+==
+stat("모델 곡선의 최저점",K>0?(Math.sqrt(3)*N/K).toFixed(1)+" s":"없음"
+@@ w16
+stat("Record","10 min at 100 Hz","only 12 averages fit at τ = 50 s")
+==
+stat("기록","100 Hz로 10분","τ = 50 s에서는 평균 12개뿐")
+@@ w16
+h("div",{class:"vt"},"Allan deviation of a gyro at rest")
+==
+h("div",{class:"vt"},"정지한 gyro의 Allan deviation")
+@@ w16
+"Simulates 60,000 samples of white noise plus a random-walking bias, averages them in blocks of length τ, and plots how much neighbouring block averages differ."
+==
+"white noise에 random walk하는 bias를 더한 샘플 60,000개를 시뮬레이션하고, 길이 τ의 블록으로 평균한 뒤, 이웃한 블록 평균이 얼마나 다른지 그립니다."
+@@ w16
+button("New noise",
+==
+button("새 noise",
+@@ w16
+"aria-label":"Side view of a vehicle driving over two hills: the true path and the path obtained by integrating the simulated gyroscope and accelerometer"
+==
+"aria-label":"두 언덕을 넘는 차량을 옆에서 본 모습: 실제 경로와, 시뮬레이션한 gyroscope와 accelerometer를 적분해 얻은 경로"
+@@ w16
+"true end"
+==
+"실제 끝점"
+@@ w16
+"IMU end"
+==
+"IMU 끝점"
+@@ w16
+"scale: "+(100/s).toFixed(1)+" m per 100 px"
+==
+"축척: 100 px당 "+(100/s).toFixed(1)+" m"
+@@ w16
+aria:"Position error of dead reckoning against time, with the cubic curve predicted for a gyroscope bias and the quadratic curve predicted for an accelerometer bias"
+==
+aria:"시간에 따른 dead reckoning의 위치 오차. gyroscope bias로 예측되는 3차 곡선과 accelerometer bias로 예측되는 2차 곡선을 함께 그렸습니다."
+@@ w16
+label:"time (s)"
+==
+label:"시간 (s)"
+@@ w16
+label:"position error (m)"
+==
+label:"위치 오차 (m)"
+@@ w16
+name:"simulated error"
+==
+name:"시뮬레이션 오차"
+@@ w16
+name:"gyro-bias model g·b·t³/6"
+==
+name:"gyro bias 모델 g·b·t³/6"
+@@ w16
+name:"accel-bias model ½·b·t²"
+==
+name:"accel bias 모델 ½·b·t²"
+@@ w16
+stat("Position error after 20 s",
+==
+stat("20 s 후 위치 오차",
+@@ w16
+"integrated path vs true path"
+==
+"적분 경로 vs 실제 경로"
+@@ w16
+stat("Tilt error after 20 s",
+==
+stat("20 s 후 기울기 오차",
+@@ w16
+"leaks g·sin(tilt) = "+(G16*Math.abs(Math.sin(tilt))).toFixed(2)+" m/s² sideways"
+==
+"옆으로 새는 g·sin(tilt) = "+(G16*Math.abs(Math.sin(tilt))).toFixed(2)+" m/s²"
+@@ w16
+stat("Gyro bias alone predicts",
+==
+stat("gyro bias만 있을 때 예측",
+@@ w16
+stat("Accel bias alone predicts",
+==
+stat("accel bias만 있을 때 예측",
+@@ w16
+h("div",{class:"vt"},"Dead reckoning with a planar IMU")
+==
+h("div",{class:"vt"},"평면 IMU로 하는 dead reckoning")
+@@ w16
+"A vehicle drives 40 m over two hills in 20 s. A 100 Hz gyroscope and accelerometer are simulated and integrated with equation (11.12), starting from the exact initial state."
+==
+"차량이 20 s 동안 두 언덕을 넘어 40 m를 달립니다. 100 Hz gyroscope와 accelerometer를 시뮬레이션하고, 정확한 초기 state에서 출발해 식 (11.12)로 적분합니다."
+@@ w16
+select("Gyro output ",
+==
+select("Gyro 출력 ",
+@@ w16
+["avg","average rate over each 10 ms"]
+==
+["avg","10 ms 구간의 평균 각속도"]
+@@ w16
+["inst","instantaneous sample every 10 ms"]
+==
+["inst","10 ms마다 순간 샘플"]
+@@ w16
+"true path"
+==
+"실제 경로"
+@@ w16
+"integrated IMU"
+==
+"IMU 적분"
+@@ w16
+"aria-label":"The predicted position of keyframe j drawn two ways: as the curved path from naive integration, and as a chain of three arrows, initial velocity times time, the gravity drop, and the rotated preintegrated position increment. Both end at the same point."
+==
+"aria-label":"keyframe j의 예측 위치를 두 가지로 그린 그림: naive integration으로 얻은 곡선 경로, 그리고 세 화살표의 사슬(초기 속도 곱하기 시간, gravity에 의한 낙하, 회전된 preintegrated 위치 increment). 둘은 같은 점에서 끝납니다."
+@@ w16
+stat("Position of j, naive integration",
+==
+stat("j의 위치, naive integration",
+@@ w16
+"100 samples integrated again"
+==
+"샘플 100개를 다시 적분"
+@@ w16
+stat("Position of j, from the increments",
+==
+stat("j의 위치, increment로 계산",
+@@ w16
+"one line: pᵢ + vᵢΔt + ½gΔt² + RᵢΔp"
+==
+"한 줄: pᵢ + vᵢΔt + ½gΔt² + RᵢΔp"
+@@ w16
+stat("Difference",
+==
+stat("차이",
+@@ w16
+"floating-point round-off"
+==
+"부동소수점 반올림 오차"
+@@ w16
+stat("IMU samples read so far",
+==
+stat("지금까지 읽은 IMU 샘플",
+@@ w16
+h("div",{class:"vt"},"Preintegration: integrate once, reuse for any starting state")
+==
+h("div",{class:"vt"},"Preintegration: 한 번 적분해 어떤 시작 state에도 재사용")
+@@ w16
+"One second of IMU data (100 samples) between keyframes i and j. The sliders play the optimizer changing its estimate of the state at i."
+==
+"keyframe i와 j 사이의 1초 분량 IMU 데이터(샘플 100개)입니다. 슬라이더는 optimizer가 i의 state 추정값을 바꾸는 역할을 합니다."
+@@ w16
+range("Orientation at i",
+==
+range("i의 orientation",
+@@ w16
+range("Velocity at i, x",
+==
+range("i의 속도, x",
+@@ w16
+range("Velocity at i, z",
+==
+range("i의 속도, z",
+@@ w16
+"Stored increments: Δθ = "
+==
+"저장된 increment: Δθ = "
+@@ w16
+"Their 1σ noise: δθ "
+==
+"increment의 1σ noise: δθ "
+@@ w16
+"Rᵢ Δp (stored increment)"
+==
+"Rᵢ Δp (저장된 increment)"
+@@ w16
+aria:"Error of the first-order corrected position increment against the size of the gyroscope bias update. It grows like the square of the update."
+==
+aria:"gyroscope bias 갱신량에 따른, 1차 보정한 위치 increment의 오차. 갱신량의 제곱에 비례해 커집니다."
+@@ w16
+label:"gyro bias update δb (°/s)"
+==
+label:"gyro bias 갱신 δb (°/s)"
+@@ w16
+label:"error of corrected Δp (mm)"
+==
+label:"보정된 Δp의 오차 (mm)"
+@@ w16
+name:"first-order correction"
+==
+name:"1차 보정"
+@@ w16
+stat("Δp error if the increments are left alone",
+==
+stat("increment를 그대로 둘 때 Δp 오차",
+@@ w16
+"no samples re-read"
+==
+"샘플을 다시 읽지 않음"
+@@ w16
+stat("Δp error after the first-order update",
+==
+stat("1차 갱신 후 Δp 오차",
+@@ w16
+"no samples re-read, 2 small matrix products"
+==
+"샘플을 다시 읽지 않음, 작은 행렬 곱 2번"
+@@ w16
+stat("Δp error after integrating again","0 mm","100 samples re-read")
+==
+stat("재적분 후 Δp 오차","0 mm","샘플 100개를 다시 읽음")
+@@ w16
+h("div",{class:"vt"},"A bias update without re-integration")
+==
+h("div",{class:"vt"},"재적분 없는 bias 갱신")
+@@ w16
+"The one-second increments were computed with bias estimate zero. The optimizer now changes the bias estimate. Compare the corrected Δp with a full re-integration."
+==
+"1초 분량의 increment는 bias 추정값 0으로 계산했습니다. 이제 optimizer가 bias 추정값을 바꿉니다. 보정된 Δp를 전체 재적분 결과와 비교해 보세요."
+@@ w16
+range("Gyro bias update δb",
+==
+range("Gyro bias 갱신 δb",
+@@ w16
+range("Accel bias update δb (body x)",
+==
+range("Accel bias 갱신 δb (body x)",
+@@ w16
+aria:"Position against time over two seconds: the exact curve, the rectangle-rule double integration, and the trapezoid-rule double integration"
+==
+aria:"2초 동안 시간에 따른 위치: 정확한 곡선, rectangle rule로 두 번 적분한 결과, trapezoid rule로 두 번 적분한 결과"
+@@ w16
+label:"position (mm)"
+==
+label:"위치 (mm)"
+@@ w16
+name:"exact"
+==
+name:"정확한 값"
+@@ w16
+stat("Euler RMSE, velocity",
+==
+stat("Euler RMSE, 속도",
+@@ w16
+stat("Euler RMSE, position",
+==
+stat("Euler RMSE, 위치",
+@@ w16
+stat("Trapezoid RMSE, velocity",
+==
+stat("Trapezoid RMSE, 속도",
+@@ w16
+stat("Trapezoid RMSE, position",
+==
+stat("Trapezoid RMSE, 위치",
+@@ w16
+h("div",{class:"vt"},"Integration accuracy against sampling rate")
+==
+h("div",{class:"vt"},"샘플링 주파수에 따른 적분 정확도")
+@@ w16
+"A known smooth acceleration is sampled, then integrated twice with known initial conditions, once with the rectangle rule and once assuming the acceleration is linear between samples."
+==
+"알려진 매끄러운 가속도를 샘플링한 뒤, 알려진 초기 조건에서 두 번 적분합니다. 한 번은 rectangle rule로, 한 번은 샘플 사이에서 가속도가 선형이라고 가정하고 적분합니다."
+@@ w16
+range("Sampling rate",
+==
+range("샘플링 주파수",

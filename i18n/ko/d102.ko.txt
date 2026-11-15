@@ -1,0 +1,180 @@
+@@ 1
+<span class="eyebrow">17주차 · 복습</span>
+@@ 2
+17주차 복습: visual-inertial 시스템이 알 수 있는 것과 알 수 없는 것
+@@ 3
+오늘이 끝나면 observability matrix를 만들고, 주어진 운동과 센서에서 aided inertial system의 unobservable 방향을 나열하고, sliding-window estimator가 그 방향을 어떻게 unobservable하게 유지하는지 설명할 수 있습니다.
+@@ 4
+카메라나 LiDAR로 보조한 IMU는 orientation, 속도, 위치, 두 bias, landmark를 추정합니다. 이를 linearize하면 error state는 transition matrix \(\boldsymbol{\Phi}\)를 따라 변하고, 각 측정에는 feature를 센서 기준으로만 보는 Jacobian이 있습니다. \(\mathbf{H}_{x_k}\boldsymbol{\Phi}_{(k,1)}\)을 쌓으면 observability matrix \(\mathbf{M}\)이 되며, 그 nullspace에는 언제나 네 방향, 즉 이동 셋과 gravity 축 둘레의 회전이 들어 있습니다. 이들은 world frame의 선택입니다. 어떤 운동은 그렇지 않은 방향을 더합니다. 회전이 없으면 tilt가 accelerometer bias에 숨고, 등가속도에 monocular 카메라라면 scale도 그곳에 숨으며, parallax가 없으면 feature depth를 잃습니다. 실용적인 VIO는 sliding window를 최적화하고, 오래된 state를 marginalize하며, marginalization이 yaw 정보를 만들어 내지 않도록 first-estimate Jacobian을 씁니다.
+@@ 5
+선형 시스템의 rank 검사
+@@ 6
+\(\mathbf{M} = [\mathbf{H};\ \mathbf{H}\boldsymbol{\Phi};\ \dots;\ \mathbf{H}\boldsymbol{\Phi}^{K-1}]\); \(\mathbf{u}\)가 unobservable \(\Leftrightarrow \mathbf{M}\mathbf{u} = \mathbf{0}\)
+@@ 7
+배경 지식 · <a href="#d97">Day 1</a>
+@@ 8
+=
+@@ 9
+\(\mathbf{x} = \{\mathbf{R}^w_b, \mathbf{b}^g, \mathbf{v}^w, \mathbf{b}^a, \mathbf{p}^w, \mathbf{x}^w_f\}\), 크기 \(15 + n_f\)의 error state
+@@ 10
+=
+@@ 11
+error-state dynamics
+@@ 12
+=
+@@ 13
+점 측정과 그 Jacobian
+@@ 14
+=
+@@ 15
+Plücker 직선
+@@ 16
+\(\mathbf{n}_\ell = \mathbf{p}_1\times\mathbf{p}_2\), \(\mathbf{v}_\ell = \mathbf{p}_2 - \mathbf{p}_1\), \(d_\ell = \norm{\mathbf{n}_\ell}/\norm{\mathbf{v}_\ell}\), 이미지 직선 \(\boldsymbol{\ell} = \mathbf{K}\mathbf{n}^c_\ell\)
+@@ 17
+=
+@@ 18
+sensor frame에서 본 평면
+@@ 19
+=
+@@ 20
+=
+@@ 21
+\(\mathbf{M}(\hat{\mathbf{x}}) = [\mathbf{H}_{x_1}\boldsymbol{\Phi}_{(1,1)};\ \dots;\ \mathbf{H}_{x_k}\boldsymbol{\Phi}_{(k,1)}]\); \(\mathbf{M}\T\boldsymbol{\Sigma}^{-1}\mathbf{M}\)와 nullspace가 같음
+@@ 22
+=
+@@ 23
+네 null vector (점 행)
+@@ 24
+이동: \(\tilde{\mathbf{p}} = \tilde{\mathbf{p}}_f = \mathbf{t}\); yaw: \(\tilde{\boldsymbol{\theta}} = \mathbf{R}^{c_1}_w\mathbf{g}\), \(\tilde{\mathbf{v}} = -\mathbf{v}_1\times\mathbf{g}\), \(\tilde{\mathbf{p}} = -\mathbf{p}_1\times\mathbf{g}\), \(\tilde{\mathbf{p}}_f = -\mathbf{p}_f\times\mathbf{g}\)
+@@ 25
+=
+@@ 26
+bias가 흡수할 수 있는 것
+@@ 27
+회전 \(\mathbf{Q}\): \(\mathbf{b}' = \mathbf{b}^a + \mathbf{R}\T(\mathbf{Q}\T - \mathbf{I})\mathbf{g}\); scale \(s\): \(\mathbf{b}' = \mathbf{b}^a - (s-1)\mathbf{R}\T\mathbf{a}^w\). 더해진 항이 상수이면 unobservable.
+@@ 28
+유도; Table 11.1, p. 326 · <a href="#d100">Day 4</a>
+@@ 29
+=
+@@ 30
+=
+@@ 31
+Q1. Day 1의 카트는 state가 \((p, v, b)\)이고 위치 센서가 있습니다. 완전히 observable해지는 최소 측정 횟수는 얼마입니까?
+@@ 32
+결코 그렇게 되지 않음
+@@ 33
+측정 한 번이 \(\mathbf{M}\)에 행을 하나 더합니다. 미지수가 셋이면 rank 3이 필요하고, \(k = 0, 1, 2\)에 대한 행 \([1, k, -k^2/2]\)는 독립입니다.
+@@ 34
+Q2. (11.41)의 \(\boldsymbol{\Phi}\)에서 위치 오차의 열에는 위치 행에 단위 블록 하나만 있습니다. 이것은 무엇을 뜻합니까?
+@@ 35
+위치 오차는 앞으로 복사될 뿐 다른 state에 영향을 주지 않는다
+@@ 36
+IMU가 위치를 직접 잰다
+@@ 37
+위치 오차는 시간이 지나면 줄어든다
+@@ 38
+위치 오차가 속도 오차로 바뀐다
+@@ 39
+IMU kinematics의 어떤 것도 로봇이 어디 있는지에 의존하지 않습니다. 초기 위치 오차는 크기가 그대로 유지되고 다른 어디에도 영향을 주지 않습니다.
+@@ 40
+Q3. 점이 \(\hat{\mathbf{p}}^c_f = (2, 0, 4)\T\)에 있습니다. pinhole bearing \((x/z, y/z)\)에서 \(\mathbf{H}_b\)의 첫 행은 무엇입니까?
+@@ 41
+\(\tfrac1z[1,\ 0,\ -x/z] = \tfrac14[1,\ 0,\ -0.5] = [0.25,\ 0,\ -0.125]\). 확인: \((2, 0, 4)\)를 곱하면 \(0.5 - 0.5 = 0\)입니다.
+@@ 42
+Q4. 직선의 Plücker coordinates 중 어느 부분이 그 이미지를 결정합니까?
+@@ 43
+방향 \(\mathbf{v}^c_\ell\)
+@@ 44
+moment \(\mathbf{n}^c_\ell\)
+@@ 45
+둘 다 똑같이
+@@ 46
+둘의 외적
+@@ 47
+\(\boldsymbol{\ell} = \mathbf{K}\mathbf{n}^c_\ell\). moment는 카메라 중심과 직선을 지나는 평면의 법선이고, 이미지 직선은 그 평면이 이미지와 만나는 곳입니다.
+@@ 48
+Q5. stereo 카메라와 IMU가 위치를 모르는 landmark 사이에서 일반적인 운동을 합니다. unobservable 방향은 몇 개입니까?
+@@ 49
+global 위치(3)와 yaw(1)입니다. stereo 카메라는 bearing뿐 아니라 range도 재지만, 그렇다고 시스템이 어떤 global frame에 묶이지는 않습니다.
+@@ 50
+Q6. monocular 카메라와 IMU를 단 드론이 회전 없이 등가속도로 직선 비행합니다. 추가로 unobservable해지는 양은 무엇입니까?
+@@ 51
+system scale만
+@@ 52
+각 feature의 depth만
+@@ 53
+global orientation과 system scale
+@@ 54
+gyroscope bias
+@@ 55
+회전 없음은 Table 11.1의 1행(global orientation)입니다. monocular 카메라에서 등가속도는 2행(system scale)입니다.
+@@ 56
+Q7. 스칼라 state \(x_0, x_1\): information 4인 \(x_0\)의 prior와 information 4인 odometry factor. \(x_0\)를 marginalize한 뒤 \(x_1\)에 대한 information은 얼마입니까?
+@@ 57
+\(\boldsymbol{\Lambda} = \begin{bmatrix} 8 & -4 \\ -4 & 4 \end{bmatrix}\)이므로 \(4 - (-4)\cdot\tfrac18\cdot(-4) = 2\)입니다. 분산은 0.5 = 0.25 + 0.25입니다.
+@@ 58
+Q8. first-estimate Jacobian은 무엇을 고정합니까?
+@@ 59
+가장 오래된 keyframe의 state 추정값
+@@ 60
+accelerometer bias
+@@ 61
+sliding window의 크기
+@@ 62
+marginalization prior에 참여하는 변수의 linearization point
+@@ 63
+추정값은 계속 바뀝니다. Jacobian을 계산하는 지점만 유지해서, prior와 새 factor가 같은 yaw null vector를 공유하게 합니다.
+@@ 64
+스스로 시험해 볼 수 있도록 실습을 다시 실었습니다. 설정을 바꾸기 전에, eigenvalue가 몇 개 0이 될지, 어떤 변화가 보이지 않을지 먼저 말해 보세요. 그다음 확인하세요.
+@@ 65
+눈여겨볼 점: 모든 답은 세 가지 질문에서 나옵니다. body가 회전하는가(아니라면 tilt가 목록에 추가됨)? body frame 가속도가 변하는가(아니고 카메라가 bearing만 잰다면 scale이 추가됨)? body가 조금이라도 이동하는가(아니고 카메라가 bearing만 잰다면 각 landmark의 depth가 추가됨)?
+@@ 66
+Day 1의 카트는 state가 \((p, v, b)\)이고, \(\boldsymbol{\Phi}^k = \begin{bmatrix} 1 & k & -k^2/2 \\ 0 & 1 & -k \\ 0 & 0 & 1 \end{bmatrix}\)이며, 속도 센서 \(\mathbf{H} = [0\ 1\ 0]\)이 있습니다. (a) 측정 세 번에 대한 \(\mathbf{M}\)을 쓰고 rank와 nullspace를 구하세요. (b) 위치 측정을 한 번 더하면 시스템이 observable해짐을 보이세요.
+@@ 67
+(a) \(k = 0, 1, 2\)에 대해 행은 \(\mathbf{H}\boldsymbol{\Phi}^k = [0, 1, -k]\)입니다:
+@@ 68
+3행은 (\(2\times\) 2행) − 1행과 같고 1행과 2행은 독립이므로 rank는 2입니다. 첫 열이 0이므로 nullspace는 \((1, 0, 0)\), 즉 초기 위치가 생성합니다.
+@@ 69
+(b) step \(k\)에서의 위치 측정은 행 \([1, k, -k^2/2]\)를 더합니다. 이 행과 \((1, 0, 0)\)의 곱은 0이 아니라 1이므로, 그 벡터는 더 이상 nullspace에 없습니다. nullspace는 차원이 1이었으므로 이제 \(\{\mathbf{0}\}\)이고 rank는 3입니다.
+@@ 70
+점이 \(\hat{\mathbf{p}}^c_f = (2, -1, 2)\T\) m에 있습니다. (a) \(\mathbf{H}_r\)과 pinhole \(\mathbf{H}_b\)를 계산하세요. (b) \(\mathbf{H}_b\hat{\mathbf{p}}^c_f = \mathbf{0}\)을 확인하세요. (c) 점이 센서의 \(x\)축을 따라 3 cm 움직입니다. range와 bearing은 얼마나 바뀝니까?
+@@ 71
+(a) \(\norm{\mathbf{p}} = \sqrt{4 + 1 + 4} = 3\)이므로 \(\mathbf{H}_r = [\tfrac23,\ -\tfrac13,\ \tfrac23]\)입니다. \(z = 2\), \(x/z = 1\), \(y/z = -0.5\)이므로:
+@@ 72
+(b) 첫 행: \(0.5\cdot 2 - 0.5\cdot 2 = 0\). 둘째 행: \(0.5\cdot(-1) + 0.25\cdot 2 = 0\).
+@@ 73
+(c) \(\delta\mathbf{p} = (0.03, 0, 0)\). range: \(\tfrac23 \times 0.03 = 0.02\) m. bearing: 정규화 이미지 좌표에서 \((0.5 \times 0.03,\ 0) = (0.015,\ 0)\).
+@@ 74
+수평면에서 생각하므로 gravity는 들어오지 않습니다. 로봇은 회전하지 않고(\(\mathbf{R} = \mathbf{I}\)), 원점에서 속도 \((1, 0)\) m/s로 출발하며, 일정한 가속도 \((0.2, 0)\) m/s²를 가집니다. accelerometer bias는 \((0.05, 0)\) m/s²입니다. landmark는 \((4, 2)\) m에 있고 카메라는 bearing만 잽니다. (a) 해의 scale을 \(s = 2\)로 바꾸세요. 새 속도, landmark, 그리고 accelerometer 측정값을 바꾸지 않는 bias를 구하세요. (b) \(t = 2\) s의 bearing이 두 해에서 같음을 확인하세요. (c) 이제 가속도가 처음 1초 동안 0.2 m/s², 그 뒤에는 0.6 m/s²입니다. \(s \ne 1\)인 어떤 해도 맞지 않음을 보이세요.
+@@ 75
+(a) 속도 \((2, 0)\), 가속도 \((0.4, 0)\), landmark \((8, 4)\). 측정값은 \(\mathbf{a} + \mathbf{b} = (0.25, 0)\)입니다. scale을 바꾼 해는 \(0.4 + b'_x = 0.25\)가 필요하므로 \(\mathbf{b}' = (-0.15, 0)\)입니다. 이것은 \(\mathbf{b}' = \mathbf{b} - (s-1)\mathbf{a}\)입니다.
+@@ 76
+(b) 원래 해: \(x(2) = 1\cdot 2 + \tfrac12\cdot 0.2\cdot 4 = 2.4\)이므로 bearing은 \(\operatorname{atan2}(2,\ 4 - 2.4) = \operatorname{atan2}(2, 1.6) \approx 51.3^\circ\)입니다. scale을 바꾼 해: \(x(2) = 4.8\), bearing은 \(\operatorname{atan2}(4,\ 8 - 4.8) = \operatorname{atan2}(4, 3.2) \approx 51.3^\circ\)입니다.
+@@ 77
+(c) 측정값은 \(0.25\), 그다음 \(0.65\)입니다. scale을 바꾼 해는 하나의 상수 \(b'_x\)로 \(0.2s + b'_x = 0.25\)와 \(0.6s + b'_x = 0.65\)를 함께 만족해야 합니다. 빼면 \(0.4s = 0.4\)이므로 \(s = 1\)입니다. 가속도의 변화가 scale을 고정합니다. bias는 상수만 흡수할 수 있습니다.
+@@ 78
+스칼라 위치 세 개 \(x_0, x_1, x_2\)가 odometry factor 두 개 \(x_1 - x_0 = u_1\)과 \(x_2 - x_1 = u_2\)로 이어져 있고, 각각 information이 1입니다. prior는 없습니다. (a) \(3\times 3\) information matrix를 쓰고 \((1, 1, 1)\)이 null vector임을 보이세요. (b) \(x_0\)를 marginalize하고 결과가 여전히 null vector \((1, 1)\)을 가짐을 보이세요. (c) inconsistent한 relinearization이 결과의 \((x_1, x_1)\) 원소에 0.1을 더한다고 합시다. estimator가 이제 보고하는 \(x_2\)의 분산은 얼마이고, 원래는 얼마여야 합니까?
+@@ 79
+(a) 각 factor는 자기 두 변수에 \(\begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}\)을 더합니다:
+@@ 80
+세 위치를 함께 옮겨도 어떤 측정도 바뀌지 않습니다.
+@@ 81
+(b) \(\Lambda_{mm} = 1\), \(\boldsymbol{\Lambda}_{rm} = (-1, 0)\T\), \(\boldsymbol{\Lambda}_{rr} = \begin{bmatrix} 2 & -1 \\ -1 & 1 \end{bmatrix}\). Schur complement는 \(\boldsymbol{\Lambda}_{rm}\Lambda_{mm}^{-1}\boldsymbol{\Lambda}_{mr} = \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix}\)을 뺍니다:
+@@ 82
+(c) 행렬은 \(\begin{bmatrix} 1.1 & -1 \\ -1 & 1 \end{bmatrix}\)가 되고 행렬식은 \(1.1 - 1 = 0.1\)입니다. 이제 가역이고 역행렬은 \(\tfrac{1}{0.1}\begin{bmatrix} 1 & 1 \\ 1 & 1.1 \end{bmatrix}\)이므로, 보고되는 \(x_2\)의 분산은 11입니다. 올바른 답은 "무한대"입니다. 사슬이 어디에 있는지 말해 주는 측정은 없습니다. 작은 inconsistency 하나가 unobservable 방향을 자신만만한 추정값으로 바꿔 버렸습니다. first-estimate Jacobian이 막는 일을 1차원으로 그린 그림이 이것입니다.
+@@ 83
+작은 선형 시스템의 \(\mathbf{M}\)을 만들고 그 rank와 nullspace를 읽을 수 있습니다.
+@@ 84
+AINS state를 책의 순서로 쓰고, \(\boldsymbol{\Phi}\)와 \(\mathbf{H}_f\)의 각 블록이 무엇을 뜻하는지 말할 수 있습니다.
+@@ 85
+네 unobservable 방향을 말하고, gravity 축 둘레의 회전은 그중 하나인데 roll과 pitch는 아닌 이유를 설명할 수 있습니다.
+@@ 86
+Table 11.1의 각 행에 대해 무엇을 잃는지, 그리고 어떤 메커니즘(bias 흡수 또는 parallax 부재) 때문인지 말할 수 있습니다.
+@@ 87
+sliding-window VIO의 factor graph를 그리고, Schur complement로 state 하나를 marginalize할 수 있습니다.
+@@ 88
+linearization point를 섞으면 estimator가 yaw에 대해 과신하게 되는 이유를 두 문장으로 설명할 수 있습니다.
+@@ 89
+<em>SLAM Handbook</em>, 11장, §11.3–§11.5, pp. 319–332.
+@@ 90
+Kailath, <em>Linear Systems</em>, 1980 (rank 검사); Huang, Mourikis, Roumeliotis, <em>Observability-based Rules for Designing Consistent EKF SLAM Estimators</em>, 2010 (consistency); Barfoot, <em>State Estimation for Robotics</em>, 2017 (marginalization).

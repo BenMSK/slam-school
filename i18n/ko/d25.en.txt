@@ -1,0 +1,218 @@
+@@ 1
+<span class="eyebrow">Week 5 · Day 1</span>
+@@ 2
+Why continuous time, and trajectories built from splines
+@@ 3
+After today you can say when a trajectory is better stored as a function of time than as a list of poses, build a B-spline curve from its basis functions, and name the coefficients that one measurement touches.
+@@ 4
+About 60 min · Read §2.2 (opening) and §2.2.1, pp. 62–65 (3 pages) · Needs Week 3 Day 1
+@@ 5
+Read first: §2.2 opening and §2.2.1, pp. 62–65
+@@ 6
+Start at the heading "2.2 Continuous-Time Trajectories" near the bottom of p. 62 and stop at the heading "2.2.2" on p. 65. While you read, look for:
+@@ 7
+The three kinds of time that the last paragraph before §2.2.1 tells you to keep apart (p. 63).
+@@ 8
+Equation (2.36) and the phrase "local support" (p. 63).
+@@ 9
+In Figure 2.3 (p. 64), how many coefficient variables each black measurement dot is connected to.
+@@ 10
+What you need from the solver to put an uncertainty on a queried pose (top of p. 65).
+@@ 11
+Instead of estimating one pose per measurement, estimate a small set of coefficients that define a smooth function \(\mathbf{p}(t)\), and evaluate that function at whatever instant a sensor fired. If the function is a sum of basis functions that are each nonzero for only a short time, every measurement still touches only a handful of unknowns, so the factor graph stays sparse.
+@@ 12
+1. One pose per measurement does not scale
+@@ 13
+Until now every measurement was attached to a pose variable at its own time stamp. That works when a camera delivers a few frames per second. It breaks down in three situations the book lists. <span class="src">§2.2 · pp. 62–63</span>
+@@ 14
+<strong>High-rate sensors.</strong> Suppose an inertial measurement unit reports 200 times a second. One minute of driving would need 12,000 pose variables for that sensor alone.
+@@ 15
+<strong>Asynchronous sensors.</strong> A camera and a lidar rarely fire at the same instants, so each would need its own poses.
+@@ 16
+<strong>Motion-distorted sensors.</strong> A spinning lidar, a radar, or a rolling-shutter camera collects one "frame" over a stretch of time while the robot moves. Every point or pixel row has its own time stamp, and strictly each one was taken from a different pose.
+@@ 17
+A <strong>continuous-time trajectory</strong> is a function \(\mathbf{p}(t)\) that returns the pose at any time \(t\). It is defined by far fewer variables than there are measurements. It also lets you ask for the pose at times when nothing was measured: between measurements (interpolation) or, with caution, after the last one (extrapolation). <span class="src">§2.2 · p. 63</span>
+@@ 18 attr
+Three horizontal time lines stacked. Top: measurement times, about forty irregular ticks. Middle: estimation variables, seven evenly spaced circles. Bottom: query times, three diamonds at arbitrary places.
+@@ 19
+Measurement times
+@@ 20
+set by the sensors
+@@ 21
+Estimation variables
+@@ 22
+set by you
+@@ 23
+Query times
+@@ 24
+set by the user of the result
+@@ 25
+In discrete-time SLAM the three rows are the same set of times. A continuous-time trajectory lets each be chosen for its own reason. The book calls this separation a major advantage of both families of methods you meet this week.
+@@ 26
+2. A trajectory as a weighted sum of basis functions
+@@ 27
+The <strong>parametric</strong> way to build \(\mathbf{p}(t)\) is to fix \(K\) known functions of time, the <strong>temporal basis functions</strong> \(\boldsymbol{\Psi}_k(t)\), and add them up with unknown weights, the <strong>coefficients</strong> \(\mathbf{c}_k\):
+@@ 28
+The coefficients are the estimation variables. The basis functions are chosen once and never change. For now \(\mathbf{p}\) is an ordinary vector, such as a position. Poses on a Lie group come on <a href="#d29">Day 5</a>. <span class="src">§2.2.1 · p. 63</span> In the simplest case every component of \(\mathbf{p}\) uses the same scalar function \(\psi_k(t)\), so \(\boldsymbol{\Psi}_k(t) = \psi_k(t)\,\mathbf{I}\). The book makes that simplification itself in equation (2.53).
+@@ 29
+Here is the smallest useful example. Put knots at \(t = 0, 1, 2, \dots\) seconds and let \(\psi_k\) be a "hat" that is 1 at knot \(k\), falls linearly to 0 at the two neighbouring knots, and is 0 everywhere else. At \(t = 2.25\) only two hats are nonzero: \(\psi_2 = 0.75\) and \(\psi_3 = 0.25\). With \(c_2 = 4\) and \(c_3 = 8\),
+@@ 30
+That is linear interpolation between the coefficients. The curve is continuous but has corners at the knots, so its velocity jumps. Smoother basis functions fix that.
+@@ 31
+3. B-splines and local support
+@@ 32
+A <strong>spline</strong> is a function made of polynomial pieces joined at <strong>knots</strong>. A basis function has <strong>local support</strong> if it is zero outside a short interval. <span class="src">§2.2.1 · p. 63</span> The standard family with both properties is the <strong>B-spline</strong>. The book names it but does not construct it, so here is the construction.
+@@ 33
+Filling the gap: the B-spline recursion
+@@ 34
+Measure time in knot intervals, so the knots are the integers. The B-spline of degree 0 that starts at knot \(k\) is a box:
+@@ 35
+Each higher degree is a blend of two neighbours of the degree below, with weights that are linear in \(t\). This is the <strong>Cox–de Boor recursion</strong>, written here for evenly spaced knots:
+@@ 36
+Do one step by hand with \(k=0\), \(d=1\): \(B_{0,1}(t) = t\,B_{0,0}(t) + (2-t)\,B_{1,0}(t)\), which equals \(t\) on \([0,1)\) and \(2-t\) on \([1,2)\). That is the hat from section 2. Each step makes the function one interval wider and one derivative smoother:
+@@ 37
+Degree d
+@@ 38
+Nonzero over
+@@ 39
+Functions nonzero at any time
+@@ 40
+What is continuous at the knots
+@@ 41
+1 interval
+@@ 42
+nothing (the curve jumps)
+@@ 43
+1 (linear)
+@@ 44
+2 intervals
+@@ 45
+position
+@@ 46
+2 (quadratic)
+@@ 47
+3 intervals
+@@ 48
+position, velocity
+@@ 49
+3 (cubic)
+@@ 50
+4 intervals
+@@ 51
+position, velocity, acceleration
+@@ 52
+Two more facts hold for every degree: the functions are never negative, and at any time the nonzero ones add up to exactly 1. So \(\mathbf{p}(t)\) is always a weighted average of the nearby coefficients.
+@@ 53
+For the cubic case, write \(u \in [0,1)\) for the fraction of the current knot interval that has passed. Running the recursion three times gives the four weights, from the oldest active coefficient to the newest:
+@@ 54
+Worked example. Take four active coefficients \(0, 3, 6, 3\) and the middle of the interval, \(u = 0.5\). The weights are \(0.0208,\ 0.4792,\ 0.4792,\ 0.0208\) (they sum to 1), so
+@@ 55
+Try it: move the time slider and watch which basis functions light up. Then drag a coefficient up and down. Change the degree and repeat.
+@@ 56
+Notice that at degree 3 exactly four basis functions are nonzero at any time (0.057, 0.590, 0.348, 0.004 at the starting position) and they sum to 1. Dragging a coefficient changes the curve only inside the shaded band, four knot intervals wide. The widget shifts each function so that function \(k\) peaks at \(t = k\).
+@@ 57
+Think of a row of people holding a long flexible rod. Each person can lift or lower only the part of the rod near them. The coefficients are how high each person holds their hands. The rod is the trajectory. No single person decides the shape anywhere, and no person affects the rod far away.
+@@ 58
+4. What one measurement touches
+@@ 59
+Suppose the robot observes landmark \(\boldsymbol{\ell}\) at time \(t_i\). The measurement model is the same as before, except that the pose is read off the trajectory at that instant: <span class="src">§2.2.1 · pp. 63–64</span>
+@@ 60
+The sum looks like it involves all \(K\) coefficients. It does not: with local support, \(\boldsymbol{\Psi}_k(t_i)\) is zero for all but a few \(k\). Collect those active coefficients and the landmark in \(\mathbf{x}_i\), and the model is again \(\mathbf{z}_i = \mathbf{h}_i(\mathbf{x}_i) + \boldsymbol{\eta}_i\), equation (2.39), which is the form every factor has had since <a href="#d8">Week 2 · Day 2</a>. With cubic B-splines a landmark measurement becomes a factor on five variables: four coefficients and one landmark. The book calls it a quinary factor (Figure 2.3).
+@@ 61
+Filling the gap: the Jacobian with respect to a coefficient
+@@ 62
+To linearize you need the derivative of the residual with respect to each \(\mathbf{c}_k\). The chain rule gives it in one line. Let \(\mathbf{H}_i = \partial \mathbf{h}_i / \partial \mathbf{p}\) be the Jacobian you would have used for a pose variable. Since \(\mathbf{p}(t_i)\) is linear in the coefficients,
+@@ 63
+For a cubic B-spline this is \(\mathbf{H}_i\) times one of the four numbers \(w_0,\dots,w_3\), and zero for every other coefficient. Nothing else in the Gauss-Newton machinery changes.
+@@ 64 attr
+Sparsity pattern of a Jacobian. Six rows, one per measurement in time order, and nine columns, one per spline coefficient. Each row has four adjacent filled cells, and the filled group slides to the right as time increases.
+@@ 65
+z₁ at t₁
+@@ 66
+z₂ at t₂
+@@ 67
+z₃ at t₃
+@@ 68
+z₄ at t₄
+@@ 69
+z₅ at t₅
+@@ 70
+z₆ at t₆
+@@ 71
+time order of the measurements runs down, coefficients run across
+@@ 72
+The coefficient part of the Jacobian for six measurements on a cubic B-spline with nine coefficients. Every row has four nonzero blocks, however many measurements there are. Two measurements in the same knot interval (rows 1 and 2) share the same four coefficients.
+@@ 73
+5. Velocity and queries come for free
+@@ 74
+Because the coefficients do not depend on time, differentiating the trajectory only differentiates the basis functions: <span class="src">§2.2.1 · p. 64</span>
+@@ 75
+So a sensor that measures velocity, or acceleration, gives a factor on the same coefficients. For the cubic weights above, with knot spacing \(T\) seconds, \(\dot w_0 = -\tfrac{1}{2T}(1-u)^2\), \(\dot w_1 = \tfrac{1}{2T}(3u^2-4u)\), \(\dot w_2 = \tfrac{1}{2T}(-3u^2+2u+1)\), \(\dot w_3 = \tfrac{1}{2T}u^2\). In the worked example (\(T = 1\) s, \(u=0.5\)) these are \(-0.125, -0.625, 0.625, 0.125\), and the velocity is \(3\cdot(-0.625) + 6\cdot 0.625 + 3\cdot 0.125 = 2.25\) units per second.
+@@ 76
+After MAP inference you can evaluate (2.36) or (2.40) at any time. The uncertainty follows too. Stack the active weights at the query time in a row \(\boldsymbol{\Psi}(t)\) and let \(\boldsymbol{\Sigma}_c\) be the marginal covariance of the active coefficients. Because the map from coefficients to pose is linear, the rule for a linear function of a Gaussian from <a href="#d2">Week 1 · Day 2</a> gives
+@@ 77
+Only the marginal over the few active coefficients is needed, not the whole covariance. <span class="src">§2.2.1 · p. 65</span> Example with the hats of section 2: at the midpoint the weights are \((0.5, 0.5)\). If the two coefficients each have variance 0.04 and covariance 0.01, the queried value has variance \(0.25\cdot0.04 + 0.25\cdot0.04 + 2\cdot0.25\cdot0.01 = 0.025\).
+@@ 78
+<strong>"The coefficients are poses on the trajectory."</strong> Only for the linear hat functions. A cubic B-spline does not pass through its coefficients: at a knot (\(u = 0\)) the weights are \(\tfrac16, \tfrac46, \tfrac16\), so the curve is a blend of three of them.
+@@ 79
+<strong>"Continuous time means infinitely many unknowns."</strong> The unknowns are the \(K\) coefficients. The function is continuous; the list of variables is finite and usually shorter than in discrete time.
+@@ 80
+<strong>"Local support is only a convenience."</strong> It is what keeps each factor small. With basis functions that are nonzero everywhere, such as sines, every measurement would touch every coefficient and the sparsity of <a href="#d13">Week 3 · Day 1</a> would be lost.
+@@ 81
+Q1. A trajectory is a cubic B-spline. One landmark is observed at one time stamp. How many variables does the resulting factor connect?
+@@ 82
+2: one pose and one landmark
+@@ 83
+K + 1, all coefficients and the landmark
+@@ 84
+Four basis functions are nonzero at any time, so four coefficients are active, plus the landmark: a five-way factor, as in Figure 2.3.
+@@ 85
+Q2. At a knot of a cubic B-spline (u = 0) the three active coefficients are 1, 4, and 7. What is the value of the curve there?
+@@ 86
+At u = 0 the weights are 1/6, 4/6, 1/6 (the fourth is 0). So p = (1 + 16 + 7)/6 = 4.
+@@ 87
+Q3. A cubic B-spline has knots every 0.5 s. You change one coefficient. Over how long a stretch of time can the trajectory change?
+@@ 88
+The whole trajectory
+@@ 89
+A cubic basis function is nonzero over four knot intervals: 4 × 0.5 s = 2 s. Outside that window its weight is zero.
+@@ 90
+Q4. A rolling-shutter camera exposes each image row at a slightly different time. What does a continuous-time trajectory let you do that one pose per image does not?
+@@ 91
+Remove the need for a camera model
+@@ 92
+Evaluate the pose at each row's own time stamp without adding variables
+@@ 93
+Avoid linearizing the measurement model
+@@ 94
+Make every factor involve all coefficients
+@@ 95
+Each pixel's residual uses p(t) at that pixel's time. The unknowns are still the same few coefficients.
+@@ 96
+Q5. A wheel encoder measures speed. To use it with a spline trajectory you need
+@@ 97
+a second spline with its own coefficients for velocity
+@@ 98
+the time derivatives of the basis functions, applied to the same coefficients
+@@ 99
+finite differences of neighbouring pose variables
+@@ 100
+a higher-degree spline, because cubic splines have no velocity
+@@ 101
+Equation (2.40): the velocity is the sum of the differentiated basis functions times the same coefficients.
+@@ 102
+Continuous-time trajectories separate measurement times, estimation variables, and query times.
+@@ 103
+Parametric form: \(\mathbf{p}(t) = \sum_k \boldsymbol{\Psi}_k(t)\,\mathbf{c}_k\), equation (2.36). The coefficients are the unknowns.
+@@ 104
+B-splines of degree \(d\) come from the Cox–de Boor recursion. Exactly \(d+1\) are nonzero at any time, and they sum to 1.
+@@ 105
+Local support means a measurement at \(t_i\) is a factor on the few active coefficients; its Jacobian is \(\mathbf{H}_i\boldsymbol{\Psi}_k(t_i)\).
+@@ 106
+Derivatives and queried covariances come from the same coefficients, through \(\dot{\boldsymbol{\Psi}}_k\) and \(\boldsymbol{\Psi}\boldsymbol{\Sigma}_c\boldsymbol{\Psi}\T\).
+@@ 107
+<em>SLAM Handbook</em>, §2.2 "Continuous-Time Trajectories" (opening) and §2.2.1 "Splines", pp. 62–65, equations (2.36)–(2.40), Figure 2.3.
+@@ 108
+The B-spline recursion, the partition-of-unity property, and the uniform cubic weights follow de Boor, <em>A Practical Guide to Splines</em>, 1978.
+@@ 109
+The sensor rates in section 1 are illustrative numbers chosen for the example, not figures from the book.

@@ -1,0 +1,192 @@
+@@ 1
+<span class="eyebrow">Week 11 · Day 3</span>
+@@ 2
+The camera model: from a 3D point to a pixel, and back to a ray
+@@ 3
+After today you can project a 3D point to a pixel with the pinhole model, unproject a pixel to a ray, apply and undo radial distortion, and say which lens needs which model.
+@@ 4
+About 60 min · Read §7.3.1, pp. 197–200 (4 pages) · Needs Week 11 Day 2
+@@ 5
+Read first: §7.3.1, pp. 197–200
+@@ 6
+The projection function \(\pi\) and the unprojection \(\pi^{-1}\), and the phrase "only known up to scale" (p. 198).
+@@ 7
+The four pinhole parameters and what each means (p. 198).
+@@ 8
+Why the radial-tangential model has no analytical unprojection (p. 199).
+@@ 9
+Which model the book suggests for lenses up to 180° and beyond 180° (p. 199), and what a rolling shutter is (p. 200).
+@@ 10
+A camera model is a function \(\pi\) that maps a 3D point in the camera's frame to a pixel, using a handful of calibrated numbers. Going forward is a division by depth. Going back is impossible for a point and possible only for a ray, because the division threw the depth away. Every visual measurement model in the rest of the chapter is built on \(\pi\).
+@@ 11
+1. Projection and unprojection
+@@ 12
+A camera model has a <strong>geometric</strong> part, saying where a 3D point lands in the image, and a <strong>photometric</strong> part, saying how bright the pixel gets. <span class="src">§7.3.1 · p. 197</span> The geometric part is the <strong>projection function</strong>
+@@ 13
+Here \(\mathbf{x}^c\) is the point in <strong>camera coordinates</strong> (origin at the camera, \(z\) pointing forward along the optical axis), \(\mathbf{z}\) is its pixel position in the image domain \(\Omega\), and \(\boldsymbol{\xi}\) holds the <strong>intrinsic parameters</strong>, usually calibrated beforehand. The <strong>unprojection</strong> \(\mathbf{x}^c = \pi^{-1}(\mathbf{z}, \boldsymbol{\xi})\) returns a 3D ray: the depth is unknown, so the result is known only up to scale. <span class="src">§7.3.1.1 · p. 198</span>
+@@ 14
+Two notation warnings. In Part I, \(\boldsymbol{\xi}\) was a pose perturbation (<a href="#d21">Week 4 · Day 3</a>); in Chapter 7 it is the vector of camera intrinsics. And the book uses \(z\) both for the depth coordinate and, in bold, for the measurement \(\mathbf{z}\).
+@@ 15
+2. The pinhole model
+@@ 16
+The <strong>pinhole</strong> (also rectilinear or perspective) model suits narrow-angle lenses without distortion. <span class="src">§7.3.1.1 · p. 198</span>
+@@ 17
+\(f_u, f_v\) are the <strong>focal lengths</strong> in pixels, horizontally and vertically; with square pixels \(f_u \approx f_v\). \((u_0, v_0)\) is the <strong>principal point</strong>, the pixel where the optical axis meets the image.
+@@ 18 attr
+Side view of a pinhole camera. A ray from a 3D point at sideways offset x and depth z passes through the camera centre and crosses the image plane, which lies at distance f in front of the centre, at height f times x over z above the optical axis.
+@@ 19
+optical axis
+@@ 20
+image plane
+@@ 21
+3D point
+@@ 22
+camera centre
+@@ 23
+image point, at height f·x/z
+@@ 24
+The two triangles that share the camera centre are similar: (image height) / f = x / z.
+@@ 25
+Filling the gap: where the formula comes from, and the matrix form
+@@ 26
+<strong>Similar triangles.</strong> In the figure, the ray from the point through the camera centre crosses a plane at distance \(f\). The small triangle (legs \(f\) and the image height) and the large one (legs \(z\) and \(x\)) have the same angles, so image height \(= f\,x/z\). The same holds for \(y\).
+@@ 27
+<strong>Pixels.</strong> A sensor counts pixels from a corner of the image, not from the optical axis, so the principal point is added. If the lens has focal length 4 mm and pixels are 5 µm wide, then \(f_u = 4\,\text{mm} / 0.005\,\text{mm} = 800\) pixels. This is why \(f\) is "in pixel units".
+@@ 28
+<strong>Example.</strong> \(f_u = f_v = 500\), \((u_0, v_0) = (320, 240)\), and \(\mathbf{x}^c = (0.4, -0.2, 2)\) m:
+@@ 29
+Unprojecting \((420, 190)\) gives \(\big(\tfrac{420-320}{500}, \tfrac{190-240}{500}, 1\big) = (0.2, -0.1, 1)\), which is \(\mathbf{x}^c/2\): the right direction, with the depth gone. The point \((4, -2, 20)\) lands on the same pixel.
+@@ 30
+<strong>Homogeneous coordinates.</strong> Represent the pixel \((u, v)\) by any triple \((\lambda u, \lambda v, \lambda)\) with \(\lambda \ne 0\), and write \(\sim\) for "equal up to a nonzero scale factor". Then the pinhole model is a matrix product:
+@@ 31
+Dividing by the last entry, \(z\), gives back \(\pi_p\). The matrix \(\mathbf{K}\) is the <strong>calibration matrix</strong>, and \(\pi_p^{-1}(\mathbf{z}) \sim \mathbf{K}^{-1}\begin{bmatrix} u & v & 1 \end{bmatrix}\T\). The \(\sim\) in the book's unprojection formula is this same symbol. Homogeneous coordinates turn the awkward division into linear algebra, which Day 5 uses to relate two views.
+@@ 32
+<strong>Field of view.</strong> A pixel at the image edge, \(W/2\) from the principal point, sees a ray at angle \(\arctan\frac{W/2}{f_u}\) from the axis. An image 640 pixels wide with \(f_u = 500\) has a horizontal field of view of \(2\arctan(0.64) \approx 65^\circ\).
+@@ 33
+3. Lens distortion
+@@ 34
+Real lenses bend straight lines. The most common correction is the <strong>radial-tangential</strong> model, which adds four parameters, \(\boldsymbol{\xi}_{RT} = \begin{bmatrix} \boldsymbol{\xi}_p\T & k_1 & k_2 & p_1 & p_2 \end{bmatrix}\T\), and inserts one step between the division and the scaling to pixels. <span class="src">§7.3.1.1 · pp. 198–199</span>
+@@ 35
+\((x', y')\) are <strong>normalized image coordinates</strong>: the pinhole image for \(f = 1\) and principal point at zero. The \(k\) terms are <strong>radial</strong>: they move a point along the line through the image center, by an amount that grows with the distance \(r\). The \(p\) terms are <strong>tangential</strong>, and model a lens that is slightly off-center or tilted.
+@@ 36
+Example: \(k_1 = -0.2\), all other coefficients zero, \(x' = 0.5\), \(y' = 0\). Then \(r^2 = 0.25\), the factor is \(1 - 0.05 = 0.95\), and \(x'' = 0.475\). With \(f_u = 500\) the pixel moves \(500 \times 0.025 = 12.5\) pixels toward the center.
+@@ 37
+Try it: slide \(k_1\) from negative to positive, then change the focal length.
+@@ 38
+Notice that negative \(k_1\) pulls the corners inward (barrel distortion) and positive \(k_1\) pushes them outward (pincushion). The center barely moves; the corner at \(r = 1\) moves 72 pixels at the default settings (\(0.18 \times 400\)). The last tile counts the iterations needed to undo the distortion for that corner.
+@@ 39
+Filling the gap: undoing distortion by iteration
+@@ 40
+To unproject a pixel you need \((x', y')\) from \((x'', y'')\). That means solving a polynomial of degree five in \(r\) (and worse with tangential terms), for which there is no formula. The book mentions Newton-Raphson. <span class="src">§7.3.1.1 · p. 199</span> An even simpler scheme works for moderate distortion. With radial terms only, the model says \(x' = x'' / (1 + k_1 r^2 + k_2 r^4)\), where \(r\) belongs to the unknown point. So guess, and repeat:
+@@ 41
+For the example above (\(x'' = 0.475\), \(k_1 = -0.2\)) the iterates are \(0.475 \to 0.49745 \to 0.49973 \to 0.49997\), heading to the true value 0.5. Systems that need this for every pixel compute it once and store a lookup table.
+@@ 42
+4. Wide-angle and fisheye lenses
+@@ 43
+A pinhole image point lies at distance \(f\tan\theta\) from the principal point, where \(\theta\) is the angle between the ray and the optical axis. As \(\theta \to 90^\circ\) this goes to infinity, so a pinhole-based model cannot represent rays from the side, let alone from behind. The book lists the usual choices (Figure 7.1 shows the lenses). <span class="src">§7.3.1.1 · pp. 198–199</span>
+@@ 44
+Parameters
+@@ 45
+Use
+@@ 46
+Unprojection
+@@ 47
+Pinhole
+@@ 48
+Narrow-angle lenses without distortion
+@@ 49
+Closed form
+@@ 50
+Radial-tangential
+@@ 51
+8: pinhole + \(k_1, k_2, p_1, p_2\)
+@@ 52
+Ordinary lenses with some distortion
+@@ 53
+Iterative
+@@ 54
+Brown-Conrady (as defined in the book)
+@@ 55
+6: pinhole + \(k_1, k_2\)
+@@ 56
+Wide-angle lenses, fields of view up to 180°
+@@ 57
+Kannala-Brandt (KB)
+@@ 58
+8: pinhole + \(k_1,\dots,k_4\)
+@@ 59
+Fisheye lenses beyond 180°
+@@ 60
+Double Sphere (DS)
+@@ 61
+Fisheye and wide-angle lenses
+@@ 62
+The KB model replaces \(\tan\theta\) by a polynomial in the angle itself:
+@@ 63
+With all \(k_n = 0\), a ray at \(\theta = 90^\circ\) lands at radius \(f\cdot\tfrac{\pi}{2}\), a finite number: about 471 pixels for \(f = 300\). The DS model projects the point onto two unit spheres in turn and then applies a shifted pinhole projection; the book reports it to be around five times faster to compute than KB at comparable reprojection error. <span class="src">§7.3.1.1 · p. 199</span>
+@@ 64
+The choice matters. A fisheye lens should get a spherical model and a rectilinear lens a linear one; an ill-suited model leaves systematic errors that bias the whole SLAM estimate. <span class="src">§7.3.1.4 · p. 200</span>
+@@ 65
+5. Brightness and time
+@@ 66
+The <strong>photometric model</strong> \(I = f(E, T)\) maps irradiance \(E\) (the light power arriving at a pixel) to the stored intensity \(I\), given camera settings \(T\): exposure time, gain, gamma correction, de-bayering, lens vignetting. It matters for methods that compare pixel brightness across images (the direct methods of Day 2) and for textured dense reconstruction. <span class="src">§7.3.1.2 · pp. 199–200</span>
+@@ 67
+Time matters too. A <strong>global shutter</strong> exposes all rows at once. A <strong>rolling shutter</strong>, found in most consumer cameras, reads the rows one after another, so each row is taken from a slightly different camera pose. Suppose read-out takes 30 ms while the camera turns at 60°/s: the last row is taken 1.8° later than the first, which at \(f = 500\) is a shift of \(500\tan 1.8^\circ \approx 16\) pixels. The remedies are a global-shutter camera, or a model with one pose per row, which becomes practical when an IMU measures the motion during the exposure. <span class="src">§7.3.1.3 · p. 200</span> The continuous-time trajectories of <a href="#d25">Week 5 · Day 1</a> were built for exactly this.
+@@ 68
+<strong>"Unprojection recovers the 3D point."</strong> It recovers a direction. Every point \(\lambda\,\pi^{-1}(\mathbf{z})\) with \(\lambda \gt 0\) projects to the same pixel.
+@@ 69
+<strong>"The focal length is a distance in meters."</strong> In \(\boldsymbol{\xi}_p\) it is in pixels: the physical focal length divided by the pixel size.
+@@ 70
+<strong>"Distortion is a small cosmetic effect."</strong> At the image corners it can be tens of pixels, far more than the sub-pixel noise of a good feature detector.
+@@ 71
+Q1. A pinhole camera has \(f_u = f_v = 400\), \((u_0, v_0) = (320, 240)\). Where does the point \(\mathbf{x}^c = (1, 0.5, 4)\) project?
+@@ 72
+u = 400·(1/4) + 320 = 420 and v = 400·(0.5/4) + 240 = 290. (720, 440) forgets the division by depth; (100, 50) forgets the principal point.
+@@ 73
+Q2. With the same camera, which 3D point could have produced the pixel (520, 240)?
+@@ 74
+Unprojection gives the ray direction ((520−320)/400, 0, 1) = (0.5, 0, 1). The point (2, 0, 4) is 4 times that direction, so it lies on the ray.
+@@ 75
+Q3. An image is 640 pixels wide and \(f_u = 320\). What is the horizontal field of view of this pinhole camera?
+@@ 76
+Half the width is 320 pixels, so the half-angle is arctan(320/320) = 45°, and the full field of view is 90°.
+@@ 77
+Q4. A lens has \(k_1 = -0.1\) and no other distortion. A point has normalized coordinates \(x' = 1\), \(y' = 0\), and \(f_u = 400\). How does distortion move its pixel?
+@@ 78
+40 pixels away from the center
+@@ 79
+40 pixels toward the center
+@@ 80
+4 pixels toward the center
+@@ 81
+It does not move, because \(y' = 0\)
+@@ 82
+r² = 1, so x″ = 1·(1 − 0.1) = 0.9. The change of 0.1 in normalized units is 0.1 × 400 = 40 pixels, inward because k₁ is negative.
+@@ 83
+Q5. Why can a pinhole model with distortion terms not describe a 190° fisheye lens?
+@@ 84
+Fisheye lenses have no principal point
+@@ 85
+Distortion polynomials are limited to two coefficients
+@@ 86
+The model starts by dividing by depth, and x/z grows without bound as the ray approaches 90° from the axis
+@@ 87
+Fisheye cameras always use rolling shutters
+@@ 88
+The normalized coordinate is tan θ, which diverges at 90° and has the wrong sign behind the camera. Models such as Kannala-Brandt and Double Sphere parametrize by the ray angle or by a sphere instead.
+@@ 89
+\(\mathbf{z} = \pi(\mathbf{x}^c, \boldsymbol{\xi})\) maps a camera-frame point to a pixel; \(\pi^{-1}\) returns a ray, known up to scale.
+@@ 90
+Pinhole: \(u = f_u x/z + u_0\), \(v = f_v y/z + v_0\), or \(\begin{bmatrix} u & v & 1 \end{bmatrix}\T \sim \mathbf{K}\mathbf{x}^c\) in homogeneous coordinates.
+@@ 91
+Radial-tangential distortion acts on normalized coordinates between the division and the scaling to pixels; undoing it takes iteration.
+@@ 92
+Fisheye lenses need models built on the ray angle (Kannala-Brandt) or on spheres (Double Sphere).
+@@ 93
+The photometric model matters for direct methods, and a rolling shutter gives each image row its own pose.
+@@ 94
+<em>SLAM Handbook</em>, Chapter 7, §7.3.1 "Camera Model", pp. 197–200, including Figure 7.1.
+@@ 95
+Similar-triangles derivation, homogeneous coordinates, the calibration matrix, and the field-of-view formula follow Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004.
+@@ 96
+The fixed-point undistortion iteration is the standard simple scheme; see Szeliski, <em>Computer Vision: Algorithms and Applications</em>, 2010, for lens distortion models.

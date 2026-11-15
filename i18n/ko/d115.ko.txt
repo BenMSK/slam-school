@@ -1,0 +1,222 @@
+@@ 1
+<span class="eyebrow">20주차 · Day 1</span>
+@@ 2
+rendering으로 최적화하는 map
+@@ 3
+오늘이 끝나면 differentiable rendering이 무엇인지, 왜 이것으로 평범한 2D 이미지에서 3D map을 학습할 수 있는지, 그리고 ray marching이 rasterization과 어떻게 다른지 설명할 수 있습니다.
+@@ 4
+약 60분 · 14장 도입부와 §14.1, pp. 397–401 읽기 (5쪽) · 8주차 Day 2 필요
+@@ 5
+먼저 읽기: 14장 도입부와 §14.1, pp. 397–401
+@@ 6
+p. 398이 point와 occupancy grid가 학습에 다루기 불편한 이유로 드는 것들, 그리고 DeepSDF가 대신 하는 일.
+@@ 7
+그래픽스 pipeline이 3D 모델을 담는 두 가지 방식과, 각각에 맞는 rendering 방법 (p. 399).
+@@ 8
+Figure 14.2 (p. 400)에서: forward 화살표가 무엇을 거쳐 가는지, backward 화살표가 어디서 끝나는지.
+@@ 9
+고품질 view synthesis의 핵심이 결국 무엇이었는지 말하는 p. 400의 문장, 그리고 3DGS가 NeRF와 어떻게 다르게 rendering하는지 말하는 p. 401의 문단.
+@@ 10
+map을 꼭 손으로 설계한 fusion 규칙으로 조립할 필요는 없습니다. map의 parameter가 바뀔 때 출력이 매끄럽게 바뀌는 절차로 map에서 이미지를 rendering할 수 있다면, rendering한 이미지와 실제 사진의 차이는 그 parameter에 대한 gradient를 갖고, 그 gradient를 따라가면 map이 좋아집니다. Neural radiance field (NeRF)와 3D Gaussian splatting (3DGS)은 바로 이 루프를 위해 만들어진 두 가지 map 표현입니다.
+@@ 11
+1. 저장된 geometry에서 학습된 함수로
+@@ 12
+<a href="#d44">8주차 · Day 2</a>의 map은 geometry를 직접 저장합니다: point들, 또는 occupancy 값의 grid입니다. 딥러닝이 이미지에서 3D로 넘어갔을 때, 첫 시도들은 이 구조를 그대로 network에 넣었습니다. 책은 문제를 이렇게 짚습니다: 이 구조들은 이산적이고, 임의 모양의 닫힌 연속 표면을 간결하게 기술하기 어려우며, 이것이 gradient 기반 최적화를 방해합니다. <span class="src">§14.1.1 · p. 398</span>
+@@ 13
+대안은 모양이 <em>함수 자체가 되게</em> 하는 것입니다. <strong>multi-layer perceptron (MLP)</strong>은 작은 neural network입니다: 여러 층을 쌓은 것으로, 각 층은 입력에 행렬을 곱하고, 벡터를 더하고, 간단한 비선형 함수를 적용합니다. 그 행렬과 벡터가 <strong>weights</strong>(가중치)입니다. 3D 좌표를 넣고 숫자 하나를 내도록 학습시킵니다: <strong>occupancy</strong>(점유: 이 점이 무언가의 안쪽인가?), 또는 <strong>signed distance function (SDF)</strong>(부호 거리 함수), 즉 가장 가까운 표면까지의 거리에 안쪽인지 바깥쪽인지 알려 주는 부호를 붙인 값입니다. 표면은 SDF가 0인 점들의 집합입니다. DeepSDF는 8층 MLP로 정확히 이렇게 하며, 어떤 모양을 뜻하는지 고르는 추가 입력 벡터(latent code)를 선택적으로 받습니다. <span class="src">§14.1.1 · p. 398 · Fig. 14.1</span>
+@@ 14
+이런 network가 학습해야 하는 것을 손으로 써 본 예: 원점이 중심이고 반지름이 1인 구에 대해 \(f(\mathbf{x}) = \norm{\mathbf{x}} - 1\)입니다. 그러면 \(f(0.5, 0, 0) = -0.5\) (안쪽), \(f(2, 0, 0) = 1\) (바깥쪽), \(f(0.6, 0.8, 0) = 0\) (표면 위)입니다. 학습된 MLP는 공식이 없는 모양에 대해 \(f\)의 역할을 합니다.
+@@ 15
+저장하는 것
+@@ 16
+책의 설명
+@@ 17
+Point, occupancy grid
+@@ 18
+geometry의 이산 샘플
+@@ 19
+이산적이며, gradient 기반 학습에 잘 맞지 않음
+@@ 20
+Implicit neural function (occupancy 또는 SDF)
+@@ 21
+MLP의 weight
+@@ 22
+연속적이고 간결하며 topology 제약과 이산화 오차가 없지만, 3D ground truth로 학습
+@@ 23
+differentiable rendering으로 최적화한 scene
+@@ 24
+이미지를 rendering할 수 있는 모든 parameter
+@@ 25
+2D 이미지만 필요
+@@ 26
+두 번째 행에는 실용적인 결함이 있습니다. 3D 목표값으로 학습하려면 3D ground truth 데이터가 필요한데, 이는 주석을 다는 비용이 크고 규모를 키우기 어렵습니다. 사진은 쌉니다. 그래서 이 분야는 3D를 2D 이미지로 supervision하는 방향으로 옮겨 갔습니다. <span class="src">§14.1.1 · p. 398</span>
+@@ 27
+2. Differentiable rendering: 루프
+@@ 28
+<strong>Rendering</strong>은 scene 기술과 카메라 pose를 이미지로 바꾸는 계산입니다. <strong>Differentiable rendering (DR)</strong>은 gradient가 2D 이미지에서 3D scene parameter로 거꾸로 흐를 수 있도록 짠 rendering입니다. <span class="src">§14.1.2 · p. 399</span>
+@@ 29 attr
+루프 다이어그램. 색, density, semantics, 카메라 pose 같은 scene parameter가 renderer에 들어가고, renderer는 RGB, depth, label, normal 같은 rendering 출력을 만듭니다. loss가 이를 실제 이미지와 비교합니다. 실선 화살표는 parameter에서 loss로 가는 forward 방향, 점선 화살표는 loss에서 parameter로 가는 backward 방향입니다.
+@@ 30
+=
+@@ 31
+색, density,
+@@ 32
+=
+@@ 33
+카메라 pose
+@@ 34
+=
+@@ 35
+=
+@@ 36
+또는 rasterization
+@@ 37
+Rendering 출력
+@@ 38
+=
+@@ 39
+label, normal
+@@ 40
+실제
+@@ 41
+이미지와의
+@@ 42
+차이
+@@ 43
+실제 이미지
+@@ 44
+forward: 이미지 rendering
+@@ 45
+backward: loss의 gradient
+@@ 46
+Differentiable rendering 루프. forward 경로의 모든 상자는 미분 가능해야 하며, 그래야 loss를 각 scene parameter까지 거슬러 추적할 수 있습니다. 카메라 pose가 parameter 안에 들어 있다는 점이 이것을 mapping 도구에 그치지 않는 SLAM 도구로 만듭니다.
+@@ 47
+출력이 꼭 컬러 이미지일 필요는 없습니다. 같은 루프로 depth map, semantic label map, normal map을 rendering할 수 있고, parameter에는 색, density, semantics, 카메라 pose가 들어갈 수 있습니다. <span class="src">Fig. 14.2 · p. 400</span>
+@@ 48
+빈틈 채우기: 픽셀 하나의 gradient
+@@ 49
+책은 gradient가 "거꾸로 흐른다"고만 하고 실제로 보여 주지는 않습니다. 가장 작은 renderer를 생각해 봅시다: 픽셀 하나가, 밝기 \(b\)인 배경 앞에 놓인 밝기 \(c\), opacity \(\alpha\)의 반투명 blob 하나를 봅니다. rendering된 픽셀은 둘을 섞은 값입니다.
+@@ 50
+여기서 \(C_{gt}\)는 실제 사진의 픽셀("gt"는 ground truth)이고 \(L\)은 loss입니다. chain rule에 따라,
+@@ 51
+숫자로: \(c = 0.9\), \(b = 0.1\), \(\alpha = 0.5\)이면 \(C = 0.5\)입니다. 사진은 \(C_{gt} = 0.7\)이므로 \(L = 0.04\)이고 \(\partial L/\partial\alpha = 2(-0.2)(0.8) = -0.32\)입니다. 크기 0.5의 gradient descent step은 \(\alpha\)를 \(0.5 + 0.5 \times 0.32 = 0.66\)으로 옮깁니다. 이제 \(C = 0.66 \times 0.9 + 0.34 \times 0.1 = 0.628\)이고 \(L = 0.0052\)입니다: 사진이 rendering 결과보다 밝았기 때문에 blob이 더 불투명해졌습니다. 실제 시스템은 수백만 개의 parameter와 픽셀에 대해 같은 일을 하며, 미분은 automatic differentiation이 만들어 냅니다 (<a href="#d37">7주차 · Day 1</a>).
+@@ 52
+이 아이디어는 direct method의 photometric error로 이미 만났습니다 (<a href="#d64">11주차 · Day 4</a>): 픽셀이 어떻게 보여야 할지 예측하고, 카메라가 본 것과 비교하고, 미지수를 조정합니다. 거기서 미지수는 pose 하나와 몇 개의 depth였습니다. 여기서는 scene 전체입니다.
+@@ 53
+3. 두 종류의 scene, 두 가지 rendering 방법
+@@ 54
+그래픽스 pipeline은 3D 모델을 두 형태 중 하나로 담고, 형태마다 고유한 rendering 방법이 있습니다. <span class="src">§14.1.2 · p. 399</span>
+@@ 55
+담는 내용
+@@ 56
+Rendering 방법
+@@ 57
+=
+@@ 58
+다각형이나 implicit surface로 나타낸 물체 경계
+@@ 59
+<strong>Rasterization</strong>: 표면 geometry를 2D 이미지 평면에 투영
+@@ 60
+하드웨어 가속, 매우 효율적
+@@ 61
+=
+@@ 62
+공간 전체에 걸친 density나 색 같은 연속 field
+@@ 63
+<strong>Ray marching</strong>: 픽셀마다 volume을 통과하는 ray를 쏘고 ray를 따라 값을 샘플링
+@@ 64
+더 큼
+@@ 65
+초기 differentiable renderer는 mesh용 rasterization을 부드럽게 만들었습니다. 이후 volume rendering이 gradient 기반 최적화를 위한 더 강력한 도구로 자리 잡았는데, 정확한 표면 위치를 알기 전에도 3D 공간 전체에 걸쳐 gradient를 주기 때문입니다. <span class="src">§14.1.2 · p. 399</span>
+@@ 66
+빈틈 채우기: "표면을 찾기 전의 gradient"가 왜 중요한가
+@@ 67
+한 ray 위에 샘플 두 개를 놓습니다. opacity는 \(\alpha_1, \alpha_2\), 밝기는 \(c_1, c_2\)이고 배경은 검은색입니다. 샘플 2의 빛은 샘플 1을 지나야 하므로
+@@ 68
+현재 scene이 틀렸다고 합시다: 샘플 1은 비어 있고 (\(\alpha_1 = 0\)) 샘플 2는 꽉 찬 어두운 벽입니다 (\(\alpha_2 = 1\), \(c_2 = 0.2\)). 그래서 \(C = 0.2\)입니다. 사진에는 밝은 물체가 보여 \(C_{gt} = 0.8\)이고, 샘플 1의 색은 \(c_1 = 0.8\)입니다. 그러면 \(\partial C/\partial\alpha_1 = 0.8 - 0.2 = 0.6\)이고 \(\partial L/\partial\alpha_1 = 2(0.2 - 0.8)(0.6) = -0.72\)입니다. 아직 아무것도 없는데도 미분은 0이 아닙니다: loss가 빈 점에 물질을 요구하는 것입니다.
+@@ 69
+단단한 표면은 이런 신호를 주지 않습니다. 픽셀이 불투명한 표면을 본다면, 그 표면을 ray를 따라 살짝 밀어도 픽셀은 전혀 바뀌지 않으므로, 표면 위치에 대한 미분은 0입니다. 예외는 픽셀 값이 갑자기 바뀌는 물체 윤곽뿐입니다. 그래서 mesh 기반 방법은 rasterizer를 부드럽게 만들어야 했고, volume은 최적화하기가 더 쉽습니다.
+@@ 70
+4. NeRF와 3DGS 한눈에 보기
+@@ 71
+<strong>NeRF</strong> (2020)는 scene을 MLP 하나에 저장하고 ray marching으로 rendering합니다: 픽셀마다 ray를 따라 나아가며 각 샘플에서 MLP에 opacity와 색을 묻습니다. MLP는 3D 위치와 보는 방향을 입력으로 받는데, 세밀한 디테일을 표현할 수 있도록 입력이 positional encoding을 거칩니다. NeRF는 <strong>posed</strong> 컬러 이미지(카메라 pose를 이미 아는 이미지)로 rendering loss를 최소화하여 학습하며, 고품질 <strong>novel view synthesis</strong>를 만들어 냅니다: 한 번도 촬영하지 않은 시점에서 본 이미지입니다. <span class="src">§14.1.3 · pp. 399–400</span>
+@@ 72
+NeRF의 병목은 학습 속도입니다. 이후 연구는 MLP를 명시적인 volume 구조, 즉 voxel grid와 hash table로 대체하거나 보조했고, MLP 없이도 비슷한 품질에 도달했습니다. 책은 여기서 핵심 요소가 network가 아니라 differentiable volume rendering이라는 교훈을 끌어냅니다. 그래도 픽셀마다 ray를 따라 나아가는 방식은 여전히 rendering이 느립니다. <span class="src">§14.1.3 · p. 400</span>
+@@ 73
+<strong>3D Gaussian splatting</strong> (2023)은 반투명한 물질이라는 아이디어는 유지하되 저장 방식과 renderer를 모두 바꿉니다. scene은 반투명 Gaussian blob의 큰 집합이고, alpha blending으로 섞이며, differentiable rasterization으로 rendering됩니다: NeRF가 ray를 순회하는 자리에서, 이 renderer는 blob을 순회하며 각각을 이미지에 투영합니다. scene의 대부분은 비어 있으므로 rendering이 훨씬 빠르고, 학습 속도는 가장 빠른 volumetric NeRF 변형들과 비슷합니다. <span class="src">§14.1.3 · p. 401</span>
+@@ 74 attr
+위에서 본 두 스케치. 왼쪽은 ray marching: 카메라가 한 픽셀을 지나는 ray 하나를 보내고, 빈 공간을 포함해 ray를 따라 같은 간격으로 샘플을 뽑습니다. 오른쪽은 splatting: blob 세 개가 각각 카메라 쪽으로 투영되어 이미지 선 위에 footprint를 남깁니다.
+@@ 75
+이미지
+@@ 76
+=
+@@ 77
+픽셀마다: ray를 따라 샘플링
+@@ 78
+=
+@@ 79
+blob마다: 덮는 픽셀 찾기
+@@ 80
+이번 주의 두 renderer를 위에서 본 모습. Ray marching은 빈 공간에도 샘플을 씁니다. Splatting은 primitive가 떨어지는 픽셀만 건드립니다.
+@@ 81
+둘 다 offline 도구로 출발했습니다: pose를 아는 이미지가 주어지면 scene을 최적화하는데, 원래는 며칠이 걸렸습니다. 명시적인 자료 구조가 이를 거의 real-time 수준으로 줄였고, 이제 둘 다 SLAM 시스템 안으로 들어가고 있으며, 이것이 Day 3과 Day 5의 주제입니다. 바탕에 깔린 생각은 둘보다 오래되었습니다: 책은 differentiable rendering과 occupancy map의 결합을 2000년대 초 Thrun의 "forward sensor model"까지 거슬러 올라가 찾습니다. <span class="src">Ch. 14 opening · p. 397</span>
+@@ 82
+<strong>"NeRF는 neural network 덕분에 작동한다."</strong> grid 기반 변형들은 MLP 없이도 비슷한 품질에 도달합니다. 책은 그 공을 differentiable volume rendering에 돌립니다. <span class="src">p. 400</span>
+@@ 83
+<strong>"Differentiable rendering에는 3D ground truth가 필요하다."</strong> 3D ground truth를 피하는 것이 바로 그 목적입니다. supervision은 2D 이미지입니다.
+@@ 84
+<strong>"Rasterization은 표면 전용이므로 3DGS는 표면 방법이다."</strong> 3DGS는 volume data를 rasterization합니다: 그 primitive들은 반투명하며, depth test로 가려지는 대신 서로 blending됩니다. <span class="src">p. 409</span>
+@@ 85
+Q1. 한 픽셀이 배경 b = 0.2 앞에 있는, 밝기 c = 1.0, opacity α = 0.25인 blob을 봅니다. 사진에는 0.8이 찍혀 있습니다. L = (C − C_gt)²일 때, ∂L/∂α는 무엇이고 gradient descent는 어떻게 움직입니까?
+@@ 86
+−0.64, 따라서 α가 증가
+@@ 87
++0.64, 따라서 α가 감소
+@@ 88
+0, 픽셀이 α에 의존하지 않음
+@@ 89
+−0.32, 따라서 α가 감소
+@@ 90
+C = 0.25 × 1.0 + 0.75 × 0.2 = 0.4. ∂L/∂α = 2(0.4 − 0.8)(1.0 − 0.2) = −0.64. Gradient descent는 gradient의 반대 방향으로 움직이므로, α가 커지고 픽셀이 밝아집니다.
+@@ 91
+Q2. 연구는 왜 3D 데이터로 implicit function을 학습하는 방식에서 differentiable rendering으로 옮겨 갔습니까?
+@@ 92
+MLP는 3D 모양을 표현할 수 없습니다
+@@ 93
+3D supervision은 불연속적인 표면을 만듭니다
+@@ 94
+ground truth 3D 데이터는 얻기 비싸지만, 2D 이미지는 모으기 쉽습니다
+@@ 95
+Rendering이 MLP 계산보다 빠릅니다
+@@ 96
+DeepSDF 방식의 학습은 작동하지만 3D ground truth가 필요하고, 이는 규모를 키울 수 없습니다. Differentiable rendering은 평범한 이미지로 3D parameter를 supervision할 수 있게 합니다.
+@@ 97
+Q3. ray marching과 달리 splatting을 설명하는 루프 구조는 무엇입니까?
+@@ 98
+픽셀마다 ray를 따라 점을 샘플링하고 각 점에서 scene에 query하기
+@@ 99
+primitive마다 이미지에 투영하고 그것이 덮는 픽셀을 갱신하기
+@@ 100
+voxel마다 모든 카메라로 ray를 쏘기
+@@ 101
+픽셀마다 가장 가까운 표면을 찾고 멈추기
+@@ 102
+Rasterization은 primitive를 순회합니다. 그래서 빈 공간을 통째로 건너뛸 수 있고, 속도는 여기서 나옵니다.
+@@ 103
+Q4. ray의 첫 샘플은 비어 있고 (α₁ = 0, 색 c₁ = 0.5) 두 번째 샘플은 불투명한 벽입니다 (α₂ = 1, c₂ = 0.9). C = α₁c₁ + (1 − α₁)α₂c₂일 때 ∂C/∂α₁은 무엇입니까?
+@@ 104
+0, 샘플이 비어 있으므로
+@@ 105
+∂C/∂α₁ = c₁ − α₂c₂ = 0.5 − 0.9 = −0.4. 빈 샘플에 물질을 더하면 픽셀이 어두워지며, 아직 아무것도 없는데도 미분이 그렇게 알려 줍니다.
+@@ 106
+Implicit neural representation은 모양을 MLP가 계산하는 함수(occupancy 또는 SDF)로 저장합니다: 연속적이고 간결하지만, 학습에 3D ground truth가 필요합니다.
+@@ 107
+Differentiable rendering은 그 필요를 없앱니다: rendering하고, 실제 이미지와 비교하고, loss의 gradient를 scene parameter로 되돌려 보냅니다. 이 parameter에는 카메라 pose도 들어갈 수 있습니다.
+@@ 108
+표면은 rasterization하고, volume은 ray marching합니다. volume은 표면 위치가 정해지기 전부터 ray 위 모든 곳에서 쓸모 있는 gradient를 줍니다.
+@@ 109
+NeRF는 ray marching으로 rendering하는 MLP입니다. 3DGS는 rasterization으로 rendering하는 반투명 Gaussian의 집합이며, rendering이 훨씬 빠릅니다.
+@@ 110
+<em>SLAM Handbook</em>, 14장 도입부와 §14.1 "3D Scene Representation and Differentiable Rendering", pp. 397–401, Figures 14.1–14.3.
+@@ 111
+"빈틈 채우기"의 픽셀 하나, 샘플 두 개 gradient는 alpha-blending 공식에 chain rule을 그대로 적용한 것이며, 책은 이 공식을 식 (14.6)으로 제시합니다.

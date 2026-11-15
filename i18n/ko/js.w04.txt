@@ -1,0 +1,324 @@
+@@ w04
+"Left: the circle of planar rotations with two rotations marked, the midpoint of the straight chord between them, and the midpoint along the circle. Right: a unit square transformed by the entry-wise average matrix and by the midpoint on the circle."
+==
+"왼쪽: 평면 회전의 원과 그 위에 표시한 두 회전, 두 회전을 잇는 곧은 현의 중점, 그리고 원을 따라 잡은 중점. 오른쪽: 원소별 평균 행렬과 원 위의 중점으로 변환한 단위 정사각형."
+@@ w04
+"each rotation is a point on this circle"
+==
+"각 회전은 이 원 위의 한 점"
+@@ w04
+"what each matrix does to a unit square"
+==
+"각 행렬이 단위 정사각형에 하는 일"
+@@ w04
+stat("Entry-wise average ½(R₁ + R₂)",
+==
+stat("원소별 평균 ½(R₁ + R₂)",
+@@ w04
+" × a rotation")
+==
+" × 회전 행렬")
+@@ w04
+stat("Its determinant",f2(det),"a rotation matrix needs exactly 1")
+==
+stat("행렬식",f2(det),"rotation matrix는 정확히 1")
+@@ w04
+stat("Midpoint on the circle",
+==
+stat("원 위의 중점",
+@@ w04
+"R₁ Exp(½ Log(R₁⁻¹R₂)), determinant 1")
+==
+"R₁ Exp(½ Log(R₁⁻¹R₂)), 행렬식 1")
+@@ w04
+h("div",{class:"vt"},"Averaging two rotations")
+==
+h("div",{class:"vt"},"두 회전의 평균")
+@@ w04
+"Adds the two 2×2 rotation matrices entry by entry, halves the sum, and tests whether the result is still a rotation."
+==
+"2×2 rotation matrix 두 개를 원소별로 더해 반으로 나누고, 결과가 여전히 회전인지 확인합니다."
+@@ w04
+range("Angle of R₁",
+==
+range("R₁의 각도",
+@@ w04
+range("Angle of R₂",
+==
+range("R₂의 각도",
+@@ w04
+"entry-wise average"]
+==
+"원소별 평균"]
+@@ w04
+"midpoint on the circle"]
+==
+"원 위의 중점"]
+@@ w04
+"unit square"]
+==
+"단위 정사각형"]
+@@ w04
+"Top view of the plane with a robot at the origin, the arc traced by Exp of s times xi as s goes from 0 to 1, and the final pose Exp(xi)"
+==
+"원점에 로봇이 있는 평면을 위에서 본 그림. s가 0에서 1로 갈 때 Exp(s xi)가 그리는 원호와 마지막 pose Exp(xi)."
+@@ w04
+stat("Translation of the pose",
+==
+stat("pose의 이동",
+@@ w04
+"V(θ)ρ, while ρ itself is ("
+==
+"V(θ)ρ, ρ 자체는 ("
+@@ w04
+stat("Log of the pose",
+==
+stat("pose의 Log",
+@@ w04
+"the round trip returns ξ")
+==
+"왕복하면 ξ로 돌아옴")
+@@ w04
+stat("Translate, then rotate",
+==
+stat("이동 후 회전",
+@@ w04
+"Exp(ρ only) Exp(θ only), "+f2(Math.hypot(Q[0]-T[0],Q[1]-T[1]))+" away from Exp(ξ)")
+==
+"Exp(ρ만) Exp(θ만), Exp(ξ)에서 "+f2(Math.hypot(Q[0]-T[0],Q[1]-T[1]))+" 떨어짐")
+@@ w04
+button("Show translate, then rotate",
+==
+button("이동 후 회전 보기",
+@@ w04
+h("div",{class:"vt"},"Exp and Log on SE(2)")
+==
+h("div",{class:"vt"},"SE(2)에서의 Exp와 Log")
+@@ w04
+"Computes T = Exp(ξ) for ξ = (ρ₁, ρ₂, θ) and draws the poses Exp(sξ) for s from 0 to 1. Dots are one unit apart."
+==
+"ξ = (ρ₁, ρ₂, θ)에 대해 T = Exp(ξ)를 계산하고, s를 0에서 1까지 바꾸며 pose Exp(sξ)를 그립니다. 점 간격은 1입니다."
+@@ w04
+range("ρ₁ (forward)",
+==
+range("ρ₁ (앞)",
+@@ w04
+range("ρ₂ (sideways)",
+==
+range("ρ₂ (옆)",
+@@ w04
+range("θ (turn)",
+==
+range("θ (회전)",
+@@ w04
+"identity (start)"]
+==
+"identity (시작)"]
+@@ w04
+"Exp(sξ), ending at Exp(ξ)"]
+==
+"Exp(sξ), 끝은 Exp(ξ)"]
+@@ w04
+"centre of the arc"]
+==
+"원호의 중심"]
+@@ w04
+"Exp(ρ only) Exp(θ only)"]
+==
+"Exp(ρ만) Exp(θ만)"]
+@@ w04
+"Top: map with five known landmarks, the true camera pose, and the current estimate with its sight lines. Bottom: the one-dimensional image, with measured and predicted landmark positions."
+==
+"위: 알려진 landmark 다섯 개, 실제 카메라 pose, 시선을 그린 현재 추정값이 있는 map. 아래: 측정한 landmark 위치와 예측한 landmark 위치가 표시된 1차원 이미지."
+@@ w04
+"the camera's 1-D image"
+==
+"카메라의 1-D 이미지"
+@@ w04
+stat("Steps taken",
+==
+stat("진행한 step",
+@@ w04
+"last ξ* = ("
+==
+"마지막 ξ* = ("
+@@ w04
+"press the button"
+==
+"버튼을 눌러 보세요"
+@@ w04
+"sum of (residual / σ)², σ = 0.005"
+==
+"(residual / σ)²의 합, σ = 0.005"
+@@ w04
+stat("Position error",
+==
+stat("위치 오차",
+@@ w04
+"camera position, in map units"
+==
+"카메라 위치, map 단위"
+@@ w04
+stat("Heading error",
+==
+stat("heading 오차",
+@@ w04
+"estimate minus truth"
+==
+"추정 − 실제"
+@@ w04
+h("div",{class:"vt"},"Gauss-Newton on SE(2): planar PnP")
+==
+h("div",{class:"vt"},"SE(2) 위의 Gauss-Newton: 평면 PnP")
+@@ w04
+"Each press linearizes the five measurements about the current pose, solves the 3×3 normal equations for ξ, and updates T ← T Exp(ξ). A step is halved if it would raise the cost."
+==
+"누를 때마다 현재 pose 주변에서 측정 다섯 개를 선형화하고, ξ에 대한 3×3 normal equations를 풀고, T ← T Exp(ξ)로 update합니다. cost를 높이는 step은 반으로 줄입니다."
+@@ w04
+range("Initial heading error",
+==
+range("초기 heading 오차",
+@@ w04
+range("Initial sideways error",
+==
+range("초기 옆 방향 오차",
+@@ w04
+button("Reset",reset)
+==
+button("초기화",reset)
+@@ w04
+"landmarks and measured u"]
+==
+"landmark와 측정 u"]
+@@ w04
+"estimate and predicted u"]
+==
+"추정과 예측 u"]
+@@ w04
+"true camera (dashed)"]
+==
+"실제 카메라 (점선)"]
+@@ w04
+"Scatter of the end positions of 500 simulated robots, the two-sigma ellipse of a Gaussian fitted to x and y, and the curved two-sigma contour of a Gaussian fitted in the tangent space"
+==
+"시뮬레이션한 로봇 500대의 끝 위치 산점도, x와 y에 맞춘 Gaussian의 2시그마 타원, 그리고 tangent space에서 맞춘 Gaussian의 휘어진 2시그마 등고선"
+@@ w04
+stat("Heading spread at the end",
+==
+stat("끝에서의 heading 퍼짐",
+@@ w04
+"standard deviation over "+N+" robots"
+==
+"로봇 "+N+"대의 표준편차"
+@@ w04
+stat("Mean of (x, y)",
+==
+stat("(x, y)의 평균",
+@@ w04
+"noise-free end is ("
+==
+"noise 없는 끝점 ("
+@@ w04
+stat("Tangent-space mean, as a position",
+==
+stat("tangent space 평균의 위치",
+@@ w04
+"noise-free pose × Exp(mean of ξ)"
+==
+"noise 없는 pose × Exp(ξ의 평균)"
+@@ w04
+stat("Skewness of x",skew.toFixed(2),"a Gaussian has 0")
+==
+stat("x의 skewness",skew.toFixed(2),"Gaussian은 0")
+@@ w04
+h("div",{class:"vt"},"The banana distribution")
+==
+h("div",{class:"vt"},"Banana distribution")
+@@ w04
+"500 robots each take K steps of one unit. Every step is Exp(u + δ) with u = (1, 0, 0) and Gaussian δ in the tangent space. Dots are where they end up. The view is scaled to fit."
+==
+"로봇 500대가 각각 길이 1인 step을 K번 갑니다. 모든 step은 u = (1, 0, 0)과 tangent space의 Gaussian δ로 만든 Exp(u + δ)입니다. 점은 로봇들이 도착한 곳입니다. 화면은 크기에 맞게 조정됩니다."
+@@ w04
+range("Steps K",
+==
+range("step 수 K",
+@@ w04
+range("Heading noise per step",
+==
+range("step당 heading noise",
+@@ w04
+range("Translation noise per step",
+==
+range("step당 이동 noise",
+@@ w04
+button("New samples",
+==
+button("새 샘플",
+@@ w04
+"end positions"]
+==
+"끝 위치"]
+@@ w04
+"Gaussian in (x, y): mean and 2σ ellipse"]
+==
+"(x, y)의 Gaussian: 평균과 2σ 타원"]
+@@ w04
+"Gaussian in the tangent space: mean and 2σ contour"]
+==
+"tangent space의 Gaussian: 평균과 2σ 등고선"]
+@@ w04
+"noise-free path"]
+==
+"noise 없는 경로"]
+@@ w04
+"Error of the two approximations against the size of the first rotation, both on logarithmic axes"
+==
+"첫 번째 회전의 크기에 따른 두 근사의 오차, 두 축 모두 로그 눈금"
+@@ w04
+label:"size of θ₁ (rad)"
+==
+label:"θ₁의 크기 (rad)"
+@@ w04
+label:"error (rad)"
+==
+label:"오차 (rad)"
+@@ w04
+"θ₂ + J(θ₂)⁻¹θ₁, equation (2.34)"
+==
+"θ₂ + J(θ₂)⁻¹θ₁, 식 (2.34)"
+@@ w04
+stat("Exact combined rotation vector",
+==
+stat("정확한 합성 rotation vector",
+@@ w04
+"Log(Exp(θ₁) Exp(θ₂)), in rad"
+==
+"Log(Exp(θ₁) Exp(θ₂)), 단위 rad"
+@@ w04
+stat("Plain sum is off by",
+==
+stat("단순 합의 오차",
+@@ w04
+stat("Equation (2.34) is off by",
+==
+stat("식 (2.34)의 오차",
+@@ w04
+h("div",{class:"vt"},"Combining two rotations in the tangent space")
+==
+h("div",{class:"vt"},"tangent space에서 두 회전 합치기")
+@@ w04
+"θ₂ is a rotation about the z-axis. θ₁ is a smaller rotation about an axis tilted away from z. The chart compares two approximations of Log(Exp(θ₁) Exp(θ₂)) with the exact value."
+==
+"θ₂는 z축에 대한 회전입니다. θ₁은 z에서 기울어진 축에 대한 더 작은 회전입니다. 차트는 Log(Exp(θ₁) Exp(θ₂))의 두 근사를 정확한 값과 비교합니다."
+@@ w04
+range("Size of θ₁",
+==
+range("θ₁의 크기",
+@@ w04
+range("Size of θ₂",
+==
+range("θ₂의 크기",
+@@ w04
+range("Angle between the two axes",
+==
+range("두 축 사이 각도",

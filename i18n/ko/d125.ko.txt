@@ -1,0 +1,212 @@
+@@ 1
+<span class="eyebrow">21주차 · Day 5</span>
+@@ 2
+Deformable SLAM: scene에서 아무것도 가만히 있지 않을 때
+@@ 3
+오늘이 끝나면 카메라 하나로 변형되는 scene을 reconstruction하는 데 왜 prior가 필요한지 설명하고, 작은 deformation graph에서 as-rigid-as-possible regularizer를 계산하고, deformable SLAM 시스템의 tracking thread와 mapping thread를 설명할 수 있습니다.
+@@ 4
+약 60분 · §15.4와 §15.5, pp. 446–453 읽기 (8쪽) · 12주차 Day 1과 8주차 Day 2 필요
+@@ 5
+먼저 읽기: §15.4와 §15.5, pp. 446–453
+@@ 6
+Figure 15.14 (p. 447)의 세 패널: 각각에서 무엇이 움직이고 무엇이 고정되어 있는가?
+@@ 7
+template과 isometric deformation 모델 (p. 447), 그리고 "Floating Map Ambiguity" (p. 448).
+@@ 8
+§15.5의 "Deformable SLAM" 아래에 있는 열린 질문들 (p. 452).
+@@ 9
+모든 점이 매 frame마다 자유롭게 움직일 수 있다면, 카메라 하나로는 점의 위치를 정할 만큼의 방정식도 얻지 못하고, 카메라의 위치는 말할 것도 없습니다. Deformable SLAM은 표면이 어떻게 변형되는지 가정해야 풀 수 있게 됩니다. 시간에 따라 매끄럽게, 이웃과 비슷하게, 늘어나지 않게 변형된다고 가정합니다. 그러면 카메라가 보는 것 중 rigid한 부분은 카메라 자신의 움직임으로, 나머지는 scene의 변형으로 돌립니다.
+@@ 10
+1. 문제, 그리고 왜 under-constrained인가
+@@ 11
+scene의 일부만 변형된다면 로봇은 Day 2처럼 정적 배경에 대해 localization하고, 남는 것은 센서 pose를 아는 상태에서 변형되는 물체를 reconstruction하는 일입니다. <strong>Deformable SLAM</strong>은 보이는 rigid 부분이 전혀 없는 일반적인 경우입니다. 동기가 되는 응용은 최소 침습 수술로, monocular 카메라가 변형되는 장기만 봅니다. 관련된 비전 문제는 <strong>non-rigid structure from motion (NRSfM)</strong>입니다. 점은 매 frame마다 다른 3D 위치를 가지므로, map은 점마다 3D <em>trajectory</em>를 저장합니다. <span class="src">§15.4 · p. 446</span>
+@@ 12
+빈틈 채우기: 미지수 세기
+@@ 13
+\(N\)개의 점을 \(F\)장의 이미지에서 본다고 합시다. 각 관측은 픽셀 하나, 즉 숫자 두 개입니다.
+@@ 14
+미지수
+@@ 15
+방정식
+@@ 16
+Rigid scene, 움직이는 카메라 (<a href="#d65">11주차 · Day 5</a>)
+@@ 17
+\(3N + 6F - 7\), 7은 <a href="#d70">12주차 · Day 4</a>의 gauge freedom
+@@ 18
+353 대 2000
+@@ 19
+변형되는 scene, 고정된 카메라 하나
+@@ 20
+3000 대 2000
+@@ 21
+변형되는 scene, depth 카메라
+@@ 22
+3000 대 3000
+@@ 23
+가운데 행에서는 모든 frame의 모든 점이 어떤 픽셀도 바꾸지 않고 자기 viewing ray를 따라 미끄러질 수 있습니다. \(NF = 1000\)개의 자유로운 depth입니다. 데이터를 늘려도 소용없습니다. 각 frame이 없애는 만큼 새 미지수를 가져오기 때문입니다. 빠진 방정식은 <strong>prior</strong>에서 와야 합니다. 책은 temporal smoothness (점의 trajectory는 시간에 따라 매끄러움)와 spatial smoothness (점은 이웃과 비슷하게 변형됨)를 꼽습니다. <span class="src">§15.4.1.1 · p. 446</span> depth가 있으면 개수가 이미 맞으므로 prior는 문제를 over-constrained하게 만들고, 이것이 책이 그 경우를 먼저 다루는 이유입니다. <span class="src">§15.4.2 · p. 449</span>
+@@ 24
+2. NRSfM에서 deformable SLAM으로
+@@ 25
+고전적인 NRSfM은 고정된 카메라와, 정적 배경 없이 움직이는 물체를 가정합니다. 손, 펄럭이는 깃발, 뛰어오르는 사람 같은 것입니다. 대부분의 frame이 물체 전체를 보여 줍니다. 각 점의 움직임에는 물체의 rigid motion과 국소 변형이 섞여 있습니다. rigid 부분을 따로 계산하지는 않지만, 그것이 parallax를 제공해 추정을 well-conditioned하게 만듭니다. <span class="src">§15.4.1.1 · pp. 446–447</span>
+@@ 26
+<strong>Shape from template (SfT)</strong>는 강한 prior를 더합니다. 정지 상태 물체의 texture가 있는 3D 모양, 즉 <strong>template</strong>을 알고 있고, 변형만 복원합니다. 한 가지 모델은 <strong>isometric</strong>(등거리) deformation입니다. 표면 위 점 사이의 geodesic distance, 즉 표면 안에서의 최단 경로가 보존됩니다. 종이는 이렇게 휘고, 고무는 그렇지 않습니다. 이 모델은 well-posed이며 안정적인 real-time 해법으로 이어졌습니다. 대안은 deformation energy와 reprojection error를 함께 최소화합니다. template이 없을 때 초기 NRSfM은 먼 물체에만 유효한 orthographic 카메라와, trajectory에 대한 저차원 basis를 가정했습니다. 가까이서 찍으려면 perspective 카메라가 필요하며, 거기서도 isometry가 잘 동작했습니다. <span class="src">§15.4.1.1 · pp. 447–448</span>
+@@ 27
+고전적인 NRSfM
+@@ 28
+=
+@@ 29
+고정
+@@ 30
+움직임; 그 trajectory도 추정함
+@@ 31
+관측된 움직임의 rigid 부분
+@@ 32
+각 점의 움직임 안에 남겨 둠
+@@ 33
+카메라 trajectory에 할당함
+@@ 34
+시야
+@@ 35
+대부분의 frame이 물체 전체를 봄
+@@ 36
+근접 촬영과 탐색: frame마다 다른 영역을 봄
+@@ 37
+처리 방식
+@@ 38
+Batch, 모든 이미지에 대해
+@@ 39
+Causal, real-time: 시각 \(k\)에는 frame \(1 \dots k\)만
+@@ 40
+두 번째 행은 사실이 아니라 가설입니다. 정적 배경이 없으면 이미지로는 "조직이 오른쪽으로 흘러갔다"와 "카메라가 왼쪽으로 움직였다"를 구별할 수 없습니다. rigid 성분과 non-rigid 성분을 분리하는 것은 일반적으로 ill-posed이며, 책은 이를 <strong>floating map ambiguity</strong>라고 부릅니다. 변형되는 물체의 변위에 대한 prior가 분리를 가능하게 합니다. <span class="src">§15.4.1.2 · p. 448</span>
+@@ 41
+3. depth가 있을 때: canonical map과 deformation graph
+@@ 42
+RGB-D 카메라와 stereo 카메라는 depth를 측정합니다. 책이 RGB-D 데이터로 하는 deformable 3D SLAM의 기념비적 연구라고 부르는 DynamicFusion은 scene의 정지 상태 모양인 <strong>canonical map</strong>을 만들고, 이를 변형해 현재 depth 이미지를 설명합니다. 이때 일종의 <strong>embedded deformation (ED) graph</strong>와 <strong>as-rigid-as-possible</strong> regularizer를 결합합니다. ED 모델은 변형의 공간을 graph로 이산화해 dense reconstruction을 빠르게 합니다. <span class="src">§15.4.2 · p. 449</span>
+@@ 43
+빈틈 채우기: deformation graph와 "as rigid as possible"이 계산하는 것
+@@ 44
+<strong>deformation graph</strong>는 표면 위에 퍼진 node들의 sparse 집합입니다. node \(i\)는 정지 위치 \(\mathbf{q}_i\), 현재 위치 \(\mathbf{p}_i\), 회전 \(\mathbf{R}_i\)를 가지며, edge가 가까운 node들을 잇습니다. 각 dense 표면 점은 근처 node들의 변환을 섞은 것을 따르므로, node 변환 수백 개가 점 수백만 개를 대신합니다.
+@@ 45
+<strong>as-rigid-as-possible</strong> energy는 모든 node의 이웃이 하나의 rigid 조각처럼 움직이기를 요구합니다:
+@@ 46
+energy는 모든 이웃이 회전과 이동만 했을 때 정확히 0이므로, 굽힘은 싸고 늘어남이나 전단은 비쌉니다.
+@@ 47
+<strong>평면에서 node 하나를 손으로.</strong> 정지 edge \(\mathbf{e}_1 = (1, 0)\), \(\mathbf{e}_2 = (0, 1)\); 현재 edge \(\mathbf{e}'_1 = (0.8, 0.6)\), \(\mathbf{e}'_2 = (-0.6, 0.8)\). \(\mathbf{a} \times \mathbf{b} = a_x b_y - a_y b_x\)로 두면 최적 회전각은 다음과 같습니다
+@@ 48
+정지 edge를 \(36.9^\circ\) 회전하면 현재 edge가 정확히 나오므로, 이 node의 기여는 0입니다. 더 단순한 prior인 "이웃이 똑같이 움직임", \(\sum \norm{(\mathbf{p}_i - \mathbf{p}_j) - (\mathbf{q}_i - \mathbf{q}_j)}^2\)는 \(\norm{(-0.2, 0.6)}^2 + \norm{(-0.6, -0.2)}^2 = 0.8\)을 줍니다. 아무것도 변형하지 않는 순수 회전을 벌주는 것입니다.
+@@ 49
+\(E_{\text{ARAP}}\)의 최소화는 쉬운 두 단계를 번갈아 합니다. 위치를 고정하면 각 \(\mathbf{R}_i\)는 위의 닫힌 형태로 구해집니다 (3D에서는 <a href="#d74">13주차 · Day 2</a>에서처럼 SVD). 회전을 고정하면 energy는 위치에 대한 이차식이고, 모든 free node에서 \(\sum_{j}(\mathbf{p}_i - \mathbf{p}_j) = \sum_{j} \tfrac12(\mathbf{R}_i + \mathbf{R}_j)(\mathbf{q}_i - \mathbf{q}_j)\)일 때 gradient가 0이 됩니다. 선형 시스템입니다.
+@@ 50
+직접 해 보기: 둥근 handle을 끌어 보고, regularizer를 바꿔 보세요.
+@@ 51
+눈여겨볼 점: 처음에 handle은 아래 왼쪽으로 당겨져 있습니다. regularizer가 없으면 handle만 움직이고, 띠가 rigid motion에서 벗어난 정도는 89%입니다. "이웃이 똑같이 움직임"은 변위를 퍼뜨리지만 모든 칸을 전단합니다: 25%. As-rigid-as-possible은 각 조각이 회전하게 해 주어 띠가 자처럼 휩니다: 6%. 이제 handle을 띠 길이보다 훨씬 멀리 끌어 보세요. rigid한 해가 없으므로 regularizer는 늘어남을 모든 edge에 퍼뜨립니다.
+@@ 52
+DynamicFusion 이후 VolumeDeform은 photometric 정보를 더했고, KillingFusion은 매끄럽고 거의 isometric한 변형을 강제했습니다 (Figure 15.16). 셋 모두 map을 SDF로 저장하는데, 이는 규모를 키우기 어렵고 탐색을 제한합니다. SurfelWarp는 대신 surfel을 씁니다. 수술용 stereo에서는 MIS-SLAM이 as-rigid-as-possible 변형과 ED 모델을 결합합니다. <span class="src">§15.4.2 · p. 449</span>
+@@ 53
+4. 카메라 하나: tracking thread와 mapping thread
+@@ 54
+monocular deformable SLAM 시스템은 visual SLAM의 두 thread (<a href="#d67">12주차 · Day 1</a>)를 유지합니다. frame rate로 도는 tracking과 keyframe rate로 도는 mapping입니다. <strong>Tracking</strong>은 shape from template과 비슷합니다. 탐색 중인 영역에 대해 정지 상태 모양이 있다고 가정하고, 각 frame에서 카메라 pose와 그 local template의 변형을 추정합니다. <strong>Mapping</strong>은 점 track들을 받아 template을 다시 계산합니다. <span class="src">§15.4.3–15.4.4 · pp. 450–451</span>
+@@ 55
+단계
+@@ 56
+=
+@@ 57
+=
+@@ 58
+=
+@@ 59
+물리 기반 탄성 모델에서 착안한 deformation energy
+@@ 60
+공간적 as-rigid-as-possible regularizer와 점성(viscous) 시간 regularizer
+@@ 61
+=
+@@ 62
+covisible keyframe들에 대한 isometric NRSfM으로 keyframe마다 template을 얻음; 평면 topology를 가정함
+@@ 63
+dynamic deformable graph가 어떤 topology에도 대처함; deformable bundle adjustment 안에 visco-elastic 모델
+@@ 64
+Feature 매칭
+@@ 65
+ORB는 의료 scene의 근접 frame tracking에 부적합한 것으로 드러남; Lucas-Kanade flow (<a href="#d68">12주차 · Day 2</a>)가 affine 조명 변화에 불변이어서 더 잘 동작함. relocalization에는 여전히 ORB와 bag of words를 씀.
+@@ 66
+=
+@@ 67
+=
+@@ 68
+isometric NRSfM이 첫 template을 처음부터 계산함; 초기 매칭은 평면 scene을 가정함
+@@ 69
+rigid structure from motion이 initial guess를 줌
+@@ 70
+Map 확장
+@@ 71
+새 점에 대한 매칭을 찾으면 isometric NRSfM이 처리함
+@@ 72
+새 점은 rigid 알고리즘과 non-rigid 알고리즘으로 triangulation하고, 맞는 모델을 선택함
+@@ 73
+5. 이 분야의 현재 위치
+@@ 74
+§15.5는 열린 문제들로 끝맺습니다. <span class="src">§15.5 · pp. 451–453</span> 물체 tracking은 큰 occlusion과 많은 움직이는 물체가 있을 때 state 추정에 도움이 되지만, 비용이 더 듭니다. NeRF와 3D Gaussian splatting (<a href="#d115">20주차</a>)은 dynamic scene에 유망하지만, real-time 비용과 map 관리는 풀리지 않았습니다. data association은 여전히 어렵고, 추세는 학습된 prior 쪽입니다. lifelong 동작에는 메모리 관리가 필요합니다. 무엇을 남길지, 어떻게 요약하거나 marginalize할지, 언제 잊을지. deformable SLAM에서는 기본적인 질문들이 열려 있습니다. 어떤 조건에서 카메라 trajectory와 변형을 둘 다 추정할 수 있는가, 물체의 rigid motion을 카메라의 움직임과 구별할 수 있는가, local minimum이 있는가? 명시된 목표는 spatio-temporal AI, 즉 일관된 이력을 주고 다음에 올 것을 예측하는 world model입니다.
+@@ 75
+<strong>"As rigid as possible은 물체가 rigid하게 유지된다는 뜻이다."</strong> 작은 이웃 각각이 자기 회전을 가지고 rigid하게 움직여야 한다는 뜻입니다. 전체는 크게 휠 수 있습니다.
+@@ 76
+Q1. 고정된 monocular 카메라가 변형되는 표면 위의 점 50개를 20 frame 동안 관측합니다. prior가 없을 때 미지수와 방정식은 각각 몇 개입니까?
+@@ 77
+미지수 150개, 방정식 2000개
+@@ 78
+미지수 3000개, 방정식 2000개
+@@ 79
+미지수 2000개, 방정식 3000개
+@@ 80
+미지수 3000개, 방정식 3000개
+@@ 81
+모든 점은 매 frame마다 자기 3D 위치를 가집니다: 3 × 50 × 20 = 3000. 각 관측은 픽셀 하나입니다: 2 × 50 × 20 = 2000. 관측마다 depth 하나가 결정되지 않습니다.
+@@ 82
+Q2. 어떤 node의 정지 edge가 (1, 0)과 (0, 1)이고 현재 edge가 (0, 1)과 (−1, 0)입니다. 이 node의 as-rigid-as-possible energy와 "이웃이 똑같이 움직임" energy는 각각 얼마입니까?
+@@ 83
+2와 2
+@@ 84
+4와 0
+@@ 85
+0과 2
+@@ 86
+0과 4
+@@ 87
+현재 edge는 정지 edge를 90° 회전한 것이므로 최적 회전이 정확히 맞습니다: ARAP energy 0. 회전이 없으면 차이는 (−1, 1)과 (−1, −1)이고, 제곱 길이는 2 + 2 = 4입니다.
+@@ 88
+Q3. deformable SLAM에서 관측된 움직임의 일부를 rigid 변환으로 설명할 수 있습니다. 작업 가설은 그 부분을 어디에 둡니까?
+@@ 89
+카메라 trajectory에
+@@ 90
+scene의 변형에
+@@ 91
+양쪽에 절반씩
+@@ 92
+outlier로 버림
+@@ 93
+rigid 변환으로 설명할 수 있는 것은 무엇이든 카메라 trajectory에 포함됩니다.
+@@ 94
+Q4. 의료 scene의 frame 간 tracking에서 Lucas-Kanade optical flow가 ORB 매칭을 대체한 이유는 무엇입니까?
+@@ 95
+카메라 calibration이 필요 없음
+@@ 96
+tracking을 잃은 뒤 장소를 인식함
+@@ 97
+affine 조명 변화에 불변이고, 근접 frame tracking에서 더 잘 동작함
+@@ 98
+depth를 직접 측정함
+@@ 99
+책은 그곳에서 LK가 더 잘 동작한 이유를 affine 조명 변화에 대한 불변성으로 봅니다.
+@@ 100
+카메라 하나로 본 변형되는 scene에는 미지수 \(3NF\)개와 방정식 \(2NF\)개가 있습니다. 시간적, 공간적 prior, 또는 depth 센서가 나머지를 채웁니다.
+@@ 101
+Shape from template은 알려진 정지 모양을 가정합니다. 표면 안의 거리를 보존하는 isometry가 perspective 카메라에서 동작하는 prior입니다.
+@@ 102
+Deformable SLAM은 카메라도 움직이고, scene을 근접한 조각들로 보며, causal하게 동작하고, 움직임의 rigid 부분을 카메라에 할당합니다.
+@@ 103
+depth가 있으면 canonical map을 as rigid as possible이 되도록 regularize된 deformation graph로 변형합니다. 이웃은 회전할 수 있지만 늘어날 수는 없습니다.
+@@ 104
+<em>SLAM Handbook</em>, §15.4 "Deformable SLAM"과 §15.5 "Further Readings &amp; Recent Trends", pp. 446–453, Figures 15.14–15.16.
+@@ 105
+Sorkine and Alexa, <em>As-Rigid-As-Possible Surface Modeling</em>, 2007 (energy와, 그 local 단계와 global 단계의 교대).
+@@ 106
+Sumner, Schmidt, Pauly, <em>Embedded Deformation for Shape Manipulation</em>, 2007 (deformation graph); Hartley와 Zisserman, <em>Multiple View Geometry</em>, 2004 (7개 parameter의 gauge).

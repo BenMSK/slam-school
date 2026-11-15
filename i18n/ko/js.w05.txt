@@ -1,0 +1,252 @@
+@@ w05
+"time t (s)"
+==
+"시간 t (s)"
+@@ w05
+"aria-label":"Top: ten B-spline basis functions over time with the ones that are nonzero at the chosen time highlighted. Bottom: ten draggable coefficients and the curve they produce."
+==
+"aria-label":"위: 시간에 따른 B-spline basis function 10개. 고른 시각에서 0이 아닌 것은 강조됨. 아래: 끌 수 있는 계수 10개와 그 계수들이 만드는 곡선."
+@@ w05
+"basis functions Ψₖ(t)"
+==
+"basis function Ψₖ(t)"
+@@ w05
+"coefficients cₖ (drag them) and the curve p(t)"
+==
+"계수 cₖ (끌어서 조정)와 곡선 p(t)"
+@@ w05
+stat("Nonzero basis functions",w.length,"at this time; degree "+d+" → at most "+(d+1))
+==
+stat("0이 아닌 basis function",w.length,"이 시각 기준, 차수 "+d+" → 최대 "+(d+1))
+@@ w05
+stat("Their values",
+==
+stat("각 값",
+@@ w05
+"sum = "+
+==
+"합 = "+
+@@ w05
+stat("Curve value",p(t).toFixed(3),"p(t) at t = "+t.toFixed(2)+" s, from "+w.length+" coefficient"+(w.length>1?"s":""))
+==
+stat("곡선 값",p(t).toFixed(3),"t = "+t.toFixed(2)+" s의 p(t), 계수 "+w.length+"개 사용")
+@@ w05
+h("div",{class:"vt"},"B-spline basis functions")
+==
+h("div",{class:"vt"},"B-spline basis function")
+@@ w05
+"Ten basis functions on knots one second apart, built with the Cox–de Boor recursion, and the curve p(t) = Σ Ψₖ(t) cₖ they give. The curve is drawn where every basis function it needs exists."
+==
+"1초 간격 knot 위에 Cox–de Boor recursion으로 만든 basis function 10개와, 이들이 주는 곡선 p(t) = Σ Ψₖ(t) cₖ. 곡선은 필요한 basis function이 모두 있는 구간에만 그립니다."
+@@ w05
+select("Degree ",
+==
+select("차수 ",
+@@ w05
+"0 (piecewise constant)"
+==
+"0 (구간별 상수)"
+@@ w05
+range("Time t",
+==
+range("시간 t",
+@@ w05
+frame("Noisy position measurements over time, the true trajectory, and a cubic B-spline fitted to the measurements by regularized least squares")
+==
+frame("시간에 따른 noise 섞인 위치 측정값, 실제 trajectory, 그리고 regularized least squares로 측정값에 맞춘 cubic B-spline")
+@@ w05
+"The normal equations are singular: with λ = 0 and knots this close, some coefficients are touched by no measurement. Add a regularizer or widen the knot spacing."
+==
+"normal equations가 singular입니다. λ = 0이고 knot이 이렇게 촘촘하면 어떤 측정도 건드리지 않는 계수가 생깁니다. regularizer를 더하거나 knot 간격을 넓히세요."
+@@ w05
+stat("Coefficients K",F.K,"for M = "+D.length+" measurements")
+==
+stat("계수 K",F.K,"측정 M = "+D.length+"개에 대해")
+@@ w05
+stat("RMS residual at the measurements",
+==
+stat("측정에서의 RMS residual",
+@@ w05
+stat("RMS error against the true curve",
+==
+stat("실제 곡선 대비 RMS 오차",
+@@ w05
+"between first and last measurement"
+==
+"첫 측정과 마지막 측정 사이"
+@@ w05
+h("div",{class:"vt"},"Fit a spline: how many basis functions?")
+==
+h("div",{class:"vt"},"spline 맞추기: basis function은 몇 개?")
+@@ w05
+"Solves (ΨᵀΨ/σ² + λI) c = Ψᵀz/σ² for the coefficients of a uniform cubic B-spline. λ = 1 is the regularizer of equation (2.43)."
+==
+"균일 cubic B-spline의 계수에 대해 (ΨᵀΨ/σ² + λI) c = Ψᵀz/σ²를 풉니다. λ = 1이 식 (2.43)의 regularizer입니다."
+@@ w05
+range("Knot spacing",
+==
+range("knot 간격",
+@@ w05
+range("Regularizer λ",
+==
+range("regularizer λ",
+@@ w05
+button("New noise",
+==
+button("새 noise",
+@@ w05
+["var(--line2)","true trajectory"]
+==
+["var(--line2)","실제 trajectory"]
+@@ w05
+["var(--ink)","measurements"]
+==
+["var(--ink)","측정값"]
+@@ w05
+["var(--c2)","knots"]
+==
+["var(--c2)","knot"]
+@@ w05
+"aria-label":"Two heat maps side by side: the kernel matrix K on the left and its inverse on the right. Coloured cells are nonzero entries."
+==
+"aria-label":"나란히 놓인 heat map 두 개: 왼쪽은 kernel matrix K, 오른쪽은 그 역행렬. 색칠된 칸은 0이 아닌 원소."
+@@ w05
+stat("Size of K",N+" × "+N,n+" times"+(d===2?", state (p, v)":""))
+==
+stat("K의 크기",N+" × "+N,"시각 "+n+"개"+(d===2?", state (p, v)":""))
+@@ w05
+stat("Nonzero entries of K⁻¹",nz+" of "+N*N,"K has "+N*N+" of "+N*N)
+==
+stat("K⁻¹의 0 아닌 원소",N*N+"개 중 "+nz,"K는 "+N*N+"개 중 "+N*N)
+@@ w05
+stat("Pattern of K⁻¹",
+==
+stat("K⁻¹의 패턴",
+@@ w05
+"each state linked to its neighbours only":"every time linked to every other"
+==
+"각 state가 이웃과만 연결":"모든 시각이 서로 연결"
+@@ w05
+button("Irregular times",
+==
+button("불규칙한 시각",
+@@ w05
+h("div",{class:"vt"},"Dense kernel, sparse inverse")
+==
+h("div",{class:"vt"},"dense한 kernel, sparse한 역행렬")
+@@ w05
+"Builds K = ΦQΦᵀ for the chosen prior (unit power spectral density, unit initial covariance), inverts it numerically, and counts the entries of the inverse that are not zero. Blue is positive, pink is negative."
+==
+"고른 prior로 K = ΦQΦᵀ를 만들고 (power spectral density 1, 초기 covariance 1), 수치적으로 역행렬을 구한 뒤 0이 아닌 원소를 셉니다. 파란색은 양수, 분홍색은 음수입니다."
+@@ w05
+"constant velocity, positions only"
+==
+"constant velocity, 위치만"
+@@ w05
+range("Number of times M",
+==
+range("시각 수 M",
+@@ w05
+frame("Noisy position measurements over time, the true trajectory, the Gaussian-process posterior mean, and a shaded band of plus and minus two posterior standard deviations")
+==
+frame("시간에 따른 noise 섞인 위치 측정값, 실제 trajectory, Gaussian-process posterior 평균, 그리고 posterior 표준편차의 ±2배를 나타내는 음영 띠")
+@@ w05
+stat("Band half-width at 3 s",
+==
+stat("3 s에서 띠 반폭",
+@@ w05
+"2σ, among the measurements"
+==
+"2σ, 측정이 있는 구간"
+@@ w05
+stat("Band half-width at 6.1 s",
+==
+stat("6.1 s에서 띠 반폭",
+@@ w05
+"2σ, middle of the gap"
+==
+"2σ, 빈 구간 한가운데"
+@@ w05
+stat("True curve inside the band",
+==
+stat("띠 안에 든 실제 곡선",
+@@ w05
+"of 126 query times"
+==
+"query 시각 126개 중"
+@@ w05
+h("div",{class:"vt"},"Gaussian-process regression with a motion prior")
+==
+h("div",{class:"vt"},"motion prior를 쓴 Gaussian-process regression")
+@@ w05
+"Computes the posterior mean and variance of p(t) at 126 query times from the same measurements as the spline widget. The prior has a wide initial covariance, so only its smoothness matters."
+==
+"spline 위젯과 같은 측정값으로 query 시각 126개에서 p(t)의 posterior 평균과 분산을 계산합니다. prior의 초기 covariance가 넓어서 prior의 매끄러움만 결과에 영향을 줍니다."
+@@ w05
+range("Assumed measurement σ",
+==
+range("가정한 측정 σ",
+@@ w05
+["var(--c5)","posterior mean"]
+==
+["var(--c5)","posterior 평균"]
+@@ w05
+["var(--c5-soft)","±2σ band"]
+==
+["var(--c5-soft)","±2σ 띠"]
+@@ w05
+"aria-label":"Top view of two poses drawn as triangles, the curved path given by interpolating between them on SE(2), the straight path given by interpolating coordinates, and the interpolated pose"
+==
+"aria-label":"삼각형으로 그린 두 pose를 위에서 본 그림. SE(2) 위 interpolation이 주는 곡선 경로, 좌표 interpolation이 주는 직선 경로, 그리고 interpolation한 pose"
+@@ w05
+"Tₖ (drag)"
+==
+"Tₖ (끌기)"
+@@ w05
+stat("Log of the relative pose",
+==
+stat("상대 pose의 Log",
+@@ w05
+stat("Interpolated pose",
+==
+stat("interpolation한 pose",
+@@ w05
+"Exp(α ξ) Tₖ₋₁ at α = "+al.toFixed(2)
+==
+"α = "+al.toFixed(2)+"에서 Exp(α ξ) Tₖ₋₁"
+@@ w05
+stat("Distance to the straight-line point",
+==
+stat("직선 위 점까지 거리",
+@@ w05
+"same α, coordinates interpolated"
+==
+"같은 α, 좌표를 interpolation"
+@@ w05
+stat("Determinant of the blended rotation",
+==
+stat("섞은 회전의 행렬식",
+@@ w05
+"(1−α)Rₖ₋₁ + αRₖ; a rotation needs 1"
+==
+"(1−α)Rₖ₋₁ + αRₖ; 회전이면 1"
+@@ w05
+h("div",{class:"vt"},"Interpolating between two poses")
+==
+h("div",{class:"vt"},"두 pose 사이의 interpolation")
+@@ w05
+"Computes T(t) = Exp(α Log(Tₖ Tₖ₋₁⁻¹)) Tₖ₋₁ on SE(2), equation (2.61) with a linear spline, and compares it with interpolating x and y separately."
+==
+"SE(2) 위에서 T(t) = Exp(α Log(Tₖ Tₖ₋₁⁻¹)) Tₖ₋₁ (linear spline을 쓴 식 (2.61))를 계산하고, x와 y를 따로 interpolation한 결과와 비교합니다."
+@@ w05
+range("Heading of Tₖ",
+==
+range("Tₖ의 heading",
+@@ w05
+["var(--c5)","interpolation on SE(2)"]
+==
+["var(--c5)","SE(2) 위 interpolation"]
+@@ w05
+["var(--c2)","straight line in x, y"]
+==
+["var(--c2)","x, y 직선"]

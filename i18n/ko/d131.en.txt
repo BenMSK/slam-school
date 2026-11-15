@@ -1,0 +1,142 @@
+@@ 1
+<span class="eyebrow">Week 22 · Day 5</span>
+@@ 2
+Meshes that bend, hierarchies, and 3D scene graphs
+@@ 3
+After today you can explain how a mesh is corrected after a loop closure by optimizing a deformation graph, count the memory a hierarchical map saves, and define a 3D scene graph and say what makes inference on it cheap.
+@@ 4
+About 60 min · Read §16.3.3, §16.4, §16.5, pp. 479–489 (11 pages, about 3 of them figures and 3 a survey) · Needs Week 13 Day 5
+@@ 5
+Read first: §16.3.3, §16.4, and §16.5, pp. 479–489
+@@ 6
+The two drawbacks of voxel maps that open §16.3.3 (p. 479).
+@@ 7
+The three sums of (16.27) on p. 481, and which graph edges each runs over.
+@@ 8
+Where the factor \(L\) goes between (16.34) and (16.35), p. 484.
+@@ 9
+The three properties in Definition 16.2 and the bound (16.37), p. 485.
+@@ 10
+A loop closure moves the trajectory, and the dense map has to follow. A mesh can: tie a few of its vertices to the pose graph, optimize both as one pose graph, and drag the rest along. The same graph then grows upward into objects, places, and rooms: a 3D scene graph, where each symbol is stored once and a query touches only the branch it needs.
+@@ 11
+1. A mesh tied to the pose graph
+@@ 12
+Voxel maps fuse information well but are expensive to store and hard to edit: after a loop closure, past observations have to be removed and integrated again at their corrected poses. A mesh, usually extracted from a voxel map kept in a window around the robot, stores only surfaces and can be deformed in place. The method is <strong>pose-graph and mesh optimization (PGMO)</strong>. <span class="src">§16.3.3 · p. 479</span>
+@@ 13
+PGMO builds a <strong>deformation graph</strong> whose nodes each carry a rigid transformation: <span class="src">§16.3.3 · pp. 479–480</span>
+@@ 14
+<strong>Pose vertices</strong> \(\mathbf{X}_i = [\mathbf{R}^X_i, \mathbf{t}^X_i]\), the nodes of the robot's pose graph, joined by its odometry and loop-closure edges.
+@@ 15
+<strong>Mesh vertices</strong> \(\mathbf{M}_k = [\mathbf{R}^M_k, \mathbf{t}^M_k]\), the vertices of a downsampled mesh, joined by its edges. Before any deformation \(\mathbf{R}^M_k = \mathbf{I}_3\) and \(\mathbf{t}^M_k = \mathbf{g}_k\), the vertex's original position.
+@@ 16
+An edge between pose \(i\) and mesh vertex \(k\) whenever the vertex was visible from that pose.
+@@ 17 attr
+A deformation graph. Five pose vertices (circles) are chained along the bottom, and a dashed arc joins the last to the first as a loop closure. Four mesh control nodes (squares) are chained along the top. Each pose is joined to the one or two mesh nodes it saw.
+@@ 18
+mesh Mₖ
+@@ 19
+poses Xᵢ
+@@ 20
+loop closure
+@@ 21
+Circles: pose vertices. Squares: mesh control nodes. Thin lines: visibility edges. When the loop closure pulls the poses, the visibility edges pull the mesh with them.
+@@ 22
+2. The cost, and why it is a pose graph
+@@ 23
+When a loop closure arrives, all transformations are re-estimated by minimizing <span class="src">§16.3.3 · p. 481</span>
+@@ 24
+The first sum is ordinary pose-graph optimization over the relative-pose measurements \(\mathbf{Z}_{ij}\). The second keeps the mesh locally rigid: if the patch around node \(k\) moved as a rigid body, neighbour \(l\) would be at \(\mathbf{R}^M_k(\mathbf{g}_l - \mathbf{g}_k) + \mathbf{t}^M_k\), and the term penalizes its distance from where \(l\) actually is. The third does the same between a pose and the mesh nodes it saw, with \(\tilde{\mathbf{g}}_{il} = \tilde{\mathbf{R}}_i\T(\mathbf{g}_l - \mathbf{g}_i)\) the original position of node \(l\) in the frame of pose \(i\). Before deformation every rigidity term is zero.
+@@ 25
+Filling the gap: from (16.27) to the pose-graph form (16.30)
+@@ 26
+The book defines \(\mathbf{G}_{kl} = \begin{bmatrix}\mathbf{I}_3 & \mathbf{g}_l - \mathbf{g}_k\\ \mathbf{0} & 1\end{bmatrix}\) and claims the second sum equals \(\sum \norm{\mathbf{M}_k\mathbf{G}_{kl} - \mathbf{M}_l}^2_{\boldsymbol{\Omega}}\). Multiply out, writing \(\mathbf{M}_k\) as a \(4\times4\) matrix:
+@@ 27
+The last column is exactly the rigidity residual. The weighted Frobenius norm of (16.28), \(\norm{\mathbf{A}}^2_{\boldsymbol{\Omega}} = \tr(\mathbf{A}\boldsymbol{\Omega}\mathbf{A}\T)\) with \(\boldsymbol{\Omega} = \diag(\omega_R\mathbf{I}_3, \omega_t)\), weights the squared entries of the first three columns by \(\omega_R\) and those of the last column by \(\omega_t\). Setting \(\omega_R = 0\) on mesh edges leaves \(\omega_t\) times the squared rigidity residual, and the third sum works the same way. So every term has the form \(\norm{\mathbf{T}_i\mathbf{E}_{ij} - \mathbf{T}_j}^2_{\boldsymbol{\Omega}_{ij}}\), equation (16.31): one pose graph over \(n + m\) nodes, for the solvers of <a href="#d77">Week 13 · Day 5</a>.
+@@ 28
+3. Moving every other vertex
+@@ 29
+The optimization moved only the control nodes. Each vertex \(\mathbf{v}_i\) of the full mesh is then carried by its \(m\) nearest control nodes: <span class="src">§16.3.3 · p. 482</span>
+@@ 30
+Each bracket is "where \(\mathbf{v}_i\) would go if it were glued to node \(j\)", and \(d_{\max}\) is the distance to the furthest of the \(m\) nodes. Take \(m = 3\) nodes at distances 1, 2, and 4 m. Then \(\bar{w} = (0.75^2, 0.5^2, 0) = (0.5625, 0.25, 0)\) and \(w = (0.69, 0.31, 0)\). If the nodes only translated, by \((0.4, 0)\), \((0.1, 0)\), and \((-2, 0)\) m, the vertex moves by \(0.69 \times 0.4 + 0.31 \times 0.1 = 0.31\) m in \(x\). The furthest node has weight zero.
+@@ 31
+4. Symbols, and what hierarchy saves
+@@ 32
+<strong>Symbol grounding</strong> is tying a symbol that means something to a person, such as "chair" or "kitchen", to a location in the map. Raw images are too bulky to ground symbols in, so they are attached to a compact <strong>sub-symbolic</strong> representation such as voxels or a mesh. <span class="src">§16.4.1 · p. 483</span>
+@@ 33
+The naive way stores in every voxel which of the \(L\) symbols apply to it (a voxel can belong to a chair and to a kitchen). For volume \(V\) and resolution \(\delta\): <span class="src">§16.4.1 · p. 484</span>
+@@ 34
+Organizing the symbols by containment gives instead
+@@ 35
+Each symbol is now stored once, as a node of a graph whose edges mean "contains". Nothing is lost; the per-voxel labels can be regenerated. For a flat of 150 m³ at \(\delta = 0.1\) m with 15 symbols, (16.34) is \(15 \times 150{,}000 = 2{,}250{,}000\) entries and (16.35) is \(150{,}000 + 14 + 4 + 1\). Replacing the voxel grid by an octree or by a graph of places shrinks the first term to \(N_{\text{sub-sym}}\) (16.36), now with some loss. <span class="src">§16.4.1 · p. 484</span>
+@@ 36
+5. Hierarchical graphs and 3D scene graphs
+@@ 37
+A graph is <strong>hierarchical</strong> if its nodes split into layers \(1, \dots, l\) such that (1) a node has at most one parent in the layer above, (2) edges between layers join consecutive layers only, and (3) children of different parents are never connected. Then the descendants of two nodes of the same layer never mix, and the treewidth of the whole graph is bounded by <span class="src">Definition 16.2, §16.4.1 · p. 485</span>
+@@ 38
+where \(\mathcal{G}[\mathcal{C}(v)]\) is the subgraph formed by the children of \(v\).
+@@ 39
+Filling the gap: what treewidth buys
+@@ 40
+<strong>Treewidth</strong> measures how far a graph is from a tree: a tree has treewidth 1, a fully connected graph on \(n\) nodes has \(n - 1\). With the best elimination order (<a href="#d15">Week 3 · Day 3</a>), the largest clique created has treewidth \(+\,1\) variables, and exact inference over discrete variables costs exponentially in that number but only linearly in the number of nodes. So (16.37) says the cost is set by the most tangled group of siblings, such as the objects of one cluttered room, and not by the size of the building.
+@@ 41
+A <strong>3D scene graph</strong> is a graph \(\mathcal{G} = (\mathcal{V}, \mathcal{E})\) whose nodes carry features that always include a position, and whose edges carry features too. Its layers are typically objects, places (a sparse model of free space), rooms, and buildings. Edges between layers mean containment. Edges inside a layer mean relations such as "on top of" or "nearby", some of them directed. Relations such as "left of", common in 2D scene graphs, depend on the viewpoint and mean little in 3D. <span class="src">§16.4.2 · pp. 486–487</span>
+@@ 42
+Try it: run each of the four queries and compare the first two counters.
+@@ 43
+Notice that "the mug in the kitchen" examines 9 of 19 nodes and never opens the living room, which has a mug of its own. "Go to the living room" examines 5 and no object at all. The last two queries examine all 19, more than the 14 entries of a flat object list: hierarchy pays when the query names a level above the answer.
+@@ 44
+Going deeper (optional): loop closures and where §16.5 points
+@@ 45
+To keep a scene graph consistent, one approach adds the places layer to the deformation graph of (16.27) and re-interpolates the other layers; another puts factors between all layers, which is no longer a plain pose graph. <span class="src">§16.4.2 · p. 487</span> The trends: maps that store language-aligned features in place of a fixed label set (next week), scene graphs for outdoor scenes with task-driven layers, uncertainty over mixed discrete and continuous variables, and multi-robot semantic mapping. <span class="src">§16.5 · pp. 487–489</span>
+@@ 46
+Q1. In the pose-graph form (16.30), why is the rotation weight ω_R set to zero on mesh edges?
+@@ 47
+Mesh control nodes have no rotation
+@@ 48
+To make the problem convex
+@@ 49
+Only the translation column of M_k G_kl − M_l is the rigidity residual of (16.27); the rotation block R_k − R_l is not part of the cost
+@@ 50
+Because the mesh is assumed not to deform
+@@ 51
+The rigidity terms are 3-vectors equal to the last column of the matrix difference, so the other three columns must get weight zero.
+@@ 52
+Q2. A mesh vertex has m = 3 nearest control nodes at distances 1, 3, and 4 m. What is the normalized weight of the nearest node in (16.33)?
+@@ 53
+d_max = 4. Unnormalized weights: (1 − 1/4)² = 0.5625, (1 − 3/4)² = 0.0625, and 0. Normalized: 0.5625/0.625 = 0.90.
+@@ 54
+Q3. A floor of 200 m³ is stored at δ = 0.1 m with L = 50 symbols, 300 objects, and 12 rooms in 1 building. Roughly how much smaller is the hierarchical count (16.35) than the flat count (16.34)?
+@@ 55
+About 2 times
+@@ 56
+About 50 times
+@@ 57
+About 300 times
+@@ 58
+They are equal
+@@ 59
+V/δ³ = 200,000 voxels. Flat: 50 × 200,000 = 10,000,000. Hierarchical: 200,000 + 313. The ratio is about 50, the number of symbols.
+@@ 60
+Q4. Which of these breaks Definition 16.2?
+@@ 61
+Two objects in the same room joined by an "on top of" edge
+@@ 62
+A room that contains forty objects
+@@ 63
+A building with a single room
+@@ 64
+An object node with containment edges to two different rooms
+@@ 65
+Two parents violate the single-parent property. Edges between siblings are allowed; they only raise the treewidth of that group.
+@@ 66
+PGMO joins the pose graph and a downsampled mesh in a deformation graph and optimizes (16.27): pose-graph terms plus local-rigidity terms. With \(\omega_R = 0\) on mesh edges it is a standard pose graph.
+@@ 67
+The full mesh follows by blending the motions of each vertex's nearest control nodes (16.32).
+@@ 68
+Storing each symbol once in a hierarchy cuts memory from \(L \cdot V/\delta^3\) to \(V/\delta^3 + N\), without loss.
+@@ 69
+A 3D scene graph is a layered graph of positioned nodes. Single parents, locality, and disjoint children bound its treewidth by that of one group of siblings, plus one.
+@@ 70
+<em>SLAM Handbook</em>, §16.3.3 "Mesh-based Metric-Semantic SLAM", §16.4 "Hierarchical Metric-Semantic Representations and 3D Scene Graphs", §16.5 "Further Readings &amp; Recent Trends", pp. 479–489.
+@@ 71
+Sumner, Schmid, Pauly, <em>Embedded Deformation for Shape Manipulation</em>, 2007 (the deformation graph and its blending weights); Koller and Friedman, <em>Probabilistic Graphical Models</em>, 2009 (treewidth and the cost of exact inference).

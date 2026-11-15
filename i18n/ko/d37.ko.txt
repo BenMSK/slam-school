@@ -1,0 +1,238 @@
+@@ 1
+<span class="eyebrow">7주차 · Day 1</span>
+@@ 2
+back-end를 거쳐 미분해야 하는 이유와 autodiff의 작동 방식
+@@ 3
+오늘이 끝나면 학습된 front-end를 쓰는 SLAM을 bilevel optimization 문제로 쓰고, 이 문제를 어렵게 만드는 Jacobian 하나를 짚어 내고, 작은 computation graph에서 forward mode와 reverse mode automatic differentiation을 손으로 실행할 수 있습니다.
+@@ 4
+약 60분 · 4장 도입부, §4.1, §4.2 앞부분, pp. 101–104 읽기 (4쪽) · 2주차 Day 4 필요
+@@ 5
+먼저 읽기: 4장 도입부, §4.1, §4.2(§4.2.1 전까지), pp. 101–104
+@@ 6
+p. 101에서 "최적화 문제를 거쳐 미분한다"는 것이 무엇을 알려 주는지 말로 설명하는 문장.
+@@ 7
+p. 102의 식 (4.1). 각 residual이 가중치와 cost의 곱으로 쓰여 있습니다. 가중치와 cost 모두 network가 들어올 수 있는 자리입니다.
+@@ 8
+p. 103의 식 (4.2a)와 (4.2b): 어느 문제가 어느 문제 안에 들어 있고, 각 문제에 어떤 변수가 속하는지.
+@@ 9
+p. 104의 식 (4.3)과 그 뒤 문장: 어느 항이 어려운 항인지.
+@@ 10
+학습된 front-end가 측정값을 만들고, back-end가 그것을 추정값 \(\mathbf{x}^*\)로 바꿉니다. <em>최종</em> 추정값이 얼마나 좋은지를 기준으로 front-end를 학습시키려면, front-end의 parameter \(\mathbf{y}\)가 움직일 때 \(\mathbf{x}^*\)가 어떻게 움직이는지 알아야 합니다. 그것이 <em>arg min</em>의 Jacobian \(\partial\mathbf{x}^*/\partial\mathbf{y}\)이며, 이 장 전체가 이것을 계산하는 방법을 다룹니다.
+@@ 11
+1. 일방향 pipeline에서 loop로
+@@ 12
+<a href="#d1">1주차 · Day 1</a>에서 front-end는 pseudo-measurement를 back-end에 넘기고 아무 응답도 받지 못했습니다. 이제는 neural network가 feature 검출, matching, frame 간 움직임 추정 같은 front-end의 일부를 잘 해내고, 기하학적 최적화는 여전히 결과의 global consistency를 보장하는 도구로 남아 있습니다. <span class="src">Ch. 4 intro · p. 101</span> network를 그 자체의 과제(예를 들어 matching 정확도)로 학습시킨 뒤 고정해서 끼워 넣을 수도 있습니다. 하지만 그러면 network는 자신의 실수 가운데 어떤 것이 실제로 SLAM 추정값을 해치는지 끝내 배우지 못합니다.
+@@ 13
+대안은 back-end가 front-end에 training signal을 보내게 하는 것입니다. 그러려면 back-end를 <em>거친 뒤</em> 측정한 오차를 network 가중치에 대한 gradient로 바꿔야 하고, 그 gradient는 가는 길에 optimizer를 통과해야 합니다. <span class="src">Ch. 4 intro · pp. 101–102</span>
+@@ 14 attr
+가로로 놓인 상자 세 개: 가중치 y를 가진 front-end neural network, 변수 x를 가진 back-end nonlinear least squares solver, training loss U. 실선 화살표는 왼쪽에서 오른쪽으로 factor를, 그다음 해 x-star를 전달합니다. 점선 화살표는 오른쪽에서 왼쪽으로 x-star에 대한 U의 미분을, 그다음 y에 대한 x-star의 미분을 전달합니다.
+@@ 15
+=
+@@ 16
+=
+@@ 17
+=
+@@ 18
+=
+@@ 19
+=
+@@ 20
+upper-level 변수 y
+@@ 21
+lower-level 변수 x
+@@ 22
+=
+@@ 23
+실선: forward 계산 · 점선: network로 보내는 gradient
+@@ 24
+왼쪽 점선 화살표가 새로운 요소입니다. back-end는 공식이 아니라 iterative solver이므로, "그 미분"에는 정의와 계산 방법이 필요합니다.
+@@ 25
+2. 복습: back-end는 nonlinear least squares 문제
+@@ 26
+back-end는 <strong>nonlinear least squares (NLS)</strong>(비선형 최소제곱) 문제를 풉니다: <span class="src">§4.1 · p. 102</span>
+@@ 27
+각 <strong>residual</strong>(잔차) \(\mathbf{r}_i\)는 변수의 작은 부분집합 \(\mathbf{x}_i\)(factor graph의 factor 하나)에만 의존하며, 스칼라 가중치 \(w_i\)와 벡터 cost \(\mathbf{c}_i\)의 곱으로 쓰입니다. solver는 <a href="#d10">2주차 · Day 4</a>의 것과 같습니다. linearize하고, normal equations를 풀어 step \(\delta\mathbf{x}\)를 구하고, 업데이트하고, 반복합니다. \(\mathbf{J}_i = \partial\mathbf{r}_i/\partial\mathbf{x}\)라 하면 <strong>Gauss-Newton (GN)</strong>은 \(\sum_i \mathbf{J}_i\T\mathbf{J}_i\)를 Hessian의 근사로 쓰고, Levenberg-Marquardt와 dogleg는 step을 더 안전하게 고칩니다. <span class="src">§4.1 · pp. 102–103</span>
+@@ 28
+빈틈 채우기: normal equations의 부호
+@@ 29
+p. 102는 선형 시스템을 \((\sum_i \mathbf{J}_i\T\mathbf{J}_i)\,\delta\mathbf{x} = \sum_i \mathbf{J}_i\T\mathbf{r}_i\)로 간단히 씁니다. 우변에 마이너스 부호가 붙는지는 residual을 어떻게 정의하느냐에 달려 있습니다. 이번 주에 residual은 항상 "예측값 빼기 측정값"이며, 이때 \(\tfrac12\norm{\mathbf{r} + \mathbf{J}\,\delta\mathbf{x}}^2\)를 최소화하면 다음 식이 나옵니다.
+@@ 30
+이것은 책이 나중에 p. 115의 식 (4.43)에서 직접 쓰는 형태입니다.
+@@ 31
+<strong>이번 주의 toy problem.</strong> 미지수 \(x\) 하나(직선 위의 위치)와 residual 두 개:
+@@ 32
+첫째 residual은 비선형 센서입니다. 읽은 값 \(x^2\)을 예측하고 측정값 \(y\)와 비교합니다. 둘째는 \(x\)를 1 쪽으로 당기는 prior입니다. 숫자 \(y\)는 front-end가 출력하는 값입니다. \(y = 2\)로 두고 \(x_0 = 1\)에서 시작합니다. residual은 \(\mathbf{r} = (x^2 - y,\; x - 1)\)이고 \(\mathbf{J} = (2x,\; 1)\T\)이므로, GN step 한 번은 \(x \leftarrow x - \dfrac{2x(x^2-y) + (x-1)}{4x^2+1}\)입니다:
+@@ 33
+=
+@@ 34
+\(x^* = (1+\sqrt3)/2 \approx 1.3660\)으로 수렴합니다. \(x^*\)는 \(\sqrt{2} \approx 1.414\)(센서만 보면 나오는 값)도 아니고 1(prior가 말하는 값)도 아닙니다. 둘의 절충입니다. \(y\)를 바꾸면 절충점이 움직입니다. 얼마나 빨리 움직이는지가 이번 주의 질문입니다.
+@@ 35
+3. 중첩된 두 문제: bilevel optimization
+@@ 36
+network의 parameter를 \(\mathbf{y} \in \R^m\), back-end의 변수를 \(\mathbf{x} \in \R^n\)이라 합시다. back-end의 결과로 network를 학습시키는 것은 <strong>bilevel optimization (BLO)</strong>(이중 수준 최적화) 문제입니다: <span class="src">§4.2 · p. 103</span>
+@@ 37
+\(\mathcal{L}\)은 <strong>lower-level (LL) cost</strong>입니다. \(\mathbf{y}\)를 고정한 채 \(\mathbf{x}\)에 대해 최소화하는 SLAM 목적 함수입니다. \(\mathcal{U}\)는 <strong>upper-level (UL) cost</strong>입니다. \(\mathbf{y}\)에 대해 최소화하는 training loss이며, lower level의 해 \(\mathbf{x}^*\)에서 계산됩니다. 제약 조건 "s.t." 자체가 최적화 문제라는 점이 "bilevel"의 뜻입니다. 변수 \(\mathbf{x}\)는 보통 물리적 의미(pose, landmark)가 있고, 변수 \(\mathbf{y}\)는 보통 그렇지 않습니다(network 가중치). <span class="src">§4.2 · p. 103</span>
+@@ 38
+두 기호는 이 정의대로 씁니다. p. 103의 (4.2) 바로 앞 문장은 두 level의 이름을 느슨하게 쓰고 있으므로, 식과 Figure 4.1을 기준으로 삼습니다.
+@@ 39
+사례
+@@ 40
+Upper level: y와 U
+@@ 41
+Lower level: x와 L
+@@ 42
+Example 4.1, 학습된 feature를 쓰는 visual SLAM (p. 104)
+@@ 43
+y: feature network의 가중치. U: feature matching 오차
+@@ 44
+x: 카메라 pose와 landmark. L: bundle adjustment의 reprojection error
+@@ 45
+=
+@@ 46
+y: relative pose를 추정하는 network의 가중치. U: pose-graph 오차
+@@ 47
+x: pose. L: 같은 pose-graph 오차
+@@ 48
+우리의 toy problem
+@@ 49
+y: 측정값 자체. U = ½(x* − 1.5)², ground truth 1.5에 대한 오차
+@@ 50
+x: 위치. L = ½(x² − y)² + ½(x − 1)²
+@@ 51
+Example 4.2에서 두 level이 같은 오차를 쓰는 것은 실수가 아닙니다. lower level은 주어진 측정값에 맞는 pose를 고르고, upper level은 network가 만드는 측정값이 최적화 후에 더 적은 오차를 남기도록 network를 바꿉니다. <span class="src">§4.2 · p. 104</span>
+@@ 52
+보조 요리사(front-end)가 재료를 손질해요. 셰프(back-end)는 어떤 재료가 오든 늘 그걸로 만들 수 있는 최고의 요리를 만들어요. 평론가는 그 요리에 점수를 매겨요. 실력을 늘리려면 보조 요리사는 이걸 알아야 해요. "양파를 조금 더 잘게 썰었다면 셰프의 최고 요리는 어떻게 달라졌고, 평론가는 더 좋아했을까?" 재료의 작은 변화에 셰프가 보이는 반응이 바로 \(\partial\mathbf{x}^*/\partial\mathbf{y}\)예요.
+@@ 53
+4. upper level에 필요한 gradient
+@@ 54
+upper level은 gradient descent로 학습합니다. \(\mathbf{y} \leftarrow \mathbf{y} + \delta\mathbf{y}\)이고 \(\delta\mathbf{y}\)는 음의 gradient 방향입니다. \(\mathbf{x}^*\)가 \(\mathbf{y}\)에 의존하므로 chain rule에서 두 항이 나옵니다: <span class="src">§4.2 · p. 104</span>
+@@ 55
+빈틈 채우기: 행렬 크기, 그리고 어느 항이 어려운가
+@@ 56
+\(\mathcal{U}\)는 스칼라이고, \(\mathbf{y}\)의 원소는 \(m\)개, \(\mathbf{x}\)의 원소는 \(n\)개입니다. gradient를 행벡터로 쓰면:
+@@ 57
+\(\partial\mathcal{U}/\partial\mathbf{y}\)는 \(1\times m\)입니다. \(\mathbf{x}^*\)를 상수로 취급한 <strong>직접</strong> 의존성이며, 일반적인 backpropagation으로 구합니다.
+@@ 58
+\(\partial\mathcal{U}/\partial\mathbf{x}^*\)는 \(1\times n\)입니다. 이것도 평범합니다.
+@@ 59
+\(\partial\mathbf{x}^*/\partial\mathbf{y}\)는 \(n\times m\)입니다. \((j,k)\) 원소는 \(k\)번째 parameter가 한 단위 바뀔 때 \(j\)번째 해 변수가 얼마나 움직이는지를 나타냅니다. 이것이 <strong>간접</strong> 부분이자 어려운 부분입니다. \(\mathbf{x}^*\)가 공식이 아니라 "solver를 실행한 결과"로 정의되기 때문입니다.
+@@ 60
+toy problem에서 \(\mathcal{U} = \tfrac12(x^*-1.5)^2\)는 \(y\)를 직접 포함하지 않으므로 첫째 항은 0이고 \(\nabla_y\,\mathcal{U} = (x^* - 1.5)\cdot \dfrac{dx^*}{dy}\)입니다. 이 미분은 brute force로 추정할 수 있습니다. \(y = 2.01\)과 \(y = 1.99\)에서 lower level을 풀면 \(x^* = 1.36936\)과 \(1.36269\)가 나오므로
+@@ 61
+gradient는 음수입니다. \(y\)를 올리면 loss가 줄어든다는 뜻인데, \(x^* = 1.366\)이 목표 1.5보다 아래에 있으니 말이 됩니다. 그러나 이 방법은 <em>parameter 하나마다</em> 전체 solve가 두 번 필요합니다. network 가중치가 100만 개라면 training step 한 번에 SLAM solve가 200만 번입니다. 책은 실용적인 두 경로를 제시합니다. <strong>unrolled differentiation</strong>(내일)과 <strong>implicit differentiation</strong>(음함수 미분, Day 3)입니다. <span class="src">§4.2 · p. 104</span>
+@@ 62
+5. 밑바탕의 도구: automatic differentiation
+@@ 63
+두 경로 모두 <strong>automatic differentiation (AutoDiff)</strong>(자동 미분)에 기댑니다. p. 105는 여기에 forward mode와 reverse mode가 있다고만 언급하고 세부 사항은 라이브러리에 맡깁니다. 여기서는 두 mode를 직접 살펴봅니다. 두 mode의 비용이 내일의 모든 것을 결정하기 때문입니다.
+@@ 64
+프로그램은 기본 연산(덧셈, 곱셈, 제곱, sin, …)을 차례로 실행해 출력을 계산하며, 각 연산의 미분은 알려져 있습니다. AutoDiff는 그 연산 순서에 chain rule을 기호가 아니라 숫자로 적용합니다. 반올림 오차를 빼면 정확합니다. finite difference 근사도 아니고, 공식을 기호로 조작하는 것도 아닙니다.
+@@ 65
+빈틈 채우기: 두 mode
+@@ 66
+프로그램을 중간값 \(v_1, v_2, \dots\)로 씁니다. 각 값은 앞선 값들로부터 계산됩니다.
+@@ 67
+<strong>Forward mode</strong>는 입력 하나, 예를 들어 \(x\)를 골라 모든 값 옆에 그 값의 <strong>tangent</strong> \(\dot v = \partial v/\partial x\)를 함께 들고 갑니다. 입력에는 \(\dot x = 1\), 나머지에는 0을 seed로 넣고, 각 연산은 자기 미분 규칙으로 tangent를 갱신합니다. \(v = a\,b\)이면 \(\dot v = \dot a\, b + a\, \dot b\)입니다. 값 계산과 함께 진행하는 pass 한 번으로 <em>그 입력 하나</em>에 대한 <em>모든 출력</em>의 미분을 얻습니다.
+@@ 68
+<strong>Reverse mode</strong>는 먼저 프로그램을 실행해 모든 중간값을 저장합니다. 그다음 연산을 거꾸로 따라가며 모든 값에 대해 <strong>adjoint</strong> \(\bar v = \partial(\text{output})/\partial v\)를 들고 갑니다. 출력에는 1을 seed로 넣고, 각 node는 자기 adjoint를 자신을 계산하는 데 쓰인 값들에 넘깁니다. \(v = a\,b\)이면 \(\bar a\)는 \(\bar v\, b\)를, \(\bar b\)는 \(\bar v\, a\)를 받습니다. 여러 곳에 쓰인 값은 받은 것을 모두 더합니다. backward pass 한 번으로 <em>모든 입력</em>에 대한 <em>그 출력 하나</em>의 미분을 얻습니다. neural network에 적용하면 이것이 backpropagation입니다.
+@@ 69
+toy cost를 기본 연산 단계로 나눕니다: \(v_1 = x^2\), \(v_2 = v_1 - y\), \(v_3 = x - 1\), \(v_4 = \tfrac12 v_2^2\), \(v_5 = \tfrac12 v_3^2\), \(\mathcal{L} = v_4 + v_5\). \(x = 1.5\), \(y = 2\)에서:
+@@ 70
+=
+@@ 71
+값
+@@ 72
+Forward tangent (x에 seed)
+@@ 73
+=
+@@ 74
+=
+@@ 75
+forward 열은 위에서 아래로, reverse 열은 아래에서 위로 읽습니다. 둘 다 \(\partial\mathcal{L}/\partial x = 1.25\)를 얻고, 이는 공식 \(2x(x^2-y) + (x-1) = 0.75 + 0.5\)와 일치합니다. \(\partial\mathcal{L}/\partial y = -0.25\)까지 함께 얻는 것은 reverse pass뿐입니다.
+@@ 76
+직접 해 보기: Step 슬라이더로 각 mode를 한 단계씩 진행한 다음, x와 y를 바꿔 보세요.
+@@ 77
+눈여겨볼 점: 기본값 x = 1.5, y = 2에서 x에 seed를 넣은 forward pass는 L에서 1.250으로 끝나고 y에 대해서는 아무것도 알려 주지 않습니다. y에 seed를 넣으면 −0.250으로 끝납니다. reverse pass는 두 숫자를 x node와 y node에서 한 번의 sweep으로 모두 내놓으며, 그 화살표는 계산 방향과 반대로 흐릅니다.
+@@ 78
+입력 m개, 출력 p개인 f
+@@ 79
+=
+@@ 80
+=
+@@ 81
+pass 한 번으로 계산하는 것
+@@ 82
+Jacobian 곱하기 벡터, J·u (u가 단위 벡터면 열 하나)
+@@ 83
+벡터 곱하기 Jacobian, wᵀ·J (w가 단위 벡터면 행 하나)
+@@ 84
+전체 Jacobian에 필요한 pass 수
+@@ 85
+추가 메모리
+@@ 86
+tangent 외에는 없음
+@@ 87
+모든 중간값을 backward pass까지 보관해야 함
+@@ 88
+유리한 경우
+@@ 89
+입력이 적고 출력이 많을 때
+@@ 90
+입력이 많고 출력이 하나일 때: training loss
+@@ 91
+training loss는 출력이 하나이고 입력이 수백만 개이므로 학습에는 reverse mode를 씁니다. 그 대가는 끝에서 두 번째 행, 곧 계산 길이에 비례하는 메모리입니다. 내일은 back-end solver의 모든 iteration이 그 "계산"이 되고, 이 대가가 핵심 문제가 됩니다.
+@@ 92
+<strong>"U는 y를 포함하지 않으므로 y에 대한 gradient는 0이다."</strong> (4.3)에서 0인 것은 직접 항뿐입니다. \(\mathcal{U}\)는 \(\mathbf{x}^*(\mathbf{y})\)를 통해 \(\mathbf{y}\)에 의존하며, 보통은 그 간접 항이 신호의 전부입니다.
+@@ 93
+<strong>"AutoDiff는 라이브러리가 대신 계산해 주는 finite difference다."</strong> finite difference는 입력을 조금 옮긴 곳에서 함수를 계산하며 truncation 오차가 있습니다. AutoDiff는 같은 연산을 따라 정확한 미분 규칙을 전파하므로 그런 오차가 없습니다.
+@@ 94
+<strong>"Reverse mode가 언제나 더 빠르다."</strong> reverse mode는 출력마다 pass가 한 번 필요하고 계산 전체를 저장합니다. 입력이 적고 출력이 많은 함수라면 forward mode가 더 저렴합니다.
+@@ 95
+<strong>"lower level과 upper level은 서로 다른 cost를 써야 한다."</strong> Example 4.2는 두 level에서 같은 pose-graph 오차를 씁니다. 두 level의 차이는 어떤 변수가 자유로운가에 있습니다.
+@@ 96
+Q1. Example 4.2(network가 relative pose를 추정하고 pose-graph optimization이 drift를 제거)에서 lower-level 변수 x는 무엇입니까?
+@@ 97
+network의 가중치
+@@ 98
+이미지
+@@ 99
+로봇 pose
+@@ 100
+learning rate
+@@ 101
+lower level은 back-end입니다. network 출력을 고정한 채 pose를 최적화합니다. network 가중치는 upper-level 변수 y입니다.
+@@ 102
+Q2. toy cost L = ½(x² − y)² + ½(x − 1)²의 computation graph를 x = 2, y = 3에서 계산할 때 ∂L/∂x는 무엇입니까?
+@@ 103
+v1 = 4, v2 = 1, v3 = 1. Reverse: v2와 v3의 adjoint는 1과 1이므로 ∂L/∂x = 1 · 2x + 1 · 1 = 4 + 1 = 5. (그리고 ∂L/∂y = −1.)
+@@ 104
+Q3. back-end의 변수가 n = 600개, network의 가중치가 m = 1,000,000개입니다. ∂x*/∂y의 크기는 무엇이고, 행벡터 ∇U 하나를 reverse mode로 계산하는 데 AutoDiff pass가 몇 번 필요합니까?
+@@ 105
+1,000,000 × 600; pass 600번
+@@ 106
+600 × 600; pass 1번
+@@ 107
+600 × 1,000,000; pass 1,000,000번
+@@ 108
+600 × 1,000,000; pass 1번
+@@ 109
+행은 해 변수를, 열은 parameter를 가리키므로 n × m입니다. loss U는 스칼라 출력 하나이므로 reverse pass 한 번으로 gradient 전체를 얻습니다. 600 × 1,000,000 행렬 전체는 필요 없고, 행벡터 ∂U/∂x*와의 곱만 있으면 됩니다.
+@@ 110
+Q4. toy problem에서 해는 y = 2일 때 x* = 1.3660, y = 2.1일 때 x* = 1.3991입니다. 이 finite difference로 보면 y = 2 근처에서 y가 한 단위 바뀔 때 U = ½(x* − 1.5)²는 대략 얼마나 바뀝니까?
+@@ 111
+dx*/dy ≈ (1.3991 − 1.3660)/0.1 = 0.331이고 ∂U/∂x* = 1.3660 − 1.5 = −0.134입니다. 둘의 곱은 약 −0.044입니다. 직접 항은 0입니다.
+@@ 112
+back-end를 거쳐 미분하면 front-end의 출력이 바뀔 때 SLAM 해가 어떻게 바뀌는지 알 수 있고, 그래서 front-end를 최종 정확도로 학습시킬 수 있습니다.
+@@ 113
+이것은 bilevel 문제입니다. upper-level cost \(\mathcal{U}\)는 \(\mathbf{y}\)를 학습시키고, lower-level cost \(\mathcal{L}\)은 \(\mathbf{x}^*\)를 구하기 위해 푸는 NLS 문제 (4.1)입니다.
+@@ 114
+gradient (4.3)에는 직접 항과 간접 항이 있습니다. 간접 항에는 arg min의 \(n\times m\) Jacobian인 \(\partial\mathbf{x}^*/\partial\mathbf{y}\)가 필요합니다.
+@@ 115
+Forward-mode AutoDiff는 입력마다 pass가 한 번 들고, reverse mode는 출력마다 한 번 들지만 계산 전체를 저장합니다.
+@@ 116
+<em>SLAM Handbook</em>, 4장 "Differentiable Optimization" (Wang, Jatavallabhula, Mukadam), 도입부, §4.1, §4.2(§4.2.1 전까지), pp. 101–104; Figure 4.1; Example 4.1, 4.2.
+@@ 117
+Griewank, Walther, <em>Evaluating Derivatives: Principles and Techniques of Algorithmic Differentiation</em>, 2nd ed., 2008 (forward mode와 reverse mode, 그 비용).
+@@ 118
+=
+@@ 119
+Nocedal, Wright, <em>Numerical Optimization</em>, 2006 (Gauss-Newton과 부호 규약). toy problem과 그 숫자는 이 앱이 직접 만든 것입니다.

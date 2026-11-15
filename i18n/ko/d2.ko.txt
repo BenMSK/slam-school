@@ -1,0 +1,204 @@
+@@ 1
+<span class="eyebrow">1주차 · Day 2</span>
+@@ 2
+로봇 안에서 SLAM의 자리, 그리고 필요한 확률
+@@ 3
+오늘이 끝나면 SLAM 시스템이 빠른 loop와 느린 loop를 함께 돌리는 이유를 설명하고, 로봇에게 SLAM이 정말 필요한지 판단하고, Bayes' rule로 Gaussian prior와 Gaussian 측정값을 결합할 수 있습니다.
+@@ 4
+약 60분 · §I.3, pp. 9–12 읽기 (4쪽) · 1주차 Day 1 필요
+@@ 5
+먼저 읽기: Prelude §I.3과 §I.3.1, pp. 9–12
+@@ 6
+Figure I.4 (p. 9)의 두 feedback loop: motion controller를 거치는 작은 loop와 motion planning을 거치는 큰 loop. 각 loop에 SLAM의 어느 부분이 입력을 주는지 눈여겨보세요.
+@@ 7
+SLAM과 structure from motion을 가르는 것 (p. 10).
+@@ 8
+세 질문 Q1–Q3 (pp. 10–12)와 각각의 짧은 답.
+@@ 9
+Figure I.5 (pp. 11–12)의 Office 1 / Office 3 이야기, 그리고 "perceptual aliasing"이라는 용어.
+@@ 10
+SLAM은 로봇의 나머지 부분을 위한 서비스이고, 두 고객의 마감 시간이 다릅니다. controller는 밀리초 안에 odometry가 필요하고, planner는 global하게 보정된 map을 몇 초 기다릴 수 있습니다. back-end가 일할 때 쓰는 언어는 확률입니다. belief는 밀도이며 보통 Gaussian이고, <strong>Bayes' rule</strong>은 측정값 하나가 prior belief를 더 날카로운 belief로 바꾸는 방법을 알려 줍니다.
+@@ 11
+1. 하나의 시스템, 두 개의 loop, 두 개의 마감
+@@ 12
+SLAM은 뒤따르는 작업을 돕기 위해 존재합니다. pose 추정값 덕분에 controller는 로봇을 계획된 trajectory 위에 붙잡아 둘 수 있습니다. map은 현재 pose와 함께 planner가 경로를 찾게 해 줍니다. <span class="src">§I.3 · p. 9</span> Figure I.4는 이것이 둘 다 SLAM을 거치는 별개의 feedback loop 두 개이며, 속도가 매우 다르다는 것을 보여 줍니다.
+@@ 13
+=
+@@ 14
+고객
+@@ 15
+SLAM이 주는 것
+@@ 16
+허용 지연
+@@ 17
+안쪽 (제어)
+@@ 18
+=
+@@ 19
+front-end의 odometry
+@@ 20
+빠른 드론이면 밀리초
+@@ 21
+바깥쪽 (계획)
+@@ 22
+=
+@@ 23
+back-end가 global하게 보정한 trajectory와 map
+@@ 24
+초 단위
+@@ 25 attr
+두 개의 타임라인. 위쪽에서는 front-end가 몇 밀리초마다 촘촘한 간격으로 controller에 odometry를 보냅니다. 아래쪽에서는 back-end가 몇 초마다 넓은 간격으로 planner에 보정된 pose와 map을 보내고, 그 사이에 백그라운드에서 최적화합니다.
+@@ 26
+=
+@@ 27
+odometry, 몇 ms마다
+@@ 28
+=
+@@ 29
+poses + map, 몇 s마다
+@@ 30
+업데이트 사이에 백그라운드에서 최적화
+@@ 31
+시간 →
+@@ 32
+같은 SLAM 시스템이 두 가지 속도로 답합니다. 느린 프로세스가 빠른 프로세스를 막아서는 절대 안 됩니다.
+@@ 33
+그래서 실제 SLAM 시스템은 센서 데이터에서 map으로 가는 하나의 함수가 아니라, 병렬로 도는 여러 프로세스입니다. <span class="src">§I.3 · p. 9</span> 이 프로세스들은 양방향으로 소통하기도 합니다. back-end는 controller가 쓰는 odometry trajectory를 주기적으로 보정하고, loop-closure 검출기에 어떤 후보 매칭이 그럴듯한지 알려 줄 수 있습니다. <span class="src">§I.3 · p. 10</span>
+@@ 34
+"느리다"는 "offline"이라는 뜻이 아닙니다. back-end는 <strong>online</strong>이어야 합니다. 데이터가 계속 들어와도 실행 시간이 한없이 늘어나서는 안 되고, 로봇 자체의 컴퓨터에서 돌아가야 합니다. 이 요구 조건이 역사적으로 SLAM을 <strong>structure from motion (SfM)</strong>과 갈라놓았습니다. SfM은 이미지로부터 3D 장면을 복원하는 컴퓨터 비전 문제입니다. SfM은 보통 순서 없는 사진 더미를 받아 클러스터에서 몇 시간을 쓰기도 합니다. SLAM은 로봇이 움직이는 대로 데이터를 순서대로 받고, 몇 초 안에 답해야 합니다. 책은 이 경계가 흐려져서 이제 많은 사람이 "visual SLAM"과 "SfM"을 같은 뜻으로 쓴다고 덧붙입니다. <span class="src">§I.3 · p. 10</span>
+@@ 35
+2. 정말 SLAM이 필요한가?
+@@ 36
+책은 이 질문을 세 단계로 묻습니다. <span class="src">§I.3.1 · pp. 10–12</span>
+@@ 37
+짧은 답
+@@ 38
+논거
+@@ 39
+Q1. 모든 작업에 SLAM이 필요한가?
+@@ 40
+목표물을 시야에 두기, 짧은 거리 이동하기, localization 인프라가 있는 곳에서 일하기는 모두 SLAM 없이 할 수 있습니다. 인프라 없이 오래 작동하려면 기억이 필요하고, map이 바로 그 기억입니다.
+@@ 41
+Q2. map이 기하학적으로 정확해야 하는가?
+@@ 42
+장기간 쓰려면 예
+@@ 43
+odometry만으로는 drift가 생기므로, 벽을 맞댄 두 방이 추정에서는 멀리 떨어질 수 있고, 로봇은 둘 사이의 짧은 길을 놓칩니다.
+@@ 44
+Q3. map이 아예 필요한가?
+@@ 45
+미해결, 하지만 map이 도움이 됨
+@@ 46
+네트워크가 센서 데이터를 곧바로 행동으로 연결할 수는 있지만, 그 내부 표현은 query하거나 들여다볼 수 없습니다. map은 작업 사이에 옮겨 쓸 수 있고, 어떤 응용에서는 map 자체가 결과물입니다.
+@@ 47
+Q2에는 솔깃한 중간 길이 있습니다. <strong>topological map</strong>(위상 지도)은 node가 장소이고 edge가 "여기서 저기로 갈 수 있다"를 뜻하는 그래프입니다. 거리나 각도는 저장하지 않으므로 최적화가 필요 없습니다. 로봇이 두 장소 사이를 주행하거나, place recognition이 두 view가 같은 장소를 보여 준다고 할 때 edge를 추가하면 됩니다. 약점은 <strong>perceptual aliasing</strong>입니다. 서로 다른 두 장소가 비슷해 보이는 것입니다. Office 1과 Office 3이 똑같아 보이면 순수한 topological map은 둘을 하나의 방으로 합쳐 버립니다 (Figure I.5d). metric map에는 그 주장을 검증할 기하 정보가 있습니다. <span class="src">§I.3.1 · p. 12</span> 아래 4절에서 닮은 장소가 얼마나 잘못 이끌 수 있는지를 숫자로 보여 줍니다.
+@@ 48
+3. 확률 변수와 Gaussian
+@@ 49
+오늘의 나머지는 1장이 전제로 하는 배경 지식입니다. <strong>확률 변수</strong>(random variable)는 값을 확신할 수 없는 양입니다. 그 <strong>확률 밀도</strong>(probability density) \(p(x)\)는 각 값이 얼마나 그럴듯한지를 나타내며, 적분하면 1입니다. 책은 밀도를 \(p(\mathbf{a})\)로, \(\mathbf{b}\)를 알 때 \(\mathbf{a}\)의 밀도를 \(p(\mathbf{a}\mid\mathbf{b})\)로 씁니다. <span class="src">Notation · p. xiv</span> 밀도는 두 숫자로 요약됩니다. <strong>평균</strong>(mean) \(\mu = \E[x]\)과 <strong>분산</strong>(variance) \(\sigma^2 = \E[(x-\mu)^2]\)입니다. 그 제곱근 \(\sigma\)가 <strong>표준편차</strong>(standard deviation)이며, \(x\)와 단위가 같습니다.
+@@ 50
+평균이 \(\mu\)이고 분산이 \(\sigma^2\)인 <strong>Gaussian</strong>(정규) 밀도는 다음과 같습니다.
+@@ 51
+확률의 약 68%가 평균에서 \(1\sigma\) 안에, 95%가 \(2\sigma\) 안에, 99.7%가 \(3\sigma\) 안에 있습니다. \(\sigma = 0.05\) m인 range 센서는 약 95%의 경우 실제 range에서 0.10 m 이내의 값을 읽습니다.
+@@ 52
+벡터 \(\boldsymbol{\theta}\in\R^n\)에서는 평균이 벡터 \(\boldsymbol{\mu}\)가 되고, 분산은 <strong>covariance matrix</strong>(공분산 행렬) \(\boldsymbol{\Sigma} = \E[(\boldsymbol{\theta}-\boldsymbol{\mu})(\boldsymbol{\theta}-\boldsymbol{\mu})\T]\)가 됩니다. 대각에 분산이 놓인 \(n\times n\) 대칭 행렬입니다. 책에서는 다변량 Gaussian을 식 (1.9)로 만나게 됩니다.
+@@ 53
+<span class="src">§1.2.2 · p. 27</span> 스칼라 공식과 모양이 같습니다. \((x-\mu)^2/\sigma^2\)가 \(\mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\)가 되었고, 이는 표준편차 단위로 잰 거리의 제곱입니다.
+@@ 54
+covariance matrix를 읽는 예제. landmark 위치 \((x, y)\)의 covariance가 다음과 같다고 합시다.
+@@ 55
+그러면 \(\sigma_x = \sqrt{4} = 2\) m이고 \(\sigma_y = \sqrt{1} = 1\) m입니다. 비대각 원소는 \(x\)와 \(y\)의 covariance입니다. 이를 두 표준편차로 나누면 <strong>상관계수</strong>(correlation) \(\rho = 1.2/(2\times 1) = 0.6\)이 됩니다. \(x\)가 평균보다 크면 \(y\)도 평균보다 큰 경향이 있다는 뜻입니다. 밀도가 일정한 곡선은 타원이며, \(\rho\neq 0\)이면 기울어집니다. 내일 직접 그려 봅니다.
+@@ 56
+=
+@@ 57
+state \(x\)와 측정값 \(z\)의 joint density를 두 가지 순서로 쓰고, \(p(x,z) = p(x\mid z)\,p(z) = p(z\mid x)\,p(x)\), \(p(z)\)로 나눕니다.
+@@ 58
+<strong>prior</strong>(사전 확률)는 측정 전에 믿던 것입니다. <strong>likelihood</strong>(우도)는 measurement model을 거꾸로 읽은 것입니다. 실제로 관측한 \(z\)에 대해, 각 후보 \(x\)가 그 값을 얼마나 잘 설명하는가? <strong>posterior</strong>(사후 확률)는 측정 후에 믿는 것입니다. 분모 \(p(z)\)는 \(x\)에 의존하지 않습니다. 결과의 적분이 1이 되도록 크기만 다시 맞춥니다. 책은 prior 양에 check 표시 \(\check{x}\)를, posterior 양에 hat \(\hat{x}\)를 붙입니다. <span class="src">Notation · p. xiv</span>
+@@ 59
+perceptual aliasing이 있는 예제. odometry로 보면 로봇이 전에 본 장소로 돌아왔을 확률은 10%입니다. place recognition 모듈이 매칭을 보고합니다. 이 모듈은 정말 같은 장소일 때 90%의 경우 반응하고, 비슷해 보이는 다른 장소일 때 20%의 경우 반응합니다. 진짜 재방문일 확률은 얼마일까요?
+@@ 60
+검출기가 "90%의 경우 작동"하는데도 매칭은 세 번 중 두 번 틀립니다. 재방문은 드물고 닮은 장소는 흔하며, prior가 그 사실을 담고 있습니다. 그래서 back-end는 모든 loop closure를 액면 그대로 받아들일 수 없습니다. 책은 3장에서 이 문제로 돌아옵니다. <span class="src">§I.3.1 · p. 12</span>
+@@ 61
+5. 두 가지 estimator: MLE와 MAP
+@@ 62
+밀도는 belief이고, 로봇이 행동하려면 숫자 하나가 필요합니다. 표준적인 선택은 두 가지입니다.
+@@ 63
+<strong>maximum likelihood estimate (MLE)</strong>는 prior를 무시하고 측정값을 가장 잘 설명하는 state를 고릅니다. <strong>maximum a posteriori (MAP) estimate</strong>는 posterior의 봉우리를 고릅니다. prior가 평평하면 둘은 같습니다. 내일 읽을 쪽은 이 둘을 현대 SLAM의 추정 틀로 꼽고, <span class="src">§I.4.1 · p. 15</span> 1장은 SLAM을 식 (1.8)의 MAP 문제로 씁니다. <span class="src">§1.2.1 · p. 27</span>
+@@ 64
+직접 해 보기: 복도에 있는 로봇이 odometry로 자기가 2.0 m 지점에 있다고 믿습니다 (오차 1.0 m 안팎). 그다음 range 센서가 4.0 m라고 알려 줍니다 (오차 0.5 m 안팎). 슬라이더 네 개를 움직여 보세요.
+@@ 65
+눈여겨볼 점: 기본 설정에서 MLE는 측정값 그대로인 4.00 m이고, MAP는 3.60 m입니다. prior가 추정값을 끌어당기지만 5분의 1만큼만 끌어당깁니다. 측정값이 둘 중 더 정밀하기 때문입니다. posterior는 두 입력보다 폭이 좁습니다. prior σ를 3.0으로 올리면 MAP는 3.95 m로 움직여 MLE에 거의 닿습니다.
+@@ 66
+빈틈 채우기: Gaussian 곱하기 Gaussian이 Gaussian인 이유, 그리고 3.60의 출처
+@@ 67
+Prior: \(x\sim\N(\check{x},\check{\sigma}^2)\). 측정: \(z = x + \eta\), \(\eta\sim\N(0,\sigma_z^2)\)이므로 likelihood는 \(p(z\mid x) = \N(z;\,x,\,\sigma_z^2)\)입니다. likelihood 곱하기 prior에 음의 로그를 취합니다. 지수는 더해지고, 앞의 상수들은 더해지는 상수 하나가 됩니다.
+@@ 68
+로그는 증가함수이므로 posterior의 최댓값은 \(J\)의 최솟값입니다. 도함수를 0으로 놓습니다.
+@@ 69
+\(J\)는 \(x\)에 대한 2차식이고, 음의 로그가 2차식인 밀도는 Gaussian입니다. 그 분산은 곡률 \(J''\)의 역수입니다.
+@@ 70
+위젯의 숫자로 계산하면 \(\hat{x} = (2/1 + 4/0.25)/(1/1 + 1/0.25) = 18/5 = 3.6\) m이고 \(\hat{\sigma}^2 = 1/5\)이므로 \(\hat{\sigma} = 0.447\) m입니다. 평균 식을 정리하면 위젯 마지막 타일의 형태가 됩니다.
+@@ 71
+첫 줄에서 일어난 일을 보세요. posterior를 최대화하는 문제가, 각각을 분산으로 나눈 제곱 오차의 합을 최소화하는 문제로 바뀌었습니다. 1장은 수천 개의 항으로 똑같은 일을 합니다.
+@@ 72
+<strong>"p(z | x)와 p(x | z)는 같은 숫자다."</strong> 닮은 장소 예제에서 앞의 것은 0.9이고 뒤의 것은 1/3입니다. Bayes' rule이 둘 사이를 변환하며, 그러려면 prior가 필요합니다.
+@@ 73
+<strong>"likelihood는 x에 대한 밀도다."</strong> likelihood는 \(z\)에 대한 밀도입니다. \(x\)의 함수로 읽으면 적분이 1일 필요가 없습니다.
+@@ 74
+<strong>"MAP는 항상 MLE보다 낫다."</strong> MAP는 prior만큼만 좋습니다. 위젯에서 prior σ를 0.2로 놓아 보세요. 확신에 찬 틀린 prior가 좋은 측정값에서 추정값을 멀리 끌어냅니다.
+@@ 75
+Q1. 드론의 motion controller는 몇 밀리초 안에 pose 업데이트가 필요합니다. SLAM의 출력 중 몇 초 늦게 도착해도 괜찮은 것은 무엇입니까?
+@@ 76
+front-end의 odometry
+@@ 77
+없음: SLAM의 모든 부분이 밀리초 마감을 지켜야 함
+@@ 78
+back-end가 global하게 최적화한 trajectory와 map
+@@ 79
+raw 센서 데이터
+@@ 80
+제어 loop는 odometry로 돌아가며 지연이 짧아야 합니다. global planning은 더 낮은 주기로 돌아가므로, back-end가 보정한 trajectory와 map은 back-end가 online을 유지하는 한 몇 초 늦어도 됩니다.
+@@ 81
+Q2. 재방문의 prior 확률이 0.2입니다. place recognizer는 진짜 재방문이면 0.9, 아니면 0.1의 확률로 반응합니다. recognizer가 반응했습니다. 진짜 재방문일 확률은 얼마입니까?
+@@ 82
+약 0.69
+@@ 83
+=
+@@ 84
+Q3. Prior: 위치 10 m, σ = 2 m. 측정값: 13 m, σ = 1 m. MAP 추정값은 얼마입니까?
+@@ 85
+가중치는 1/σ²입니다: prior는 1/4, 측정값은 1. (10 × 0.25 + 13 × 1) / 1.25 = 15.5 / 1.25 = 12.4 m. 같은 계산으로 K = 4/(4+1) = 0.8이고 10 + 0.8 × 3 = 12.4입니다.
+@@ 86
+Q4. 2-D 위치의 covariance 행이 (9, −3)과 (−3, 4)입니다. 두 좌표 사이의 상관계수는 얼마입니까?
+@@ 87
+약 −0.08
+@@ 88
+표준편차는 √9 = 3과 √4 = 2입니다. 상관계수 = covariance / (σ₁σ₂) = −3 / 6 = −0.5.
+@@ 89
+Q5. 같은 스칼라에 대한 Gaussian prior와 Gaussian 측정값이 있을 때, MAP 추정값이 MLE와 같아지는 것은 언제입니까?
+@@ 90
+prior와 측정값의 σ가 같을 때
+@@ 91
+prior가 아주 넓은 (평평한) 극한에서
+@@ 92
+측정 σ가 아주 클 때
+@@ 93
+항상
+@@ 94
+측정값의 가중치는 K = σ̌² / (σ̌² + σ_z²)입니다. prior σ가 커지면 이 값은 1로 가고, 그러면 MAP 추정값은 z, 즉 MLE와 같아집니다. σ가 같으면 MAP는 중점입니다.
+@@ 95
+SLAM은 빠른 제어 loop(odometry, 밀리초)와 느린 계획 loop(보정된 trajectory와 map, 초)에 입력을 주므로 병렬 프로세스로 돌아가며, 느린 쪽도 online을 유지해야 합니다.
+@@ 96
+모든 작업에 SLAM이 필요하지는 않지만, 인프라 없이 오래 작동하려면 consistent한 map이 필요합니다. odometry는 drift하고, topological map은 perceptual aliasing에 속습니다.
+@@ 97
+Gaussian은 평균과 covariance로 정해집니다. 지수 \(\mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\)는 σ 단위로 잰 거리의 제곱입니다.
+@@ 98
+Bayes' rule: posterior ∝ likelihood × prior. MLE는 likelihood를 최대화하고, MAP는 posterior를 최대화합니다.
+@@ 99
+Gaussian에서 MAP는 least-squares 문제입니다. 분산의 역수가 더해지고, 평균은 분산의 역수로 가중한 평균입니다.
+@@ 100
+<em>SLAM Handbook</em>, Prelude to Part I, §I.3 "The Role of SLAM in the Autonomy Architecture"와 §I.3.1, pp. 9–12; Notation, p. xiv; 식 (1.9)–(1.10), p. 27, 2주차에 앞서 미리 인용.
+@@ 101
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005, 2장 (Bayes' rule, prior와 posterior).
+@@ 102
+Barfoot, <em>State Estimation for Robotics</em>, 2017, 2장 (Gaussian 밀도, Gaussian 추정값의 결합).

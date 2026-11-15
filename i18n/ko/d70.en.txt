@@ -1,0 +1,180 @@
+@@ 1
+<span class="eyebrow">Week 12 · Day 4</span>
+@@ 2
+Bundle adjustment revisited: power series, variable projection, gauge freedom
+@@ 3
+After today you can derive the power-series approximation of the inverse Schur complement and say when it converges quickly, explain what variable projection removes from the problem, and count the directions a bundle adjustment cannot determine.
+@@ 4
+About 60 min · Read §7.4.4, pp. 213–215, with Figure 7.11 (about 1.5 pages), and the top of p. 221 · Needs Week 12 Day 3
+@@ 5
+Read first: §7.4.4, pp. 213–215, and the first sentence on p. 221
+@@ 6
+The two shortcomings of classical BA named in the first paragraph of §7.4.4 (p. 213).
+@@ 7
+Equations (7.8) and (7.9): what is being approximated, and what the approximation is built from.
+@@ 8
+The two stages of the variable-projection approach on p. 214, and its limit of about 100 cameras.
+@@ 9
+On p. 221: the 7 unknowns that a vision-only system leaves undetermined.
+@@ 10
+The Schur complement trick of Day 3 leaves two problems open: the reduced camera system still has to be solved, and the whole iteration needs a good starting point. Recent work attacks the first with a matrix power series that needs only multiplications, and the second by eliminating the points from the nonlinear problem itself. A third fact holds for every BA solver: images alone cannot tell where the map is, how it is oriented, or how big it is.
+@@ 11
+1. Two weaknesses of the classical pipeline
+@@ 12
+Classical BA (Day 3) has been refined for a century and works well. The book names two shortcomings. <span class="src">§7.4.4 · p. 213</span>
+@@ 13
+<strong>Initialization.</strong> Gauss-Newton and Levenberg-Marquardt are local methods. They need landmarks and camera poses that are already roughly right, which is why Week 11 spent a day on initialization.
+@@ 14
+<strong>Scale.</strong> For very large problems the computation and the memory grow prohibitively. The bottleneck is solving the reduced camera system, the second line of equation (7.7).
+@@ 15
+2. Power bundle adjustment: invert by multiplying
+@@ 16
+The matrix to invert is the Schur complement <span class="src">§7.4.4 · p. 213, eq. (7.8)–(7.9)</span>
+@@ 17
+At large scale a common way to solve with it is the conjugate gradient method, an iterative solver. Power Bundle Adjustment instead approximates the inverse by a truncated <strong>matrix power series</strong>:
+@@ 18
+Filling the gap: where (7.9) comes from and why it converges
+@@ 19
+<strong>The scalar case.</strong> For a number \(|q| \lt 1\), the geometric series gives \(1/(1-q) = 1 + q + q^2 + \dots\). You can check it by multiplying: \((1 - q)(1 + q + \dots + q^m) = 1 - q^{m+1}\), and \(q^{m+1} \to 0\).
+@@ 20
+<strong>The matrix case.</strong> The same multiplication works for a square matrix \(\mathbf{N}\): \((\mathbf{I} - \mathbf{N})(\mathbf{I} + \mathbf{N} + \dots + \mathbf{N}^m) = \mathbf{I} - \mathbf{N}^{m+1}\). If \(\mathbf{N}^{m+1} \to \mathbf{0}\), then \((\mathbf{I} - \mathbf{N})^{-1} = \sum_{i \ge 0} \mathbf{N}^i\). This is the <strong>Neumann series</strong>. It converges exactly when every eigenvalue of \(\mathbf{N}\) is smaller than 1 in magnitude. The largest magnitude is the <strong>spectral radius</strong> \(\rho(\mathbf{N})\), and the error after \(m\) terms shrinks like \(\rho^{m+1}\).
+@@ 21
+<strong>Apply it.</strong> Abbreviate \(\mathbf{E} = \mathbf{H}_{cp}\mathbf{H}_{pp}^{-1}\mathbf{H}_{cp}\T\) and pull \(\mathbf{H}_{cc}\) out of (7.8):
+@@ 22
+Cutting the sum at \(i = m\) is (7.9).
+@@ 23
+<strong>Why it converges.</strong> Suppose the full matrix \(\mathbf{H}\) is positive definite (Section 4 shows what that requires). Then \(\mathbf{H}_{cc}\) and its Schur complement \(\mathbf{H}^{red}_{cc}\) are positive definite too, and \(\mathbf{E}\) is positive semidefinite. The matrix \(\mathbf{N} = \mathbf{H}_{cc}^{-1}\mathbf{E}\) has the same eigenvalues as the symmetric matrix \(\mathbf{S} = \mathbf{H}_{cc}^{-1/2}\mathbf{E}\,\mathbf{H}_{cc}^{-1/2}\), which are real and \(\ge 0\). And \(\mathbf{I} - \mathbf{S} = \mathbf{H}_{cc}^{-1/2}\mathbf{H}^{red}_{cc}\mathbf{H}_{cc}^{-1/2}\) is positive definite, so those eigenvalues are also \(\lt 1\). Hence \(0 \le \rho \lt 1\) and the series converges, as the book states.
+@@ 24
+<strong>Why it is cheap.</strong> \(\mathbf{H}_{cc}\) and \(\mathbf{H}_{pp}\) are block diagonal (Day 3), so their inverses are small independent blocks. Applying (7.9) to a vector then takes only products with the sparse \(\mathbf{H}_{cp}\) and those blocks. Nothing is factorized, and the reduced system need not even be formed.
+@@ 25
+<strong>Numbers.</strong> In the hand example of Day 3, \(H_{cc} = 6\) and \(E = 5\), so \(N = 5/6\) and the exact inverse is \(1/(6-5) = 1\). The partial sums are \(\tfrac{1}{6}(1 + \tfrac{5}{6} + \dots) = 1 - (5/6)^{m+1}\): 0.167, 0.306, 0.421, … It converges, but slowly, because \(\rho = 5/6\) is close to 1.
+@@ 26
+Try it: the widget evaluates (7.9) on the 18 × 18 reduced camera system of Day 3's problem. The slider sets the Levenberg-Marquardt damping \(\lambda\) (<a href="#d11">Week 2 · Day 5</a>), which multiplies every diagonal entry of \(\mathbf{H}\) by \(1 + \lambda\).
+@@ 27
+Notice: on a logarithmic axis the error falls along a straight line, with slope set by \(\rho\). At \(\lambda = 0.1\) the spectral radius is about 0.87 and it takes about 16 extra terms to reach 1% error. At \(\lambda = 1\) it drops to about 0.36 and ten terms give six digits. At \(\lambda = 0.001\) it is about 0.998 and forty terms achieve almost nothing. The series always converges; how fast depends on how much of the cameras' information is tied up in the unknown points.
+@@ 28
+3. Variable projection: no initialization needed
+@@ 29
+The second weakness is the dependence on a starting point. The book describes a cure built on <strong>variable projection</strong>. <span class="src">§7.4.4 · p. 214</span>
+@@ 30
+Filling the gap: what variable projection is
+@@ 31
+Some least-squares problems are nonlinear in a few unknowns and linear in the rest. Fitting \(y(t) = b\,e^{-a t}\) is the standard small example: nonlinear in the decay rate \(a\), linear in the amplitude \(b\). For any fixed \(a\), the best \(b\) has a closed form (ordinary linear least squares):
+@@ 32
+Substitute it back, and the cost becomes a function of \(a\) alone. You optimize over \(a\), and \(b\) is always the best possible for the current \(a\). With data \(y = (2, 1)\) at \(t = (0, 1)\): for \(a = 0\), \(b^* = 3/2\) and the fit \((1.5, 1.5)\) misses by \(\pm 0.5\); for \(a = \ln 2\), \(b^* = (2 + 0.5)/(1 + 0.25) = 2\) and the fit \((2, 1)\) is exact. A bad guess of \(b\) can never mislead the search, because \(b\) is never guessed.
+@@ 33
+Compare with Day 3. The Schur complement eliminates the points from the <em>linearized</em> system inside each iteration. Variable projection eliminates them from the <em>nonlinear</em> problem, once.
+@@ 34
+Bundle adjustment is not of this form as it stands, because the perspective division makes the projection nonlinear in the point. So the method has two stages. In the first, the perspective projection is replaced by a generic projective matrix, chosen so that the best landmarks can be solved analytically as a function of the cameras. The optimizer then searches over cameras only. This removes what the book calls the chicken-and-egg dependency between landmarks and poses and gives a larger basin of attraction. In the second stage, <strong>projective refinement</strong>, that solution initializes the original perspective problem. <span class="src">§7.4.4 · p. 214</span>
+@@ 35
+Figure 7.11 shows the result: poses and landmarks recovered from a random start. The price is computation; on its own the strategy is too demanding beyond roughly 100 cameras. Combined with the power series of Section 2 it scales to large problems without initialization. <span class="src">§7.4.4 · pp. 214–215</span>
+@@ 36
+4. Gauge freedom: what no BA solver can determine
+@@ 37
+Section 2 assumed \(\mathbf{H}\) is positive definite. For pure BA it is not, and the reason matters in every visual SLAM system. The book mentions it in one sentence: a vision-only system has a <strong>gauge freedom</strong> of 7 unknowns: global position (3), orientation (3), and scale (1). <span class="src">§7.8.1 · p. 221</span>
+@@ 38
+Filling the gap: why exactly seven
+@@ 39
+Take any solution and apply the same <strong>similarity transform</strong> to the whole world: scale by \(s \gt 0\), rotate by \(\mathbf{Q} \in \SO(3)\), shift by \(\mathbf{a}\). Points become \(\mathbf{x}' = s\,\mathbf{Q}\mathbf{x}^w + \mathbf{a}\). Give each camera the matching new pose \(\mathbf{R}' = \mathbf{R}\mathbf{Q}\T\), \(\mathbf{t}' = s\,\mathbf{t} - \mathbf{R}\mathbf{Q}\T\mathbf{a}\). Then the point in the camera frame is
+@@ 40
+Everything is scaled by \(s\) in the camera frame, and the projection divides by depth: \(\pi(s\,\mathbf{x}^c) = \pi(\mathbf{x}^c)\). Every predicted pixel is unchanged, so every reprojection error is unchanged. The transform has \(3 + 3 + 1 = 7\) parameters. The cost is flat along these 7 directions, and the Gauss-Newton matrix \(\mathbf{H} = \mathbf{J}\T\mathbf{J}\) has 7 zero eigenvalues: \(\mathbf{H}\,\mathbf{d} = \mathbf{b}\) has no unique solution.
+@@ 41
+In the flat world of our widgets a similarity has 2 shifts, 1 rotation and 1 scale: 4 directions.
+@@ 42
+Try it: choose a move and drag "Amount". Then change "Anchor priors".
+@@ 43
+Notice: shifting, rotating or scaling <em>everything</em> leaves the reprojection error at zero, while shifting one camera alone raises it at once. With no anchor, \(\mathbf{H}\) has exactly 4 zero eigenvalues. Anchoring the pose of camera 1 removes three of them; the one that survives is scale. Anchoring one more number, the x-position of camera 2, removes the last.
+@@ 44
+Solvers deal with the gauge in one of three ways: hold some unknowns fixed (the first camera pose, plus one length for the scale), add prior factors that do the same softly, or rely on Levenberg-Marquardt damping, which makes the system solvable without choosing an anchor. Other sensors shrink the gauge:
+@@ 45
+Sensors
+@@ 46
+Still undetermined
+@@ 47
+Count
+@@ 48
+One camera
+@@ 49
+Position, orientation, scale
+@@ 50
+Stereo or depth camera (metric depth)
+@@ 51
+Position, orientation
+@@ 52
+Camera and IMU (gravity and metric scale observable)
+@@ 53
+Position and yaw
+@@ 54
+The first and last rows are the book's; the middle one follows because a known baseline or a metric depth reading fixes the scale. <span class="src">§7.8.1 · p. 221</span>
+@@ 55
+Going deeper (optional): marginalization in a sliding window
+@@ 56
+DSO keeps a window of recent keyframes and marginalizes older ones (Day 2). Marginalizing is the Schur complement again, applied to the variables that leave. The result, \(\mathbf{H}^{red}\) and its right-hand side, is kept as a prior factor on the variables that were connected to them. That prior is dense among those variables (fill-in, <a href="#d15">Week 3 · Day 3</a>). So a sliding window does not forget the past; it compresses it into one factor, linearized at the time the keyframe left.
+@@ 57
+<strong>"The power series is exact after a few terms."</strong> It is an approximation whose error shrinks like \(\rho^{m+1}\). If \(\rho\) is close to 1, a few terms are a poor inverse.
+@@ 58
+<strong>"Variable projection is the Schur complement under another name."</strong> Both eliminate the points, but at different levels: Schur inside each linear solve, variable projection in the nonlinear cost itself. Only the second enlarges the basin of attraction.
+@@ 59
+<strong>"A singular \(\mathbf{H}\) means the data are bad."</strong> In BA it is singular for perfect data too. The seven flat directions are a property of the measurement, not of the noise.
+@@ 60
+<strong>"Monocular SLAM measures distances in meters."</strong> Its map is correct up to an unknown scale factor until something metric (a stereo baseline, a depth sensor, an IMU, GPS) fixes it.
+@@ 61
+Q1. A scalar reduced system has \(H_{cc} = 4\) and \(H_{cp}H_{pp}^{-1}H_{cp}\T = 2\). What does the power series (7.9) give with cut-off \(m = 1\), and what is the exact inverse?
+@@ 62
+0.25 and 0.5
+@@ 63
+0.375 and 0.5
+@@ 64
+0.5 and 0.5
+@@ 65
+0.375 and 0.25
+@@ 66
+N = 2/4 = 0.5. Two terms: (1 + 0.5) × 1/4 = 0.375. Exact: 1/(4 − 2) = 0.5. The error 0.125 equals 0.5 × 0.5².
+@@ 67
+Q2. The spectral radius of \(\mathbf{H}_{cc}^{-1}\mathbf{H}_{cp}\mathbf{H}_{pp}^{-1}\mathbf{H}_{cp}\T\) is 0.9. Roughly how many additional terms of the series reduce the error by a factor of 10?
+@@ 68
+Each term multiplies the error by about 0.9. Solve 0.9ᵏ = 0.1: k = ln 0.1 / ln 0.9 ≈ 21.9.
+@@ 69
+Q3. A monocular BA problem has 10 cameras and 200 points and no priors. How many zero eigenvalues does \(\mathbf{J}\T\mathbf{J}\) have?
+@@ 70
+One for each parameter of a similarity transform: 3 translation, 3 rotation, 1 scale. The count does not depend on the size of the problem.
+@@ 71
+Q4. Which change to a BA solution alters the reprojection errors?
+@@ 72
+Doubling all point coordinates and all camera positions
+@@ 73
+Rotating all points and all cameras by 30° about the vertical axis
+@@ 74
+Moving all points 1 m north while leaving the cameras where they are
+@@ 75
+Moving all points and all cameras 1 m north
+@@ 76
+Only a transform applied to points and cameras together is a gauge move. Moving the points alone changes what every camera should see.
+@@ 77
+Q5. In the two-stage approach of §7.4.4, what does the first stage achieve?
+@@ 78
+It removes outlier matches with RANSAC
+@@ 79
+With a projective camera model, the landmarks are solved analytically as a function of the cameras, so the search runs over cameras only
+@@ 80
+It inverts the reduced camera system by a power series
+@@ 81
+It fixes the gauge by anchoring the first camera
+@@ 82
+Eliminating the landmarks in closed form removes the mutual dependence of landmarks and poses. The second stage refines with the true perspective model.
+@@ 83
+Classical BA needs a good initialization and becomes expensive at large scale; the bottleneck is the reduced camera system.
+@@ 84
+Power BA approximates its inverse by \(\sum_{i=0}^{m} (\mathbf{H}_{cc}^{-1}\mathbf{H}_{cp}\mathbf{H}_{pp}^{-1}\mathbf{H}_{cp}\T)^i\, \mathbf{H}_{cc}^{-1}\), a Neumann series that converges because its spectral radius is below 1, at a rate set by that radius.
+@@ 85
+Variable projection solves the landmarks in closed form inside the nonlinear problem, which widens the basin of attraction; a projective first stage makes that possible, a perspective second stage refines.
+@@ 86
+Reprojection errors are invariant to a similarity transform of the world: 7 gauge directions for one camera, 4 with an IMU. Anchors, priors, or damping make the linear system solvable.
+@@ 87
+<em>SLAM Handbook</em>, §7.4.4 "Bundle Adjustment Revisited", pp. 213–215, equations (7.8)–(7.9), Figure 7.11; §7.8.1, p. 221 (gauge freedom).
+@@ 88
+Golub and Van Loan, <em>Matrix Computations</em>, 4th edition, 2013, for the Neumann series and the spectral radius.
+@@ 89
+Golub and Pereyra, <em>The differentiation of pseudo-inverses and nonlinear least squares problems whose variables separate</em>, 1973, for variable projection.
+@@ 90
+Triggs, McLauchlan, Hartley, Fitzgibbon, <em>Bundle Adjustment: A Modern Synthesis</em>, 2000, for gauge freedom.

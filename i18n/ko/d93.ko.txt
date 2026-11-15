@@ -1,0 +1,180 @@
+@@ 1
+<span class="eyebrow">16주차 · Day 3</span>
+@@ 2
+Motion integration: IMU 샘플에서 trajectory로, 그리고 drift가 생기는 이유
+@@ 3
+오늘이 끝나면 식 (11.12)로 IMU 샘플을 적분해 회전, 속도, 위치를 구하고, bias와 noise가 어떻게 위치 오차로 자라는지 예측하고, factor graph가 왜 그 적분을 반복할 여유가 없는지 설명할 수 있습니다.
+@@ 4
+약 60분 · §11.2 도입부와 §11.2.1, pp. 308–310 읽기 (3쪽) · 16주차 Day 1, 4주차 Day 2 필요
+@@ 5
+먼저 읽기: §11.2 도입부와 §11.2.1, pp. 308–310
+@@ 6
+p. 308에서 raw IMU 데이터를 factor graph에 그대로 넣는 것이 비현실적인 두 가지 이유. discrete time의 경우와 continuous time의 경우.
+@@ 7
+p. 309의 식 (11.9)와 (11.11) 사이에서 세우는 두 가정, 그리고 (11.12) 다음에 orientation을 일정하게 유지한다는 문장.
+@@ 8
+p. 309 아래쪽의 discrete-time noise와 continuous-time noise 사이의 관계.
+@@ 9
+p. 310의 마지막 문단: \(\mathbf{R}_i\)가 바뀔 때 (11.13)에서 정확히 무엇을 다시 계산해야 하는지.
+@@ 10
+measurement model을 거꾸로 돌리면 측정값으로부터 움직임을 계산할 수 있습니다. accelerometer 샘플을 하나씩 world로 회전하고, gravity를 다시 더하고, 두 번 적분합니다. 이것이 dead reckoning입니다. dead reckoning에는 시작 orientation과 속도가 필요하고, 모든 오차가 두세 번 적분되므로 빠르게 drift하며, 결과가 시작 state에 의존하는 방식 때문에 그 state가 수정될 때마다 처음부터 다시 적분해야 합니다.
+@@ 11
+1. 왜 IMU 샘플마다 state를 하나씩 두지 않는가?
+@@ 12
+Day 1의 모델은 각 IMU 샘플을 그 순간의 로봇 state와 연결하므로, 원리상 각 샘플이 <a href="#d8">2주차 · Day 2</a>의 MAP 문제에서 factor가 될 수 있습니다. 문제는 속도입니다. IMU는 초당 200에서 1000개의 샘플을 내놓고, 샘플마다 graph에 자기 state가 필요합니다. <span class="src">§11.2 · p. 308</span> 200 Hz로 1분이면 state가 12,000개이고, 각 state에는 회전, 위치, 속도, 두 bias가 있습니다. state 하나에 미지수 15개, 모두 180,000개입니다. 로봇이 어떻게 움직였는지만 알려 주는 센서 하나에 말입니다. continuous-time trajectory(<a href="#d25">5주차 · Day 1</a>)를 쓰면 추가 state는 피하지만, 여전히 샘플마다 factor 하나가 필요합니다. <span class="src">§11.2 · p. 308</span>
+@@ 13 attr
+두 개의 factor graph. 위: 작은 state 원 열일곱 개가 IMU 샘플마다 하나씩 사슬로 이어지고, 이웃한 원은 작은 사각형 factor로 연결됩니다. 아래: 큰 state 원 두 개, keyframe i와 keyframe j만 있고, 그 사이의 모든 IMU 샘플(눈금으로 표시)을 요약하는 사각형 factor 하나로 연결됩니다.
+@@ 14
+IMU 샘플마다 state: 초당 새 변수 200–1000개
+@@ 15
+keyframe에만 state: 그 사이에 요약 factor 하나
+@@ 16
+=
+@@ 17
+=
+@@ 18
+IMU factor 하나
+@@ 19
+§11.2의 목표. 사각형은 factor, 원은 state입니다. 오늘은 단순 적분으로 이 요약을 만들고 그 결함을 찾습니다. 내일 그 결함을 고칩니다.
+@@ 20
+2. kinematic model
+@@ 21
+적분은 세 개의 미분방정식에서 출발합니다. <span class="src">§11.2.1 · p. 308</span>
+@@ 22
+뒤의 두 식은 가속도와 속도의 정의입니다. wedge \((\cdot)^\wedge\)는 3-벡터를 skew-symmetric 행렬로 바꾸어 \(\boldsymbol{\omega}^\wedge\mathbf{u} = \boldsymbol{\omega}\times\mathbf{u}\)가 되게 합니다(<a href="#d20">4주차 · Day 2</a>).
+@@ 23
+빈틈 채우기: 회전 방정식은 어디서 오는가
+@@ 24
+짧은 시간 \(dt\) 동안 몸체는 자신의 축으로 잰 작은 회전 벡터 \(\boldsymbol{\omega}^b_b\,dt\)만큼 돕니다. body 축으로 표현한 회전은 오른쪽에 곱합니다.
+@@ 25
+\(\mathbf{R}(t)\)를 빼고 \(dt\)로 나눈 뒤 \(dt \to 0\)으로 보내면 \(\dot{\mathbf{R}} = \mathbf{R}\,\boldsymbol{\omega}^\wedge\)입니다. 같은 식을 거꾸로 읽으면 적분 규칙이 됩니다. step \(\Delta t\) 동안 \(\boldsymbol{\omega}\)가 일정하면 \(\mathbf{R}(t+\Delta t) = \mathbf{R}(t)\Exp(\boldsymbol{\omega}\Delta t)\)가 정확히 성립합니다. 책의 (11.9)는 step 동안 \(\boldsymbol{\omega}\)의 <em>방향</em>만 고정되면 됩니다.
+@@ 26
+3. 적분 한 step
+@@ 27
+샘플링 주기 \(\Delta t\) 하나 동안 \(\mathbf{a}^w\)와 \(\boldsymbol{\omega}^b_b\)가 일정하다고 가정합니다. (11.8)을 적분하면 다음을 얻습니다. <span class="src">§11.2.1 · p. 309</span>
+@@ 28
+우리에게는 \(\mathbf{a}^w\)와 \(\boldsymbol{\omega}^b_b\)가 없고 측정값이 있습니다. measurement model을 실제 양에 대해 풉니다. (11.2)에서 \(\boldsymbol{\omega}^b_b = \tilde{\boldsymbol{\omega}} - \mathbf{b}^g - \boldsymbol{\eta}^g\)입니다. (11.1)에는 \(\mathbf{R} = \mathbf{R}^w_b\)를 곱해 \(\mathbf{R}^b_w\)를 되돌립니다.
+@@ 29
+이것을 (11.11)에 대입하면 이 장의 나머지가 모두 기대는 식이 나옵니다. <span class="src">§11.2.1 · p. 309</span>
+@@ 30
+이제부터 frame 표기는 생략합니다. \(\mathbf{R}\)은 body-to-world이고, \(\mathbf{v}\), \(\mathbf{p}\), \(\mathbf{g}\)는 world 좌표입니다. noise \(\boldsymbol{\eta}^{gd}\), \(\boldsymbol{\eta}^{ad}\)는 <a href="#d92">Day 2</a>의 discrete-time 버전이며, covariance는 연속 noise의 \(\tfrac{1}{\Delta t}\)배입니다. 실제로는 noise를 모르므로 noise를 0으로 두고 가장 좋은 bias 추정값으로 (11.12)를 돌립니다.
+@@ 31
+검산: 완벽한 센서를 단 수평한 로봇이 정지해 있으면 \(\tilde{\mathbf{a}} = (0,0,9.81)\)을 출력합니다. \(\mathbf{R} = \mathbf{I}\), \(\mathbf{g} = (0,0,-9.81)\)이면 속도 갱신은 \(\mathbf{g}\Delta t + \tilde{\mathbf{a}}\Delta t = \mathbf{0}\)입니다. 측정값과 gravity가 상쇄되어 로봇은 제자리에 있습니다. 큰 두 숫자의 이 상쇄가 약점이라는 것을 다음 절에서 봅니다.
+@@ 32
+식 (11.12)는 step 전체에 step <em>시작</em> 시점의 orientation을 씁니다. 몸체가 회전하고 있으면 이것은 정확하지 않습니다. IMU rate가 높으면 오차가 작게 유지되며, Day 5에서 이 문제를 다시 다룹니다. <span class="src">§11.2.1 · p. 309</span>
+@@ 33
+4. dead reckoning의 drift, 그리고 이를 키우는 gravity
+@@ 34
+직접 해 보기: 위젯은 위의 루프를, 두 언덕을 넘어가는 시뮬레이션 평면 IMU(gyroscope 하나, accelerometer 축 두 개)에 대해 돌립니다. 기본값인 0.1°/s gyroscope bias로 시작하세요. 그다음 이를 0으로 놓고 accelerometer bias 0.05 m/s²를 시험해 보세요.
+@@ 35
+눈여겨볼 점: 0.1°/s밖에 안 되는 gyroscope bias가 40 m 주행에서 20 s 뒤 추정값을 약 22 m나 벗어나게 하고, 오차가 3차 모델 곡선을 따릅니다. 마지막의 기울기 오차는 2°뿐이지만, 2°의 기울기는 gravity 중 0.34 m/s²를 가짜 수평 가속도로 바꿉니다. accelerometer bias 0.05 m/s²만 있으면 2차 곡선을 따라 대략 10 m가 됩니다. 모든 슬라이더를 0으로 놓아도 약 6 cm의 오차가 남습니다. 변하는 가속도에 (11.12)의 rectangle rule을 쓴 결과입니다.
+@@ 36
+빈틈 채우기: 각 오차는 얼마나 빨리 자라는가?
+@@ 37
+책은 inertial odometry가 drift한다고만 하고 그 속도는 말하지 않습니다. 속도는 적분 횟수를 세어 보면 나옵니다.
+@@ 38
+<strong>accelerometer bias</strong> \(b_a\). 일정한 가속도 오차를 두 번 적분합니다. 속도 오차 \(b_a t\), 위치 오차 \(\tfrac12 b_a t^2\).
+@@ 39
+<strong>gyroscope bias</strong> \(b_g\). orientation 오차가 \(\delta\theta = b_g t\)로 자랍니다. 적분기는 측정된 specific force를 틀린 \(\mathbf{R}\)로 회전하는데, 이 힘의 대부분은 9.81 m/s²의 떠받치는 힘입니다. 길이 \(g\)인 수직 벡터가 작은 각도 \(\delta\theta\)만큼 기울면 수평 성분 \(g\sin\delta\theta \approx g\,\delta\theta\)가 생깁니다. \(\mathbf{g}\)를 다시 더하면 수직 성분은 여전히 거의 상쇄되지만, 수평 성분은 가짜 가속도 \(g\,b_g\,t\)로 남습니다. 두 번 적분하면:
+@@ 40
+\(b_g = 0.1\)°/s \(= 1.745\times10^{-3}\) rad/s, \(t = 20\) s이면 \(\tfrac16 \times 9.81 \times 1.745\times10^{-3} \times 8000 = 22.8\) m로, 위젯의 숫자와 같습니다.
+@@ 41
+<strong>white noise.</strong> density가 \(\sigma_a\)인 accelerometer noise는 서로 독립인 충격의 연속입니다. 시각 \(s\)의 충격은 속도를 영구히 바꾸므로, 시각 \(t\)까지 위치를 \(t-s\)에 비례하는 양만큼 옮깁니다. 모든 충격의 분산을 더하면 \(\operatorname{var}(\delta p) = \sigma_a^2\int_0^t (t-s)^2 ds = \sigma_a^2 t^3/3\)입니다. 적분을 한 번 더 하는 같은 논리로 표의 gyroscope noise 항목이 나옵니다.
+@@ 42
+오차 원인
+@@ 43
+직접적인 효과
+@@ 44
+시간 t 후의 위치 오차
+@@ 45
+t = 20 s에서
+@@ 46
+=
+@@ 47
+속도 오차 \(b_a t\)
+@@ 48
+=
+@@ 49
+기울기 \(b_g t\), 가짜 가속도 \(g\,b_g t\)
+@@ 50
+=
+@@ 51
+=
+@@ 52
+=
+@@ 53
+=
+@@ 54
+=
+@@ 55
+=
+@@ 56
+적분기는 길이 9.81인 기지의 벡터 gravity를, 거의 같은 길이의 측정값에서 빼야 합니다. 측정값을 조금 틀린 각도로 들고 있으면 뺄셈 뒤에 옆 방향 나머지가 남습니다. IMU는 어느 쪽이 아래인지 아는 동안만 제대로 길을 찾습니다.
+@@ 57
+실험 하나 더: gyroscope bias를 +0.10°/s로, accelerometer bias를 약 +0.11 m/s²로 놓아 보세요. 이 경로에서는 두 오차가 반대 방향으로 밀기 때문에 최종 오차가 몇 미터로 줄어듭니다. 적분기에게 기울기 오차와 accelerometer bias는 비슷해 보입니다. 다음 주의 observability 분석이 바로 이런 효과를 구별하는 일입니다.
+@@ 58
+5. keyframe, 그리고 단순 적분의 결함
+@@ 59
+dead reckoning만으로는 몇 초를 넘기면 가망이 없으므로, IMU는 선택된 시점에 state를 두는 factor graph 안에서 카메라나 LiDAR와 결합됩니다. 책은 어느 센서가 이를 촉발하든 이 state를 <strong>keyframe state</strong>라고 부릅니다. <span class="src">§11.2.1 · p. 310</span> 시각 \(t_i\)와 \(t_j\)의 연속한 keyframe 사이에는 많은 IMU 샘플 \(k = i, i+1, \dots, j-1\)이 있습니다. 이 모두에 대해 (11.12)를 이어 붙이면 다음과 같습니다.
+@@ 60
+여기서 \(\Delta t_{ij} = \sum_{k=i}^{j-1}\Delta t\)는 keyframe 사이의 시간입니다. <span class="src">§11.2.1 · p. 310</span> 이것은 이미 state \(i\)와 \(j\) 사이의 상대 운동 제약입니다. 결함은 미지수가 들어가는 방식에 있습니다. 합 안의 모든 \(\mathbf{R}_k\)는 \(\mathbf{R}_i\)에 gyroscope 항들의 곱을 곱한 것이고, 모든 \(\mathbf{v}_k\)는 \(\mathbf{v}_i\)를 포함합니다. Gauss-Newton(<a href="#d10">2주차 · Day 4</a>) 같은 비선형 solver는 iteration마다 \(\mathbf{R}_i\)와 \(\mathbf{v}_i\)의 추정값을 바꾸고, 그때마다 합의 모든 항이 무효가 됩니다. <span class="src">§11.2.1 · p. 310</span>
+@@ 61
+비용을 세어 봅시다. keyframe 구간 100개, 구간마다 샘플 200개, solver iteration 10번이면 한 번 풀 때마다 샘플 적분이 200,000번이고, graph를 다시 최적화할 때마다 이를 반복합니다. 내일 배울 재배열을 쓰면 이것이 20,000번으로 줄고, 그것도 한 번만 하면 됩니다.
+@@ 62
+<strong>"accelerometer를 두 번 적분하면 위치가 나온다."</strong> 먼저 현재의 \(\mathbf{R}\)로 측정값을 world로 회전하고, 그다음 \(\mathbf{g}\)를 더하고, 그다음 적분합니다. 회전을 빼먹으면 측정값이 엉뚱한 축으로 더해지고, gravity를 빼먹으면 정지한 로봇이 9.81 m/s²로 위로 가속합니다.
+@@ 63
+<strong>"gyroscope는 정확하므로 gyroscope로 인한 위치 drift는 작다."</strong> 기울기 오차는 \(g\)가 곱해진 뒤 두 번 더 적분됩니다. \(t^3\)으로 자라며 대개 가장 큰 오차가 됩니다.
+@@ 64
+<strong>"식 (11.13)은 factor graph에 쓸 수 없다."</strong> 쓸 수 있습니다. 다만 낭비일 뿐입니다. \(i\)의 state가 바뀔 때마다 raw 샘플에서 다시 계산해야 하기 때문입니다.
+@@ 65
+Q1. 수평한 로봇이 정지해 있고 R = I, v = 0, g = (0, 0, −9.81), 완벽한 accelerometer 측정값 (0, 0, 9.81), Δt = 0.01 s입니다. 한 step 뒤 (11.12)가 주는 속도는 무엇입니까?
+@@ 66
+v + gΔt + R·ã·Δt = 0 + (0,0,−0.0981) + (0,0,+0.0981) = 0. 측정값과 gravity가 상쇄됩니다.
+@@ 67
+Q2. 보정되지 않은 accelerometer bias 0.02 m/s²가 30 s 동안 작용합니다. 이로 인한 위치 오차는 대략 얼마입니까?
+@@ 68
+½·b·t² = 0.5 × 0.02 × 900 = 9 m. (0.6 m/s는 속도 오차입니다.)
+@@ 69
+Q3. gyroscope bias가 일정할 때 dead reckoning 시간을 10 s에서 20 s로 두 배 늘립니다. 그 bias로 인한 위치 오차는 대략 몇 배가 됩니까?
+@@ 70
+오차는 g·b·t³/6으로 시간의 3제곱에 비례합니다: 2³ = 8.
+@@ 71
+Q4. solver가 keyframe i의 회전 추정값을 바꾸면 왜 (11.13)의 합을 다시 계산해야 합니까?
+@@ 72
+IMU noise covariance가 그 회전에 의존하기 때문에
+@@ 73
+i와 j 사이의 모든 회전이 i의 회전에 gyroscope 항을 곱한 것이고, 각각이 accelerometer 샘플에 곱해지기 때문에
+@@ 74
+gravity 벡터가 i의 회전에 따라 바뀌기 때문에
+@@ 75
+샘플링 주기가 바뀌기 때문에
+@@ 76
+각 R_k = R_i·(Exp 항들의 곱)은 샘플 k를 world로 회전합니다. R_i가 바뀌면 회전된 모든 샘플, 따라서 두 합의 모든 항이 바뀝니다. world 좌표의 gravity와 Δt는 고정입니다.
+@@ 77
+Q5. (11.12)에서 시각 t에 얻은 accelerometer 샘플을 회전하는 데 쓰는 orientation은 무엇입니까?
+@@ 78
+t + Δt에서의 orientation
+@@ 79
+t와 t + Δt에서의 orientation의 평균
+@@ 80
+t에서의 orientation, step 전체 동안 고정
+@@ 81
+trajectory의 초기 orientation
+@@ 82
+속도와 위치 식은 R(t)를 씁니다. 이 방식은 step 동안 R을 일정하게 두며, 몸체가 회전할 때는 근사입니다.
+@@ 83
+IMU 샘플마다 state를 하나씩 두면 factor graph가 너무 커집니다. 목표는 keyframe 쌍마다 IMU factor 하나입니다.
+@@ 84
+kinematics (11.8)에 measurement model을 더하면 적분 step (11.12)가 나옵니다. 측정값을 world로 회전하고, gravity를 더하고, 적분합니다.
+@@ 85
+위치 오차는 accelerometer bias에 대해 \(\tfrac12 b_a t^2\), gyroscope bias에 대해 \(\tfrac16 g\,b_g t^3\)으로 자랍니다. 기울기 오차가 gravity를 수평 가속도로 새어 들게 하기 때문입니다.
+@@ 86
+keyframe 사이에서 step을 이어 붙이면 유효한 상대 운동 제약인 (11.13)이 나옵니다.
+@@ 87
+그 합들은 \(\mathbf{R}_i\)와 \(\mathbf{v}_i\)에 의존하므로 solver iteration마다 raw 샘플에서 다시 계산해야 합니다. preintegration이 이 비용을 없앱니다.
+@@ 88
+<em>SLAM Handbook</em>, §11.2 도입부와 §11.2.1 "Motion Integration", pp. 308–310.
+@@ 89
+Titterton and Weston, <em>Strapdown Inertial Navigation Technology</em>, 2nd ed., 2004 (strapdown kinematics, 기울기 오차가 gravity를 위치 오차로 결합시키는 방식).
+@@ 90
+Woodman, <em>An Introduction to Inertial Navigation</em>, University of Cambridge technical report, 2007 (bias와 white noise로 인한 위치 오차의 증가 속도).

@@ -1,0 +1,234 @@
+@@ 1
+<span class="eyebrow">Week 6 · Day 1</span>
+@@ 2
+Where outliers come from, and why least squares cannot cope
+@@ 3
+After today you can name the sources of outliers in SLAM, compute how far one bad measurement moves a least-squares estimate, and say what a breakdown point is.
+@@ 4
+About 60 min · Read §3.1, pp. 75–78 (4 pages) · Needs Week 2 Day 2
+@@ 5
+Read first: chapter opening and §3.1, pp. 75–78
+@@ 6
+The two examples of wrong data association on p. 76: a landmark given the wrong identity, and a loop closure between two places that only look alike.
+@@ 7
+The causes of outliers on p. 76 that are <em>not</em> data-association mistakes.
+@@ 8
+The sentence on p. 77 that says why squaring the residuals is the root of the trouble.
+@@ 9
+Figure 3.1 on p. 77: compare the top row (ground truth) with the bottom row (least squares with outliers).
+@@ 10
+Least squares is the right estimator when every error is Gaussian. Real front-ends sometimes match the wrong things, and those measurements are wrong by meters, not by noise. Because the cost squares each residual, a few such <strong>outliers</strong> outvote all the good measurements and the estimate can be arbitrarily wrong.
+@@ 11
+1. What least squares silently assumes
+@@ 12
+In <a href="#d8">Week 2 · Day 2</a> you derived the back-end problem from a noise model. If measurement \(\mathbf{z}_i\) equals its prediction \(h_i(\mathbf{x}_i)\) plus zero-mean Gaussian noise with covariance \(\boldsymbol{\Sigma}_i\), then the maximum a posteriori estimate is the nonlinear least-squares problem
+@@ 13
+where \(\mathbf{x}_i\) is the part of the state that measurement \(i\) involves and \(\norm{\mathbf{e}}^2_{\boldsymbol{\Sigma}} = \mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\). <span class="src">Ch. 3 opening · p. 75</span> The chapter writes the size of one term as a scalar <strong>residual</strong> \(r_i(\mathbf{x}) = \norm{\mathbf{z}_i - h_i(\mathbf{x}_i)}_{\boldsymbol{\Sigma}_i}\), so the cost is \(\sum_i r_i(\mathbf{x})^2\). A residual is measured in standard deviations: \(r_i = 3\) means "this measurement disagrees with the estimate by 3σ". <span class="src">§3.1.2 · p. 77</span>
+@@ 14
+The book calls the Gaussian <strong>light-tailed</strong>: it gives almost no probability to large errors. <span class="src">§3.1.2 · p. 77</span>
+@@ 15
+Filling the gap: how light is "light-tailed"?
+@@ 16
+For a Gaussian error \(e\) with standard deviation \(\sigma\), the probability of landing further than \(k\sigma\) from the mean is \(2\,(1 - \Phi(k))\), where \(\Phi\) is the standard normal cumulative distribution. From a table of \(\Phi\):
+@@ 17
+Error larger than
+@@ 18
+Probability under the Gaussian model
+@@ 19
+one measurement in three
+@@ 20
+one in 370
+@@ 21
+one in 1.7 million
+@@ 22
+never, for practical purposes
+@@ 23
+So a model with only Gaussian noise says that a 10σ error cannot happen. When one does happen, the estimator "believes" the measurement anyway, and the only way to make a 10σ error plausible is to move the estimate a long way toward it.
+@@ 24
+2. Where the bad measurements come from
+@@ 25
+The back-end never sees raw data. It sees what the front-end extracted (see <a href="#d1">Week 1 · Day 1</a>), and the extraction involves a decision: <em>which</em> landmark is this, <em>which</em> earlier pose saw the same place? Deciding what a measurement refers to is the <strong>data association problem</strong>. A wrong decision gives a measurement that is precise but about the wrong thing. <span class="src">§3.1.1 · p. 76</span>
+@@ 26
+Cause
+@@ 27
+What goes wrong
+@@ 28
+Kind
+@@ 29
+Wrong landmark identity
+@@ 30
+A detection is attributed to landmark \(\ell_j\) but really shows a different landmark, so \(\mathbf{z}_{ij}\) is far from \(h(\mathbf{p}_i, \ell_j)\).
+@@ 31
+Data association
+@@ 32
+False loop closure
+@@ 33
+Place recognition links poses \(\mathbf{p}_i\) and \(\mathbf{p}_j\) that did not observe the same scene.
+@@ 34
+Moving object
+@@ 35
+The landmark is identified correctly, but the model assumes it is static and it has moved.
+@@ 36
+Violated assumption
+@@ 37
+Sensor fault
+@@ 38
+A faulty wheel encoder, dust on the lens.
+@@ 39
+Failure or degradation
+@@ 40
+False loop closures often have a specific cause, <strong>perceptual aliasing</strong>: two different places look the same to the sensor, like two classrooms in one building or identical office cubicles. <span class="src">§3.1.1 · p. 76</span>
+@@ 41 attr
+A robot path runs right along a corridor, turns, and comes back along a parallel corridor. Classroom A is on the first corridor and a look-alike classroom B is on the second. A correct loop closure joins two poses that are really close together near the start. A false loop closure joins the pose outside classroom A to the pose outside classroom B, which are far apart.
+@@ 42
+classroom A
+@@ 43
+classroom B
+@@ 44
+end
+@@ 45
+correct loop closure
+@@ 46
+false loop closure:
+@@ 47
+A and B look alike
+@@ 48
+Perceptual aliasing. The green constraint says "these two poses are close", which is true. The pink one says the same about two poses that are a corridor apart.
+@@ 49
+A false loop closure is the worst kind of outlier. It is not a noisy version of the truth. It is a confident statement, with a small covariance, that two distant poses coincide.
+@@ 50
+3. Why squaring makes it worse
+@@ 51
+Evaluate the cost near the true state. Good measurements have residuals around 1 (they are in units of σ), so each contributes about 1 to \(\sum_i r_i^2\). An outlier that is off by 20σ contributes \(20^2 = 400\): as much as 400 good measurements. The optimizer reduces the cost fastest by shrinking that one term, and it does so by bending the estimate away from what the good measurements say. <span class="src">§3.1.2 · p. 77</span>
+@@ 52
+Try it: the blue points lie near the line \(y = 0.5x + 1\). Drag the pink point around, then change the number of good points.
+@@ 53
+Notice: with 12 good points, one bad point at (8.5, 1.2) changes the fit from y = 0.52x + 0.82 to y = 0.36x + 1.35, and at the true line it alone carries 98% of the cost. Drag it further and the line follows without limit. With 40 good points the pull is weaker, but it never reaches zero.
+@@ 54
+Filling the gap: one outlier moves the estimate by error ÷ N
+@@ 55
+The simplest least-squares problem is estimating one number \(x\) from \(N\) direct measurements \(z_1, \dots, z_N\) with equal noise. The cost is \(\sum_i (z_i - x)^2\). Set its derivative to zero:
+@@ 56
+The least-squares estimate is the mean. Now corrupt one measurement by adding an error \(E\) to it. The sum grows by \(E\), so
+@@ 57
+Two things follow. The shift is proportional to \(E\), so there is no bound on the damage: make \(E\) large enough and the estimate is anywhere you like. And the shift shrinks only like \(1/N\), so adding good data dilutes an outlier but never removes it. Example: nine measurements equal to 2.0 and one equal to 52.0 give \(\hat{x} = (9 \times 2 + 52)/10 = 7.0\), far from every single measurement.
+@@ 58
+In a line fit, or in SLAM, the same thing happens with one extra twist that the widget shows: a bad point far from the middle of the data has a long lever arm, so it changes the slope as well as the offset.
+@@ 59
+4. Breakdown point: a number for "how fragile"
+@@ 60
+Robust statistics measures fragility with the <strong>breakdown point</strong> of an estimator: the smallest fraction of the measurements that, if replaced by arbitrary values, can move the estimate arbitrarily far. This idea is not in today's pages, but it is the standard yardstick and you will meet it in the papers the chapter cites.
+@@ 61
+The mean (least squares) has breakdown point \(1/N\), which tends to 0: one bad measurement out of any number is enough, as Section 3 showed.
+@@ 62
+The median has breakdown point 50%. To drag the middle value arbitrarily far you must corrupt half of the data.
+@@ 63
+Example: the data \(\{0.8,\ 0.9,\ 1.0,\ 1.1,\ 1.2\}\) have mean 1.0 and median 1.0. Replace 1.2 by 100. The mean becomes \((0.8 + 0.9 + 1.0 + 1.1 + 100)/5 = 20.76\). The median, the middle of \(\{0.8, 0.9, 1.0, 1.1, 100\}\), is still 1.0.
+@@ 64
+No estimator can have a breakdown point above 50% without extra information: if most of the data are wrong and they agree with each other, nothing in the data says which group to trust. Remember this limit on Days 3 and 5, where methods tolerate far more than 50% outliers. They can because they are told something extra, for example that the odometry is trustworthy.
+@@ 65
+Least squares runs a vote where each measurement's voice gets louder the more it disagrees with everyone else. One measurement that is wildly wrong shouts down a hundred that are quietly right.
+@@ 66
+5. What it does to a map, and the plan for the week
+@@ 67
+Figure 3.1 runs plain least squares on three standard problems. <span class="src">§3.1.2 · pp. 77–78</span>
+@@ 68
+Type
+@@ 69
+Outliers
+@@ 70
+Simulated pose graph, grid-like
+@@ 71
+3500 2D poses, 8953 measurements
+@@ 72
+15% random outliers added to the loop closures
+@@ 73
+SubT
+@@ 74
+Real pose graph from a tunnel
+@@ 75
+682 3D poses, 3278 measurements
+@@ 76
+Already in the data
+@@ 77
+Victoria Park
+@@ 78
+Real landmark SLAM
+@@ 79
+7120 2D poses and landmarks, 17728 measurements
+@@ 80
+15% random outliers added to the landmark measurements
+@@ 81
+All three estimates are unusable. In SubT the failure has a recognizable shape: two parallel corridors that look alike produce many false loop closures, and the back-end obeys them by folding the two corridors into one. <span class="src">§3.1.2 · p. 78</span> That is perceptual aliasing written into the map.
+@@ 82
+The chapter attacks the problem at both ends of the pipeline:
+@@ 83
+Methods
+@@ 84
+Day
+@@ 85
+Front-end (§3.2)
+@@ 86
+Find and delete gross outliers before they reach the optimizer
+@@ 87
+RANSAC, pairwise consistency maximization
+@@ 88
+Back-end (§3.3)
+@@ 89
+Change the cost so that surviving outliers have little pull
+@@ 90
+Robust losses, IRLS, graduated non-convexity
+@@ 91
+<strong>"An outlier is a very noisy measurement."</strong> Usually it is a precise measurement of the wrong thing. Inflating every covariance to cover it would throw away the accuracy of the good data.
+@@ 92
+<strong>"With enough good data the outliers average out."</strong> The shift is \(E/N\). It is small only if \(E\) is bounded, and a false loop closure can be wrong by the size of the building.
+@@ 93
+<strong>"Outliers are random, so they point in random directions and cancel."</strong> Perceptual aliasing produces many outliers that agree with each other, as in the SubT corridors.
+@@ 94
+Q1. Nineteen range measurements read 4.0 m and one reads 44.0 m. What is the least-squares estimate of the range?
+@@ 95
+The estimate is the mean: the outlier's error is 40 m and N = 20, so the shift is 40/20 = 2 m, giving 6.0 m. Check: (19 × 4 + 44)/20 = 120/20 = 6.
+@@ 96
+Q2. Evaluated at the true state, 200 good measurements each have residual 1 (in units of σ) and one outlier has residual 30. What fraction of the cost Σr² comes from the outlier?
+@@ 97
+About 82%
+@@ 98
+About 13%
+@@ 99
+About 0.5%
+@@ 100
+About 50%
+@@ 101
+The outlier contributes 30² = 900 and the good measurements 200 × 1 = 200, so the share is 900/1100 ≈ 0.82. One measurement in 201 owns most of the cost.
+@@ 102
+Q3. A camera tracks a parked car as a landmark. The car is identified correctly in every frame, then drives off while still in view. Why do its measurements become outliers?
+@@ 103
+Data association failed
+@@ 104
+Perceptual aliasing
+@@ 105
+The camera noise increased
+@@ 106
+The model assumes landmarks are static, and that assumption is now false
+@@ 107
+The association is right, so this is not a data-association error. The measurement model assumes a static landmark, and a violated assumption produces large residuals just as a wrong match does (p. 76).
+@@ 108
+Q4. You have 11 measurements of one quantity. What is the smallest number of them an adversary must corrupt to move the median arbitrarily far?
+@@ 109
+The median of 11 values is the 6th smallest. With 5 corrupted values, the 6th smallest is still one of the 6 good values, or lies between good values. With 6 corrupted values sent to +∞, the 6th smallest is corrupted. The mean would need only 1.
+@@ 110
+Least squares is MAP estimation under Gaussian noise, and a Gaussian says large errors essentially never happen.
+@@ 111
+Outliers come mostly from wrong data association (wrong landmark, false loop closure, perceptual aliasing), and also from violated assumptions and sensor faults.
+@@ 112
+Squaring gives an outlier with residual \(k\) the weight of \(k^2\) good measurements.
+@@ 113
+One corrupted measurement shifts a mean by \(E/N\): unbounded in \(E\). The breakdown point of least squares is zero.
+@@ 114
+The chapter's answer has two layers: reject outliers in the front-end, and make the back-end cost robust to the ones that remain.
+@@ 115
+<em>SLAM Handbook</em>, Chapter 3 opening and §3.1 "What Causes Outliers and Why Are They a Problem?", pp. 75–78, equation (3.1), Figure 3.1.
+@@ 116
+Rousseeuw and Leroy, <em>Robust Regression and Outlier Detection</em>, 1987 (breakdown point; mean versus median).
+@@ 117
+The Gaussian tail probabilities are standard normal table values. The \(E/N\) argument is the derivative of a sum of squares, as in Week 1 Day 4.

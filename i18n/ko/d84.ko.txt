@@ -1,0 +1,170 @@
+@@ 1
+<span class="eyebrow">14주차 · 복습</span>
+@@ 2
+14주차 복습: chirp에서 pose graph까지, radar
+@@ 3
+오늘이 끝나면 FMCW 측정으로 range, 속도, 각도를 계산하고, CFAR 임계값을 정하고, Doppler 측정값에 ego-velocity를 fit하고, radar SLAM pipeline이 loop closure를 찾고 검증하는 방법을 설명할 수 있습니다.
+@@ 4
+FMCW radar는 chirp를 보내고 각 echo를 송신 신호와 비교합니다. beat frequency는 range를, chirp 사이의 위상 변화는 radial velocity를, 안테나 사이의 위상 변화는 각도를 줍니다. raw 출력은 speckle과 multipath ghost가 섞인 noise 많은 전력 map이므로, CFAR나 k-strongest 같은 filter가 점이 될 cell을 고릅니다. odometry는 static 점들의 radial velocity에 센서 속도를 fit하는 Doppler만으로 얻거나, LiDAR처럼 scan matching으로 얻습니다. scan matching은 보통 여러 keyframe에 대해, motion compensation을 한 뒤에 합니다. place recognition은 높이 대신 intensity를 저장하도록 LiDAR descriptor를 고쳐 씁니다. 완전한 시스템은 odometry와 신중하게 검증한 loop constraint를 평범한 pose graph에 넣습니다.
+@@ 5
+echo 지연과 range
+@@ 6
+=
+@@ 7
+slope가 \(S = B/T\)인 chirp의 beat frequency
+@@ 8
+\(f_0 = \dfrac{2Sd}{c}\)이므로 \(d = \dfrac{c f_0}{2S}\)
+@@ 9
+=
+@@ 10
+complex sample이 \(N\)개일 때의 range 해상도와 모호성 없는 range
+@@ 11
+=
+@@ 12
+chirp 사이의 위상 변화로 구하는 속도
+@@ 13
+=
+@@ 14
+=
+@@ 15
+=
+@@ 16
+angle of arrival, 안테나 간격 \(\ell\)
+@@ 17
+=
+@@ 18
+training cell이 \(N\)개인 CA-CFAR 임계값
+@@ 19
+§9.1.4, p. 260 및 App · Day 2
+@@ 20
+static target의 Doppler residual과, 그 제곱합을 최소화하는 ego-velocity
+@@ 21
+(9.14), p. 264 및 App · Day 3
+@@ 22
+=
+@@ 23
+=
+@@ 24
+joint loop 검색
+@@ 25
+=
+@@ 26
+Q1. chirp의 slope가 S = 10¹³ Hz/s입니다. 30 m에 있는 target은 어떤 beat frequency를 만듭니까? (c = 3 × 10⁸ m/s)
+@@ 27
+=
+@@ 28
+=
+@@ 29
+=
+@@ 30
+=
+@@ 31
+=
+@@ 32
+Q2. range bin을 절반 크기로 만들고 싶습니다. 무엇을 바꿔야 합니까?
+@@ 33
+bandwidth를 두 배로
+@@ 34
+bandwidth는 그대로 두고 chirp 길이를 두 배로
+@@ 35
+반송파 주파수를 두 배로
+@@ 36
+chirp 사이의 시간을 두 배로
+@@ 37
+bin 크기는 c/(2B)입니다. 여기에는 bandwidth만 나타납니다.
+@@ 38
+Q3. λ = 4 mm인 radar가 chirp를 100 µs 간격으로 보냅니다. aliasing 없이 보고할 수 있는 최대 radial 속력은 얼마입니까?
+@@ 39
+=
+@@ 40
+Q4. 두 수신 안테나가 정확히 한 파장 떨어져 있습니다. 어떤 angle of arrival에서 위상 차이가 모호하지 않습니까?
+@@ 41
+±90° 이내
+@@ 42
+±60° 이내
+@@ 43
+±30° 이내
+@@ 44
+±15° 이내
+@@ 45
+|Δφ|가 π보다 작으려면 |sin θ|가 λ/(2ℓ) = 1/2보다 작아야 합니다. 즉 θ는 ±30° 이내입니다.
+@@ 46
+Q5. radargram의 모든 cell에서 noise 전력이 두 배가 됩니다. CA-CFAR filter의 false alarm 확률은 어떻게 됩니까?
+@@ 47
+제곱이 됩니다
+@@ 48
+임계값은 측정한 국소 noise 수준의 배수이므로 함께 두 배가 됩니다. P_fa = (1 + α/N)^(−N)에는 noise 수준이 들어 있지 않습니다.
+@@ 49
+Q6. 정면(azimuth 0°)의 static 점은 closing speed가 8 m/s이고, azimuth 90°(왼쪽)의 static 점은 −2 m/s입니다. 센서 속도는 얼마입니까?
+@@ 50
+전방 8 m/s, 오른쪽 2 m/s
+@@ 51
+전방 8 m/s, 왼쪽 2 m/s
+@@ 52
+전방 6 m/s
+@@ 53
+전방 2 m/s, 오른쪽 8 m/s
+@@ 54
+0°의 측정값은 v_x = 8입니다. 90°의 측정값은 v_y = −2입니다. 센서가 왼쪽의 점에서 멀어지고 있으므로 오른쪽으로 움직입니다.
+@@ 55
+Q7. radar Scan Context의 sector가 40개입니다. 저장된 descriptor와 가장 잘 맞는 것은 5열 shift일 때입니다. 이는 어떤 heading 변화를 뜻합니까?
+@@ 56
+sector 하나는 360°/40 = 9°이므로 5열은 45°입니다.
+@@ 57
+Q8. TBV-SLAM에서 descriptor 점수는 좋지만 틀린 loop 후보를 최종적으로 pose graph에 들어오지 못하게 막는 것은 무엇입니까?
+@@ 58
+keyframe 거리 임계값
+@@ 59
+=
+@@ 60
+=
+@@ 61
+쌍의 registration과 그 뒤의 정렬 검증
+@@ 62
+후보는 odometry와 함께 점수가 매겨진 뒤 registration되고, 정렬은 overlap 척도와 misalignment 검출기로 검사됩니다. 검증된 후보만 constraint가 됩니다 (pp. 275–276).
+@@ 63
+FMCW radar가 \(B = 750\) MHz, \(T = 50\ \mu\text{s}\)인 chirp를 씁니다. 어떤 target이 2 MHz의 beat frequency를 만듭니다. (a) 이 target은 얼마나 떨어져 있습니까? (b) range 해상도는 얼마입니까? (c) chirp당 complex sample이 256개라면 모호성 없는 최대 range는 얼마입니까? \(c = 3\times10^8\) m/s를 쓰세요.
+@@ 64
+=
+@@ 65
+(c) \(d_{\max} = N\,c/(2B) = 256 \times 0.2 = 51.2\) m. 확인: sampling rate는 \(N/T = 5.12\) MHz이고, 51.2 m의 target은 \(f_0 = 2Sd/c = 5.12\) MHz입니다.
+@@ 66
+radar의 \(\lambda = 3.9\) mm이고 chirp를 \(T = 60\ \mu\text{s}\) 간격으로 보냅니다. (a) 두 chirp 사이에 beat 위상이 0.8 rad 바뀝니다. radial velocity는 얼마입니까? (b) \(v_{\max}\)는 얼마입니까? (c) target이 20 m/s로 멀어집니다. radar는 어떤 속도를 보고합니까?
+@@ 67
+(c) 실제 위상 변화는 \(4\pi v T/\lambda = 4\pi(20)(6\times10^{-5})/(3.9\times10^{-3}) = 3.867\) rad로 \(\pi\)보다 큽니다. radar에는 이것이 한 바퀴 접힌 값 \(3.867 - 2\pi = -2.416\) rad로 보이므로, \(v = (3.9\times10^{-3})(-2.416)/(7.54\times10^{-4}) = -12.5\) m/s를 보고합니다. 같은 말로 \(20 - 2v_{\max} = -12.5\)입니다. target이 다가오는 것처럼 보입니다.
+@@ 68
+2D radar가 다섯 점의 closing speed를 보고합니다: azimuth 0°에서 8.00 m/s, 90°에서 1.00 m/s, −90°에서 −1.00 m/s, 45°에서 6.36 m/s, 180°에서 −2.00 m/s. (a) 처음 네 점으로 센서 속도를 least squares로 fit하세요. (b) 다섯 번째 점의 residual을 계산하고 해석하세요. (c) 다섯 점 모두로 fit하고 비교하세요.
+@@ 69
+(a) \(\mathbf{A}\)의 행은 \((1,0)\), \((0,1)\), \((0,-1)\), \((0.707, 0.707)\)입니다. 그러면
+@@ 70
+행렬식은 \(1.5 \times 2.5 - 0.25 = 3.5\)이므로 \(v_x = (2.5 \times 12.5 - 0.5 \times 6.5)/3.5 = 8\), \(v_y = (1.5 \times 6.5 - 0.5 \times 12.5)/3.5 = 1\)입니다. 센서는 (8, 1) m/s로 움직이고, 네 residual은 모두 0입니다.
+@@ 71
+(b) 180°의 static 점이라면 \(8\cos180° + 1\sin180° = -8\) m/s를 읽어야 합니다. 측정값은 −2이므로 residual은 \(-2 - (-8) = 6\) m/s입니다. 이 점은 static이 아닙니다. 센서 뒤에서 시선 방향으로 6 m/s로 따라오는 무언가입니다.
+@@ 72
+(c) 다섯 번째 행은 \((-1, 0)\)입니다. 이제 \(\mathbf{A}\T\mathbf{A} = \begin{bmatrix} 2.5 & 0.5 \\ 0.5 & 2.5 \end{bmatrix}\)이고 \(\mathbf{A}\T\mathbf{y} = (12.5 + 2,\ 6.5) = (14.5,\ 6.5)\)입니다. 행렬식은 6이므로 \(v_x = (2.5 \times 14.5 - 0.5 \times 6.5)/6 = 5.5\), \(v_y = (2.5 \times 6.5 - 0.5 \times 14.5)/6 = 1.5\)입니다. 다섯 점 중 움직이는 점 하나가 전방 속력을 8에서 5.5 m/s로 끌어내렸습니다. 그래서 fit하기 전에 outlier를 제거합니다.
+@@ 73
+CA-CFAR filter가 training cell \(N = 8\)개와 \(P_{fa} = 10^{-4}\)를 씁니다. (a) 배수 \(\alpha\)를 계산하세요. (b) 여덟 training cell의 전력 합이 12이고 cell under test의 전력이 30입니다. 검출입니까? (c) 전력 1.5인 training cell 하나가 전력 40인 두 번째 target으로 바뀝니다. cell under test는 여전히 검출됩니까? (d) \(N \to \infty\)일 때 \(\alpha \to -\ln P_{fa}\)임을 보이고, 여기서의 값을 구하세요.
+@@ 74
+(b) 평균은 \(12/8 = 1.5\), 임계값은 \(17.30 \times 1.5 = 25.9\)입니다. \(30 \gt 25.9\)이므로 검출입니다.
+@@ 75
+(c) 합은 \(12 - 1.5 + 40 = 50.5\), 평균은 6.31, 임계값은 \(17.30 \times 6.31 = 109.2\)가 됩니다. 이제 \(30 \lt 109.2\)이므로 target을 놓칩니다. training window 안의 강한 이웃이 더 약한 target을 가립니다. 여덟 cell의 중앙값은 거의 움직이지 않을 것이며, 이것이 OS-CFAR를 쓰는 근거입니다.
+@@ 76
+(d) \(P_{fa}^{-1/N} = e^{-\ln P_{fa}/N}\)로 씁니다. \(N\)이 크면 지수가 작아 \(e^{x} \approx 1 + x\)이므로 \(\alpha = N(e^{-\ln P_{fa}/N} - 1) \approx N \cdot (-\ln P_{fa}/N) = -\ln P_{fa}\)입니다. \(P_{fa} = 10^{-4}\)이면 9.21이며, noise 수준을 정확히 알 때 쓸 임계값입니다. cell이 8개면 배수는 그 값의 거의 두 배입니다.
+@@ 77
+chirp가 지연을 어떻게 주파수로 바꾸는지, 그리고 chirp 사이의 위상이 왜 속도를 주는지 식 없이 설명할 수 있습니다.
+@@ 78
+chirp 파라미터로 range, range 해상도, 속도, aliasing 한계를 계산할 수 있습니다.
+@@ 79
+speckle, multipath, motion distortion이 radar scan에 무엇을 하는지, 그리고 CFAR와 k-strongest filtering의 목적이 어떻게 다른지 말할 수 있습니다.
+@@ 80
+ego-velocity에 대한 least-squares 문제를 세우고 풀 수 있으며, 움직이는 물체를 왜 제거해야 하는지와 회전이 왜 observable하지 않은지 설명할 수 있습니다.
+@@ 81
+Scan Context를 radar에 맞게 어떻게 고치는지, 그리고 좁은 field of view가 왜 rotation invariance를 깨는지 설명할 수 있습니다.
+@@ 82
+loop 후보가 radar pose graph의 constraint가 되기 전에 통과하는 검사들을 나열할 수 있습니다.
+@@ 83
+<em>SLAM Handbook</em>, 9장 "Radar SLAM", pp. 250–281.
+@@ 84
+Richards, <em>Fundamentals of Radar Signal Processing</em>, 2nd ed., 2014 (range와 속도 해상도, CA-CFAR 배수).
+@@ 85
+=

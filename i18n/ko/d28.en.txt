@@ -1,0 +1,200 @@
+@@ 1
+<span class="eyebrow">Week 5 · Day 4</span>
+@@ 2
+Gaussian-process regression and interpolation by hand
+@@ 3
+After today you can compute a GP posterior mean and variance from a small kernel matrix by hand, interpolate between two estimated states at constant cost, and explain why measurement, estimation, and query times can all differ.
+@@ 4
+About 60 min · Read §2.2.3 (end), pp. 68–69 (1 page) · Needs Week 3 Day 3 and Week 5 Day 3
+@@ 5
+Read first: the end of §2.2.3, pp. 68–69
+@@ 6
+Read from the last paragraph of p. 68 ("This formulation of continuous-time trajectory estimation is really an example of Gaussian process regression") to the heading "2.2.4" on p. 69. It is short; most of today is the math behind it. While you read, look for:
+@@ 7
+What a query costs and which estimated states it involves (top of p. 69).
+@@ 8
+The lidar example of using fewer control points than measurements (p. 69).
+@@ 9
+The reason given for why extra estimation times do not cause overfitting, and the caveat that follows (p. 69).
+@@ 10
+The estimator of the last two days is <strong>Gaussian-process regression</strong>: start from a Gaussian prior over whole trajectories and condition it on noisy measurements. Conditioning returns a mean and a variance at every time, measured or not. With a prior that comes from an SDE, the answer at a query time needs only the two estimated states on either side of it.
+@@ 11
+1. Regression is conditioning a Gaussian
+@@ 12
+Work with one scalar coordinate \(p(t)\) and a zero-mean GP prior with kernel \(\mathcal{K}\). Sensors measure the position at times \(t_1,\dots,t_M\) with independent noise of variance \(\sigma^2\): \(z_i = p(t_i) + \eta_i\). We want \(p(\tau)\) at a <strong>query time</strong> \(\tau\). By the definition of a GP, the measurements and the query value are jointly Gaussian with mean zero:
+@@ 13
+\(\mathbf{K}\) is the kernel matrix at the measurement times, and the noise adds \(\sigma^2\) to its diagonal. Now apply the rule for conditioning one block of a Gaussian on another from <a href="#d15">Week 3 · Day 3</a>: if \((\mathbf{a}, \mathbf{b})\) are zero-mean and jointly Gaussian, then given \(\mathbf{a}\), \(\mathbf{b}\) has mean \(\boldsymbol{\Sigma}_{ba}\boldsymbol{\Sigma}_{aa}^{-1}\mathbf{a}\) and covariance \(\boldsymbol{\Sigma}_{bb} - \boldsymbol{\Sigma}_{ba}\boldsymbol{\Sigma}_{aa}^{-1}\boldsymbol{\Sigma}_{ab}\). With \(\mathbf{a} = \mathbf{z}\) and \(\mathbf{b} = p(\tau)\):
+@@ 14
+These two formulas are GP regression. The posterior mean is a weighted sum of the measurements. The posterior variance is the prior variance minus what the measurements explained, and it does not depend on the measured values, only on the times and the kernel.
+@@ 15
+Filling the gap: this is equation (2.45)
+@@ 16
+The book reaches the same estimator through the modified normal equations \((\mathbf{A}\T\mathbf{A} + \mathbf{K}^{-1})\,\boldsymbol{\delta}^* = \mathbf{A}\T\mathbf{b}\). To see that the two agree, use direct position measurements. The whitened Jacobian is \(\mathbf{A} = \mathbf{I}/\sigma\) and the whitened residual, starting from a zero estimate, is \(\mathbf{b} = \mathbf{z}/\sigma\), so (2.45) reads \((\sigma^{-2}\mathbf{I} + \mathbf{K}^{-1})\,\hat{\mathbf{p}} = \sigma^{-2}\mathbf{z}\). Factor the bracket as \(\sigma^{-2}\mathbf{K}^{-1}(\mathbf{K} + \sigma^2\mathbf{I})\) and invert:
+@@ 17
+(The last step swaps the two factors, which is allowed because both are functions of the same matrix \(\mathbf{K}\).) Row \(i\) of \(\mathbf{K}\) is \(\mathbf{k}_\tau\T\) for \(\tau = t_i\), so this is the regression mean evaluated at the measurement times. MAP estimation with the kernel prior and GP regression are the same computation. The book's version is preferable in SLAM because it works with the sparse \(\mathbf{K}^{-1}\) and never forms the dense \(\mathbf{K}\).
+@@ 18
+2. A full example by hand
+@@ 19
+Prior: a random walk that starts at exactly \(p(0) = 0\), with \(Q_c = 1\). From <a href="#d27">Day 3</a> its kernel is \(\mathcal{K}(t,t') = \min(t,t')\). Two measurements with noise variance \(\sigma^2 = 1\): \(z = 2\) at \(t = 1\) and \(z = 3\) at \(t = 3\).
+@@ 20
+For each query time, \(\mathbf{k}_\tau = (\min(1,\tau), \min(3,\tau))\). The mean is \(\mathbf{k}_\tau\) dotted with \((5,4)/7\). For the variance at \(\tau = 2\): \(\mathbf{k}_\tau = (1,2)\), \((\mathbf{K}+\sigma^2\mathbf{I})^{-1}\mathbf{k}_\tau = (2,3)/7\), so the variance is \(2 - (1\cdot2 + 2\cdot3)/7 = 6/7\).
+@@ 21
+Query time τ
+@@ 22
+Posterior mean
+@@ 23
+Posterior variance
+@@ 24
+1 (a measurement time)
+@@ 25
+2 (between)
+@@ 26
+3 (a measurement time)
+@@ 27
+5 (after the last one)
+@@ 28 attr
+Plot of the worked example. The posterior mean is three straight pieces: from zero at time zero up to 1.29 at time one, up to 2.43 at time three, then flat to time five. A shaded band of one standard deviation is pinched to zero at time zero, bulges between the measurements, and widens steadily after time three. The two measurements, 2 at time one and 3 at time three, lie above the mean.
+@@ 29
+τ = 2: 1.86, var 0.86
+@@ 30
+τ = 5: 2.43, var 2.71
+@@ 31
+time t (s)
+@@ 32
+line: posterior mean · band: ± 1 standard deviation
+@@ 33
+The worked example, plotted from the formulas of section 1. Filled dots are the measurements, open dots two of the queries in the table.
+@@ 34
+Four things to read off, all of which hold in general:
+@@ 35
+The estimate does not pass through the measurements. At \(t = 1\) the sensor said 2 and the posterior says 1.29, because the prior (anchored at 0) and the noise both have a say.
+@@ 36
+At a measurement time the posterior variance (0.43, 0.71) is below the sensor's own variance of 1. The other measurement and the prior add information.
+@@ 37
+Between the measurements the mean is the straight line between the two estimates, \((9/7 + 17/7)/2 = 13/7\), and the variance bulges above both ends.
+@@ 38
+After the last measurement the mean stays where it was, because the random-walk prior predicts no change, and the variance grows by \(Q_c = 1\) per second: \(5/7 + 2 = 19/7\). This is the caution the book attaches to extrapolation. <span class="src">§2.2 · p. 63</span>
+@@ 39
+3. The same thing on a real trajectory
+@@ 40
+Try it: this is the data from <a href="#d26">Day 2</a>, now fitted with a GP. Lower the power spectral density Q to 0.001, then raise it to 100. Then switch to the random-walk prior and set Q to 1.
+@@ 41
+Notice the band. At the start (constant velocity, Q = 10) it is ±0.42 among the measurements and ±1.66 in the middle of the gap. After the last measurement the mean carries on in a straight line at the last estimated velocity, and the band widens quickly. With Q = 0.001 the mean is nearly a straight line, the error rises to 0.70, and the band is narrow and wrong: the prior is too stiff and too sure. With Q = 100 the band in the gap is wider than the plot. With the random-walk prior the mean is made of straight pieces between measurements, as in the hand example.
+@@ 42
+Q is the hyperparameter the book says must be tuned to get the desired smoothness. <span class="src">§2.2.2 · p. 66</span> Compare with the spline widget: there, too many coefficients made the problem singular. Here every instant is covered by the prior, so the estimate is defined everywhere and comes with an honest uncertainty where data is missing.
+@@ 43
+4. Interpolating between two estimated states
+@@ 44
+The formulas of section 1 use every measurement for every query. With an SDE prior that is unnecessary. The book states that a query costs the same no matter how many measurements there are, because it involves only the estimated states at the two times that bracket it. <span class="src">§2.2.3 · p. 69</span>
+@@ 45
+Filling the gap: the interpolation formula
+@@ 46
+Let \(t_k \lt \tau \lt t_{k+1}\). Under the prior, \(\mathbf{x}(\tau) = \boldsymbol{\Phi}(\tau,t_k)\mathbf{x}_k + \mathbf{w}_\tau\) with \(\mathbf{w}_\tau \sim \N(\mathbf{0}, \mathbf{Q}_\tau)\), where \(\mathbf{Q}_\tau\) is the step covariance of <a href="#d27">Day 3</a> for the interval from \(t_k\) to \(\tau\). Likewise \(\mathbf{x}_{k+1}\) given \(\mathbf{x}_k\) has covariance \(\mathbf{Q}_{k+1}\), and the covariance between \(\mathbf{x}(\tau)\) and \(\mathbf{x}_{k+1}\) given \(\mathbf{x}_k\) is \(\mathbf{Q}_\tau\boldsymbol{\Phi}(t_{k+1},\tau)\T\). Conditioning \(\mathbf{x}(\tau)\) on \(\mathbf{x}_{k+1}\) as well, with the same rule as in section 1, gives
+@@ 47
+where the noise has covariance \(\mathbf{Q}_\tau - \boldsymbol{\Omega}(\tau)\mathbf{Q}_{k+1}\boldsymbol{\Omega}(\tau)\T\). Because the state is Markovian, once the two bracketing states are known no other state or measurement says anything more about \(\mathbf{x}(\tau)\). So the posterior mean at \(\tau\) is \(\boldsymbol{\Lambda}\hat{\mathbf{x}}_k + \boldsymbol{\Omega}\hat{\mathbf{x}}_{k+1}\), and the posterior covariance is \([\boldsymbol{\Lambda}\ \boldsymbol{\Omega}]\) applied on both sides of the joint posterior covariance of the two states, plus the noise covariance. (Barfoot writes \(\boldsymbol{\Psi}\) for our \(\boldsymbol{\Omega}\); we rename it because \(\boldsymbol{\Psi}\) already means a basis function this week.)
+@@ 48
+<strong>Random walk.</strong> \(\Phi = 1\), \(Q_\tau = Q_c(\tau - t_k)\), \(Q_{k+1} = Q_c(t_{k+1} - t_k)\). With \(\alpha = (\tau - t_k)/(t_{k+1} - t_k)\) this gives \(\Omega = \alpha\) and \(\Lambda = 1 - \alpha\): linear interpolation. The noise variance is \(Q_c\,(t_{k+1}-t_k)\,\alpha(1-\alpha)\), largest at the midpoint.
+@@ 49
+<strong>Check against section 2.</strong> At \(\tau = 2\), between \(t = 1\) and \(t = 3\): \(\alpha = 0.5\). The mean is \(0.5\cdot\tfrac97 + 0.5\cdot\tfrac{17}{7} = \tfrac{13}{7}\). The joint posterior of the two estimates has variances \(\tfrac37, \tfrac57\) and covariance \(\tfrac17\), so the variance is \(0.25\,(\tfrac37 + \tfrac57 + 2\cdot\tfrac17) + 1\cdot2\cdot0.25 = \tfrac{5}{14} + \tfrac{7}{14} = \tfrac67\). Both match the table.
+@@ 50
+<strong>Constant velocity.</strong> The same formula with the \(\boldsymbol{\Phi}\) and \(\mathbf{Q}\) of Day 3 gives 2 × 2 matrices whose entries are cubic polynomials in \(\alpha\). The interpolated position is the cubic curve that matches the estimated position and velocity at both ends (cubic Hermite interpolation).
+@@ 51
+So the choice of SDE decides the interpolation scheme: a random walk gives straight lines, constant velocity gives cubics. The book makes the same point on p. 73.
+@@ 52
+5. Three kinds of time, and fewer states than measurements
+@@ 53
+The interpolation formula has a second use. A measurement taken at a time \(t_i\) that falls <em>between</em> two estimation times can be modelled through \(\mathbf{x}(t_i) = \boldsymbol{\Lambda}\mathbf{x}_k + \boldsymbol{\Omega}\mathbf{x}_{k+1}\). Its factor then touches the two bracketing states instead of needing a state of its own. The book's example: one state per lidar scan, while every point in the scan is still used at its own time stamp. It compares the idea to inducing points in the GP literature. <span class="src">§2.2.3 · p. 69</span>
+@@ 54
+This is the separation of measurement times, estimation times, and query times from <a href="#d25">Day 1</a>, now for the nonparametric method. One difference from splines matters in practice. Adding more estimation times to a GP does not cause overfitting, because the kernel regularizes every stretch of the trajectory however finely it is divided. You still need enough of them to capture the detail of the motion. <span class="src">§2.2.3 · p. 69</span>
+@@ 55
+Spline (Days 1–2)
+@@ 56
+GP with an SDE prior (Days 3–4)
+@@ 57
+Estimation variables
+@@ 58
+Coefficients
+@@ 59
+States (pose, and derivatives if the prior needs them) at chosen times
+@@ 60
+A measurement at an arbitrary time touches
+@@ 61
+The active coefficients (4 for a cubic)
+@@ 62
+The 2 bracketing states
+@@ 63
+Regularization
+@@ 64
+None unless you add it
+@@ 65
+Built in: the motion-prior factors
+@@ 66
+More variables than needed
+@@ 67
+Risk of overfitting
+@@ 68
+No overfitting, only more computation
+@@ 69
+Query at any time
+@@ 70
+Evaluate the basis functions
+@@ 71
+Interpolate from 2 states, mean and covariance
+@@ 72
+<strong>"The posterior mean passes through the measurements."</strong> Only if the noise variance is zero. Otherwise it is a compromise between the measurements and the prior.
+@@ 73
+<strong>"The band shows where the measurements scatter."</strong> It is the uncertainty of the trajectory itself. It can be much narrower than the sensor noise where many measurements overlap, and much wider where there are none.
+@@ 74
+<strong>"A query needs all the measurements again."</strong> With a Markovian prior it needs the two bracketing estimated states and their joint covariance, nothing else.
+@@ 75
+Q1. Which of these does the GP posterior variance at a query time NOT depend on?
+@@ 76
+The measurement times
+@@ 77
+The kernel and its hyperparameters
+@@ 78
+The measurement noise variance
+@@ 79
+The measured values z
+@@ 80
+The variance formula contains K, k, and σ² only. The measured values enter the mean, not the variance.
+@@ 81
+Q2. Random-walk prior with p(0) = 0 and Q_c = 1, so the kernel is min(t, t′). One measurement z = 3 at t = 2 with noise variance 2. What is the posterior mean at t = 2?
+@@ 82
+K = 2, so the mean is 2/(2 + 2) × 3 = 1.5: halfway between the prior mean 0 and the measurement, because the prior variance and the noise variance are equal.
+@@ 83
+Q3. Same setup as Q2. What is the posterior variance at t = 2?
+@@ 84
+2 − 2·(1/4)·2 = 1. Two sources with variance 2 each (prior and measurement) combine to variance 1.
+@@ 85
+Q4. With a random-walk prior the estimates are 10 at t = 4 s and 14 at t = 6 s. What is the interpolated mean at t = 4.5 s?
+@@ 86
+α = 0.5/2 = 0.25, so the mean is 0.75·10 + 0.25·14 = 11.
+@@ 87
+Q5. A trajectory was estimated from 100 measurements, then re-estimated from 10,000. With an SDE prior, how does the cost of one query change?
+@@ 88
+It grows 100 times
+@@ 89
+It stays the same, because a query uses only the two bracketing states
+@@ 90
+It grows 10,000 times, because the kernel matrix is inverted again
+@@ 91
+It shrinks, because more data makes interpolation simpler
+@@ 92
+Constant time with respect to the number of measurements (p. 69). Solving for the states costs more, but each query afterwards does not.
+@@ 93
+GP regression: \(\hat p(\tau) = \mathbf{k}_\tau\T(\mathbf{K} + \sigma^2\mathbf{I})^{-1}\mathbf{z}\) and \(\operatorname{var} = \mathcal{K}(\tau,\tau) - \mathbf{k}_\tau\T(\mathbf{K} + \sigma^2\mathbf{I})^{-1}\mathbf{k}_\tau\). It is the same estimator as equation (2.45).
+@@ 94
+The variance is small near measurements, bulges between them, and grows without bound when extrapolating.
+@@ 95
+With a Markovian prior, \(\hat{\mathbf{x}}(\tau) = \boldsymbol{\Lambda}(\tau)\hat{\mathbf{x}}_k + \boldsymbol{\Omega}(\tau)\hat{\mathbf{x}}_{k+1}\): constant cost per query. Random walk gives linear interpolation, constant velocity gives cubic.
+@@ 96
+The same interpolation lets a measurement between estimation times become a factor on two states, so there can be far fewer states than measurements.
+@@ 97
+More estimation times do not overfit a GP. Too few lose detail.
+@@ 98
+<em>SLAM Handbook</em>, §2.2.3 "Gaussian Processes", pp. 68–69 (GP regression, interpolation, control points); §2.2, p. 63 (extrapolating with caution).
+@@ 99
+The regression mean and variance formulas follow Rasmussen and Williams, <em>Gaussian Processes for Machine Learning</em>, 2006. The worked example is computed here from those formulas.
+@@ 100
+The interpolation matrices and the fact that the constant-velocity prior gives cubic Hermite interpolation follow Barfoot, <em>State Estimation for Robotics</em>, 2017.

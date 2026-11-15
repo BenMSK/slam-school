@@ -1,0 +1,220 @@
+@@ 1
+<span class="eyebrow">Week 18 · Day 5</span>
+@@ 2
+Leg odometry in a factor graph, and where it breaks
+@@ 3
+After today you can propagate encoder noise to the foot, write the residual and covariance of the forward-kinematics, contact, and velocity factors, and name the assumptions that fail on soft ground, flexible legs, and slippery floors.
+@@ 4
+About 60 min · Read §12.4–12.6, pp. 348–357 (10 pages; pp. 353–357 read quickly) · Needs Week 18 Day 3 and Week 16 Day 4
+@@ 5
+Read first: §12.4–12.6, pp. 348–357
+@@ 6
+How the non-Gaussian effect of encoder noise is made Gaussian again, equation (12.27) on p. 349.
+@@ 7
+In Figure 12.7 (p. 351): which factors join two consecutive states and which attach to one state.
+@@ 8
+Why the contact covariance (12.34) is multiplied by a time interval.
+@@ 9
+Figures 12.8 and 12.9 (p. 354): two different causes that leg odometry misreads in the same way.
+@@ 10
+A measurement becomes a factor once it has a residual and a covariance. For leg odometry the covariance has two sources: encoder noise, pushed through the kinematics with the Jacobian, and slip, modeled as noise on the contact point's velocity. With those in hand, leg odometry sits in the factor graph next to the IMU factor of Week 16, and the graph, not the legs alone, decides what to believe when the ground is soft or slippery.
+@@ 11
+1. Encoder noise at the foot
+@@ 12
+Model each encoder reading as the true angle plus zero-mean Gaussian noise: <span class="src">§12.4.1 · p. 348</span>
+@@ 13
+Forward kinematics is full of sines and cosines, so the foot position computed from \(\tilde{\mathbf{q}}\) is not exactly Gaussian. As everywhere in this book, linearize: <span class="src">§12.4.1 · p. 349</span>
+@@ 14
+where \(\mathbf{J}_c\) is the leg Jacobian of <a href="#d104">Day 2</a>, expressed in the contact frame.
+@@ 15
+Filling the gap: from (12.27) to a covariance
+@@ 16
+The foot-position error is \(\mathbf{e} = \mathbf{J}_c\boldsymbol{\eta}_q\), a linear function of a Gaussian, so it is Gaussian with zero mean and covariance
+@@ 17
+Numbers for the planar leg at \(q = (30^\circ, -60^\circ)\), with independent noise of \(\sigma_q = 0.5^\circ = 0.00873\) rad on each joint, so \(\boldsymbol{\Sigma}_q = \sigma_q^2\mathbf{I}\):
+@@ 18
+The standard deviations are \(\sigma_x = 0.00873\sqrt{0.60} = 6.8\) mm and \(\sigma_z = 0.00873\sqrt{0.04} = 1.7\) mm. Half a degree at the joints is 7 mm at the foot, mostly horizontal, because in this pose turning the hip sweeps the foot sideways.
+@@ 19
+Try it: compare the predicted and measured numbers. Then straighten the knee by moving q₂ to 0°.
+@@ 20
+Notice that the cloud of exactly computed foot positions has the shape and size of the 2σ ellipse that the Jacobian predicts (6.8 and 1.7 mm predicted, 7.3 and 1.8 mm measured from 300 samples): for noise of encoder size, the first-order formula is accurate. With a straight leg the ellipse collapses to a line across the leg (short axis 0 mm). To first order, joint noise cannot move the foot along a straight leg.
+@@ 21
+Velocity measurements have two noise inputs, on the angles and on the rates. Expanding the product and dropping the term with two noises multiplied together: <span class="src">§12.4.1 · p. 349</span>
+@@ 22
+Both extra terms are linear in Gaussian noise, so they can be lumped into one Gaussian velocity noise \(\boldsymbol{\eta}_v\).
+@@ 23
+2. Filter or factor graph
+@@ 24
+A walking controller needs the state at a high rate, so legged robots have mostly used Kalman filters (EKF, UKF, invariant EKF) that fuse IMU and kinematics. A Kalman filter needs a process model; when there is none, a constant-velocity model or IMU propagation stands in for it. A factor graph treats process and measurement models alike, as relations between states and measurements, which makes it the more general tool. With only two consecutive states in the graph it behaves like a filter. With a longer window it can also correct past states. Keeping the number of states small over a long window calls for <strong>preintegration</strong>, exactly as for the IMU in <a href="#d94">Week 16 · Day 4</a>. So far, graph-based estimators on legged robots have mostly served mapping at lower rates rather than control. <span class="src">§12.4, §12.4.2 · pp. 348–350</span>
+@@ 25
+3. Bipeds: forward-kinematics and contact factors
+@@ 26
+For a humanoid, each state holds the base pose \(\mathbf{T}\) and the contact pose \(\mathbf{C}_i\) of a stance foot (state (12.12)). Two factors use them. <span class="src">§12.4.2.1 · pp. 350–351</span>
+@@ 27 attr
+A factor graph with two rows of variables. Top row: base states T0, T1, T2, joined by IMU factors, with a prior on T0. Bottom row: contact frames C0, C1, C2, joined by contact factors. Each base state is joined to the contact frame below it by a forward kinematics factor.
+@@ 28
+FK (12.29)
+@@ 29
+FK
+@@ 30
+contact (12.33)
+@@ 31
+contact
+@@ 32
+top row: base pose, velocity, biases · bottom row: contact frame of the stance foot
+@@ 33
+Figure 12.7(a) with each state split into its base part and its contact part. The book draws one circle per state; this drawing shows which part each factor touches.
+@@ 34
+The <strong>forward kinematics factor</strong> is the measurement (12.13) written as a residual. If \(\mathbf{fk}(\mathbf{q}) = \mathbf{T}^{-1}\mathbf{C}_i\) held exactly, then \(\mathbf{C}_i^{-1}\,\mathbf{T}\,\mathbf{fk}(\mathbf{q})\) would be the identity and its logarithm zero:
+@@ 35
+Its covariance is section 1's result. The <strong>contact preintegration factor</strong> says the contact frame should not have moved between times \(t_i\) and \(t_j\), up to slip: <span class="src">(12.31)–(12.34) · pp. 350–351</span>
+@@ 36
+The top block is the rotation of the contact frame from \(i\) to \(j\), the bottom block its translation; both should be zero. \(\boldsymbol{\Sigma}_w\) and \(\boldsymbol{\Sigma}_v\) describe the contact's angular and linear velocity noise.
+@@ 37
+Filling the gap: why the covariance is multiplied by \(\Delta t_{ij}\)
+@@ 38
+The book models slip as zero-mean Gaussian noise on the <em>velocity</em> of the contact point. Position is the integral of velocity, and the integral of white noise is a random walk: its variance grows in proportion to elapsed time (the same law as the drift in <a href="#d1">Week 1 · Day 1</a> and the integrated IMU noise of Week 16). So \(\boldsymbol{\Sigma}_v\) is a rate, in m²/s, and the position variance after a stance of length \(\Delta t_{ij}\) is \(\boldsymbol{\Sigma}_v\,\Delta t_{ij}\). Example: \(\boldsymbol{\Sigma}_v = (0.02)^2\mathbf{I}\) m²/s and a stance of 0.25 s give a standard deviation of \(0.02\sqrt{0.25} = 0.01\) m. The factor lets the contact point creep by about 1 cm before it objects. A longer stance is allowed more creep.
+@@ 39
+One limit: this factor is valid only for the same stance leg, within one stance phase. Handling the switch from one leg to the other needed follow-up work. <span class="src">§12.4.2.1 · p. 351</span>
+@@ 40
+4. Quadrupeds: the velocity factor
+@@ 41
+Point feet cannot constrain all 6 degrees of freedom between two states, so the factors of section 3 do not apply. Quadrupeds preintegrate the velocity measurement of <a href="#d105">Day 3</a> instead: <span class="src">§12.4.2.2 · p. 352</span>
+@@ 42
+Mind the notation: bold \(\Delta\mathbf{t}_{ij}\) is a translation increment, plain \(\Delta t\) is the sample time.
+@@ 43
+Filling the gap: where the sum comes from
+@@ 44
+\(\mathbf{v}_k\) is the body velocity in base coordinates, so the world-frame velocity is \(\mathbf{R}_k\mathbf{v}_k\). Holding it for one sample interval at a time and adding up,
+@@ 45
+The right side depends on the absolute orientations \(\mathbf{R}_k\), which the optimizer keeps changing. Multiply both sides by \(\mathbf{R}_i\T\):
+@@ 46
+Now the right side needs only \(\Delta\mathbf{R}_{ik}\), the rotation since time \(i\), which is the preintegrated gyroscope rotation of Week 16. It can be computed once from the measurements and reused however the optimizer moves \(\mathbf{R}_i\) and \(\mathbf{t}_i\). That is the whole trick of preintegration, applied to leg velocity.
+@@ 47
+For the covariance, each term of the sum adds \(\mathbf{A}\boldsymbol{\Sigma}_v\mathbf{A}\T\) with \(\mathbf{A} = \Delta\tilde{\mathbf{R}}_{ik}\Delta t\), which is how the book builds \(\boldsymbol{\Sigma}_{\mathcal{V},ij}\) in (12.38). If \(\boldsymbol{\Sigma}_v = \sigma_v^2\mathbf{I}\), the rotations cancel and \(n\) samples give \(n\,\Delta t^2\sigma_v^2\,\mathbf{I}\). Example: \(\sigma_v = 0.05\) m/s per sample, \(\Delta t = 2.5\) ms, \(n = 100\) samples (0.25 s): \(\sqrt{100} \times 0.0025 \times 0.05 = 1.25\) mm.
+@@ 48
+When several legs are in stance at once there are three options: use only the leg judged most reliable; treat each leg as its own measurement, which is easiest when contact positions are in the state; or average the legs' velocity measurements into one, to save computation. <span class="src">§12.4.2.3 · p. 352</span>
+@@ 49
+5. Fusing with other sensors, and what still breaks
+@@ 50
+In a SLAM system, leg odometry's job is to supply low-drift edges between consecutive nodes, so that loop closures have less to correct. Cameras and LiDARs are added as more measurements (in a filter) or more factors (in a graph). The difficulty is that the sources differ in rate, noise, and failure behaviour. A <strong>loosely coupled</strong> system runs separate estimators (visual-inertial, legged-inertial, LiDAR-inertial) in parallel and picks the best output. A <strong>tightly coupled</strong> system puts all factors in one graph; then the triage happens per factor: a failed modality's factor is simply not added, and robust cost functions (<a href="#d34">Week 6 · Day 4</a>) absorb noise that is not zero-mean Gaussian. <span class="src">§12.4.3 · p. 353</span>
+@@ 51
+What goes wrong
+@@ 52
+Which assumption fails
+@@ 53
+What leg odometry reports
+@@ 54
+Remedies in the book
+@@ 55
+Leg deformation (Figure 12.8)
+@@ 56
+The robot is rigid, so \(\mathbf{fk}\) gives the real foot position
+@@ 57
+A biased motion, for example upward when the legs bend under load
+@@ 58
+Reject measurements during impacts; IMUs on the links to measure their true orientation
+@@ 59
+Soft or collapsing ground (Figure 12.9)
+@@ 60
+The contact point has zero velocity
+@@ 61
+An upward motion, as the foot sinks after contact was declared
+@@ 62
+An exteroceptive sensor such as a camera, to make the contact's velocity observable; track that velocity as an extra state
+@@ 63
+Slip
+@@ 64
+The contact point has zero velocity (the force leaves the friction cone)
+@@ 65
+A motion that did not happen: too much forward travel when the foot slides backward
+@@ 66
+The same as for soft ground
+@@ 67
+Filling the gap: why sinking looks like climbing
+@@ 68
+Take the upright planar robot, hip at height 0.65 m, and let contact be declared when the foot first touches: the contact point is fixed at height \(c_z = 0\). The ground then gives way by 3 cm. The leg extends to keep pushing, so the foot's height in the base frame goes from \(-0.65\) to \(-0.68\) m. Leg odometry computes the body height as \(t_z = c_z - f_{p,z} = 0 - (-0.68) = 0.68\) m. The body did not move, yet it is reported 3 cm higher. At the next touchdown the new contact point is placed 3 cm too high as well, and the error repeats: after 10 such steps the robot believes it has climbed 30 cm on level ground.
+@@ 69
+Recent trends: learned contact detectors that replace the force threshold; locomotion controllers trained by reinforcement learning, which need only body velocity and the direction of gravity (both observable from inertial data), although skills that must reach a goal position, such as parkour, still need odometry; and humanoids, whose hands, arms, and trunk also make intermittent contact and whose compliance breaks the rigid-contact assumption. <span class="src">§12.6 · pp. 355–356</span>
+@@ 70
+<strong>"Encoder noise is the main error in leg odometry."</strong> It is the easiest to model. Slip, soft ground, and bending legs are biases, and they are usually larger.
+@@ 71
+<strong>"The contact factor says the foot is fixed."</strong> It says the foot is fixed up to a random walk whose variance grows with the stance time.
+@@ 72
+<strong>"A quadruped can use the contact preintegration factor."</strong> A point foot has no orientation to constrain. Quadrupeds use the preintegrated velocity factor.
+@@ 73
+Q1. In some pose J_v = [0.5, 0; 0, 0.2] m/rad, and each joint reading has independent noise of 0.01 rad (1σ). What is the 1σ foot-position error in x and z?
+@@ 74
+10 mm and 10 mm
+@@ 75
+2.5 mm and 0.4 mm
+@@ 76
+5 mm and 2 mm
+@@ 77
+0.5 mm and 0.2 mm
+@@ 78
+Σ = σ² J Jᵀ = 0.01² × diag(0.25, 0.04) m², so the standard deviations are 0.01 × 0.5 = 5 mm and 0.01 × 0.2 = 2 mm.
+@@ 79
+Q2. The contact velocity noise is Σ_v = (0.04)² I m²/s and a stance lasts 0.25 s. By (12.34), how far may the contact point have moved, at 1σ per axis?
+@@ 80
+1 cm
+@@ 81
+4 cm
+@@ 82
+0.04 cm
+@@ 83
+The variance is 0.04² × 0.25 m², so the standard deviation is 0.04 × √0.25 = 0.02 m.
+@@ 84
+Q3. Why is R_iᵀ(t_j − t_i), and not t_j − t_i, the quantity in the velocity residual (12.37)?
+@@ 85
+Because translations must always be rotated before subtraction
+@@ 86
+Because the velocity noise is defined in the world frame
+@@ 87
+Because point feet cannot measure translation
+@@ 88
+Because the preintegrated sum then needs only rotations relative to time i, which do not change when the optimizer moves the state
+@@ 89
+Expressing the displacement in the base frame at time i turns the absolute rotations R_k into relative ones, ΔR_ik, which come from the gyroscope alone. The sum can be computed once.
+@@ 90
+Q4. A robot walks 10 steps on level mud. At every step the foot sinks 2 cm after contact has been declared. With otherwise perfect sensing, what does leg odometry say about the body's height at the end?
+@@ 91
+20 cm lower than at the start
+@@ 92
+20 cm higher than at the start
+@@ 93
+2 cm higher than at the start
+@@ 94
+Unchanged, because the errors alternate
+@@ 95
+Each sinking is read as the body rising 2 cm above a fixed contact point, and the next contact point inherits that error. Ten steps accumulate to +20 cm.
+@@ 96
+Q5. In a tightly coupled factor graph, a camera fails in the dark while the legs and IMU keep working. What does the book describe as the response?
+@@ 97
+Switch the whole estimator to a separate legged-inertial filter
+@@ 98
+Increase the encoder noise covariance
+@@ 99
+Do not add that modality's factors; use robust cost functions for noise that is not zero-mean Gaussian
+@@ 100
+Restart the graph with a new prior
+@@ 101
+In the tightly coupled design the triage happens factor by factor. Switching between whole subsystems is the loosely coupled approach.
+@@ 102
+Encoder noise reaches the foot through the Jacobian: \(\boldsymbol{\Sigma} = \mathbf{J}_c\boldsymbol{\Sigma}_q\mathbf{J}_c\T\).
+@@ 103
+Bipeds: a forward-kinematics factor ties base and contact poses; a contact factor says the contact frame stays put, with covariance growing as \(\Delta t_{ij}\).
+@@ 104
+Quadrupeds: stance-leg velocities are preintegrated into a relative-translation factor, \(\mathbf{r}_{\mathcal{V}} = \mathbf{R}_i\T(\mathbf{t}_j - \mathbf{t}_i) - \Delta\mathbf{t}_{ij}\).
+@@ 105
+Fusion is loosely coupled (pick among parallel estimators) or tightly coupled (one graph, factors dropped when a sensor fails).
+@@ 106
+Flexible legs, soft ground, and slip all break the model's assumptions and show up as biased motion.
+@@ 107
+<em>SLAM Handbook</em>, §12.4 "Using Leg Odometry for State Estimation", §12.5 "Open Challenges", §12.6 "Further Readings &amp; Recent Trends", pp. 348–357.
+@@ 108
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (covariance of a linear function of a Gaussian; first-order uncertainty propagation).
+@@ 109
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (filters and their process and measurement models).
+@@ 110
+The derivation of the preintegrated sum and the soft-ground example are our own steps, in the notation of §12.4.2.

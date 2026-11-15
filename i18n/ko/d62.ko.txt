@@ -1,0 +1,276 @@
+@@ 1
+<span class="eyebrow">11주차 · Day 2</span>
+@@ 2
+Photogrammetry에서 visual SLAM까지: 용어와 pipeline
+@@ 3
+오늘이 끝나면 photogrammetry, bundle adjustment, structure from motion, visual odometry, visual SLAM을 구별하고, visual SLAM 시스템의 세 부분을 그려 보이고, 두 view로부터 depth와 그 불확실성을 계산할 수 있습니다.
+@@ 4
+약 60분 · §7.1–7.2, pp. 193–197 읽기 (5쪽) · 11주차 Day 1 필요
+@@ 5
+먼저 읽기: §7.1–7.2, pp. 193–197
+@@ 6
+bundle adjustment가 언제 정식화되었고, 언제 처음 컴퓨터에서 실행되었는지 (p. 194).
+@@ 7
+structure from motion과 visual SLAM의 차이 (p. 194), visual odometry와 visual SLAM의 차이 (p. 195)를 각각 한 문장으로.
+@@ 8
+비전이 LiDAR보다 어려운 이유를 말하는 p. 196의 문장.
+@@ 9
+visual odometry를 계산하는 두 방법과, 어느 쪽의 basin of convergence가 더 큰지 (p. 196).
+@@ 10
+카메라는 사물까지의 거리가 아니라 방향을 기록합니다. depth는 같은 점을 두 곳에서 볼 때에만 드러나며, 그 정확도는 두 곳이 얼마나 떨어져 있는지에 달려 있습니다. 19세기 측량사부터 실시간으로 tracking하는 헤드셋까지, visual SLAM의 모든 것은 많은 점과 많은 view에 걸친 이 triangulation을 조직하는 방법입니다.
+@@ 11
+1. 오래된 문제
+@@ 12
+사진으로 세상을 재구성하는 일은 사진술만큼이나 오래되었습니다. 오늘날 back-end가 실행하는 수학은 컴퓨터가 생기기도 전에 쓰였습니다. <span class="src">§7.1.1 · pp. 193–194</span>
+@@ 13
+시기
+@@ 14
+인물
+@@ 15
+내용
+@@ 16
+=
+@@ 17
+사진술; 현존하는 가장 오래된 사진은 1827년 것
+@@ 18
+1851년경
+@@ 19
+=
+@@ 20
+지상 사진으로 만든 지형도: photogrammetry의 시작
+@@ 21
+=
+@@ 22
+건축 측량을 위한 photogrammetry
+@@ 23
+1890년부터
+@@ 24
+=
+@@ 25
+항공 이미지로 알프스 빙하 재구성; projective geometry
+@@ 26
+1900년대 초
+@@ 27
+=
+@@ 28
+bundle adjustment의 수학적 틀
+@@ 29
+=
+@@ 30
+bundle adjustment를 위한 행렬 방법, 당대 최대의 컴퓨터에서 실행
+@@ 31
+1990년대 초
+@@ 32
+Tomasi와 Kanade
+@@ 33
+orthographic projection에서 정적 장면에 대한 matrix factorization
+@@ 34
+컴퓨터 비전 커뮤니티
+@@ 35
+Multi-view structure from motion: feature(SIFT, SURF), matching, RANSAC, minimal solver, 그리고 bundle adjustment
+@@ 36
+2000년경
+@@ 37
+여러 연구 그룹
+@@ 38
+최초의 실시간 structure from motion과 visual SLAM
+@@ 39
+offline 재구성에서 SLAM으로 넘어가려면 <strong>causal</strong>(인과적) 방법이 필요했습니다. 전체 이미지 모음이 아니라 지금까지 본 이미지만으로 추정하는 방법입니다. <span class="src">§7.1.1 · p. 194</span>
+@@ 40
+2. 겹치는 다섯 용어
+@@ 41
+책은 이 단어들이 흔히 섞여 쓰인다고 말합니다. 비슷한 계산을 서로 다른 강조점으로 가리키는 말입니다. <span class="src">§7.1.2 · pp. 194–195</span>
+@@ 42
+차이점
+@@ 43
+=
+@@ 44
+겹치는 사진들로부터 측정값과 3D 재구성을 얻는 학문
+@@ 45
+가장 오래되고 넓은 용어; 카메라 위치를 안다고 가정하는 경우가 많음
+@@ 46
+=
+@@ 47
+최적화: reprojection error를 최소화하도록 카메라 pose(선택적으로 intrinsics)와 3D 점을 조정
+@@ 48
+시스템이 아니라 solver 단계. 좋은 initial guess와 outlier 제거가 필요함
+@@ 49
+=
+@@ 50
+이미지 모음으로부터 3D 구조와 카메라 움직임을 함께 추정
+@@ 51
+보통 offline이고 non-causal; 이미지 순서가 없을 수 있음; BA로 끝남
+@@ 52
+=
+@@ 53
+연속된 video frame으로부터 카메라 움직임을 추정
+@@ 54
+Local: 최근 frame의 sliding window만 쓰고 global map이 없으므로 drift가 생김
+@@ 55
+=
+@@ 56
+미지의 환경에서 실시간으로 localization과 mapping을 수행
+@@ 57
+VO에 place recognition, relocalization, loop closure를 더함
+@@ 58
+BA 행의 <strong>reprojection error</strong>(재투영 오차)는 이미지에서 점이 관측된 위치와 현재 3D 모델이 예측하는 위치 사이의 거리입니다. Day 5에 수식으로 씁니다. BA는 <a href="#d10">2주차 · Day 4</a>와 <a href="#d11">2주차 · Day 5</a>의 Gauss-Newton이나 Levenberg-Marquardt 방법으로 이를 최소화합니다.
+@@ 59
+3. 비전이 LiDAR보다 어려운 이유: depth를 측정하지 않는다
+@@ 60
+LiDAR는 각 점까지의 거리를 돌려줍니다. 카메라는 장면의 빛이 센서에 투영된 결과를 돌려주며, 3D 기하는 추론해야 합니다. 책이 visual 문제를 더 어렵다고 말하는 이유가 이것입니다. <span class="src">§7.2 · p. 196</span>
+@@ 61
+빈틈 채우기: 두 view로 구한 depth와 그 불확실성
+@@ 62
+가장 단순한 경우를 위에서 내려다봅시다. 똑같은 카메라 두 대가 \(z\)축을 따라 바라봅니다. 카메라 2는 카메라 1에서 오른쪽으로 거리 \(b\)(<strong>baseline</strong>)만큼 떨어져 있습니다. 옆 방향 위치 \(x\), depth \(z\)(카메라 1의 frame 기준)에 있는 점은 다음 이미지 열에 나타납니다.
+@@ 63
+여기서 \(f\)는 픽셀 단위 focal length이고, 열은 이미지 중심에서부터 셉니다(내일 레슨에서 유도합니다). 미지수 \(x\)는 두 값의 차이에서 소거되며, 이 차이를 <strong>disparity</strong>(시차)라 합니다.
+@@ 64
+먼 점일수록 disparity가 작습니다. 이제 disparity가 작은 양 \(\delta d\)만큼 틀렸다고 합시다. 미분하면
+@@ 65
+각 열이 표준편차 \(\sigma\)인 독립 noise로 측정되면 \(\sigma_d = \sqrt{2}\,\sigma\)입니다. 수치로 보면, \(f = 500\) px, \(b = 0.5\) m, \(z = 20\) m에서 \(d = 12.5\) px입니다. \(\sigma = 1\) px이면 \(\sigma_z \approx \frac{400}{250}\times 1.41 = 2.26\) m로, 픽셀 하나의 noise가 11% 오차를 만듭니다.
+@@ 66
+두 결과가 모든 visual SLAM 시스템의 모양을 결정합니다. depth 오차는 depth의 <em>제곱</em>에 비례해 커집니다. 그리고 baseline에 반비례해 줄어들므로, 새 점을 배치하려면 카메라가 옆으로 충분히 움직여야 합니다.
+@@ 67
+직접 해 보기: baseline을 두 배로 늘리고, 그다음 depth를 두 배로 늘려 보십시오.
+@@ 68
+눈여겨볼 점: triangulation된 점들의 구름은 시선 방향으로 가느다란 바늘 모양입니다. 옆 방향 위치는 잘 알지만 depth는 잘 모릅니다. 기본 설정에서 예측 depth σ는 2.26 m입니다. baseline을 1 m로 하면 절반이 되고, depth를 10 m로 하면 4분의 1이 됩니다. baseline을 맨 왼쪽까지 줄이고 depth를 30 m로 하면 disparity가 2 px 미만이 되어 구름이 수십 미터에 걸쳐 번지고, 일부 샘플은 쓸 만한 depth를 전혀 주지 못합니다(유효 샘플 수가 300 아래로 떨어집니다).
+@@ 69
+stereo rig는 고정된, 알려진 baseline을 갖습니다. 카메라 한 대가 움직일 때는 자기 움직임을 baseline으로 써야 하는데, 그 움직임 자체가 미지수입니다. 앞으로 다시 만날 두 문제의 뿌리가 여기 있습니다. monocular 시스템에는 특별한 initialization 단계가 필요하고(Day 5), 장면의 절대 scale을 복원할 수 없습니다.
+@@ 70
+4. Visual SLAM 시스템의 세 부분
+@@ 71
+<a href="#d1">1주차 · Day 1</a> 이후의 모든 SLAM 시스템처럼, visual SLAM도 여러 단계로 나뉩니다. 책은 서로를 보완하는 세 하위 기능을 듭니다. <span class="src">§7.2 · p. 196</span>
+@@ 72 attr
+visual SLAM 시스템의 블록 다이어그램. 카메라 frame이 odometry front-end로 들어가고, front-end는 현재 pose를 실시간으로 출력합니다. front-end는 keyframe을 mapping back-end로 보내고 back-end로부터 정제된 map을 받습니다. 또 현재 이미지를 place recognition에 보내며, place recognition은 loop constraint를 back-end로 보냅니다. back-end는 일관된 trajectory와 map을 출력합니다.
+@@ 73
+출력: 현재 pose, 실시간
+@@ 74
+출력: 일관된 경로 + map
+@@ 75
+=
+@@ 76
+모든 frame을 tracking
+@@ 77
+=
+@@ 78
+=
+@@ 79
+=
+@@ 80
+=
+@@ 81
+=
+@@ 82
+정제된 map
+@@ 83
+현재 이미지
+@@ 84
+=
+@@ 85
+front-end는 카메라 속도를 따라가야 합니다. back-end와 place recognition은 더 느린 주기로 병렬 실행되며, keypoint와 pose 같은 중간 결과를 공유합니다(§7.2.4).
+@@ 86
+<strong>visual odometry front-end</strong>는 연속된 frame 사이의 상대 움직임을 추정해 카메라 pose의 초기 추정값을 제공합니다. <span class="src">§7.2.1 · p. 196</span>
+@@ 87
+<strong>mapping back-end</strong>는 global 최적화, 즉 BA나 pose-graph optimization으로 trajectory와 map을 정제하고, place recognition이 찾은 constraint를 반영합니다. 그 결과 long-term consistency가 확보됩니다. <span class="src">§7.2.2 · pp. 196–197</span>
+@@ 88
+<strong>Visual place recognition과 relocalization</strong>은 고전적인 descriptor나 학습된 network로 현재 이미지를 이전 이미지들과 비교합니다. 재방문을 검출해 drift를 바로잡고, tracking을 잃었을 때 카메라를 다시 찾습니다. <span class="src">§7.2.3 · p. 197</span>
+@@ 89
+이들은 병렬 thread로 실행됩니다. global 최적화 같은 무거운 작업은 tracking이 실시간을 유지하도록 일정을 조정합니다. <span class="src">§7.2.4 · p. 197</span>
+@@ 90
+5. Visual odometry의 두 방식
+@@ 91
+=
+@@ 92
+단계
+@@ 93
+feature point를 검출하고, 이미지 간에 matching한 뒤, 움직임을 추정
+@@ 94
+한 단계: 이미지 자체에 대해 최적화
+@@ 95
+최소화 대상
+@@ 96
+카메라 움직임과 3D 점에 대한 reprojection error
+@@ 97
+카메라 움직임과 3D 구조에 대한 photometric loss(픽셀 밝기 차이)
+@@ 98
+=
+@@ 99
+명시적: matching 단계에서 결정
+@@ 100
+암묵적: 최적화가 결정
+@@ 101
+가장 가까운 기법
+@@ 102
+고전적 BA
+@@ 103
+=
+@@ 104
+=
+@@ 105
+더 큼
+@@ 106
+더 작음 (적어도 기본 정식화에서는)
+@@ 107
+<strong>basin of convergence</strong>(수렴 영역)는 optimizer가 올바른 답에 도달하는 출발 추정값들의 집합입니다. 매칭된 feature는 나쁜 초기 pose도 멀리까지 끌어올 수 있습니다. match 자체가 점이 어디로 갔는지 말해 주기 때문입니다. 원시 밝기는 올바른 위치에서 한두 픽셀 이내에서만 쓸모 있는 gradient를 줍니다. 그래서 direct 방법은 <strong>coarse-to-fine</strong>으로 작동합니다. 먼저 크게 축소한 이미지를 정렬하고(여기서는 큰 움직임도 몇 픽셀에 불과합니다), 그다음 높은 해상도에서 정제합니다. 밝기 대신 학습된 feature map을 정렬하는 방법도 있습니다. <span class="src">§7.2.1 · p. 196</span> 두 정렬 방식은 12주차에서 자세히 다룹니다.
+@@ 108
+<strong>"Bundle adjustment는 SLAM 시스템의 한 종류다."</strong> BA는 핵심에 있는 최적화 문제입니다. SfM과 visual SLAM은 이를 호출하는 시스템입니다.
+@@ 109
+<strong>"Visual odometry에 map을 더하면 visual SLAM이다."</strong> 결정적으로 더해지는 것은 이전에 방문한 장소를 알아보고 loop를 따라 trajectory를 바로잡는 능력입니다.
+@@ 110
+<strong>"해상도를 높이면 depth 정확도가 해결된다."</strong> depth 오차는 \(z^2/(f\,b)\)에 비례합니다. baseline이 없으면 이미지가 아무리 선명해도 depth는 없습니다.
+@@ 111
+Q1. stereo 카메라의 f = 600 px, baseline은 0.12 m입니다. 어떤 점의 disparity가 9 px입니다. 이 점은 얼마나 떨어져 있습니까?
+@@ 112
+Q2. 같은 rig, 같은 픽셀 noise에서 점이 5 m에서 10 m로 멀어집니다. depth 표준편차는 대략 몇 배가 됩니까?
+@@ 113
+1 (변화 없음)
+@@ 114
+σ_z ≈ z²·σ_d/(f·b)이므로, z가 두 배가 되면 depth 불확실성은 네 배가 됩니다.
+@@ 115
+Q3. 누군가 성당을 찍은 순서 없는 관광 사진 5,000장을 내려받아, 하룻밤 동안 카메라 pose와 3D 모델을 계산합니다. 가장 잘 맞는 용어는 무엇입니까?
+@@ 116
+=
+@@ 117
+=
+@@ 118
+=
+@@ 119
+offline, non-causal, 순서 없는 이미지, 구조와 카메라 움직임의 동시 추정: 이것이 SfM입니다. VO와 visual SLAM은 들어오는 video stream을 그때그때 처리합니다.
+@@ 120
+Q4. direct 방법은 왜 보통 축소한 이미지에서 시작합니까?
+@@ 121
+작은 이미지에는 noise가 적어서
+@@ 122
+feature detector는 낮은 해상도에서만 작동해서
+@@ 123
+낮은 해상도에서는 큰 움직임도 몇 픽셀에 불과해 basin of convergence가 넓어져서
+@@ 124
+reprojection error는 작은 이미지에서만 정의되어서
+@@ 125
+밝기 gradient는 해 근처에서만 optimizer를 안내합니다. coarse 레벨은 큰 변위를 닿을 수 있는 범위로 가져오고, 더 fine한 레벨이 이를 정제합니다.
+@@ 126
+Q5. GPS가 없는 visual SLAM 시스템에서 누적된 drift를 없애는 구성 요소는 무엇입니까?
+@@ 127
+더 많은 feature를 tracking하는 visual odometry front-end
+@@ 128
+Place recognition: back-end가 그 loop constraint로 trajectory를 바로잡음
+@@ 129
+Coarse-to-fine 정렬
+@@ 130
+=
+@@ 131
+각 step이 아무리 좋아도 odometry 오차는 누적됩니다. 현재 이미지를 이전에 관측한 이미지와 정렬하면 loop를 가로지르는 constraint가 생기고, back-end가 오차를 재분배합니다.
+@@ 132
+Bundle adjustment는 컴퓨터보다 먼저 나왔습니다. visual SLAM은 그 online, causal, 실시간 후손입니다.
+@@ 133
+SfM은 offline 재구성이고, VO는 drift가 생기는 local 움직임 추정이며, visual SLAM은 여기에 place recognition과 loop closure를 더합니다.
+@@ 134
+카메라는 depth를 측정하지 않습니다. 두 view에서 \(z = f\,b/d\), \(\sigma_z \approx z^2\sigma_d/(f\,b)\)입니다.
+@@ 135
+visual SLAM 시스템은 odometry front-end, mapping back-end, place recognition 및 relocalization 구성 요소로 이루어지며, 이들은 병렬로 실행됩니다.
+@@ 136
+Feature-based odometry는 명시적 match로 reprojection error를 최소화합니다. direct odometry는 photometric loss를 최소화하며, 수렴하려면 coarse-to-fine이 필요합니다.
+@@ 137
+<em>SLAM Handbook</em>, 7장, §7.1 "Historical Background and Terminology", §7.2 "The Processing Pipeline of a Visual SLAM System", pp. 193–197.
+@@ 138
+disparity와 depth 불확실성 공식은 표준 stereo 관계식으로, Hartley와 Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004와 Szeliski, <em>Computer Vision: Algorithms and Applications</em>, 2010에 나옵니다.

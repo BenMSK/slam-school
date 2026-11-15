@@ -1,0 +1,200 @@
+@@ 1
+<span class="eyebrow">8주차 · Day 5</span>
+@@ 2
+연속 map, 그리고 표현 고르기
+@@ 3
+오늘이 끝나면 Gaussian process 회귀로 map 값과 그 불확실성을 예측하고, Hilbert map이 occupancy를 학습하는 방식을 설명하고, 주어진 환경과 작업에 맞는 표현을 고를 수 있습니다.
+@@ 4
+약 60분 · §5.4.5–5.5, pp. 141–148 읽기 (8쪽) · 8주차 Day 1과 5주차 Day 3 필요
+@@ 5
+먼저 읽기: §5.4.5부터 §5.5까지, pp. 141–148
+@@ 6
+식 (5.10)과 (5.11): 둘 중 어느 식이 측정값 \(\mathbf{y}\)를 포함하고 어느 식이 포함하지 않는지 (pp. 141–142).
+@@ 7
+Gaussian process occupancy map의 비용, 그리고 GP implicit surface가 데이터에서 먼 곳에서 "평균으로 되돌아가는(falls back to the mean)" 이유 (pp. 142–143).
+@@ 8
+Hilbert map의 세 가지 설계 목표 (p. 143).
+@@ 9
+Table 5.2 (p. 147). 한 행을 골라 그것이 왜 성립하는지 자기 말로 설명해 보세요.
+@@ 10
+voxel map은 해상도를 미리 정하고 이웃한 cell을 서로 무관하게 다룹니다. 연속 map은 대신 측정값에 맞춘 함수입니다. 어디서나 계산할 수 있고, 가까운 장소 사이의 상관관계를 이용해 빈틈을 채우며, Gaussian process는 자신이 얼마나 확신하는지도 말해 줍니다. 대가는 계산량입니다. 모든 면에서 최고인 표현은 없으므로, 이 장의 마지막 절은 map을 환경과 작업에 맞추는 일을 다룹니다.
+@@ 11
+1. 회귀로서의 mapping: Gaussian process
+@@ 12
+<strong>Gaussian process (GP)</strong>는 함수에 대한 확률 분포입니다. GP는 평균 함수 \(m(\mathbf{x})\)와 <strong>kernel</strong> \(\mathcal{K}(\mathbf{x}, \mathbf{x}')\)로 정해지며, kernel은 두 장소에서의 함숫값 사이의 covariance를 줍니다: <span class="src">§5.4.5 · p. 141</span>
+@@ 13
+<a href="#d27">5주차 · Day 3</a>에서 시간에 대한 GP를 만났습니다. 여기서 입력 \(\mathbf{x}\)는 공간의 위치이고 \(f\)는 mapping하는 양입니다. 흔한 kernel은 squared exponential \(\mathcal{K}(\mathbf{x}, \mathbf{x}') = \sigma_f^2 \exp\!\big(-\norm{\mathbf{x} - \mathbf{x}'}^2 / (2\ell^2)\big)\)입니다. <strong>length-scale</strong>(길이 척도) \(\ell\)보다 훨씬 가까운 장소의 값들은 강하게 상관되고, 훨씬 멀리 떨어진 값들은 그렇지 않습니다.
+@@ 14
+데이터는 training 위치 \(\mathsf{X}\)에서 얻은, noise가 섞인 측정값 \(J\)개 \(y_j = f(\mathbf{x}_j) + \epsilon_j\)이며, \(\epsilon_j \sim \N(0, \sigma_j^2)\)입니다. 구하려는 것은 test 위치 \(\mathsf{X}^*\)에서의 값 \(\mathbf{f}_*\)입니다. 책의 예측 식은 다음과 같습니다. <span class="src">§5.4.5 · pp. 141–142</span>
+@@ 15
+여기서 \(\mathbf{K}(\mathsf{A}, \mathsf{B})\)는 \(\mathsf{A}\)의 모든 점과 \(\mathsf{B}\)의 모든 점 사이의 kernel 값을 모은 행렬입니다.
+@@ 16
+빈틈 채우기: joint Gaussian (5.9)에서 (5.10)과 (5.11)로
+@@ 17
+식 (5.9)는 \(\mathbf{y}\)와 \(\mathbf{f}_*\)가 jointly Gaussian이라고 말합니다. 두 예측 식은 Gaussian의 한 부분을 다른 부분에 대해 conditioning하는 규칙입니다. 평균이 0인 쌍에 대해
+@@ 18
+이유: \(\mathbf{e} = \mathbf{b} - \mathbf{C}\T\mathbf{A}^{-1}\mathbf{a}\)로 정의합니다. 이것과 \(\mathbf{a}\)의 covariance는 \(\mathbf{C}\T - \mathbf{C}\T\mathbf{A}^{-1}\mathbf{A} = \mathbf{0}\)이고, jointly Gaussian인 변수들은 상관이 없으면 독립입니다. 따라서 \(\mathbf{b} = \mathbf{C}\T\mathbf{A}^{-1}\mathbf{a} + \mathbf{e}\)는 \(\mathbf{a}\)로 정해지는 부분과 \(\mathbf{a}\)가 아무것도 말해 주지 않는 부분의 합입니다. 첫째가 conditional mean입니다. 둘째의 covariance를 계산하면 \(\mathbf{B} - \mathbf{C}\T\mathbf{A}^{-1}\mathbf{C}\)가 됩니다.
+@@ 19
+이제 \(\mathbf{a} = \mathbf{y}\), \(\mathbf{b} = \mathbf{f}_*\), \(\mathbf{A} = \mathbf{K}(\mathsf{X}, \mathsf{X}) + \sigma_j^2\mathbf{I}\)(kernel에 측정 noise를 더한 것), \(\mathbf{B} = \mathbf{K}(\mathsf{X}^*, \mathsf{X}^*)\), \(\mathbf{C}\T = \mathbf{K}(\mathsf{X}^*, \mathsf{X})\)를 대입합니다. 이 공식은 prior 평균이 0이라고 가정합니다. 그렇지 않으면 먼저 \(\mathbf{y}\)에서 평균을 빼고 마지막에 다시 더합니다.
+@@ 20
+측정값이 하나인 풀어 본 예: \(x_1 = 0\)에서 \(y_1 = 1\), \(\sigma_f = 1\), \(\ell = 1\), noise 분산 0.1. 역행렬을 구할 행렬은 숫자 \(1 + 0.1 = 1.1\)입니다.
+@@ 21
+test 점 x*
+@@ 22
+kernel 값 K(x*, x₁)
+@@ 23
+평균 (5.10)
+@@ 24
+분산 (5.11)
+@@ 25
+0 (측정 위치)
+@@ 26
+1 (length-scale 하나 거리)
+@@ 27
+5 (먼 곳)
+@@ 28
+데이터 근처에서 예측은 데이터를 따르고 확신이 큽니다. 멀리서는 prior로 돌아갑니다: 평균 0, 분산 \(\sigma_f^2\). 분산 열은 \(y_1\)을 한 번도 쓰지 않았다는 점에 주목하세요. 식 (5.11)은 측정을 어디서 했는지에만 의존하므로, 로봇은 측정하기 전에 그 측정이 얼마나 많은 정보를 줄지 계산할 수 있습니다. 그래서 GP map은 탐사를 이끄는 데 쓰입니다. <span class="src">§5.4.5 · p. 142</span>
+@@ 29
+직접 해 보기: noise가 섞인 몇 개의 점에서 샘플링한 벽 단면인데, 4.2 m와 6.6 m 사이에서는 아무것도 샘플링하지 않았습니다. length-scale을 양 극단으로 옮겨 보세요.
+@@ 30
+눈여겨볼 점: 기본 length-scale 1 m에서 띠는 샘플 위치에서 좁고 빈틈에서 넓어져, prior 70 cm에 대해 표준편차 62 cm에 이릅니다. 0.2 m에서는 각 샘플이 바로 주변에만 정보를 줍니다. 샘플 사이에서 평균은 0으로 떨어지고 띠는 prior로 돌아갑니다. 3 m에서는 띠가 어디서나 좁지만(최대 18 cm), 평균은 실제 곡선에서 RMS 32 cm만큼 벗어납니다. kernel이 벽이 실제로 가진 것보다 더 큰 매끄러움을 주장하므로, map은 자신 있게 틀립니다.
+@@ 31
+2. GP occupancy map과 GP implicit surface
+@@ 32
+<strong>Gaussian process occupancy map (GPOM)</strong>은 free 또는 occupied로 label을 붙인 beam 관측을 training 데이터로, map의 cell을 test 위치로 씁니다. 그다음 회귀 출력을 0과 1 사이의 확률로 눌러 담습니다. kernel이 가까운 장소들을 묶어 주므로, map은 어떤 beam도 닿지 않은 cell의 occupancy도 추론할 수 있습니다. Day 1의 독립 cell로는 할 수 없던 일입니다. <span class="src">§5.4.5 · p. 142</span>
+@@ 33
+비용은 training 점 \(J\)개와 test 점 \(N\)개에 대해 \(O(J^3 + J^2 N)\)입니다. \(J^3\)은 괄호 안의 \(J \times J\) 행렬을 분해하는 데서 오고(<a href="#d5">1주차 · Day 5</a>의 Cholesky 비용), \(J^2 N\)은 (5.11)에서 test 점마다 그 행렬과 한 번씩 곱하는 데서 옵니다. 전형적인 3D LiDAR의 sweep 한 번보다 적은 \(J = 10{,}000\)만 되어도 \(J^3 = 10^{12}\)입니다. 그래서 실용적인 GP map은 점진적으로 동작하거나 국소 부분집합에서 동작합니다. <span class="src">§5.4.5 · p. 142</span>
+@@ 34
+<strong>Gaussian process implicit surface (GPIS)</strong>는 같은 장치를 거리에 적용합니다. training 데이터는 거리가 0인 표면 위의 점들이고, distance field \(d\)와 그 gradient \(\nabla d\)를 함께 하나의 zero-mean GP로 모델링합니다(식 (5.12)). 미분은 선형 연산이고, GP에 선형 연산을 하면 또 다른 GP가 나오므로, 표면 normal도 자기 불확실성과 함께 나옵니다. <span class="src">§5.4.5.1 · p. 142</span>
+@@ 35
+평균이 0이라는 데에는 위젯에서 본 부작용이 있습니다. 데이터에서 먼 곳에서 GP는 평균으로 돌아가는데, 여기서 평균은 0이고 이는 "표면 위"로 읽힙니다. 단순한 GPIS는 측정된 표면 근처에서는 믿을 만하지만 멀리서는 틀립니다. 전체 distance field를 추정하려면 비선형 단계가 하나 더 필요합니다. <span class="src">§5.4.5.1 · p. 143</span>
+@@ 36
+3. Hilbert map: 학습된 분류기로서의 occupancy
+@@ 37
+<strong>Hilbert map</strong>은 GP occupancy map의 연속성은 유지하면서 그 비용은 피합니다. 목표는 데이터를 online으로 처리하고, 관측 사이의 의존성을 모델링하고, 측정 불확실성을 포함하는 것이었습니다. 방법은 위치에서 계산한 feature 위에서 stochastic gradient descent로 학습하는 logistic regression 분류기입니다. <span class="src">§5.4.6 · p. 143</span>
+@@ 38
+빈틈 채우기: 분류기와 그 갱신
+@@ 39
+영역 위의 규칙 격자에 kernel 중심 \(M\)개 \(\mathbf{c}_1, \dots, \mathbf{c}_M\)을 놓습니다. 점의 <strong>feature vector</strong>(특징 벡터)는 그 점이 각 중심에 얼마나 가까운지를 나열합니다: \(\boldsymbol{\phi}(\mathbf{x}) = [k(\mathbf{x}, \mathbf{c}_1), \dots, k(\mathbf{x}, \mathbf{c}_M)]\T\). 정해진 반지름 밖에서 정확히 0인 sparse kernel을 쓰면 0이 아닌 항목은 몇 개뿐입니다. map은 가중치 벡터 \(\mathbf{w}\) 하나이며,
+@@ 40
+Day 1의 \(p = 1/(1 + e^{-l})\)과 비교해 보세요. 숫자 \(\mathbf{w}\T\boldsymbol{\phi}(\mathbf{x})\)는 log-odds이며, 이제 위치의 연속 함수입니다. 각 feature가 격자 cell 하나 안에서 1이고 나머지에서 0이라면 \(\mathbf{w}\)는 그냥 cell마다 log-odds 하나를 담을 것입니다. 이웃한 장소들이 증거를 나눠 갖게 해 주는 것은 서로 겹치는 kernel입니다.
+@@ 41
+training 데이터는 beam에서 옵니다. beam을 따라 샘플링한 점은 label \(y = 0\)(비어 있음)을, 끝점은 \(y = 1\)(점유)을 받습니다. label이 붙은 점 하나에 대한 loss는 negative log-likelihood \(-[\,y\log p + (1-y)\log(1-p)\,]\)입니다. \(\mathbf{w}\)에 대한 gradient는 \((p - y)\,\boldsymbol{\phi}(\mathbf{x})\)이므로, 학습률 \(\eta\)인 gradient step은
+@@ 42
+예: map이 지금 끝점(\(y = 1\))에서 \(p = 0.5\)라고 말하고 \(\eta = 0.5\)입니다. 이 step은 \(\mathbf{w}\)에 \(0.25\,\boldsymbol{\phi}(\mathbf{x})\)를 더합니다. \(\mathbf{x}\) 근처 몇 개 kernel의 가중치는 올라가고 나머지는 그대로입니다. 샘플 하나에 드는 비용은 map이 아무리 커도 연산 몇 번입니다.
+@@ 43
+한계는 표현력입니다. 각 kernel은 둥근 혹 모양이므로 세밀한 부분을 나타내려면 작은 kernel이 많이 필요하고, 그러면 계산이 늘고 interpolation은 덜 합니다. 큰 kernel 몇 개는 그 반대입니다. <span class="src">§5.4.6 · pp. 143–144</span>
+@@ 44
+<strong>learned map</strong>은 한 걸음 더 나아가 neural network를 함수로 씁니다. network가 임의의 query 점에서 signed distance를 돌려주도록 학습시킬 수 있고, 그러면 그 network에서 원하는 해상도의 mesh를 추출할 수 있습니다. 최근 시스템들은 작은 feature vector를 voxel grid, octree, 점 집합에 저장하고 작은 network만으로 이를 거리로 풀어내므로 큰 장면으로도 확장됩니다. neural radiance field와, surfel과 관련된 explicit 표현인 Gaussian splatting은 책의 뒷부분에서 다룹니다. <span class="src">§5.4.7 · pp. 144–145</span>
+@@ 45
+4. 고르기: 환경
+@@ 46
+로봇이 일하는 곳에서 시작하세요. 그것만으로 여러 선택이 바로 정해집니다. <span class="src">§5.5.1 · pp. 145–146</span>
+@@ 47
+환경에 대한 질문
+@@ 48
+의미하는 것
+@@ 49
+자동화 공장처럼 철저히 통제되는 환경인가?
+@@ 50
+알려진 물체를 중심으로 만든 맞춤형 map이 대개 어떤 범용 dense map보다 낫습니다.
+@@ 51
+로봇이 관측된 free space와 한 번도 보지 못한 공간을 구별해야 하는가?
+@@ 52
+점, surfel, mesh는 표면만 기술하므로 대개 구별하지 못합니다. occupancy map은 구별합니다. implicit surface는 구별할 수 있지만, 메모리를 아끼려고 표면에서 먼 곳의 정보를 버리는 경우가 많습니다.
+@@ 53
+환경이 넓은가?
+@@ 54
+explicit surface map이 메모리를 덜 씁니다. free space를 저장해야 한다면 multi-resolution 구조를 쓰세요.
+@@ 55
+움직이는 것이 있는가?
+@@ 56
+세 가지 선택지가 있습니다. 무시하거나(implicit map에서는 free-space 갱신이 남은 흔적을 대부분 지웁니다), 움직이는 물체의 측정값을 검출해 버리거나(explicit map에서 흔함), 움직이는 물체 자체를 모델링합니다.
+@@ 57
+5. 고르기: 작업
+@@ 58
+어떤 연산이든 어떤 map에서나 할 수 있지만, 비용은 같지 않습니다. 경계선은 그 연산이 표면을 따라 진행되는지, 공간을 가로질러 진행되는지입니다. <span class="src">§5.5.2 · pp. 146–147, Table 5.2</span>
+@@ 59
+explicit surface가 효율적인 일
+@@ 60
+implicit 표현이 효율적인 일
+@@ 61
+측정값 융합
+@@ 62
+색이나 texture처럼 표면 위에 있는 속성
+@@ 63
+occupancy처럼 공간에 정의된 속성; noise가 많은 depth에도 견딤
+@@ 64
+조회
+@@ 65
+표면을 따라 이동: 렌더링, coverage planning
+@@ 66
+공간의 한 점에 대해 묻기: 충돌 검사
+@@ 67
+map 바꾸기
+@@ 68
+기하: loop closure가 trajectory를 바로잡을 때 표면을 휘기
+@@ 69
+위상: 모양을 합치고, 자르고, 단순화하기
+@@ 70
+두 계열은 결합할 수 있습니다. 표준적인 예는 noise가 많은 depth를 TSDF로 걸러 낸 뒤 Marching Cubes로 표시용 mesh를 얻는 것입니다(Day 2와 3). 변환에는 비용이 드므로 국소적으로, 드물게 하세요. <span class="src">§5.5.2 · p. 147</span>
+@@ 71
+각 계열 안에서 책의 요약은 가정의 사다리입니다. 점은 가장 적게 가정하고 가장 적게 말합니다. surfel은 국소 patch를 더합니다. mesh는 연결 정보를 더하며 가장 많은 가정이 필요합니다. volumetric map 중에서 occupancy는 가장 적은 가정으로 filtering되고 얇은 장애물을 보존합니다. distance field는 최적화 기반 planning을 위한 빠른 거리와 gradient를 줍니다. GP와 Hilbert map은 depth 데이터가 sparse하거나 noise가 많을 때 가장 좋은 불확실성과 interpolation을 줍니다. <span class="src">§5.5.3 · pp. 147–148</span>
+@@ 72
+<strong>"GP 분산이 작으면 map이 맞다."</strong> (5.11)의 분산은 샘플 위치와 kernel만으로 계산됩니다. 예를 들어 length-scale이 지나치게 긴 것처럼 kernel이 세상을 잘못 기술하면, map은 자신 있게 틀릴 수 있습니다.
+@@ 73
+<strong>"GPIS 값이 0이면 그곳에 표면이 있다."</strong> 모든 측정값에서 먼 곳에서 0은 그저 prior 평균입니다.
+@@ 74
+<strong>"가장 정확한 map이 가장 좋은 map이다."</strong> 사진처럼 사실적인 mesh도 보지 않은 공간이 비어 있는지는 말해 주지 못합니다. 후속 작업이 map에 무엇을 물어야 하는지를 기준으로 고르세요.
+@@ 75
+Q1. prior 분산이 1인 zero-mean GP에 noise 분산 0.25인 측정값 y = 2가 하나 있습니다. 측정한 위치 자체에서 예측 평균은 얼마입니까?
+@@ 76
+kernel 값이 1이므로 (5.10)은 1 × 2 / (1 + 0.25) = 1.6을 줍니다. GP는 noise가 있는 샘플을 완전히 믿지 않고 prior 평균 0 쪽으로 당깁니다. 그 위치의 분산은 1 − 1/1.25 = 0.2입니다.
+@@ 77
+Q2. GP map을 training 점 2,000개로 만듭니다. 점이 20,000개가 되면 비용의 J³ 부분은 몇 배가 됩니까?
+@@ 78
+점이 10배면 행렬 분해 작업은 10³ = 1,000배입니다. 이 세제곱 증가 때문에 원래의 GP occupancy map은 batch 방식입니다.
+@@ 79
+Q3. 어떤 위치에서 Hilbert map이 wᵀφ(x) = 1.1입니다. 이 map이 알려 주는 점유 확률은 얼마입니까?
+@@ 80
+p = 1 / (1 + exp(−1.1)) = 1 / 1.333 = 0.75. 분류기의 원래 출력은 log-odds이며, occupancy grid에서와 똑같이 변환됩니다.
+@@ 81
+Q4. planner는 한 번도 관측되지 않은 공간을 통과하는 경로를 거부해야 합니다. 그 자체만으로는 이를 뒷받침할 수 없는 map은 무엇입니까?
+@@ 82
+occupancy octree
+@@ 83
+hash로 찾는 voxel block에 저장한 occupancy grid
+@@ 84
+GP occupancy map
+@@ 85
+surfel map
+@@ 86
+surfel은 표면만 기술합니다. surfel이 없는 곳에서 map은 그 공간을 보았는데 비어 있었는지, 한 번도 보지 못했는지를 말해 주지 않습니다. occupancy 기반 map은 모두 그 구별을 유지합니다.
+@@ 87
+Q5. loop closure 뒤에 back-end가 과거 pose를 많이 옮깁니다. 바로잡는 비용이 가장 싼 map은 무엇입니까?
+@@ 88
+dense 배열 하나에 담은 TSDF
+@@ 89
+occupancy grid
+@@ 90
+각각 pose에 붙어 있는 surfel
+@@ 91
+Hilbert map
+@@ 92
+explicit 표면 원소는 자기 pose와 함께 그냥 옮기면 됩니다. voxel map은 여러 pose의 측정값을 cell마다 융합해 두었으므로, 그 기하 구조를 그렇게 쉽게 휠 수 없습니다.
+@@ 93
+GP 회귀는 어떤 위치에서든 평균 (5.10)과 covariance (5.11)를 예측합니다. 둘 다 joint Gaussian을 conditioning하는 데서 나옵니다. covariance는 측정값에 의존하지 않습니다.
+@@ 94
+GP occupancy map과 GP implicit surface는 공간적 상관관계와 불확실성을 모델링하며, 비용은 \(O(J^3 + J^2 N)\)입니다. 데이터에서 먼 곳에서는 prior 평균으로 돌아갑니다.
+@@ 95
+Hilbert map은 kernel feature 위의 logistic regression입니다. online으로 학습하는 연속 log-odds 함수이며, 샘플마다 값싼 gradient step 한 번이면 됩니다.
+@@ 96
+explicit surface map은 표면을 따라 하는 일(texture, 렌더링, 변형)에 효율적입니다. implicit map은 공간에서 하는 일(occupancy, 충돌 검사, 모양 합치기)에 효율적입니다.
+@@ 97
+환경(free space와 관측되지 않은 공간의 구별, 규모, 동적 변화)과 후속 작업이 map에 묻는 것을 기준으로 고르고, 한 가지로 부족하면 표현을 결합하세요.
+@@ 98
+<em>SLAM Handbook</em>, §5.4.5 "Gaussian Processes", §5.4.6 "Hilbert Maps", §5.4.7 "Deep Learning in Mapping", 그리고 §5.5 "Usage Considerations", pp. 141–148.
+@@ 99
+Rasmussen, Williams, <em>Gaussian Processes for Machine Learning</em>, 2006 (conditioning 규칙과 squared-exponential kernel).
+@@ 100
+Bishop, <em>Pattern Recognition and Machine Learning</em>, 2006 (logistic regression과 그 gradient).

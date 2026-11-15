@@ -1,0 +1,408 @@
+@@ w23
+"aria-label":"Left: four image embeddings and four caption embeddings on a unit circle, coloured by pair. Right: the four by four matrix of cosine similarities between every image and every caption."
+==
+"aria-label":"왼쪽: 단위원 위의 image embedding 4개와 caption embedding 4개, 쌍마다 색이 같습니다. 오른쪽: 모든 이미지와 모든 caption 사이의 cosine similarity로 된 4×4 행렬."
+@@ w23
+"embedding space (unit circle)"
+==
+"embedding 공간 (단위원)"
+@@ w23
+"cosine similarity, image i with caption j"
+==
+"이미지 i와 caption j의 cosine similarity"
+@@ w23
+stat("Gradient steps",
+==
+stat("gradient step 수",
+@@ w23
+"all-equal similarities give ln 4 = 1.386"
+==
+"유사도가 모두 같으면 ln 4 = 1.386"
+@@ w23
+stat("Mean similarity, true pairs",dg.toFixed(2),"the diagonal")
+==
+stat("평균 유사도, 맞는 쌍",dg.toFixed(2),"대각 원소")
+@@ w23
+stat("Mean similarity, wrong pairs",off.toFixed(2),"off the diagonal")
+==
+stat("평균 유사도, 틀린 쌍",off.toFixed(2),"대각 밖 원소")
+@@ w23
+button("Play",
+==
+button("재생",
+@@ w23
+pb.textContent=playing?"Pause":"Play"
+==
+pb.textContent=playing?"일시정지":"재생"
+@@ w23
+pb.textContent="Play"
+==
+pb.textContent="재생"
+@@ w23
+h("div",{class:"vt"},"Contrastive learning on four image-caption pairs")
+==
+h("div",{class:"vt"},"이미지-caption 쌍 4개로 하는 contrastive learning")
+@@ w23
+"Filled dots are image embeddings, hollow squares are caption embeddings, one colour per pair. Each step is one gradient-descent step on the symmetric InfoNCE loss."
+==
+"채워진 점은 image embedding, 속이 빈 사각형은 caption embedding이며, 쌍마다 색이 하나입니다. 한 step은 대칭 InfoNCE loss에 대한 gradient-descent step 하나입니다."
+@@ w23
+range("Temperature τ",
+==
+range("temperature τ",
+@@ w23
+button("Step",
+==
+button("한 step",
+@@ w23
+button("Reset",
+==
+button("초기화",
+@@ w23
+button("New start",
+==
+button("새 시작점",
+@@ w23
+["armchair","an armchair"]
+==
+["armchair","안락의자"]
+@@ w23
+["can","a soda can"]
+==
+["can","소다 캔"]
+@@ w23
+["plant","a potted plant"]
+==
+["plant","화분"]
+@@ w23
+["table","a table"]
+==
+["table","테이블"]
+@@ w23
+["fridge","a refrigerator"]
+==
+["fridge","냉장고"]
+@@ w23
+["sofa",OBJ.sofa,true]
+==
+["소파",OBJ.sofa,true]
+@@ w23
+["television",OBJ.tv,true]
+==
+["텔레비전",OBJ.tv,true]
+@@ w23
+["plant",OBJ.plant,true]
+==
+["식물",OBJ.plant,true]
+@@ w23
+["chair",vec({seat:1,soft:.3}),false]
+==
+["의자",vec({seat:1,soft:.3}),false]
+@@ w23
+["drink",vec({drink:1,cold:.3}),false]
+==
+["음료",vec({drink:1,cold:.3}),false]
+@@ w23
+["table",OBJ.table,false]
+==
+["테이블",OBJ.table,false]
+@@ w23
+"a photo of a "+CLS[i][0]
+==
+CLS[i][0]+" 사진"
+@@ w23
+"The class set is empty, so there is nothing to compare the image with."
+==
+"class 집합이 비어 있어서 이미지와 비교할 것이 없습니다."
+@@ w23
+"  →  arg max: “a photo of a "+CLS[best][0]+"”"
+==
+"  →  arg max: “"+CLS[best][0]+" 사진”"
+@@ w23
+"  (score "
+==
+"  (점수 "
+@@ w23
+": no class in the set fits, but arg max still returns one)"
+==
+": 집합에 맞는 class가 없어도 arg max는 하나를 돌려줌)"
+@@ w23
+h("div",{class:"vt"},"A zero-shot classifier you can re-define")
+==
+h("div",{class:"vt"},"다시 정의할 수 있는 zero-shot classifier")
+@@ w23
+"Toy 8-dimensional unit features, hand-built (not CLIP). Each bar is the cosine similarity between the image feature and one class prompt; the highlighted bar is the arg max of equation (17.1)."
+==
+"손으로 만든 장난감 8차원 unit feature입니다 (CLIP 아님). 각 막대는 image feature와 class prompt 하나 사이의 cosine similarity이고, 강조된 막대가 식 (17.1)의 arg max입니다."
+@@ w23
+select("Image",IMG,
+==
+select("이미지",IMG,
+@@ w23
+"Class set C (press to add or remove a prompt):"
+==
+"class 집합 C (눌러서 prompt 추가·제거):"
+@@ w23
+["a comfy place to sit",
+==
+["편하게 앉을 곳",
+@@ w23
+["sofa",OBJ.sofa]
+==
+["소파",OBJ.sofa]
+@@ w23
+["something to drink",
+==
+["마실 것",
+@@ w23
+["television",OBJ.tv]
+==
+["텔레비전",OBJ.tv]
+@@ w23
+["something green",
+==
+["초록색인 것",
+@@ w23
+["a place to put my cup",
+==
+["컵 놓을 곳",
+@@ w23
+["sofa",3.5,2]
+==
+["소파",3.5,2]
+@@ w23
+["armchair",2,6]
+==
+["안락의자",2,6]
+@@ w23
+["tv",3.5,9.5]
+==
+["TV",3.5,9.5]
+@@ w23
+["plant",8,1]
+==
+["화분",8,1]
+@@ w23
+["table",12.5,5.5]
+==
+["테이블",12.5,5.5]
+@@ w23
+["can",11.5,4.5]
+==
+["캔",11.5,4.5]
+@@ w23
+["chair",9.5,4.5]
+==
+["의자",9.5,4.5]
+@@ w23
+["chair",14.5,4.5]
+==
+["의자",14.5,4.5]
+@@ w23
+["chairs",12,2.5]
+==
+["의자",12,2.5]
+@@ w23
+["chairs",12,6.5]
+==
+["의자",12,6.5]
+@@ w23
+["fridge",15,9]
+==
+["냉장고",15,9]
+@@ w23
+"aria-label":"Top view of a room as a 16 by 10 grid. Each cell is shaded by the cosine similarity between its fused feature and the query; cells above the threshold are outlined."
+==
+"aria-label":"방을 위에서 본 16×10 grid. 각 cell은 fusion한 feature와 query 사이의 cosine similarity로 칠해져 있고, threshold를 넘는 cell에는 테두리가 그려져 있습니다."
+@@ w23
+stat("Cells retrieved",String(k),"similarity ≥ "+thr.toFixed(2))
+==
+stat("검색된 cell",String(k),"유사도 ≥ "+thr.toFixed(2))
+@@ w23
+stat("Correct",tp+" of "+k,"also pass with noise-free features")
+==
+stat("정답",tp+" / "+k,"noise 없는 feature로도 통과")
+@@ w23
+stat("Missed",String(fn),"should pass, did not")
+==
+stat("놓침",String(fn),"통과해야 했지만 못 함")
+@@ w23
+stat("Mean cosine to the clean feature",mc.toFixed(2),"over all 160 cells")
+==
+stat("깨끗한 feature와의 평균 cosine",mc.toFixed(2),"전체 160 cell 기준")
+@@ w23
+h("div",{class:"vt"},"Query a feature map with words")
+==
+h("div",{class:"vt"},"말로 feature map에 query하기")
+@@ w23
+"Each cell stores one fused 8-dimensional feature (hand-built toy features, not CLIP). Every view adds a noisy observation of every cell, weighted by its confidence α as in equations (17.2)–(17.3). Darker = more similar to the query."
+==
+"각 cell은 fusion한 8차원 feature 하나를 저장합니다 (손으로 만든 장난감 feature이며 CLIP 아님). 모든 view가 모든 cell에 noise 섞인 관측을 하나씩 더하고, 식 (17.2)–(17.3)처럼 confidence α로 가중합니다. 진할수록 query와 비슷합니다."
+@@ w23
+range("Views fused",
+==
+range("fusion한 view 수",
+@@ w23
+range("Feature noise per view",
+==
+range("view당 feature noise",
+@@ w23
+range("Similarity threshold",
+==
+range("유사도 threshold",
+@@ w23
+button("New noise",
+==
+button("새 noise",
+@@ w23
+"similarity to the query"
+==
+"query와의 유사도"
+@@ w23
+"retrieved (above threshold)"
+==
+"검색됨 (threshold 이상)"
+@@ w23
+"true object outline"
+==
+"실제 물체 윤곽"
+@@ w23
+["wall",.02,.02]
+==
+["벽",.02,.02]
+@@ w23
+["backpack strap",.80,.03]
+==
+["배낭 끈",.80,.03]
+@@ w23
+["backpack body",.85,.02]
+==
+["배낭 몸체",.85,.02]
+@@ w23
+["backpack pocket",.78,.04]
+==
+["배낭 주머니",.78,.04]
+@@ w23
+["chair leg",.03,.02]
+==
+["의자 다리",.03,.02]
+@@ w23
+["chair seat",.04,.03]
+==
+["의자 좌판",.04,.03]
+@@ w23
+["table top",.03,.10]
+==
+["테이블 상판",.03,.10]
+@@ w23
+["ketchup packet",.02,.85]
+==
+["케첩 봉지",.02,.85]
+@@ w23
+["mustard packet",.03,.82]
+==
+["머스터드 봉지",.03,.82]
+@@ w23
+["napkin",.03,.20]
+==
+["냅킨",.03,.20]
+@@ w23
+["poster",.03,.02]
+==
+["포스터",.03,.02]
+@@ w23
+["both","clean backpacks + get condiment packets"]
+==
+["both","배낭 청소하기 + 소스 봉지 가져오기"]
+@@ w23
+["bp","clean backpacks only"]
+==
+["bp","배낭 청소하기만"]
+@@ w23
+["cp","get condiment packets only"]
+==
+["cp","소스 봉지 가져오기만"]
+@@ w23
+"aria-label":"Twelve scene primitives in a column. A bar next to each shows its relevance to the tasks. Brackets on the left group the primitives into the current clusters, and the number between two clusters is the cost of merging them."
+==
+"aria-label":"scene primitive 12개를 세로로 늘어놓은 그림. 각 primitive 옆의 막대는 task와의 관련도를 보여 줍니다. 왼쪽 괄호는 primitive들을 현재 cluster로 묶고, 두 cluster 사이의 숫자는 둘을 병합하는 비용입니다."
+@@ w23
+"p(y | x): relevance to the task list"
+==
+"p(y | x): task 목록과의 관련도"
+@@ w23
+"merge cost d (nats)"
+==
+"병합 비용 d (nats)"
+@@ w23
+"  ← cheapest"
+==
+"  ← 최소"
+@@ w23
+stat("Clusters",String(cl.length),"started from "+n+" primitives")
+==
+stat("cluster 수",String(cl.length),"primitive "+n+"개에서 시작")
+@@ w23
+stat("Task information kept",
+==
+stat("남은 task 정보",
+@@ w23
+stat("Cost of the last merge",
+==
+stat("마지막 병합 비용",
+@@ w23
+"information about Y lost"
+==
+"잃은 Y 정보"
+@@ w23
+aria:"Task information kept, in percent, against the number of clusters left"
+==
+aria:"남은 cluster 수에 따른 남은 task 정보 (%)"
+@@ w23
+label:"clusters left (merging goes right to left)"
+==
+label:"남은 cluster 수 (병합은 오른쪽에서 왼쪽으로)"
+@@ w23
+label:"% kept"
+==
+label:"남은 %"
+@@ w23
+name:"task information kept"
+==
+name:"남은 task 정보"
+@@ w23
+label:p.x+" clusters"
+==
+label:"cluster "+p.x+"개"
+@@ w23
+h("div",{class:"vt"},"Task-driven clustering, one merge at a time")
+==
+h("div",{class:"vt"},"한 번에 한 쌍씩 병합하는 task-driven clustering")
+@@ w23
+"Twelve primitives along a wall, neighbours connected. Each press merges the pair of neighbouring clusters with the smallest weight d from equation (17.9). The relevance numbers are hand-set, not computed by CLIP."
+==
+"벽을 따라 놓인 primitive 12개이며, 이웃끼리 연결되어 있습니다. 누를 때마다 식 (17.9)의 가중치 d가 가장 작은 이웃 cluster 쌍을 병합합니다. 관련도 값은 손으로 정했으며 CLIP으로 계산한 것이 아닙니다."
+@@ w23
+select("Task list",
+==
+select("task 목록",
+@@ w23
+button("Merge cheapest pair",
+==
+button("가장 싼 쌍 병합",
+@@ w23
+button("Merge 5 times",
+==
+button("5번 병합",
+@@ w23
+h("i",{style:"background:var(--c1)"}),"clean backpacks")
+==
+h("i",{style:"background:var(--c1)"}),"배낭 청소하기")
+@@ w23
+h("i",{style:"background:var(--c2)"}),"get condiment packets")
+==
+h("i",{style:"background:var(--c2)"}),"소스 봉지 가져오기")
+@@ w23
+h("i",{style:"background:var(--line2)"}),"neither task")
+==
+h("i",{style:"background:var(--line2)"}),"둘 다 아님")

@@ -1,0 +1,156 @@
+@@ 1
+<span class="eyebrow">13주차 · Day 2</span>
+@@ 2
+Scan registration: ICP와 closed-form 정렬
+@@ 3
+오늘이 끝나면 scan registration의 cost를 쓰고, 점 쌍이 알려져 있을 때 이를 closed form으로 풀고, 쌍을 모를 때 ICP 루프를 돌리고, point-to-plane residual을 선형화할 수 있습니다.
+@@ 4
+약 60분 · §8.2 도입부와 §8.2.1, pp. 227–231 읽기 (4쪽) · 1주차 Day 5, 4주차 Day 3 필요
+@@ 5
+먼저 읽기: §8.2 (첫머리)와 §8.2.1, pp. 227–231
+@@ 6
+Horn의 closed-form 방법만으로는 왜 부족한지, 그리고 ICP가 무엇을 더하는지 (p. 227).
+@@ 7
+식 (8.1)에서 미지수 \((\mathbf{R}, \mathbf{t})\)가 두 cloud 중 어느 쪽에 적용되는지 (p. 228).
+@@ 8
+Figure 8.3의 세 가지 거리 (p. 229), 그리고 NDT가 nearest-neighbour 탐색을 피하는 방법 (p. 230).
+@@ 9
+식 (8.3), 그리고 탐색을 빠르게 하는 두 가지 전략 (p. 230).
+@@ 10
+<strong>Scan registration</strong>(스캔 정합)은 한 scan을 다른 scan 위에 겹쳐 놓는 회전과 이동을 찾습니다. 어느 점이 어느 점과 짝인지 안다면 답은 SVD 한 번으로 나옵니다. 하지만 그것을 모르기 때문에 <strong>ICP</strong>는 nearest neighbour로 쌍을 추측하고, 움직임을 풀고, 이를 반복합니다. 라운드마다 cost가 줄지만 가장 가까운 local minimum까지만 내려가므로, 초기 추정값이 중요합니다.
+@@ 11
+1. registration cost
+@@ 12
+두 point cloud, <strong>source</strong> \(\mathsf{P} = \{\mathbf{p}_i\}\)와 <strong>target</strong> \(\mathsf{Q} = \{\mathbf{q}_i\}\)가 있다고 합시다. 둘을 맞추는 \(\mathbf{R} \in \SO(3)\)와 \(\mathbf{t} \in \R^3\)를 찾고 싶습니다. 같은 물리적 지점이라고 믿는 쌍 \((\mathbf{p}, \mathbf{q})\), 곧 <strong>correspondence</strong>(대응점)의 집합 \(\mathsf{C}\)가 주어지면, 식 (8.1)은 다음을 구합니다
+@@ 13
+여기서 \(d\)는 어떤 거리이고 \(k\)는 iteration 번호입니다. <span class="src">§8.2.1 · p. 228</span> 방법을 정하는 선택은 두 가지입니다. \(d\)가 무엇인지, 그리고 \(\mathsf{C}\)를 어떻게 찾는지입니다. 오늘은 가장 단순한 \(d\)인 제곱 유클리드 거리 \(\norm{\mathbf{p}_i - (\mathbf{R}\mathbf{q}_i + \mathbf{t})}^2\)에서 시작합니다. 이를 <strong>point-to-point</strong>라고 부릅니다 (Figure 8.3a).
+@@ 14
+빈틈 채우기: 어느 cloud가 움직이며, (R, t)는 무엇을 뜻하는가
+@@ 15
+책에 적힌 대로라면 (8.1)은 \((\mathbf{R}, \mathbf{t})\)를 \(\mathbf{q}\)에 적용합니다. 즉 \(\mathsf{Q}\)의 좌표로 적힌 점을 \(\mathsf{P}\)의 좌표로 옮겨 씁니다. \(\mathsf{P}\)는 센서가 pose A에 있을 때, \(\mathsf{Q}\)는 pose B에 있을 때 각자의 sensor frame에서 기록되었다고 합시다. 그러면 \(\mathbf{t}\)는 A에서 본 센서 B의 위치이고 \(\mathbf{R}\)은 그 방향입니다. odometry가 찾는 상대 움직임이 바로 이것입니다. 다른 쪽 cloud를 움직이는 소프트웨어는 그 역인 \((\mathbf{R}\T, -\mathbf{R}\T\mathbf{t})\)를 추정합니다. 이 레슨에서는 (8.1)처럼 \(\mathsf{P}\)를 고정하고 \(\mathsf{Q}\)를 움직입니다.
+@@ 16
+2. 쌍을 안다면: closed form
+@@ 17
+Horn의 방법은 쌍이 주어지면 (8.1)을 정확히 풉니다. <span class="src">§8.2 · p. 227</span> 책은 이를 유도하지 않습니다. 여기서는 <a href="#d5">1주차 · Day 5</a>의 도구만 쓰는 SVD 버전을 소개합니다.
+@@ 18
+빈틈 채우기: closed-form 정렬의 유도
+@@ 19
+\(E(\mathbf{R},\mathbf{t}) = \sum_{i=1}^{N} \norm{\mathbf{p}_i - \mathbf{R}\mathbf{q}_i - \mathbf{t}}^2\)를 최소화합니다.
+@@ 20
+<strong>1단계: 이동.</strong> \(\mathbf{R}\)을 고정하고 \(\mathbf{t}\)에 대한 gradient를 0으로 놓습니다: \(-2\sum_i (\mathbf{p}_i - \mathbf{R}\mathbf{q}_i - \mathbf{t}) = \mathbf{0}\). centroid \(\bar{\mathbf{p}} = \frac1N\sum_i \mathbf{p}_i\)와 \(\bar{\mathbf{q}} = \frac1N\sum_i \mathbf{q}_i\)를 쓰면 다음을 얻습니다
+@@ 21
+회전이 무엇이든, 가장 좋은 이동은 centroid를 centroid로 보냅니다.
+@@ 22
+<strong>2단계: 이동 제거.</strong> 이를 다시 대입하고 \(\mathbf{p}_i' = \mathbf{p}_i - \bar{\mathbf{p}}\), \(\mathbf{q}_i' = \mathbf{q}_i - \bar{\mathbf{q}}\)로 씁니다:
+@@ 23
+가운데 항에는 \(\norm{\mathbf{R}\mathbf{q}'} = \norm{\mathbf{q}'}\)를 썼습니다. 회전은 길이를 보존합니다. \(\mathbf{R}\)에 의존하는 것은 마지막 항뿐이므로, \(E\)를 최소화하는 것은 \(\sum_i \mathbf{p}_i'{}\T\mathbf{R}\mathbf{q}_i'\)를 최대화하는 것과 같습니다.
+@@ 24
+<strong>3단계: trace.</strong> 스칼라는 자기 자신의 trace와 같고 \(\tr(\mathbf{A}\mathbf{B}) = \tr(\mathbf{B}\mathbf{A})\)이므로
+@@ 25
+<strong>4단계: SVD.</strong> \(\mathbf{S} = \diag(\sigma_1,\sigma_2,\sigma_3)\), \(\sigma_1 \ge \sigma_2 \ge \sigma_3 \ge 0\)으로 \(\mathbf{H} = \mathbf{U}\mathbf{S}\mathbf{V}\T\)라 씁니다. 그러면 \(\tr(\mathbf{R}\mathbf{U}\mathbf{S}\mathbf{V}\T) = \tr(\mathbf{S}\,\mathbf{Z})\)이고, 여기서 \(\mathbf{Z} = \mathbf{V}\T\mathbf{R}\mathbf{U}\)는 직교 행렬이므로 대각 원소가 \(z_{kk} \le 1\)을 만족합니다. 따라서 \(\tr(\mathbf{S}\mathbf{Z}) = \sum_k \sigma_k z_{kk} \le \sum_k \sigma_k\)이고, 등호는 \(\mathbf{Z} = \mathbf{I}\)일 때 성립합니다:
+@@ 26
+<strong>5단계: 반사 배제.</strong> \(\det(\mathbf{V}\mathbf{U}\T) = -1\)이면 결과는 회전이 아니라 거울상입니다. 이때 가장 좋은 proper rotation은 \(\mathbf{R} = \mathbf{V}\,\diag(1, 1, -1)\,\mathbf{U}\T\)이며, 가장 작은 singular value를 포기합니다.
+@@ 27
+<strong>2D에서는</strong> SVD를 건너뛸 수 있습니다. \(\mathbf{R}(\theta)\)가 평면 회전이면 \(\sum_i \mathbf{p}_i'{}\T\mathbf{R}(\theta)\mathbf{q}_i' = A\cos\theta + B\sin\theta\)이고, 여기서
+@@ 28
+<strong>예제.</strong> \(\mathbf{q}_1 = (0,0)\), \(\mathbf{q}_2 = (2,0)\), \(\mathbf{q}_3 = (0,1)\)이고 \(\mathbf{p}_1 = (1,2)\), \(\mathbf{p}_2 = (1,4)\), \(\mathbf{p}_3 = (0,2)\)라 합시다. centroid는 \(\bar{\mathbf{q}} = (\tfrac23, \tfrac13)\)와 \(\bar{\mathbf{p}} = (\tfrac23, \tfrac83)\)입니다. 중심을 빼면 \(\mathbf{q}' = (-\tfrac23,-\tfrac13),\ (\tfrac43,-\tfrac13),\ (-\tfrac23,\tfrac23)\)이고 \(\mathbf{p}' = (\tfrac13,-\tfrac23),\ (\tfrac13,\tfrac43),\ (-\tfrac23,-\tfrac23)\)입니다. 그러면 \(A = 0 + 0 + 0 = 0\)이고 \(B = \tfrac59 + \tfrac{17}{9} + \tfrac89 = \tfrac{10}{3}\)이므로 \(\theta = \operatorname{atan2}(\tfrac{10}{3}, 0) = 90^\circ\)입니다. 90° 회전은 \((x, y)\)를 \((-y, x)\)로 보내므로 \(\mathbf{R}\bar{\mathbf{q}} = (-\tfrac13, \tfrac23)\)이고 \(\mathbf{t} = \bar{\mathbf{p}} - \mathbf{R}\bar{\mathbf{q}} = (1, 2)\)입니다. 두 번째 점으로 확인하면 \(\mathbf{R}\mathbf{q}_2 + \mathbf{t} = (0,2) + (1,2) = (1,4) = \mathbf{p}_2\)입니다.
+@@ 29
+3. 쌍을 모를 때: ICP 루프
+@@ 30
+실제 scan에는 쌍이 주어지지 않습니다. <strong>iterative closest point (ICP)</strong> 알고리즘은 추측으로 쌍을 만듭니다. 각 \(\mathbf{p}\)마다 현재 추정값 아래에서 다른 cloud의 가장 가까운 점을 고르고,
+@@ 31
+그런 다음 이 쌍들로 (8.1)을 풀고, 개선된 추정값으로 이를 반복합니다. <span class="src">§8.2.1.2 · p. 230</span>
+@@ 32
+직접 해 보기: "한 step"을 여러 번 눌러 두 반 단계가 번갈아 진행되는 것을 본 다음 "실행"을 누르십시오. 그다음 "센서 회전각"을 160°로 놓고 다시 실행해 보십시오.
+@@ 33
+눈여겨볼 점: 기본값인 20° 회전에서 point-to-point ICP는 정렬 단계가 21번 필요하고, 회전 오차는 0.0°로 끝납니다. RMS 거리는 68 cm에서 11.5 cm로 떨어지지만 0이 되지는 않습니다. 두 scan이 같은 벽의 서로 다른 지점에 맞기 때문입니다. 160°에서도 루프는 수렴하지만, 약 179° 틀린 답으로 수렴하며 RMS는 47 cm입니다. 반 바퀴 돌린 방은 자기 자신과 거의 맞아떨어집니다.
+@@ 34
+빈틈 채우기: ICP가 수렴하는 이유, 그리고 local하게만 수렴하는 이유
+@@ 35
+cost를 \(E(\mathbf{R}, \mathbf{t}, \mathsf{C})\)라 합시다. matching 단계는 \((\mathbf{R},\mathbf{t})\)를 그대로 두고 각 \(\mathbf{p}\)마다 거리가 가장 작은 쌍을 고르므로 \(E\)를 높일 수 없습니다. 정렬 단계는 \(\mathsf{C}\)를 그대로 두고 \((\mathbf{R},\mathbf{t})\)에 대한 정확한 최소점을 찾으므로 역시 \(E\)를 높일 수 없습니다. 증가하지 않으면서 아래로 0에 막힌 수열은 수렴합니다. 하지만 이 논증은 어디로 수렴하는지에 대해서는 아무것도 말해 주지 않습니다. 루프는 다시 matching해도 같은 쌍이 나오는 순간 멈추는데, 이는 모든 점이 어떤 이웃이든 찾아 낸 잘못된 정렬에서도 일어날 수 있습니다. 쌍은 그것을 만든 추정값만큼만 좋습니다. 그래서 책은 "충분히 좋은 initial guess"를 요구합니다. <span class="src">§8.4.1 · p. 242</span>
+@@ 36
+4. Point-to-plane: 미끄러짐에 벌을 주지 않기
+@@ 37
+같은 벽을 찍은 두 scan에는 같은 점이 아니라 같은 표면 위의 점이 들어 있을 뿐입니다. 그런데 point-to-point 거리는 각 점을 벽을 따라 짝 쪽으로 끌어당기므로 수렴이 느려집니다. <strong>point-to-plane</strong> 거리(Figure 8.3c)는 짝지어진 점 주변의 고정 cloud에 작은 평면을 맞추고, 그 평면에 수직인 차이만 잽니다. <span class="src">§8.2.1.1 · p. 229</span> 그 평면의 단위 normal을 \(\mathbf{n}_i\)라 하면 residual은 다음 스칼라입니다
+@@ 38
+그리고 cost는 \(\sum_i r_i^2\)입니다. 2D에서는 평면이 이웃 점들을 지나는 직선이 되며, 이것이 Figure 8.3b의 point-to-line 거리입니다. 더는 closed form이 없으므로 정렬 단계마다 Gauss-Newton step을 한 번 밟습니다 (<a href="#d10">2주차 · Day 4</a>).
+@@ 39
+빈틈 채우기: point-to-plane residual의 linearization
+@@ 40
+현재 추정값에 오른쪽 perturbation을 줍니다. <a href="#d21">4주차 · Day 3</a>에서처럼 이동 부분을 먼저 써서 \(\mathbf{T} = \mathbf{T}^0\Exp(\boldsymbol{\xi})\), \(\boldsymbol{\xi} = (\boldsymbol{\rho}, \boldsymbol{\phi})\)로 둡니다. 1차 근사로 \(\Exp(\boldsymbol{\xi})\)는 \(\mathbf{q}\)를 \(\mathbf{q} + \boldsymbol{\phi}\times\mathbf{q} + \boldsymbol{\rho}\)로 보내므로
+@@ 41
+이를 \(r_i\)에 넣고, \(\mathsf{Q}\)의 frame으로 표현한 normal을 \(\mathbf{m}_i = \mathbf{R}^{0\mathsf{T}}\mathbf{n}_i\)라 쓰면:
+@@ 42
+여기서 스칼라 삼중곱 항등식 \(\mathbf{a}\cdot(\mathbf{b}\times\mathbf{c}) = \mathbf{b}\cdot(\mathbf{c}\times\mathbf{a})\)를 썼습니다. 따라서 쌍마다 다음 한 행을 보탭니다
+@@ 43
+이 6 × 6 시스템을 풀고 \(\mathbf{T}^0 \leftarrow \mathbf{T}^0\Exp(\boldsymbol{\xi})\)로 갱신한 다음, 다시 matching하고 반복합니다. 쌍 하나는 방정식 하나를 주므로 쌍이 적어도 여섯 개 필요하며, normal들이 충분히 다양한 방향을 가리켜야 합니다. 긴 복도에서는 모든 normal이 복도 축 \(\mathbf{a}\)에 수직입니다. 그러면 축 \(\mathbf{a}\)를 따른 순수 이동에 \(\mathbf{J}_i\)를 적용한 값은 모든 \(i\)에 대해 \(-\mathbf{m}_i\T\mathbf{a} = 0\)입니다. 행렬은 singular가 되고, 복도를 따른 움직임은 추정할 수 없습니다. 이것이 §8.5의 "구조 없는 복도" 실패입니다. <span class="src">§8.5 · p. 248</span>
+@@ 44
+위젯을 point-to-plane으로 바꾸고 "실행"을 누르십시오. 기본 설정에서는 21번 대신 6번 만에 같은 답으로 수렴합니다. 60° 회전에서는 point-to-point가 여전히 성공하는데도 실패합니다. linearization은 해 근처에서만 잘 맞기 때문입니다.
+@@ 45
+5. 분포끼리 맞추기: GICP와 NDT
+@@ 46
+책은 날것의 점 대신 국소 확률 분포를 비교하는 방법도 언급합니다. <span class="src">§8.2.1.1 · pp. 229–230</span> 그중 두 가지는 식으로 알아 둘 만합니다.
+@@ 47
+<strong>Generalized ICP (GICP)</strong>는 모든 점을 그 주변 표면을 묘사하는 작은 Gaussian에서 뽑은 표본으로 봅니다. \(\mathbf{p}_i\)의 covariance는 \(\mathbf{C}_i^{P}\), \(\mathbf{q}_i\)의 covariance는 \(\mathbf{C}_i^{Q}\)입니다. 쌍이 진짜 짝이라면 차이 \(\mathbf{d}_i = \mathbf{p}_i - (\mathbf{R}\mathbf{q}_i + \mathbf{t})\)는 평균이 0이고 covariance가 \(\mathbf{C}_i^{P} + \mathbf{R}\mathbf{C}_i^{Q}\mathbf{R}\T\)이며, maximum likelihood로 다음을 얻습니다
+@@ 48
+\(\mathbf{C}_i^{P} = \mathbf{I}\), \(\mathbf{C}_i^{Q} = \mathbf{0}\)이면 point-to-point이고, 가중치 행렬이 \(\mathbf{n}_i\mathbf{n}_i\T\)이면 point-to-plane이며, 두 cloud 모두에 납작한 원판 모양 covariance를 쓰면 "plane-to-plane"이 됩니다.
+@@ 49
+<strong>normal distributions transform (NDT)</strong>는 고정 cloud를 voxel로 나누고, 각 voxel \(v\)마다 그 안 점들의 평균 \(\boldsymbol{\mu}_v\)와 covariance \(\boldsymbol{\Sigma}_v\)를 저장합니다 (<a href="#d45">8주차</a>의 voxel Gaussian). 원래 형태에서는 움직이는 점 \(\mathbf{x}_i = \mathbf{R}\mathbf{q}_i + \mathbf{t}\)를 그 점이 들어간 voxel의 Gaussian으로 점수 매깁니다
+@@ 50
+\(v(i)\)를 찾는 데는 nearest-neighbour 탐색이 아니라 나눗셈 한 번과 반올림 한 번이면 되고, cost 곡면은 딱딱한 점 쌍으로 만든 것보다 매끄럽습니다. 움직이는 scan도 voxel로 요약하면 책이 설명하는 distribution-to-distribution matching이 됩니다. <span class="src">§8.2.1.1 · p. 230</span>
+@@ 51
+<strong>"ICP는 가장 좋은 정렬을 찾는다."</strong> ICP는 시작 추정값 근처의 local minimum을 찾습니다. 추정값이 나쁘면 자신 있게 틀린 답으로 수렴합니다.
+@@ 52
+<strong>"최종 오차가 작으면 성공이다."</strong> 두 scan은 서로 다른 점을 표본으로 담기 때문에 정답에서도 오차는 0이 되지 않으며, 대칭인 장면에서는 잘못된 정렬에서도 오차가 그럭저럭 작을 수 있습니다.
+@@ 53
+Q1. 쌍이 알려져 있고, centroid는 p̄ = (4, 1)과 q̄ = (1, 2)이며, 가장 좋은 회전은 반시계 방향 90°입니다. t는 무엇입니까?
+@@ 54
+90° 회전은 (x, y)를 (−y, x)로 보내므로 R q̄ = (−2, 1)이고, t = p̄ − R q̄ = (4 + 2, 1 − 1) = (6, 0)입니다.
+@@ 55
+Q2. ICP에 실제 움직임에 가까운 시작 추정값이 필요한 이유는 무엇입니까?
+@@ 56
+회전이 크면 SVD가 정의되지 않습니다
+@@ 57
+그렇지 않으면 처음 몇 iteration 동안 cost가 증가합니다
+@@ 58
+멀리 떨어진 cloud에는 nearest-neighbour 탐색이 너무 느립니다
+@@ 59
+나쁜 추정값으로 만든 nearest-neighbour 쌍은 대부분 틀리고, 루프는 local minimum에 안착합니다
+@@ 60
+각 단계는 현재 쌍에 대해 cost를 낮추지만, 쌍은 현재 추정값에서 나옵니다. 정답에서 멀면 쌍은 서로 관계없는 점들을 묶고, 루프는 잘못된 정렬에서 멈출 수 있습니다.
+@@ 61
+Q3. 어떤 쌍이 p − (Rq + t) = (0.30, 0.04, −0.10) m이고 평면 normal은 n = (0, 1, 0)입니다. 이 쌍의 point-to-plane residual은 무엇입니까?
+@@ 62
+r = nᵀ(p − (Rq + t))는 normal 방향 성분인 0.04 m를 골라냅니다. 0.30 m와 −0.10 m 차이는 평면 안에 있으므로 벌점을 받지 않습니다. (point-to-point 거리라면 0.32 m입니다.)
+@@ 63
+Q4. 로봇이 길고 곧으며 특징 없는 터널에서 point-to-plane ICP를 돌립니다. 움직임의 어느 부분이 결정되지 않습니까?
+@@ 64
+터널 축을 중심으로 한 회전
+@@ 65
+벽 쪽으로의 이동
+@@ 66
+터널 축을 따른 이동
+@@ 67
+없음: 쌍 여섯 개면 항상 충분함
+@@ 68
+모든 normal이 축에 수직이므로 축을 따라 미끄러져도 어떤 residual도 변하지 않고, 6 × 6 시스템은 그 방향으로 singular합니다. (단면이 완벽한 원이 아닌 한 축을 중심으로 한 회전은 결정됩니다.)
+@@ 69
+registration은 rigid motion에 대해 짝지은 점 사이 거리의 합을 최소화합니다. 식 (8.1)입니다. 책의 형태에서는 (R, t)가 q에 적용됩니다.
+@@ 70
+쌍을 알면 point-to-point 문제에는 closed form이 있습니다: t = p̄ − R q̄, H = Σ q′p′ᵀ = USVᵀ, R = VUᵀ (반사를 막는 부호 보정 포함).
+@@ 71
+ICP는 nearest-neighbour matching(식 (8.3))과 그 정렬을 번갈아 합니다. cost는 증가하지 않으므로 수렴하지만, local minimum으로만 수렴합니다.
+@@ 72
+Point-to-plane은 표면 normal 방향의 오차 r = nᵀ(p − Rq − t)만 남기며, 쌍마다 1 × 6 Jacobian 행 하나를 쓰는 Gauss-Newton으로 풉니다.
+@@ 73
+GICP는 국소 covariance로 각 쌍에 가중치를 주고, NDT는 점 쌍 대신 voxel별 Gaussian을 씁니다.
+@@ 74
+<em>SLAM Handbook</em>, §8.2 (첫머리)와 §8.2.1 "Foundations of Scan Registration", pp. 227–231; 식 (8.1)–(8.3), Figure 8.3; 두 상호 참조는 §8.4.1, p. 242와 §8.5, p. 248.
+@@ 75
+Arun, Huang, Blostein, <em>Least-squares fitting of two 3-D point sets</em>, 1987, 그리고 Umeyama, <em>Least-squares estimation of transformation parameters between two point patterns</em>, 1991 (SVD 해와 반사 보정).
+@@ 76
+Besl, McKay, <em>A method for registration of 3-D shapes</em>, 1992 (ICP의 수렴 논증).
+@@ 77
+Chen, Medioni, <em>Object modelling by registration of multiple range images</em>, 1992 (point-to-plane). 여기의 linearization은 Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018의 right perturbation을 따릅니다.
+@@ 78
+Segal, Haehnel, Thrun, <em>Generalized-ICP</em>, 2009, 그리고 Biber, Straßer, <em>The normal distributions transform: a new approach to laser scan matching</em>, 2003.

@@ -1,0 +1,194 @@
+@@ 1
+<span class="eyebrow">Week 24 · Day 1</span>
+@@ 2
+From SLAM to Spatial AI: representation and the closed loop
+@@ 3
+After today you can say what a Spatial AI system is, state the chapter's two hypotheses, and explain why a persistent world model in a closed loop beats frame-to-frame estimation.
+@@ 4
+About 60 min · Read §18.1–18.2, pp. 521–526 (6 pages) · Needs Week 1 Day 1 and Week 19 Day 1
+@@ 5
+Read first: §18.1 and §18.2, pp. 521–526
+@@ 6
+The two example products, and the numbers attached to the second: 65 g and under 1 W (pp. 521–522).
+@@ 7
+The definition of a representation (p. 522) and the two hypotheses in italics (p. 523).
+@@ 8
+The six numbered properties of a Spatial AI system and the sentence naming its "key computational quality" (p. 525).
+@@ 9
+The chapter treats Spatial AI as SLAM grown up: a device keeps a persistent, close-to-metric model of its surroundings and checks every new piece of sensor data against it. The hard part is doing this within the size, cost, and power budget of a real product.
+@@ 10
+1. The gap between the task and the budget
+@@ 11
+Chapter 18, by Andrew Davison, has no equations and argues for a position. <strong>Spatial AI</strong> is the capability of a device to build rich but efficient representations of its surroundings that let it act intelligently. The aim is the right representation for real-time interpretation and action; scene understanding in the abstract is not the goal. <span class="src">§18.1.1 · p. 521</span> A design is squeezed between what the task needs and what the device can carry. <span class="src">§18.1.1 · pp. 521–522</span>
+@@ 12
+Device
+@@ 13
+The task requires
+@@ 14
+The setting allows
+@@ 15
+Household robot
+@@ 16
+Clean and know when it is clean; recognize, move, and tidy objects; make way for people
+@@ 17
+Consumer price, size, safety, limited power
+@@ 18
+AR glasses ("IA", intelligence augmentation)
+@@ 19
+Remember every place, object, and person met; find lost things; pin notes to real things
+@@ 20
+The form of ordinary spectacles, 65 g, a full day per charge, under 1 W
+@@ 21
+A waking day of 16 hours at 1 W is \(16\ \text{Wh} = 57.6\ \text{kJ}\) for cameras, processing, and display together. Today's robot-vision processors are far from that, and robust performance is hard even with bulky sensors and unlimited computing. <span class="src">§18.1.1 · p. 522</span>
+@@ 22
+2. Representation, also called a world model
+@@ 23
+A <strong>representation</strong> is the set of values in memory that stand for the state of the device and the world around it. It persists, it changes as information arrives or the world changes, and parts of it may be abstracted or forgotten to save resources. <span class="src">§18.1.2 · p. 522</span> Machine learning calls this a <strong>world model</strong>. The idea looks new there because most networks are <strong>stateless</strong>: input in, output out, nothing kept. Networks trained <strong>end to end</strong> from sensor to action do well on short tasks and struggle on long ones. A map is the oldest fix: a robot vacuum can guarantee full coverage because it remembers where it has been. <span class="src">§18.1.2 · pp. 522–523</span>
+@@ 24
+<strong>Hypothesis 1.</strong> A device that must run for a long time, do many tasks (some unknown at design time), and communicate with people should keep a scene representation that is general, persistent, close to metric 3D geometry at least locally, and understandable by a human. This excludes single-task representations and opaque learned states. The reasons given are efficiency, composability, interpretability, and generality. <span class="src">§18.1.2 · p. 523</span>
+@@ 25
+<strong>Hypothesis 2.</strong> The usefulness of such a system across many tasks is captured by a small number of performance measures, so a drone, a tidying robot, and an AR display would run largely the same system, tuned by a few numbers. <span class="src">§18.1.2 · pp. 523–524</span> <a href="#d143">Day 5</a> returns to this.
+@@ 26
+A <strong>Spatial AI system</strong>, for the chapter, is a module that builds and maintains such a representation incrementally, in real time, from mainly visual input, with quantifiable performance. <span class="src">§18.1.2 · p. 524</span>
+@@ 27
+3. SLAM has been walking this road already
+@@ 28
+Real-time visual SLAM has grown richer in steps, and you have met each one. <span class="src">§18.1.3 · p. 524</span>
+@@ 29
+Level
+@@ 30
+What the map holds
+@@ 31
+Where you studied it
+@@ 32
+1. Sparse localization
+@@ 33
+Camera poses and 3D points
+@@ 34
+<a href="#d65">Week 11 · Day 5</a>
+@@ 35
+2. Dense mapping
+@@ 36
+Surfaces: distance fields, surfels, Gaussians
+@@ 37
+<a href="#d44">Week 8 · Day 2</a>, <a href="#d118">Week 20 · Day 4</a>
+@@ 38
+3. Semantic labeling
+@@ 39
+A class or feature on every map element
+@@ 40
+Weeks 22 and 23
+@@ 41
+Beyond these the chapter expects scene graphs of segmented, physically simulated objects (Week 22). The levels describe progress; they are no recipe. A new representation is almost never bolted onto a working system. It changes the whole system: once a dense map exists the tracker can align whole images against it (<a href="#d68">Week 12 · Day 2</a>), and labels can improve the reconstruction. <span class="src">§18.1.3 · pp. 524–525</span> Hence the chapter's working assumption: today's SLAM systems are the best guide to the structure of tomorrow's Spatial AI.
+@@ 42
+4. The overall computational structure
+@@ 43
+Section 18.2 lists six properties of any such system. <span class="src">§18.2 · p. 525</span>
+@@ 44
+<strong>Embedded:</strong> cameras and supporting sensors such as an IMU, with low-power processing, in a mobile body.
+@@ 45
+<strong>Real-time model and pose,</strong> with geometry and semantics, mainly from on-board sensors.
+@@ 46
+<strong>What is where:</strong> ideally the identity, position, shape, and motion of everything nearby.
+@@ 47
+<strong>Close to metric,</strong> at least locally.
+@@ 48
+<strong>Focused quality:</strong> full detail only where the device looks and will act; the rest at lower quality, upgradable on a revisit.
+@@ 49
+<strong>Alert:</strong> every incoming piece of visual data is checked against a prediction from the model.
+@@ 50
+The quality the chapter singles out is the <strong>closed loop</strong>: the model is persistent, updated incrementally, and used inside the real-time loop for data association and tracking. The contrast is <strong>incremental estimation</strong> such as pure visual odometry, which estimates motion frame to frame and keeps no long-term structure. Closed loop does not mean one fixed rate for everything. It means each result is available when needed, so the whole never pauses. <span class="src">§18.2 · pp. 525–526</span>
+@@ 51 attr
+Top, incremental estimation: frame k minus 1 linked to frame k by a relative motion. Bottom, closed loop: a new image is compared with a predicted view; the result is fused into a persistent world model, which is rendered into the next predicted view.
+@@ 52
+Incremental: a frame is compared only with the previous one
+@@ 53
+frame k−1
+@@ 54
+frame k
+@@ 55
+motion
+@@ 56
+Closed loop: each frame is compared with a prediction from the world model
+@@ 57
+new image
+@@ 58
+compare, track
+@@ 59
+world model
+@@ 60
+persistent, updated in place
+@@ 61
+predicted view
+@@ 62
+fuse
+@@ 63
+render
+@@ 64
+predict
+@@ 65
+Incremental estimation chains relative motions and forgets. A closed loop measures every frame against one stored model.
+@@ 66
+Try it: a camera sweeps a corridor four times, and two estimators get the same measurements.
+@@ 67
+Notice that the curves are similar for the first 42 frames, while the map is being built. After that the map-based error stays near 0.04, while the odometry error wanders and averages 0.14 over the last sweep. Press New noise: odometry sometimes wanders back toward zero, but nothing holds it there.
+@@ 68
+Filling the gap: why the stored map bounds the error
+@@ 69
+In the widget, a landmark at \(l_j\) seen from position \(x_k\) gives \(z_{kj} = l_j - x_k + n_{kj}\), with independent noise of variance \(\sigma^2\).
+@@ 70
+<em>Odometry</em> sums frame-to-frame motions, each the average change in \(z\) over the landmarks two frames share. While the shared set is unchanged the noise cancels in the sum. Each time a landmark enters or leaves the view, a term fails to cancel and a fresh error, a fraction of \(\sigma\) in size, is added for good. After \(h\) hand-overs the error variance has grown in proportion to \(h\): the random walk of <a href="#d1">Week 1 · Day 1</a>.
+@@ 71
+<em>The stored map</em> holds landmark \(j\) as \(\hat{l}_j = l_j + e_j\), where \(e_j\) is the error at the moment it was stored. On any later frame with \(m\) landmarks in view,
+@@ 72
+The first error term is frozen: it is the same on every return to those landmarks. The second is fresh noise of variance \(\sigma^2/m\). Neither depends on how long the system has run. With \(\sigma = 0.05\) and \(m \approx 6\) the fresh part is \(0.05/\sqrt{6} \approx 0.02\); the rest of the 0.04 is map error frozen in during the first sweep.
+@@ 73
+Section 18.2 ends with the route to efficiency: find the <strong>graphs of computation and data movement</strong> in the algorithms, and use hardware with the same graph so that data moves as little as possible. Three questions organize the rest of the week: what is stored where, what is processed where, and what is transmitted where and when. <span class="src">§18.2 · p. 526</span>
+@@ 74
+Q1. Which system satisfies the chapter's first hypothesis about representation?
+@@ 75
+A network mapping images directly to motor commands
+@@ 76
+A recurrent network whose hidden state cannot be read as geometry
+@@ 77
+A persistent 3D map of objects and surfaces, metric within each room, that a person can inspect
+@@ 78
+A grasp detector trained for one kind of mug
+@@ 79
+The hypothesis asks for a general, persistent representation, close to metric at least locally and understandable by a human. It excludes task-specific and opaque ones.
+@@ 80
+Q2. AR glasses must run 16 hours per charge at no more than 1 W. How much energy may the device use in a day?
+@@ 81
+57.6 kJ
+@@ 82
+16 kJ
+@@ 83
+3.6 MJ
+@@ 84
+16 h × 3600 s/h = 57 600 s at 1 J per second: 57.6 kJ, or 16 Wh.
+@@ 85
+Q3. A camera tracks against a stored map with 4 landmarks in view and measurement noise σ = 0.08. What is the standard deviation of the fresh, frame-to-frame part of the position error?
+@@ 86
+The fresh part averages 4 independent noises: σ/√m = 0.08/2 = 0.04.
+@@ 87
+Q4. A system estimates camera motion between consecutive frames very accurately and stores nothing else. What does it most clearly lack?
+@@ 88
+Embedded sensors and processing
+@@ 89
+A persistent world model against which each new frame is checked
+@@ 90
+Real-time operation
+@@ 91
+A camera as the main sensor
+@@ 92
+This is pure visual odometry. With no model to predict from, it cannot detect change or bound its drift.
+@@ 93
+Spatial AI builds representations for real-time action, within a product's limits on size, cost, and power.
+@@ 94
+Hypothesis 1: keep a general, persistent, close-to-metric, human-readable scene representation. Hypothesis 2: a few performance measures describe its usefulness.
+@@ 95
+The defining structure is a closed loop: every measurement is compared with a prediction from a persistent model, which is then updated.
+@@ 96
+<em>SLAM Handbook</em>, Chapter 18 (A. J. Davison), §18.1 "From SLAM to Spatial AI" and §18.2 "Overall Computational Structure", pp. 521–526.
+@@ 97
+The error model in "Filling the gap" is this app's own illustration.

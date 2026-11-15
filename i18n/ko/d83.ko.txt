@@ -1,0 +1,346 @@
+@@ 1
+<span class="eyebrow">14주차 · Day 5</span>
+@@ 2
+완전한 radar SLAM: map, pipeline, fusion, dataset
+@@ 3
+오늘이 끝나면 radar scan 하나가 완전한 SLAM pipeline을 거치는 과정을 따라가고, loop 후보를 어떻게 검색하고 검증하는지 설명하고, radar 프로젝트에 맞는 map 표현과 dataset을 고를 수 있습니다.
+@@ 4
+약 60분 · §9.4–9.6, pp. 273–281 읽기 (9쪽) · 14주차 Day 4 필요
+@@ 5
+먼저 읽기: §9.4–9.6, pp. 273–281
+@@ 6
+§9.4.1의 map 표현 (pp. 273–274), 그리고 radar voxel 모델이 Octomap의 ray casting과 어떻게 다른지.
+@@ 7
+TBV-SLAM 설명 (pp. 275–276)에서: keyframe 규칙, covariance 행렬에 대한 발견, descriptor와 odometry를 결합하는 식.
+@@ 8
+RadarSLAM, SoC landmark pipeline, 두 3+1D pipeline이 각각 무엇을 다르게 하는지 (pp. 276–277).
+@@ 9
+p. 280의 Table 9.1. 훑어보기만 하세요. 어떤 종류의 dataset이 있는지만 알면 됩니다.
+@@ 10
+radar SLAM의 back-end는 이미 아는 pose graph입니다. radar에 고유한 것은 graph를 나쁜 입력에서 지키는 모든 장치입니다. 보수적인 점 선택, odometry와 대조해 검사하는 loop 후보, 그리고 loop constraint를 받아들이기 전의 정렬 검증입니다.
+@@ 11
+1. Map 표현
+@@ 12
+radar map은 8주차의 표현을 쓰되, sparse하고 가짜가 섞인 측정값 때문에 바꿔야 할 부분이 있습니다. <span class="src">§9.4.1 · pp. 273–274</span>
+@@ 13
+저장하는 것
+@@ 14
+radar 특유의 사항
+@@ 15
+landmark map
+@@ 16
+검출된 개별 target
+@@ 17
+가장 초기의 접근: map이 target 검출기에서 바로 나옴
+@@ 18
+=
+@@ 19
+cell이 점유되었을 확률
+@@ 20
+radar의 검출 확률을 update에 쓸 수 있음
+@@ 21
+=
+@@ 22
+LiDAR 점처럼 다루는 신호 피크
+@@ 23
+점이 이웃의 분포(방향, 가중치)를 가질 수 있어 surfel이나 NDT cell과 비슷함. 고해상도 3+1D SoC radar에서 흔함
+@@ 24
+전력 heat map
+@@ 25
+피크 검출 전, cell마다의 반사 전력
+@@ 26
+점유가 아닌 전력의 dense map. map은 correlation으로 정렬함
+@@ 27
+radar sensor model을 쓴 voxel map
+@@ 28
+voxel마다 점유의 log-odds
+@@ 29
+ray casting 없음: field of view 안의 모든 voxel을 update함
+@@ 30
+학습 기반 map과 neural map
+@@ 31
+upsampling한 map, 또는 공간의 한 점에서 질의하는 network
+@@ 32
+LiDAR가 denoising의 ground truth 역할을 함. radar field는 물리 기반 sensor model로 기하와 reflectance를 학습함
+@@ 33
+빈틈 채우기: radar가 ray casting 가정을 버리는 이유
+@@ 34
+<a href="#d44">8주차 · Day 2</a>의 log-odds occupancy update를 떠올려 봅시다. 각 voxel은 \(l = \log\frac{p}{1-p}\)를 저장하고, 관측마다 상수를 더합니다: \(l \leftarrow l + \log\frac{p_{\text{obs}}}{1-p_{\text{obs}}}\). LiDAR map은 ray casting으로 어떤 voxel을 update할지 정합니다. beam은 첫 표면에서 멈추므로, 맞은 곳 앞의 voxel은 free로, 맞은 voxel은 occupied로 관측되고, 그 뒤는 알 수 없습니다.
+@@ 35
+radar 전파는 일부 재질을 통과합니다. 그러면 다른 물체 뒤에서 온 return도 진짜이므로 "첫 접촉점만 점유되어 있다"는 말은 거짓이 됩니다. 책의 radar 모델은 log-odds 계산은 그대로 두고 ray를 대체합니다. field of view 안에서 return이 있는 voxel은 올리고, 없는 voxel은 내리며, ray를 따라서는 아무것도 가정하지 않습니다. <span class="src">§9.4.1 · pp. 273–274</span> 그래서 이런 map은 카메라 시야를 가리는 것 뒤의 구조도 보여 줄 수 있습니다.
+@@ 36
+감을 잡기 위한 숫자 하나. \(p_{\text{hit}} = 0.7\), \(p_{\text{miss}} = 0.4\)이면, scan 세 번에서 return이 있고 네 번째 scan에서 없는 voxel은 최종적으로 다음 값이 됩니다
+@@ 37
+scan 한 번 놓쳤다고 voxel이 지워지지 않습니다. return이 깜박이는 센서에는 이런 관용이 중요합니다.
+@@ 38
+2. Pipeline 하나를 단계별로
+@@ 39
+책의 모든 pipeline은 Figure 9.1을 따릅니다. raw 데이터를 점으로 거르고 장소를 인식하는 front-end, 그리고 pose graph를 최적화하는 back-end입니다. <span class="src">§9.4.2 · p. 274</span> 가장 명확한 예는 2D spinning radar용 TBV-SLAM ("trust but verify")입니다. <span class="src">§9.4.2 · pp. 275–276</span>
+@@ 40 attr
+spinning radar SLAM pipeline의 흐름, 세 줄. 위 줄, 모든 scan에 대해: radargram, azimuth마다 가장 강한 k개의 return 유지, 최근 keyframe에 registration, 1.5미터마다 새 keyframe. 가운데 줄, 새 keyframe마다: descriptor와 shift된 사본, 여러 loop 후보 검색, descriptor와 odometry로 점수 매기기, 쌍을 registration하고 정렬 검증. 아래 줄: pose graph가 위 줄에서 odometry constraint를, 가운데 줄에서 검증된 loop constraint를 받아 pose와 map을 출력합니다.
+@@ 41
+=
+@@ 42
+한 바퀴 회전
+@@ 43
+k strongest 유지
+@@ 44
+azimuth마다
+@@ 45
+최근 keyframe에
+@@ 46
+registration
+@@ 47
+새 keyframe
+@@ 48
+1.5 m마다
+@@ 49
+descriptor와
+@@ 50
+shift된 사본
+@@ 51
+loop 후보
+@@ 52
+여러 개 검색
+@@ 53
+점수: descriptor
+@@ 54
+=
+@@ 55
+쌍 registration,
+@@ 56
+정렬 검증
+@@ 57
+새 keyframe마다
+@@ 58
+=
+@@ 59
+검증된 loop constraint
+@@ 60
+pose graph 최적화 → pose와 map
+@@ 61
+위 줄은 모든 scan에서 실행됩니다. 가운데 줄은 새 keyframe마다 실행되며 loop constraint를 만들 수도, 만들지 않을 수도 있습니다. 아래는 back-end입니다.
+@@ 62
+<strong>Odometry와 keyframe.</strong> pose는 CFEAR odometry(Day 3)로 매 scan마다 추적합니다. 효율을 위해 일부 scan만 graph의 node가 됩니다. 추정 이동 거리가 임계값(예: 1.5 m)을 넘으면 새 <strong>keyframe</strong>을 추가하고, 이전 keyframe과의 odometry constraint도 함께 추가합니다.
+@@ 63
+<strong>constraint의 covariance.</strong> constraint에는 상대 pose와 covariance 행렬이 필요합니다. 이 pipeline의 저자들은 registration cost의 Hessian으로 계산한 covariance보다, 작은 값으로 미리 정한 대각 covariance가 더 잘 작동한다고 보고합니다. <span class="src">§9.4.2 · p. 275</span>
+@@ 64
+빈틈 채우기: "Hessian에서 얻은 covariance"의 뜻
+@@ 65
+registration은 least-squares cost를 최소화합니다. 최솟값 근처에서 cost는 그릇 모양의 이차식 \(\tfrac12\,\delta\T\mathbf{H}\,\delta\)입니다. 여기서 \(\delta\)는 상대 pose의 작은 변화이고 \(\mathbf{H} = \mathbf{J}\T\mathbf{J}\)는 Gauss-Newton Hessian입니다 (<a href="#d10">2주차 · Day 4</a>). residual에 분산이 \(\sigma^2\)인 독립 Gaussian noise가 있다면 추정값의 covariance는 \(\sigma^2\mathbf{H}^{-1}\)입니다. 그릇이 가파르면 추정이 확실하고, 평평한 방향은 불확실합니다. 터널에서는 그릇이 터널 방향으로 평평하고, covariance는 그 방향으로 올바르게 커집니다.
+@@ 66
+이 식은 가정만큼만 좋습니다. 점 match가 맞고 서로 다른 점의 오차가 독립이라고 가정하는데, radar 점에서는 둘 다 잘 성립하지 않습니다. 책은 Hessian이 불확실성을 과소 또는 과대 추정하는 경향이 있고, 그 때문에 back-end가 keyframe을 약간 어긋나게 정렬할 수 있다고 보고합니다. 고정 covariance는 더 거칠지만, 이런 식으로 크게 틀릴 수는 없습니다.
+@@ 67
+3. Loop 검색과 검증
+@@ 68
+TBV-SLAM의 loop 분기는 여러 안전장치를 겹겹이 쌓습니다. <span class="src">§9.4.2 · pp. 275–276</span>
+@@ 69
+<strong>Descriptor.</strong> 점 밀도와 신호 세기를 담도록 고친 Scan Context descriptor (Day 4).
+@@ 70
+<strong>Augmentation.</strong> keyframe마다 point cloud를 옆으로 shift한 사본으로 추가 descriptor를 만들어, 다른 차선으로 다시 방문해도 match되게 합니다.
+@@ 71
+<strong>여러 후보, 함께 점수 매기기.</strong> 가장 비슷한 descriptor를 고른 뒤 odometry로 거르는 대신, 후보를 다음과 같이 고릅니다
+\[ c = \argmin_{c}\ d_{\text{descriptor}}(q, c) + d_{\text{odometry}}(q, c), \]
+여기서 \(q\)는 query이고, \(d_{\text{odometry}}\)는 누적된 odometry 불확실성을 고려할 때 \(q\)와 \(c\)가 같은 장소에 있을 likelihood에서 나옵니다.
+@@ 72
+<strong>Registration.</strong> 쌍을 CFEAR registration 모듈로 정렬합니다.
+@@ 73
+<strong>검증.</strong> overlap 척도와 학습된 misalignment 검출기(CorAl)가 정렬을 믿을 수 있는지 판단합니다. 그때에만 loop constraint가 graph에 들어갑니다.
+@@ 74
+빈틈 채우기: 직접 계산해 볼 수 있는 odometry 항
+@@ 75
+책은 \(d_{\text{odometry}}\)를 말로만 설명합니다. 여기서는 이런 항을 만드는 한 가지 방법을 보입니다. 아이디어를 보여 주기 위한 것이며 시스템의 정확한 식은 아닙니다. odometry에 따르면 후보 \(c\)가 query에서 offset \(\mathbf{t}\)만큼 떨어져 있고, 둘 사이의 누적 위치 불확실성이 covariance \(\boldsymbol{\Sigma}\)인 Gaussian이라고 합시다. 두 frame이 정말 같은 장소라면 \(\mathbf{t}\)는 순수한 drift이고, 그 negative log-likelihood는 상수를 빼면 다음과 같습니다
+@@ 76
+즉 Mahalanobis distance 제곱의 절반입니다. 1.5% drift로 800 m의 loop를 돌았다면, 모든 방향으로 약 \(\sigma = 12\) m입니다.
+@@ 77
+후보
+@@ 78
+descriptor distance
+@@ 79
+odometry상 offset
+@@ 80
+=
+@@ 81
+descriptor만 보면 A가 낫습니다. 하지만 A는 표준편차 다섯 배의 drift가 필요해 사실상 불가능하고, B는 한 배도 필요 없습니다. 두 항을 합리적으로 더하면 어떤 방식이든 B를 고릅니다. 두 항의 스케일을 어떻게 맞출지는 설계상의 선택입니다. 함께 점수를 매기면, 그럴듯한 위치에서 약간 못한 descriptor match가 그럴듯하지 않은 위치에서 약간 나은 match를 이길 수 있다는 장점이 있습니다.
+@@ 82
+다른 pipeline들은 단계마다 다른 선택을 합니다. <span class="src">§9.4.2 · pp. 276–277</span>
+@@ 83
+=
+@@ 84
+=
+@@ 85
+graph에 담는 것
+@@ 86
+loop 검출과 검사
+@@ 87
+=
+@@ 88
+=
+@@ 89
+keyframe에 대한 CFEAR registration
+@@ 90
+keyframe pose
+@@ 91
+고친 Scan Context, lateral augmentation, odometry와의 joint score, registration, 정렬 검증
+@@ 92
+=
+@@ 93
+Lucas–Kanade tracker로 추적하는 blob keypoint (<a href="#d68">12주차 · Day 2</a>), constant-velocity motion compensation
+@@ 94
+keyframe pose, keypoint도 저장
+@@ 95
+point cloud에 대한 M2DP (intensity가 평균 + 1 표준편차 이상). 길쭉한 scan은 PCA 검사로 제외. 그 밖의 검증 없음
+@@ 96
+=
+@@ 97
+=
+@@ 98
+wheel encoder
+@@ 99
+pose와 개별 radar feature
+@@ 100
+명시적인 place recognition 없음. feature는 compact binary descriptor와 RANSAC으로 match하며, drift가 크지 않다고 가정
+@@ 101
+=
+@@ 102
+=
+@@ 103
+움직이는 점을 Doppler로 걸러 낸 뒤, range에 따라 달라지는 점 covariance를 쓰는 GICP 변형
+@@ 104
+submap (keyframe)
+@@ 105
+Intensity Scan Context. frame 사이의 odometry 거리가 임계값을 넘으면 후보를 기각
+@@ 106
+=
+@@ 107
+Doppler filtering, 고립된 점 제거, distribution-to-distribution matching
+@@ 108
+점의 elevation을 쓰는 원래 Scan Context
+@@ 109
+표에 대해 두 가지를 짚어 둡니다. SoC landmark pipeline이 graph에 landmark를 넣을 수 있는 것은 2D SoC radar가 spinning radar나 3+1D radar보다 검출을 훨씬 적게 내기 때문입니다. 그리고 두 3+1D pipeline 모두 센서 자체가 datacube를 점으로 바꾸므로 CFAR는 SLAM 소프트웨어의 일부가 아닙니다. 대신 Day 3의 Doppler least-squares fit이 움직이는 물체 위의 점을 제거해 데이터를 정리하고, fit한 ego-velocity는 scan-to-submap registration의 prior로 쓰입니다. <span class="src">§9.4.2 · p. 277</span> Figure 9.11은 3D radar map에서 loop closure의 효과를 보여 줍니다. closure 전에 보이던 수평·수직 drift가 closure 후에는 사라집니다. <span class="src">§9.4.2 · p. 275</span>
+@@ 110
+4. Fusion, dataset, 그리고 이 분야가 가는 방향
+@@ 111
+<strong>다른 센서와 prior map.</strong> <span class="src">§9.4.3 · pp. 277–279</span>
+@@ 112
+<strong>Radar와 LiDAR.</strong> 현재 가시 조건에서 더 나은 쪽을 씁니다. 맑은 공기에서는 LiDAR, 연기나 안개 속에서는 radar입니다. radar scan을 LiDAR map에 대해 인식할 수도 있습니다.
+@@ 113
+<strong>Radar와 카메라.</strong> Doppler ego-velocity(Day 3)를 filter 기반 visual-inertial odometry에 넣습니다. 시야가 나쁠 때의 odometry를 위해 열화상 카메라를 radar와 결합하며, radar 점이 depth 추정을 개선합니다.
+@@ 114
+<strong>Radar와 공개 map.</strong> OpenStreetMap의 건물 벽이나 위성 이미지를 localization용 prior map으로 씁니다. 이는 SLAM이라기보다 localization이며, prior는 불완전하거나 오래되었을 수 있습니다.
+@@ 115
+<strong>Ultra-wideband (UWB).</strong> 역시 전파를 쓰지만 거리 측정 방식은 mmWave radar와 크게 다릅니다. SLAM에서는 주로 재방문 검출을 위한 장소의 signature를 제공하고, 거리는 wheel encoder나 IMU에서 얻습니다. 고정 anchor를 쓰는 시스템은 설치된 인프라가 필요하므로 SLAM이 아닙니다.
+@@ 116
+<strong>Dataset.</strong> Table 9.1에 ground truth와 날씨 정보와 함께 정리되어 있습니다. <span class="src">§9.5 · pp. 279–280</span>
+@@ 117
+필요한 것
+@@ 118
+볼 dataset
+@@ 119
+spinning radar, 도시, 대규모
+@@ 120
+=
+@@ 121
+한 도시 경로를 반복 주행, 총 280 km, 다양한 날씨
+@@ 122
+session 간 place recognition
+@@ 123
+=
+@@ 124
+다양한 환경과 긴 session 간격
+@@ 125
+1년에 걸친 눈과 비
+@@ 126
+=
+@@ 127
+한 경로를 1년 동안 반복 주행, 385 km
+@@ 128
+off-road
+@@ 129
+=
+@@ 130
+비포장도로와 산길 약 154 km
+@@ 131
+SoC radar의 raw ADC sample
+@@ 132
+=
+@@ 133
+raw sample, datacube, point target. 실내, 실외, 광산에서 수집, 6-DoF ground truth 포함
+@@ 134
+고해상도 3+1D radar
+@@ 135
+=
+@@ 136
+캠퍼스, 공원, 도시와 시골 도로. Snail-Radar는 서로 다른 3+1D radar 두 대를 탑재
+@@ 137
+radar와 물체 label
+@@ 138
+=
+@@ 139
+perception용으로 제작. RadarScenes에는 정확한 ground-truth pose가 없음
+@@ 140
+<strong>동향.</strong> 책은 다음을 예상합니다. SoC 센서가 좋아지면서 특히 드론에서 완전한 3D radar SLAM이 늘어나는 것, 시야가 작은 radar 여러 대로 만든 시스템과 그에 따르는 calibration 문제, 제조사가 접근을 열어 준다면 point cloud 대신 raw radargram과 datacube를 쓰는 것, place recognition을 돕는 semantic segmentation, 그리고 다른 센서와 지리적 prior를 더 긴밀하게 쓰는 것입니다. <span class="src">§9.6 · pp. 280–281</span>
+@@ 141
+<strong>"radar SLAM에는 다른 back-end가 필요하다."</strong> back-end는 평범한 pose-graph 최적화입니다. 차이는 front-end에 있습니다.
+@@ 142
+<strong>"더 나은 불확실성 모델은 언제나 도움이 된다."</strong> 가정이 깨지는 모델에서 유도한 covariance는 고정된 적당한 covariance보다 더 해로울 수 있습니다.
+@@ 143
+<strong>"가장 비슷한 descriptor가 loop다."</strong> 검색은 제안할 뿐이고, odometry gating, registration, 검증이 결정합니다.
+@@ 144
+<strong>"UWB는 radar의 한 종류일 뿐이다."</strong> SLAM에서 UWB는 주로 장소 signature입니다. mmWave radar처럼 metric scan을 주지 않습니다.
+@@ 145
+Q1. radar voxel 모델은 왜 첫 return까지 ray를 casting하지 않고 field of view 안의 모든 voxel을 update합니까?
+@@ 146
+ray casting은 radar frame rate에 비해 너무 느립니다
+@@ 147
+radar에는 range 측정이 없습니다
+@@ 148
+radar는 일부 재질을 통과할 수 있어서, 첫 return만 점유된 점이 아닙니다
+@@ 149
+radar voxel은 LiDAR voxel보다 큽니다
+@@ 150
+ray-cast 모델은 첫 접촉점 뒤로는 아무것도 관측할 수 없다고 가정합니다. radar에서는 물체 뒤에서 온 return이 진짜일 수 있으므로, 이 모델은 return이 있는 voxel은 올리고 없는 voxel은 내리며 ray를 따라서는 아무것도 가정하지 않습니다 (pp. 273–274).
+@@ 151
+Q2. 확률 0.5에서 시작한 voxel이 p = 0.8인 "occupied" update를 두 번 받습니다. 점유 확률은 얼마입니까?
+@@ 152
+update마다 odds에 0.8/0.2 = 4를 곱합니다. odds는 1에서 16이 되므로 p = 16/17 ≈ 0.94입니다. log-odds로는 2 ln 4 = 2.77입니다.
+@@ 153
+Q3. 최적화하는 graph에 개별 radar feature를 두는 pipeline은 무엇이고, 그것이 감당 가능한 이유는 무엇입니까?
+@@ 154
+2D SoC landmark pipeline. 이런 radar는 검출이 적기 때문
+@@ 155
+TBV-SLAM. spinning radar가 느리기 때문
+@@ 156
+4DRadarSLAM. Doppler가 대부분의 점을 제거하기 때문
+@@ 157
+RadarSLAM. blob만 추적하기 때문
+@@ 158
+2D SoC radar는 360° spinning radar나 3+1D radar보다 검출을 훨씬 적게 내므로, 모든 검출을 node로 두는 것이 가능합니다 (pp. 276–277). TBV-SLAM과 RadarSLAM은 pose만 최적화합니다.
+@@ 159
+Q4. 두 loop 후보의 descriptor distance가 0.30과 0.34입니다. 누적 불확실성이 σ = 8 m인 odometry에 따르면 첫 번째는 query에서 48 m, 두 번째는 4 m 떨어져 있습니다. joint score는 어느 쪽을 선호합니까?
+@@ 160
+첫 번째. descriptor가 더 가깝기 때문
+@@ 161
+registration 없이는 어느 쪽도 판단할 수 없음
+@@ 162
+두 번째: 0.5σ의 drift면 되지만, 첫 번째는 6σ가 필요함
+@@ 163
+첫 번째. 48 m는 radar range 안이기 때문
+@@ 164
+drift로서 48/8 = 6 표준편차는 사실상 불가능하고, 4/8 = 0.5는 평범합니다. descriptor distance의 작은 차이로는 이를 뒤집을 수 없습니다.
+@@ 165
+radar map은 landmark, grid, point-cloud, voxel 표현을 재사용합니다. radar voxel 모델은 radar가 일부 재질을 투과해 볼 수 있으므로 ray casting을 버립니다.
+@@ 166
+radar SLAM pipeline은 믿을 만한 소수의 점만 남기고, 매 scan을 추적하며, 거리에 따라 keyframe을 추가하고, pose graph를 최적화합니다.
+@@ 167
+loop closure는 descriptor로 검색하고, odometry 불확실성과 함께 점수를 매기고, registration하고, 검증한 뒤에 graph에 들어갑니다.
+@@ 168
+3+1D pipeline은 Doppler ego-velocity에서 출발하며, 이는 registration의 초깃값이 되는 동시에 움직이는 점을 제거합니다.
+@@ 169
+radar는 LiDAR, 카메라, prior map과 fusion되며, spinning radar, SoC radar, 그리고 둘 다를 위한 dataset이 있습니다.
+@@ 170
+<em>SLAM Handbook</em>, 9장, §9.4 "Radar SLAM", §9.5 "Radar Datasets", §9.6 "Further Readings &amp; Recent Trends", pp. 273–281, Figure 9.11, Table 9.1.
+@@ 171
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (log-odds occupancy update와 ray-cast sensor model).
+@@ 172
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (Gauss-Newton Hessian으로 구한 least-squares 추정값의 covariance, Mahalanobis distance).

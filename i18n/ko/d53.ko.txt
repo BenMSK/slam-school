@@ -1,0 +1,264 @@
+@@ 1
+<span class="eyebrow">9주차 · Day 5</span>
+@@ 2
+대규모 relaxation 풀기: Burer-Monteiro, Riemannian staircase, 그리고 SE-Sync
+@@ 3
+오늘이 끝나면 SE-Sync가 거대한 semidefinite program을 작은 non-convex 문제를 통해 어떻게 푸는지 설명하고, Riemannian staircase를 단계별로 따라가고, SE-Sync가 돌려주는 certificate를 읽을 수 있습니다.
+@@ 4
+약 60분 · §6.1.2.3–6.1.2.5, pp. 161–164 읽기 (4쪽) · 9주차 Day 4 필요
+@@ 5
+먼저 읽기: §6.1.2.3부터 §6.1.2.5까지, pp. 161–164
+@@ 6
+범용 SDP solver를 쓸 수 없는 이유와, 그것이 손을 드는 크기 (p. 161).
+@@ 7
+Burer-Monteiro 치환, 식 (6.22), 그리고 Stiefel manifold의 정의, 식 (6.23) (p. 162).
+@@ 8
+Theorem 6.2와 그 뒤에서 Riemannian Staircase를 설명하는 문단 (p. 163).
+@@ 9
+Algorithm 3과 두 관계식 (6.26), (6.27) (p. 164).
+@@ 10
+Day 4의 SDP는 convex이지만 거대합니다. 그러나 그 해는 rank가 낮습니다. 그러니 \(\mathbf{Z}=\mathbf{Y}\T\mathbf{Y}\)인 low-rank factor \(\mathbf{Y}\)를 직접 찾습니다. 이 문제는 작고 다시 non-convex이지만, 성질이 하나 더 있습니다: 주어진 rank를 다 쓰지 않는 local 해는 global임이 보장됩니다. 그렇게 될 때까지 rank를 올리고, 결과를 회전으로 rounding한 뒤, cost를 비교해 certificate를 얻습니다.
+@@ 11
+1. 너무 큰 SDP, 작은 해
+@@ 12
+Problem 6.3은 원리적으로는 다항 시간에 풀 수 있습니다. 실제로는 범용 interior-point solver가 dense한 \(dn\times dn\) 행렬 \(\mathbf{Z}\)를 저장하고 분해하는데, 이는 차원이 수천을 넘으면 작동하지 않고, SLAM 문제는 그보다 한두 자릿수 더 큽니다. <span class="src">§6.1.2.3 · p. 161</span>
+@@ 13
+그러나 답이 어떤 모습일지 생각해 봅시다. Relaxation이 exact하면 \(\mathbf{Z}^\star=\mathbf{R}^{\star\mathsf{T}}\mathbf{R}^\star\)의 rank는 \(d\), 즉 2 또는 3입니다. Exact하지 않더라도 minimizer의 rank는 보통 \(d\)보다 그리 크지 않습니다. <span class="src">p. 161</span> Rank가 \(r\)인 \(dn\times dn\) 행렬은 \(\mathbf{Y}\in\R^{r\times dn}\)를 써서 \(\mathbf{Y}\T\mathbf{Y}\)로 나타낼 수 있습니다. Burer와 Monteiro의 아이디어는 이 분해를 SDP에 대입하는 것입니다: <span class="src">eq. (6.22) · p. 162</span>
+@@ 14
+두 가지가 바뀌었습니다. Constraint \(\mathbf{Z}\succeq0\)이 사라졌습니다. \(\mathbf{v}\T\mathbf{Y}\T\mathbf{Y}\mathbf{v}=\norm{\mathbf{Y}\mathbf{v}}^2\ge0\)이므로 \(\mathbf{Y}\T\mathbf{Y}\)는 자동으로 positive semidefinite이기 때문입니다. 그리고 미지수의 개수가 \(dn(dn+1)/2\)에서 \(rdn\)으로 줄었습니다. 3-D에서 pose가 \(n=10\,000\)개이고 \(r=5\)이면:
+@@ 15
+(6.22)를 Day 4의 (6.20)과 비교하십시오: \(\mathbf{R}\)이 행 \(d\)개를 가졌던 자리에서 \(\mathbf{Y}\)가 행 \(r\)개를 가진다는 점만 빼면 같은 문제입니다. \(r=d\)이면 \(\operatorname{O}(d)^n\) 위의 non-convex 문제로 돌아갑니다. <span class="src">p. 162</span>
+@@ 16
+2. Stiefel manifold의 곱인 feasible set
+@@ 17
+\(\mathbf{Y}\)를 크기 \(r\times d\)인 블록 \(n\)개로 나눕니다, \(\mathbf{Y}=(\mathbf{Y}_1\ \cdots\ \mathbf{Y}_n)\). Constraint는 각 \(i\)에 대해 \(\mathbf{Y}_i\T\mathbf{Y}_i=\mathbf{I}_d\)라는 뜻입니다: \(\mathbf{Y}_i\)의 열 \(d\)개는 \(\R^r\)의 orthonormal 벡터입니다. 그런 행렬 전체의 집합이 <strong>Stiefel manifold</strong>입니다: <span class="src">eq. (6.23) · p. 162</span>
+@@ 18
+즉 \(\R^p\)에서 orthonormal 벡터 \(k\)개 (\(k\)-frame)의 집합입니다.
+@@ 19
+=
+@@ 20
+한 점이 나타내는 것
+@@ 21
+익숙한 이름
+@@ 22
+\(\R^p\)의 단위 벡터 하나
+@@ 23
+단위 구
+@@ 24
+\(\R^p\)의 orthonormal 벡터 \(p\)개
+@@ 25
+orthogonal group \(\operatorname{O}(p)\)
+@@ 26
+\(\R^3\)에서 서로 수직인 단위 벡터 두 개
+@@ 27
+공간에서 자유롭게 기울어질 수 있는 평면 frame
+@@ 28
+따라서 (6.22)는 Problem 6.4와 같습니다. <span class="src">eq. (6.24) · p. 162</span>
+@@ 29
+이것은 매끄러운 manifold 위의 <em>제약 없는</em> 문제입니다. <a href="#d21">4주차 · Day 3</a>의 설정 그대로입니다: 구성상 manifold 위에 머물면 constraint를 따로 다룰 필요가 없습니다. 책은 여기서 manifold solver가 일반 constrained solver보다 더 단순하고, 빠르고, 정확하다고 말합니다. <span class="src">p. 162</span>
+@@ 30
+Day 2에서는 \(+1\)이나 \(-1\)이어야 했던 세 변수가 평면 위의 화살표가 될 수 있었어요. 여기서는 각 pose의 회전, 즉 \(d\)차원 안의 축 \(d\)개로 된 frame이 \(r\)차원 안의 축 \(d\)개로 된 frame이 될 수 있어요. 평면 로봇의 heading frame이 종이 밖으로 기울어질 수도 있는 거예요. 이 여분의 공간 덕분에 갇힌 배치가 빠져나올 수 있어요.
+@@ 31
+빈틈 채우기: Problem 6.4에서 Riemannian gradient descent 한 step
+@@ 32
+책은 "Riemannian optimization 알고리즘을 적용하라"고만 하고 넘어갑니다. 여기 가장 단순한 알고리즘이 있고, 아래 위젯이 이것을 실행합니다. \(f(\mathbf{Y})=\tr(\tilde{\mathbf{Q}}\mathbf{Y}\T\mathbf{Y})\)라고 씁니다.
+@@ 33
+<strong>보통의 gradient.</strong> \(f\)는 \(\mathbf{Y}\)에 대해 이차이고 \(\tilde{\mathbf{Q}}\)는 대칭이므로 \(\nabla f(\mathbf{Y})=2\mathbf{Y}\tilde{\mathbf{Q}}\)이며, 이는 블록 \(\mathbf{G}_i\)로 된 \(r\times dn\) 행렬입니다.
+@@ 34
+<strong>Tangent 방향.</strong> \(\mathbf{Y}_i\)의 작은 변화 \(\mathbf{V}_i\)가 1차까지 \(\mathbf{Y}_i\T\mathbf{Y}_i=\mathbf{I}\)를 유지하는 것은 \(\mathbf{Y}_i\T\mathbf{V}_i+\mathbf{V}_i\T\mathbf{Y}_i=\mathbf{0}\)일 때, 즉 \(\mathbf{Y}_i\T\mathbf{V}_i\)가 skew-symmetric일 때입니다. 그런 \(\mathbf{V}_i\)들이 tangent space를 이룹니다.
+@@ 35
+<strong>사영.</strong> 대칭 부분을 제거하면 됩니다. \(\operatorname{sym}(\mathbf{M})=\tfrac12(\mathbf{M}+\mathbf{M}\T)\)로 두면
+@@ 36
+확인: \(\mathbf{Y}_i\T\operatorname{grad}_i=\mathbf{Y}_i\T\mathbf{G}_i-\operatorname{sym}(\mathbf{Y}_i\T\mathbf{G}_i)\)는 \(\mathbf{Y}_i\T\mathbf{G}_i\)의 skew 부분이므로 조건을 만족합니다. 그리고 결과를 보십시오: Riemannian gradient는 Day 4의 certificate matrix \(\mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda}\)를 쓴 \(2\mathbf{Y}\mathbf{S}\)입니다. Gradient가 사라지는 점은 \(\mathbf{Y}\mathbf{S}=\mathbf{0}\)을 만족하며, 이것은 공짜로 얻는 certificate의 조건 (i)입니다.
+@@ 37
+<strong>Step과 retraction.</strong> Gradient 반대 방향으로 움직인 다음, 각 블록의 열을 다시 orthonormal하게 만들어 (Gram-Schmidt) manifold 위로 되돌립니다:
+@@ 38
+SE-Sync는 이것의 2차 (trust-region) 버전을 쓰며, iteration이 훨씬 적게 필요하지만 재료는 같습니다.
+@@ 39
+3. Theorem 6.2와 Riemannian staircase
+@@ 40
+당연한 반론이 있습니다. Problem 6.4는 non-convex이므로 그 local solver가 갇힐 수 있고, 그러면 출발점으로 돌아온 것처럼 보입니다. 답은 Boumal과 공저자들의 결과를 옮긴 다음 정리입니다: <span class="src">Theorem 6.2 · p. 163</span>
+@@ 41
+<em>\(\mathbf{Y}\in\operatorname{St}(d,r)^n\)가 Problem 6.4의 second-order critical point이고 (row) rank-deficient하다고 합시다. 그러면 \(\mathbf{Y}\)는 Problem 6.4의 global minimizer이고, \(\mathbf{Z}^\star=\mathbf{Y}\T\mathbf{Y}\)는 SDP relaxation인 Problem 6.3을 풉니다.</em>
+@@ 42
+용어: <strong>first-order critical point</strong>는 Riemannian gradient가 0인 점입니다. <strong>second-order critical point</strong>는 여기에 더해 tangent space 안에 음의 곡률 방향이 없는 점이며, 좋은 2차 local solver가 수렴하는 곳이 바로 이것입니다. <strong>Row rank-deficient</strong>는 \(\rank(\mathbf{Y})\lt r\)라는 뜻입니다: \(\mathbf{Y}\)의 행 \(r\)개가 선형 종속이므로, 해가 주어진 것보다 적은 차원에 들어맞습니다.
+@@ 43
+빈틈 채우기: 여분의 차원이 최적성을 증명하는 이유 (개요)
+@@ 44
+책은 증명 없이 정리를 인용합니다. Day 4를 알고 나면 논증은 짧습니다.
+@@ 45
+First-order critical은 \(\mathbf{Y}\mathbf{S}=\mathbf{0}\)이라는 뜻입니다 (위 상자 참고): 조건 (i).
+@@ 46
+이 cost에서 critical point의 tangent 방향 \(\mathbf{V}\)에 따른 2차 도함수는 \(2\tr(\mathbf{V}\mathbf{S}\mathbf{V}\T)\)입니다. (이 공식은 참고 문헌에서 가져옵니다.) Second-order critical은 이것이 모든 tangent \(\mathbf{V}\)에 대해 음수가 아니라는 뜻입니다.
+@@ 47
+Rank-deficient는 \(\mathbf{Y}\)의 모든 열에 수직인 단위 벡터 \(\mathbf{u}\in\R^r\)가 있다는 뜻입니다: \(\mathbf{u}\T\mathbf{Y}=\mathbf{0}\). 아무 \(\mathbf{v}\in\R^{dn}\)를 잡아 \(\mathbf{V}=\mathbf{u}\mathbf{v}\T\)로 둡니다. \(\mathbf{Y}_i\T\mathbf{V}_i=(\mathbf{Y}_i\T\mathbf{u})\mathbf{v}_i\T=\mathbf{0}\)이므로 이것은 tangent입니다. 이 방향은 pose들을 쓰이지 않은 차원 \(\mathbf{u}\)로 움직입니다.
+@@ 48
+이를 2단계에 넣으면: \(2\tr(\mathbf{u}\mathbf{v}\T\mathbf{S}\mathbf{v}\mathbf{u}\T)=2(\mathbf{v}\T\mathbf{S}\mathbf{v})(\mathbf{u}\T\mathbf{u})=2\,\mathbf{v}\T\mathbf{S}\mathbf{v}\ge0\). 이는 모든 \(\mathbf{v}\)에 대해 성립하므로 \(\mathbf{S}\succeq0\)입니다: 조건 (ii).
+@@ 49
+조건 (i)과 (ii)는 Day 4의 certificate이므로, \(\mathbf{Y}\T\mathbf{Y}\)는 SDP를 풉니다.
+@@ 50
+말로 하면: 쓰이지 않은 차원은 탈출구입니다. 어떤 feasible \(\mathbf{Z}\)의 cost가 더 낮다면 그 탈출구를 통해 내려가는 길이 있을 텐데, second-order critical point에는 내려가는 길이 없습니다.
+@@ 51
+<strong>Riemannian Staircase</strong>는 이 정리를 알고리즘으로 바꿉니다. <span class="src">§6.1.2.3 · p. 163</span>
+@@ 52 attr
+Riemannian staircase의 흐름도. 작은 rank r로 시작합니다. 문제 6.24에 대한 local solver가 critical point Y star를 돌려줍니다. Y star가 row rank-deficient인지 검사합니다. 아니면 r을 하나 올리고 local solver를 다시 실행합니다. 그렇다면 Y star transpose Y star가 SDP를 풀고, 알고리즘은 rounding과 certificate로 넘어갑니다.
+@@ 53
+r을 1 올림
+@@ 54
+시작: 작은
+@@ 55
+=
+@@ 56
+(6.24)에 local solver
+@@ 57
+Y* 반환
+@@ 58
+Y*가 row
+@@ 59
+rank-deficient인가?
+@@ 60
+Y*ᵀY*가 SDP의 해:
+@@ 61
+rounding 후 인증
+@@ 62
+아니오
+@@ 63
+Staircase는 보통의 local solver를 감쌉니다. Loop를 한 바퀴 돌 때마다 계단 하나입니다.
+@@ 64
+반드시 멈춥니다: \(\mathbf{Y}\)는 열이 \(dn\)개이므로 rank가 최대 \(dn\)이고, \(r\ge dn+1\)이 되면 모든 \(\mathbf{Y}\)가 rank-deficient입니다. 실제로는 계단 한두 개면 충분합니다. <span class="src">p. 163</span> 내부 solver는 SLAM이 이미 쓰는 것과 같은 종류의 빠른 2차 local 방법이므로, 속도는 유지하면서 global 보장이 더해집니다.
+@@ 65
+직접 해 보기: 위젯은 Day 1과 Day 4의 graph에서 여러분이 고른 rank \(r\)로 Problem 6.4를 풉니다. \(r=3\)에서 시작합니다.
+@@ 66
+눈여겨볼 점: \(r=3\)에서 이 시작점은 cost 5.484에서 끝나고, \(\mathbf{Y}\mathbf{Y}\T/n\)의 eigenvalue는 1.00, 0.66, 0.34입니다: full rank이므로 Theorem 6.2는 아무 말도 하지 않으며, \(\lambda_{\min}(\mathbf{S})=-0.685\)가 최적이 아님을 확인해 줍니다. \(r\)을 4로 올리십시오: cost가 0.091로 떨어지고, eigenvalue는 1, 1, 0, 0 (rank-deficient)이 되며, \(\lambda_{\min}(\mathbf{S})=0\)이고, rounding한 회전의 cost도 같습니다: 인증됨. \(r=2\)로 두면 Day 1의 local minimum 11.595가 보입니다. 그다음 \(r=4\)로 돌아가 noise를 80°로 두십시오: SDP는 5.204에서 풀리지만 rank가 4이므로 tight하지 않고, bound만 나옵니다.
+@@ 67
+4. Rounding: Y에서 다시 회전으로
+@@ 68
+Staircase는 행이 \(r\)개인 \(\mathbf{Y}^\star\in\operatorname{St}(d,r)^n\)를 돌려줍니다. 우리가 원하는 답은 행이 \(d\)개이고 블록이 \(\SO(d)\)에 속합니다. Relaxation이 exact하면 <span class="src">eq. (6.25) · p. 163</span>
+@@ 69
+이므로 \(\mathbf{Y}^\star\)의 rank는 \(d\)이고, thin singular value decomposition (<a href="#d5">1주차 · Day 5</a>)으로 \(\mathbf{R}^\star\)를 읽어 낼 수 있습니다. 0이 아닌 singular value \(d\)개만 남겨 \(\mathbf{Y}^\star=\mathbf{U}_d\boldsymbol{\Sigma}_d\mathbf{V}_d\T\)로 씁니다. 그러면 \(\hat{\mathbf{R}}=\boldsymbol{\Sigma}_d\mathbf{V}_d\T\)는 \(d\times dn\)이고 \(\hat{\mathbf{R}}\T\hat{\mathbf{R}}=\mathbf{Y}^{\star\mathsf{T}}\mathbf{Y}^\star\)를 만족합니다. 곱 \(\mathbf{R}\T\mathbf{R}\)이 같은 두 \(d\times dn\) 행렬은 왼쪽에 곱한 직교 행렬 하나만큼만 다르므로 \(\hat{\mathbf{R}}=\mathbf{G}\mathbf{R}^\star\)입니다: global 회전 하나 (그리고 블록의 행렬식이 \(-1\)로 나오면 되돌려야 할 reflection 하나)를 빼면 최적 회전입니다. 그 global 회전이 gauge freedom이며, 어떤 상대 측정값으로도 정할 수 없습니다.
+@@ 70
+\(d=2\), \(r=3\), \(n=2\)인 작은 예:
+@@ 71
+\(\mathbf{Y}^\star\)의 각 \(3\times2\) 블록은 열이 orthonormal이고, 가운데 행이 0이므로 rank는 2입니다. 쓰이지 않은 행을 버리면 \(\hat{\mathbf{R}}_1=\mathbf{I}\)와 90° 회전인 \(\hat{\mathbf{R}}_2\)가 남습니다.
+@@ 72
+Relaxation이 exact하지 않으면 \(\mathbf{Y}^\star\)의 rank는 \(d\)보다 큽니다. 그러면 가장 큰 singular value \(d\)개를 남기고 (최선의 rank-\(d\) 근사), 결과의 각 \(d\times d\) 블록을 다시 SVD로 가장 가까운 회전으로 바꿉니다. 결과는 feasible하지만 근사적으로만 최적입니다. <span class="src">§6.1.2.4 · pp. 163–164</span> 이 모든 작업은 작은 factor \(\mathbf{Y}^\star\) 위에서 이루어지며, 큰 행렬 \(\mathbf{Z}^\star\)는 한 번도 만들어지지 않습니다.
+@@ 73
+5. SE-Sync, 그리고 그것이 돌려주는 것
+@@ 74
+<strong>SE-Sync</strong> (Algorithm 3)는 Day 3부터 Day 5까지의 모든 것을 연결합니다. <span class="src">§6.1.2.5 · p. 164</span>
+@@ 75
+Algorithm 3의 단계
+@@ 76
+다룬 날
+@@ 77
+입력
+@@ 78
+\(r_0\ge d+1\)인 초기 \(\mathbf{Y}\in\operatorname{St}(d,r_0)^n\). 데이터 행렬 \(\tilde{\mathbf{Q}}\)는 측정값으로 만듭니다
+@@ 79
+=
+@@ 80
+=
+@@ 81
+\(\mathbf{Y}^{\star\mathsf{T}}\mathbf{Y}^\star\)가 SDP의 해가 되는 \(\mathbf{Y}^\star\)를 찾음
+@@ 82
+오늘, 3절
+@@ 83
+=
+@@ 84
+\(p^\star_{\text{SDP}}\)는 \(\mathbf{Y}^\star\)의 cost \(\tr(\tilde{\mathbf{Q}}\mathbf{Y}^{\star\mathsf{T}}\mathbf{Y}^\star)\)
+@@ 85
+=
+@@ 86
+Rounding
+@@ 87
+\(\mathbf{Y}^\star\)에서 얻은 \(\hat{\mathbf{R}}\in\SO(d)^n\)
+@@ 88
+오늘, 4절
+@@ 89
+이동
+@@ 90
+(6.16)으로 \(\hat{\mathbf{t}}=\mathbf{t}^\star(\hat{\mathbf{R}})\)
+@@ 91
+반환
+@@ 92
+Pose \(\hat{\mathbf{T}}=(\hat{\mathbf{t}},\hat{\mathbf{R}})\)와 숫자 \(p^\star_{\text{SDP}}\)
+@@ 93
+돌려받는 숫자가 이 알고리즘을 certifiable하게 만듭니다. 책의 (6.26)과 (6.27)에서 \(F(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\)는 해의 cost를 나타내며, \(\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\)로 읽으면 됩니다. \(p^\star_{\text{SDP}}\le p^\star_{\text{MLE}}\)이므로, SE-Sync에서 왔든 다른 어디서 왔든 <em>임의의</em> feasible pose에 대해 다음이 성립합니다 <span class="src">eq. (6.26) · p. 164</span>
+@@ 94
+그리고 relaxation이 exact하면 rounding한 추정값이 bound에 도달합니다: \(\tr(\tilde{\mathbf{Q}}\hat{\mathbf{R}}\T\hat{\mathbf{R}})=p^\star_{\text{SDP}}\) (6.27). 사후에 그 등식을 확인하는 것이 certificate입니다: 두 숫자가 일치하므로 \(\hat{\mathbf{T}}\)는 Problem 6.1의 global optimum입니다. 위젯에서 noise 10°, \(r=4\)일 때 두 숫자는 모두 0.091입니다. 80°에서는 9.141과 5.204이므로, rounding한 추정값은 최적보다 최대 3.937 높습니다. 그곳에서 \(r=2\) 실행은 cost 5.479인 회전을 찾았고, (6.26)에 따르면 이는 최적에서 0.275 이내입니다.
+@@ 95
+책은 SE-Sync 논문의 실험에서 이것이 기존 local solver만큼 빠르거나 더 빠르다고 덧붙입니다. <span class="src">p. 164</span>
+@@ 96
+<strong>"Problem 6.4는 non-convex이므로 보장이 사라진다."</strong> 보장은 자리를 옮겼습니다. 이제 보장은 푸는 문제의 convexity가 아니라 Theorem 6.2와 답에 대한 rank 검사에서 옵니다.
+@@ 97
+<strong>"Full rank는 해가 틀렸다는 뜻이다."</strong> 이 \(r\)에서 정리가 적용되지 않는다는 뜻입니다. Staircase는 \(r+1\)을 시도하는 것으로 대응합니다.
+@@ 98
+<strong>"Rounding은 항상 global optimum을 준다."</strong> Relaxation이 exact할 때만 그렇습니다. 그렇지 않으면 suboptimality에 대한 계산 가능한 bound가 붙은 feasible 추정값을 줍니다.
+@@ 99
+Q1. 3-D에서 pose가 n = 1000개인 문제를 r = 5로 풉니다. Y의 미지수는 몇 개이고, Z의 자유 원소와 비교하면 어떻습니까?
+@@ 100
+5000 대 900만
+@@ 101
+15 000 대 3000
+@@ 102
+15 000 대 약 450만
+@@ 103
+3000 대 약 450만
+@@ 104
+Y는 r × dn = 5 × 3000이므로 숫자 15 000개입니다. 3000 × 3000 대칭 행렬은 자유 원소가 3000 · 3001 / 2 = 4 501 500개입니다.
+@@ 105
+Q2. St(1, 3)은 무엇입니까?
+@@ 106
+3-D 공간의 단위 구
+@@ 107
+회전군 SO(3)
+@@ 108
+모든 3 × 1 벡터
+@@ 109
+단위원
+@@ 110
+St(k, p)는 열이 orthonormal인 p × k 행렬들의 집합입니다. 3차원에서 길이가 1인 열 하나는 단위 구 위의 점입니다.
+@@ 111
+Q3. d = 3에서 staircase가 r = 4로 실행되고, solver가 rank 4인 second-order critical point Y*를 돌려줍니다. 이제 어떻게 합니까?
+@@ 112
+Theorem 6.2에 의해 Y*는 global 최적입니다
+@@ 113
+Relaxation이 tight하지 않습니다. 멈추고 실패를 보고합니다
+@@ 114
+다른 initial guess에서 r = 4로 다시 시작합니다
+@@ 115
+r을 5로 올려 다시 풉니다
+@@ 116
+r = 4에서 rank 4는 full row rank이므로, 정리는 어느 쪽으로도 아무 말도 하지 않습니다. Staircase는 한 계단 오릅니다. Tightness는 SDP를 푼 뒤에야 판단할 수 있습니다.
+@@ 117
+Q4. SE-Sync가 cost 43.0인 pose와 p*_SDP = 41.2를 돌려줍니다. 무엇을 알 수 있습니까?
+@@ 118
+Pose는 인증된 global optimum입니다
+@@ 119
+Pose는 최적 cost보다 최대 1.8 높습니다. Relaxation이 exact하지 않았거나 rounding에서 무언가를 잃었습니다
+@@ 120
+최적 cost는 41.2입니다
+@@ 121
+Pose는 local minimum입니다
+@@ 122
+(6.26)에 의해 suboptimality는 최대 43.0 − 41.2 = 1.8입니다. 등식 (6.27)이 성립하지 않으므로, 정확한 최적성에 대한 certificate는 없습니다.
+@@ 123
+SDP의 미지수는 약 \((dn)^2/2\)개이지만 해의 rank는 \(d\)에 가깝습니다. Burer-Monteiro는 \(\mathbf{Z}=\mathbf{Y}\T\mathbf{Y}\)인 factor \(\mathbf{Y}\in\R^{r\times dn}\) 위에서 탐색합니다.
+@@ 124
+Constraint는 각 블록 \(\mathbf{Y}_i\)가 Stiefel manifold \(\operatorname{St}(d,r)\)의 점이라는 뜻이므로, 문제는 gradient가 \(2\mathbf{Y}\mathbf{S}\)인 manifold 위의 제약 없는 최적화입니다.
+@@ 125
+Theorem 6.2: rank-deficient한 second-order critical point는 global minimizer이며 SDP를 풉니다. Riemannian staircase는 그렇게 될 때까지 \(r\)을 올립니다.
+@@ 126
+Rounding은 \(\mathbf{Y}^\star\)의 최선의 rank-\(d\) 부분을 취해 그 블록을 \(\SO(d)\)로 사영합니다.
+@@ 127
+SE-Sync는 추정값과 \(p^\star_{\text{SDP}}\)를 돌려줍니다. 그 차이는 suboptimality를 bound하고, 둘이 같으면 global optimum이 인증됩니다.
+@@ 128
+<em>SLAM Handbook</em>, §6.1.2.3 "Efficiently Solving the Relaxation via the Riemannian Staircase", §6.1.2.4 "Rounding the Solution", §6.1.2.5 "SE-Sync: The Complete Algorithm", pp. 161–164, 식 (6.22)–(6.27), Theorem 6.2, Algorithm 3.
+@@ 129
+Rosen, Carlone, Bandeira, Leonard, <em>SE-Sync: A certifiably correct algorithm for synchronization over the special Euclidean group</em>, 2019: 두 "빈틈 채우기" 상자에서 쓴 Problem 6.4의 Riemannian gradient와 Hessian.
+@@ 130
+Boumal, Voroninski, Bandeira, <em>The non-convex Burer-Monteiro approach works on smooth semidefinite programs</em>, 2016: Theorem 6.2의 논증.
+@@ 131
+=
+@@ 132
+Absil, Mahony, Sepulchre, <em>Optimization Algorithms on Matrix Manifolds</em>, 2008: Stiefel manifold의 tangent space, projection, retraction.

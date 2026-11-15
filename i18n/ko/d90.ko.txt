@@ -1,0 +1,192 @@
+@@ 1
+<span class="eyebrow">15주차 · 복습</span>
+@@ 2
+15주차 복습: event-based SLAM
+@@ 3
+오늘이 끝나면 밝기 변화가 만드는 event를 예측하고, event를 흔히 쓰는 representation으로 바꾸고, contrast maximization을 손으로 실행하고, ATE와 RPE로 trajectory를 평가할 수 있습니다.
+@@ 4
+event camera의 픽셀은 독립적으로 작동하며 변화만 보고합니다. 픽셀의 log intensity가 마지막 event 이후 contrast threshold \(C\)만큼 움직이면, 픽셀은 자기 위치, 시각, 변화의 부호를 보냅니다. 그 덕분에 microsecond 단위의 타이밍, 낮은 latency, 낮은 전력, 120 dB가 넘는 dynamic range를 얻지만, event가 \(\nabla L \cdot \mathbf{v}\)를 sampling하기 때문에 데이터는 sparse하고, asynchronous하고, noise가 많고, 움직임에 의존합니다. 방법은 한 번에 처리하는 event 수, 설계인지 학습인지, feature를 추출하는지(indirect) 모든 event를 쓰는지(direct)로 분류됩니다. front-end는 event를 event frame, time surface, voxel grid로 다시 담는 경우가 많습니다. back-end는 드물고 최근의 것이며, direct, event-only back-end는 contrast를 최대화하거나 event마다의 밝기 오차를 최소화하는데, 아직은 회전 움직임에 한정됩니다. simulator, dataset, 그리고 ATE와 RPE metric이 이 분야가 스스로를 재는 방법입니다.
+@@ 5
+=
+@@ 6
+=
+@@ 7
+=
+@@ 8
+event 직후 변화 하나가 만드는 event 수
+@@ 9
+\(n = \lfloor |\Delta L| / C \rfloor\), 여기서 \(\Delta L = \ln(I_\text{new}/I_\text{old})\)
+@@ 10
+이 코스 · <a href="#d85">Day 1</a>
+@@ 11
+데시벨로 나타낸 dynamic range
+@@ 12
+\(20 \log_{10}(I_{\max}/I_{\min})\); 120 dB는 \(10^6\), 60 dB는 \(10^3\)
+@@ 13
+=
+@@ 14
+=
+@@ 15
+=
+@@ 16
+§10.3, p. 287에서 언급 · <a href="#d86">Day 2</a>
+@@ 17
+=
+@@ 18
+=
+@@ 19
+=
+@@ 20
+=
+@@ 21
+=
+@@ 22
+\(\mathbf{x}'_k = \mathbf{x}_k - (t_k - t_\text{ref})\boldsymbol{\theta}\); \(H(\mathbf{x}) = \sum_k b_k\,\delta(\mathbf{x} - \mathbf{x}'_k)\); \(\frac{1}{N_p}\sum_i (H_i - \mu_H)^2\) 최대화
+@@ 23
+=
+@@ 24
+두 sample 사이의 시뮬레이션 event 시각
+@@ 25
+=
+@@ 26
+ATE와 RPE
+@@ 27
+\(\text{ATE} = \sqrt{\tfrac{1}{n}\sum_i \norm{\mathbf{t}^\text{gt}_i - \mathbf{S}\mathbf{t}^\text{est}_i}^2}\); \(\mathbf{E}_i = (\Delta\mathbf{T}^\text{gt}_i)^{-1}\Delta\mathbf{T}^\text{est}_i\); 각도 \(= \arccos\frac{\tr(\mathbf{R}) - 1}{2}\)
+@@ 28
+=
+@@ 29
+Q1. 방금 event를 낸 픽셀에 떨어지는 빛이 80에서 20 단위로 줄어듭니다. C = 0.35일 때 픽셀은 무엇을 보낼까요?
+@@ 30
+OFF event 3개
+@@ 31
+OFF event 4개
+@@ 32
+ON event 3개
+@@ 33
+OFF event 60개
+@@ 34
+ΔL = ln(20/80) = −1.386입니다. 크기가 threshold 3.96개이므로 event 3개가 나오고, 밝기가 줄었으므로 OFF입니다.
+@@ 35
+Q2. 다음 중 event에 담기지 않는 것은 무엇일까요?
+@@ 36
+픽셀 위치
+@@ 37
+변화가 일어난 시각
+@@ 38
+픽셀의 절대 밝기
+@@ 39
+변화의 부호
+@@ 40
+event는 (x, t, p)입니다. 밝기 자체는 전혀 전달되지 않고, 밝기의 로그가 C만큼 움직였다는 사실만 전달됩니다.
+@@ 41
+Q3. 어떤 픽셀에서 ∇L = (0, 0.6)(픽셀당)이고 v = (300, 100) px/s입니다. C = 0.3일 때 linearized model이 예측하는 event rate는 얼마일까요?
+@@ 42
+초당 600
+@@ 43
+초당 200
+@@ 44
+초당 632
+@@ 45
+∇L·v = 0.6 × 100 = 60(초당)이고 60 / 0.3 = 200입니다. edge를 따라가는 300 px/s는 아무것도 더하지 않습니다. (−∇L·v가 음수이므로 event는 OFF입니다.)
+@@ 46
+Q4. 책의 분류 체계에서 어떤 방법을 "direct"로 만드는 것은 무엇일까요?
+@@ 47
+event를 한 번에 하나씩 처리합니다
+@@ 48
+neural network를 씁니다
+@@ 49
+map이 필요 없습니다
+@@ 50
+feature를 추출하지 않고 모든 event를 한 단계로 움직임과 장면 parameter에 연결합니다
+@@ 51
+direct 대 indirect는 feature에 관한 축입니다. event-by-event 대 packet, model-based 대 학습은 별개의 축입니다.
+@@ 52
+Q5. voxel grid가 0부터 20 ms까지의 window에 B = 5개의 bin을 둡니다. 15 ms의 event는 가중치를 어디에 둘까요?
+@@ 53
+전부 bin 3에
+@@ 54
+절반은 bin 3, 절반은 bin 4에
+@@ 55
+전부 bin 4에
+@@ 56
+bin 3에 0.75, bin 4에 0.25
+@@ 57
+t* = (5 − 1) × 15 / 20 = 3으로 딱 떨어지므로, bin 3의 가중치는 1이고 다른 모든 bin은 0입니다.
+@@ 58
+Q6. 픽셀 x = 40의 event가 시각 12 ms에 있습니다. 기준 시각 2 ms와 후보 속도 θ = 0.5 px/ms에서 contrast maximization은 이 event를 어디로 warp할까요?
+@@ 59
+=
+@@ 60
+Q7. 대부분의 event-based 시스템은 tracking과 mapping을 병렬로 돌립니다. back-end가 있는 시스템과 비교해 무엇이 빠져 있을까요?
+@@ 61
+map
+@@ 62
+pose 추정값
+@@ 63
+낮은 latency
+@@ 64
+모든 데이터에 대한 pose와 map의 joint refinement
+@@ 65
+각 모듈이 상대의 출력을 믿으므로 오차가 서로 오갑니다. bundle adjustment 같은 back-end는 모든 것을 함께 다듬습니다.
+@@ 66
+Q8. 어떤 추정값에 step이 50개 있습니다. 상대 움직임 마흔아홉 개는 정확하고 하나는 이동 오차가 0.7 m입니다. 이동 RPE(root mean square)는 얼마일까요?
+@@ 67
+√(0.7² / 50) = 0.7 / √50 = 0.099 m입니다. 나쁜 step이 어디에 있든 RPE는 달라지지 않지만, ATE는 달라집니다.
+@@ 68
+\(C = 0.25\)인 픽셀이 빛이 200 단위일 때 방금 event를 냈습니다. 그 뒤 빛이 600, 300, 1000으로 차례로 바뀝니다. event를 순서대로 나열하고, 픽셀이 마지막으로 기억한 수준에 해당하는 밝기를 구하세요.
+@@ 69
+모든 것을 출발 수준 \(L_0 = \ln 200\)에서 잽니다. 기억은 \(L_0\)에서 시작합니다.
+@@ 70
+600으로: \(L = L_0 + \ln 3 = L_0 + 1.099\). 기억보다 threshold 4.39개만큼 위이므로 <strong>4 ON</strong>. 이제 기억은 \(L_0 + 1.0\)입니다.
+@@ 71
+300으로: \(L = L_0 + \ln 1.5 = L_0 + 0.405\)로, 기억보다 \(0.595\), 즉 threshold 2.38개만큼 아래이므로 <strong>2 OFF</strong>. 이제 기억은 \(L_0 + 0.5\)입니다.
+@@ 72
+1000으로: \(L = L_0 + \ln 5 = L_0 + 1.609\)로, 기억보다 \(1.109\), 즉 threshold 4.44개만큼 위이므로 <strong>4 ON</strong>. 이제 기억은 \(L_0 + 1.5\)입니다.
+@@ 73
+마지막으로 기억한 수준은 \(200\,e^{1.5} = 896\) 단위에 해당합니다. event는 모두 열 개입니다: 4 ON, 2 OFF, 4 ON.
+@@ 74
+log intensity가 \(L(x) = 2\sin(2\pi x/40)\)(\(x\)는 픽셀 단위)인 무늬가 \(C = 0.2\)인 픽셀 앞을 400 px/s로 오른쪽으로 미끄러져 지나갑니다. (a) linearized model로 가장 큰 event rate를 구하세요. (b) rate가 0이 되는 것은 언제일까요? (c) 픽셀은 초당 평균 몇 개의 event를 낼까요? (a)와 비교하세요.
+@@ 75
+(a) 가장 가파른 기울기는 픽셀당 \(\max |\partial L/\partial x| = 2 \times 2\pi/40 = 0.314\)입니다. rate는 초당 \(|\nabla L \cdot v|/C = 0.314 \times 400 / 0.2 = 628\)개의 event이며, sine이 0을 지나는 지점에서 나옵니다.
+@@ 76
+(b) 기울기가 0인 마루와 골에서입니다. 픽셀이 잠시 무늬의 평평한 부분을 보고 있는 것입니다.
+@@ 77
+(c) 한 주기는 \(40/400 = 0.1\) s에 지나갑니다. 그동안 \(L\)은 4만큼 오르고(\(-2\)에서 \(2\)로) 4만큼 내려갑니다. 4만큼 오르면 ON event \(4/0.2 = 20\)개, 내려가면 OFF event 20개이므로, 0.1 s당 event 40개, 즉 초당 400개입니다. 이는 최대 rate의 \(2/\pi = 0.64\)배로, linearized model이 예측하듯 한 주기에 걸친 \(|\cos|\)의 평균과 같습니다.
+@@ 78
+같은 속도로 움직이는 두 edge에서 event 여섯 개가 나옵니다. \((x, t) = (5, 0), (7, 1), (9, 2)\)와 \((12, 0), (14, 1), (16, 2)\)이며, \(x\)는 픽셀, \(t\)는 ms 단위입니다. 이미지는 20픽셀이고 \(t_\text{ref} = 0\)입니다. (a) \(\theta = 0, 1, 2, 3\) px/ms에 대해 image of warped events의 분산을 계산하세요. (b) 이번에는 \(\theta = -1.5\)를 써 보세요. 두 픽셀의 한가운데에 떨어진 event는 두 픽셀에 똑같이 나눕니다. 이 결과는 objective의 모양에 대해 무엇을 알려 줄까요?
+@@ 79
+평균은 언제나 \(\mu_H = 6/20 = 0.3\)이므로 \(f = \frac{1}{20}\sum_i H_i^2 - 0.09\)입니다.
+@@ 80
+(a) \(\theta = 0\): 위치 5, 7, 9, 12, 14, 16. 여섯 픽셀이 1씩 가짐. \(f = 6/20 - 0.09 = 0.21\). \(\theta = 1\): 위치 5, 6, 7과 12, 13, 14. 역시 \(f = 0.21\). \(\theta = 2\): 위치 5, 5, 5와 12, 12, 12. 두 픽셀이 3씩 가짐. \(f = 18/20 - 0.09 = 0.81\). \(\theta = 3\): 위치 5, 4, 3과 12, 11, 10. \(f = 0.21\). 최댓값은 \(\theta = 2\) px/ms에 있습니다.
+@@ 81
+(b) \(x' = x + 1.5\,t\): 첫 edge는 5, 8.5, 12로, 둘째 edge는 12, 15.5, 19로 갑니다. 픽셀 12는 각 edge에서 event를 하나씩 받습니다. 이미지는 픽셀 5에서 1, 픽셀 8과 9에서 0.5, 픽셀 12에서 2, 픽셀 15와 16에서 0.5, 픽셀 19에서 1입니다. \(\sum H_i^2 = 1 + 0.25 + 0.25 + 4 + 0.25 + 0.25 + 1 = 7\)이므로 \(f = 0.35 - 0.09 = 0.26\)입니다. 움직임이 틀렸는데도 이웃 값 0.21보다 높습니다. 서로 다른 edge의 event가 우연히 만났기 때문입니다. objective에는 실제 움직임에서 떨어진 곳에 작은 local maximum이 있을 수 있으며, 그래서 optimizer는 답 근처, 예를 들어 이전 추정값에서 출발해야 합니다.
+@@ 82
+로봇이 직선을 따라 움직입니다. 다섯 timestamp에서의 실제 위치는 0, 1, 2, 3, 4 m입니다. odometry 추정값은 0, 1.1, 2.2, 3.3, 4.4 m입니다. (a) 연속한 pose에 대한 이동 RPE를 계산하세요. (b) ATE를 계산하세요. 1차원에서 "alignment"는 가장 좋은 상수 이동량입니다. (c) 같은 방식으로 17개 pose까지 계속 주행하면 각 metric은 어떻게 될까요?
+@@ 83
+(a) 실제 step은 모두 1 m, 추정 step은 모두 1.1 m이므로 각 상대 오차는 0.1 m이고 RPE는 0.1 m입니다.
+@@ 84
+(b) 실제값에서 추정값을 뺀 차이는 \(0, -0.1, -0.2, -0.3, -0.4\)입니다. least squares 이동량은 그 평균인 \(-0.2\)입니다. residual은 \(0.2, 0.1, 0, -0.1, -0.2\)이고,
+@@ 85
+이동량을 적용하지 않으면(출발점만 맞추면) \(\sqrt{(0 + 0.01 + 0.04 + 0.09 + 0.16)/5} = 0.245\) m가 됩니다.
+@@ 86
+(c) RPE는 0.1 m 그대로입니다. 이동량을 적용한 뒤의 residual은 \(i = 0, \dots, n-1\)에 대해 \(0.1\,(i - \bar{\imath})\)이고, 그 root mean square는 \(0.1\sqrt{(n^2 - 1)/12}\)입니다. \(n = 5\)이면 앞에서와 같이 \(0.1\sqrt{2} = 0.141\)이고, \(n = 17\)이면 \(0.1\sqrt{24} = 0.49\) m입니다. ATE는 주행 길이에 따라 커지지만 RPE는 그렇지 않습니다. 이것이 global 정확도와 local consistency의 차이입니다.
+@@ 87
+event generation model (10.1)을 말하고, 주어진 밝기 변화가 만드는 event 수를 계산하기.
+@@ 88
+brightness constancy에서 \(-\nabla L \cdot \mathbf{v}\,\Delta t \approx pC\)를 유도하고, 이를 써서 event rate와 polarity를 예측하기.
+@@ 89
+짧은 event 목록으로 event frame, time surface, voxel grid 만들기.
+@@ 90
+contrast maximization을 설명하고, image of warped events의 분산을 손으로 계산하기.
+@@ 91
+작은 trajectory의 ATE와 RPE를 계산하고, 각각이 무엇을 평가하는지 말하기.
+@@ 92
+IMU가 event camera의 자연스러운 짝인 이유 말하기: IMU는 각속도를 직접 잽니다(p. 294). 16주차는 여기서 시작합니다.
+@@ 93
+<em>SLAM Handbook</em>, 10장 "Event-based SLAM", pp. 282–303.
+@@ 94
+Gallego et al., <em>Event-based Vision: A Survey</em>, 2022 (linearized model과 representation).
+@@ 95
+=
+@@ 96
+Sturm, Engelhard, Endres, Burgard, Cremers, <em>A Benchmark for the Evaluation of RGB-D SLAM Systems</em>, 2012 (ATE와 RPE).

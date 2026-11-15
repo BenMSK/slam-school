@@ -1,0 +1,222 @@
+@@ 1
+<span class="eyebrow">Week 20 · Day 1</span>
+@@ 2
+Maps you can optimize by rendering them
+@@ 3
+After today you can explain what differentiable rendering is, why it lets a 3D map be learned from ordinary 2D images, and how ray marching differs from rasterization.
+@@ 4
+About 60 min · Read Ch. 14 opening and §14.1, pp. 397–401 (5 pages) · Needs Week 8 Day 2
+@@ 5
+Read first: Chapter 14 opening and §14.1, pp. 397–401
+@@ 6
+The reasons p. 398 gives for why points and occupancy grids are awkward for learning, and what DeepSDF does instead.
+@@ 7
+The two ways a graphics pipeline can hold a 3D model, and the rendering method that goes with each (p. 399).
+@@ 8
+In Figure 14.2 (p. 400): what the forward arrows pass through, and where the backward arrows end.
+@@ 9
+The sentence on p. 400 that says what the key to high-quality view synthesis turned out to be, and the paragraph on p. 401 that says how 3DGS renders differently from NeRF.
+@@ 10
+A map does not have to be assembled by hand-designed fusion rules. If an image can be rendered from the map by a procedure whose output changes smoothly when the map's parameters change, then the difference between the rendered image and a real photo has a gradient with respect to those parameters, and following it improves the map. Neural radiance fields (NeRF) and 3D Gaussian splatting (3DGS) are two map representations built for that loop.
+@@ 11
+1. From stored geometry to learned functions
+@@ 12
+The maps of <a href="#d44">Week 8 · Day 2</a> store geometry directly: points, or a grid of occupancy values. When deep learning moved from images to 3D, the first attempts fed those structures to networks. The book names the problem: they are discrete, and they struggle to describe a closed, continuous surface of arbitrary shape compactly, which gets in the way of gradient-based optimization. <span class="src">§14.1.1 · p. 398</span>
+@@ 13
+The alternative is to let the shape <em>be a function</em>. A <strong>multi-layer perceptron (MLP)</strong> is a small neural network: a stack of layers, each of which multiplies its input by a matrix, adds a vector, and applies a simple nonlinearity. Its matrices and vectors are the <strong>weights</strong>. Feed it a 3D coordinate and train it to output one number: either <strong>occupancy</strong> (is this point inside something?) or the <strong>signed distance function (SDF)</strong>, the distance to the nearest surface with a sign that says inside or outside. The surface is the set of points where the SDF is zero. DeepSDF does exactly this with an 8-layer MLP, optionally with an extra input vector (a latent code) that selects which shape is meant. <span class="src">§14.1.1 · p. 398 · Fig. 14.1</span>
+@@ 14
+A hand-written example of what such a network has to learn: for a sphere of radius 1 centred at the origin, \(f(\mathbf{x}) = \norm{\mathbf{x}} - 1\). Then \(f(0.5, 0, 0) = -0.5\) (inside), \(f(2, 0, 0) = 1\) (outside), and \(f(0.6, 0.8, 0) = 0\) (on the surface). A trained MLP plays the role of \(f\) for shapes with no formula.
+@@ 15
+What is stored
+@@ 16
+What the book says about it
+@@ 17
+Points, occupancy grids
+@@ 18
+Discrete samples of geometry
+@@ 19
+Discrete, not well suited to gradient-based learning
+@@ 20
+Implicit neural function (occupancy or SDF)
+@@ 21
+The weights of an MLP
+@@ 22
+Continuous and compact, free of topology limits and discretization error, but trained with 3D ground truth
+@@ 23
+Scene optimized by differentiable rendering
+@@ 24
+Any parameters an image can be rendered from
+@@ 25
+Needs only 2D images
+@@ 26
+The second row has a practical flaw. Training on 3D targets needs ground-truth 3D data, which is expensive to annotate and does not scale. Photos are cheap. That pushed the field toward supervising 3D with 2D images. <span class="src">§14.1.1 · p. 398</span>
+@@ 27
+2. Differentiable rendering: the loop
+@@ 28
+<strong>Rendering</strong> is the computation that turns a scene description and a camera pose into an image. <strong>Differentiable rendering (DR)</strong> is rendering arranged so that gradients can flow from the 2D image back to the 3D scene parameters. <span class="src">§14.1.2 · p. 399</span>
+@@ 29 attr
+Loop diagram. Scene parameters such as colour, density, semantics and camera poses feed a renderer, which produces rendered outputs such as RGB, depth, labels and normals. A loss compares them with real images. Solid arrows run forward from parameters to loss, dashed arrows run backward from the loss to the parameters.
+@@ 30
+Scene parameters
+@@ 31
+colour, density,
+@@ 32
+semantics,
+@@ 33
+camera poses
+@@ 34
+Renderer
+@@ 35
+ray marching
+@@ 36
+or rasterization
+@@ 37
+Rendered output
+@@ 38
+RGB, depth,
+@@ 39
+labels, normals
+@@ 40
+difference
+@@ 41
+from real
+@@ 42
+images
+@@ 43
+real image
+@@ 44
+forward: render an image
+@@ 45
+backward: gradient of the loss
+@@ 46
+The differentiable rendering loop. Every box on the forward path must be differentiable, so that the loss can be traced back to each scene parameter. Camera poses sit among the parameters, which is what makes this a SLAM tool and not only a mapping tool.
+@@ 47
+The outputs need not be colour images. The same loop renders depth maps, semantic label maps, or normal maps, and the parameters can include colour, density, semantics, and camera poses. <span class="src">Fig. 14.2 · p. 400</span>
+@@ 48
+Filling the gap: the gradient of one pixel
+@@ 49
+The book says gradients "flow back" without showing one. Take the smallest possible renderer: one pixel sees one semi-transparent blob of grey level \(c\) and opacity \(\alpha\) in front of a background of grey level \(b\). The rendered pixel is the blend
+@@ 50
+where \(C_{gt}\) is the pixel in the real photo ("gt" for ground truth) and \(L\) is the loss. By the chain rule,
+@@ 51
+Numbers: \(c = 0.9\), \(b = 0.1\), \(\alpha = 0.5\) give \(C = 0.5\). The photo says \(C_{gt} = 0.7\), so \(L = 0.04\) and \(\partial L/\partial\alpha = 2(-0.2)(0.8) = -0.32\). A gradient-descent step of size 0.5 moves \(\alpha\) to \(0.5 + 0.5 \times 0.32 = 0.66\). Now \(C = 0.66 \times 0.9 + 0.34 \times 0.1 = 0.628\) and \(L = 0.0052\): the blob became more opaque because the photo was brighter than the render. A real system does the same for millions of parameters and pixels, with the derivatives produced by automatic differentiation (<a href="#d37">Week 7 · Day 1</a>).
+@@ 52
+You met this idea as the photometric error of direct methods (<a href="#d64">Week 11 · Day 4</a>): predict what a pixel should look like, compare with what the camera saw, and adjust the unknowns. There the unknowns were a pose and some depths. Here they are the whole scene.
+@@ 53
+3. Two kinds of scene, two ways to render
+@@ 54
+A graphics pipeline holds a 3D model in one of two forms, and each has its own rendering method. <span class="src">§14.1.2 · p. 399</span>
+@@ 55
+What it encodes
+@@ 56
+Rendered by
+@@ 57
+<strong>Surface data</strong>
+@@ 58
+Object boundaries, as polygons or implicit surfaces
+@@ 59
+<strong>Rasterization</strong>: project the surface geometry onto the 2D image plane
+@@ 60
+Hardware-accelerated, very efficient
+@@ 61
+<strong>Volume data</strong>
+@@ 62
+Continuous fields such as density or colour throughout space
+@@ 63
+<strong>Ray marching</strong>: cast a ray through the volume for each pixel and sample values along it
+@@ 64
+Higher
+@@ 65
+Early differentiable renderers softened rasterization for meshes. Volume rendering then took over as the stronger tool for gradient-based optimization, because it provides gradients over 3D space even before the exact surface position is known. <span class="src">§14.1.2 · p. 399</span>
+@@ 66
+Filling the gap: why "gradients before the surface is found" matters
+@@ 67
+Put two samples on one ray, with opacities \(\alpha_1, \alpha_2\) and grey levels \(c_1, c_2\), over a black background. Light from sample 2 must pass sample 1, so
+@@ 68
+Suppose the current scene is wrong: sample 1 is empty (\(\alpha_1 = 0\)) and sample 2 is a solid dark wall (\(\alpha_2 = 1\), \(c_2 = 0.2\)), so \(C = 0.2\). The photo shows a bright object, \(C_{gt} = 0.8\), and sample 1 has colour \(c_1 = 0.8\). Then \(\partial C/\partial\alpha_1 = 0.8 - 0.2 = 0.6\) and \(\partial L/\partial\alpha_1 = 2(0.2 - 0.8)(0.6) = -0.72\). The derivative is not zero even though nothing is there yet: the loss asks for matter at an empty point.
+@@ 69
+A hard surface gives no such signal. If a pixel sees an opaque surface, sliding that surface slightly along the ray does not change the pixel at all, so the derivative with respect to the surface position is zero, except at object outlines where the pixel jumps. That is why mesh-based methods had to soften their rasterizers, and why volumes are easier to optimize.
+@@ 70
+4. NeRF and 3DGS at a glance
+@@ 71
+<strong>NeRF</strong> (2020) stores the scene in a single MLP and renders by ray marching: for each pixel it steps along the ray and asks the MLP for opacity and colour at each sample. The MLP takes a 3D location and a viewing direction, passed through a positional encoding so that it can represent fine detail. It is trained from <strong>posed</strong> colour images (images whose camera poses are already known) by minimizing the rendering loss, and it produces high-quality <strong>novel view synthesis</strong>: images from viewpoints that were never photographed. <span class="src">§14.1.3 · pp. 399–400</span>
+@@ 72
+NeRF's bottleneck is training speed. Later work replaced or assisted the MLP with explicit volume structures, voxel grids and hash tables, and reached comparable quality without an MLP. The book draws the lesson that the key ingredient is differentiable volume rendering and not the network. Even so, marching a ray for every pixel remains slow to render. <span class="src">§14.1.3 · p. 400</span>
+@@ 73
+<strong>3D Gaussian splatting</strong> (2023) keeps the idea of semi-transparent matter but changes both the storage and the renderer. The scene is a large set of semi-transparent Gaussian blobs, blended by alpha blending, and rendered by differentiable rasterization: the renderer loops over the blobs and projects each onto the image, where NeRF loops over rays. Because most of a scene is empty, this is much faster to render, with training speed similar to the fastest volumetric NeRF variants. <span class="src">§14.1.3 · p. 401</span>
+@@ 74 attr
+Two top-view sketches. On the left, ray marching: a camera sends one ray through a pixel and takes evenly spaced samples along it, including in empty space. On the right, splatting: three blobs are each projected toward the camera and leave a footprint on the image line.
+@@ 75
+image
+@@ 76
+(a) Ray marching
+@@ 77
+for each pixel: sample along its ray
+@@ 78
+(b) Splatting
+@@ 79
+for each blob: find the pixels it covers
+@@ 80
+The two renderers of this week, seen from above. Ray marching spends samples on empty space. Splatting touches only the pixels a primitive lands on.
+@@ 81
+Both started as offline tools: given posed images, optimize a scene, originally over days. Explicit data structures brought that down to near real time, and both are now being built into SLAM systems, which is the subject of Days 3 and 5. The underlying thought is older than either: the book traces the pairing of differentiable rendering with occupancy maps back to Thrun's "forward sensor model" of the early 2000s. <span class="src">Ch. 14 opening · p. 397</span>
+@@ 82
+<strong>"NeRF works because of the neural network."</strong> Grid-based variants reach comparable quality without an MLP. The book credits differentiable volume rendering. <span class="src">p. 400</span>
+@@ 83
+<strong>"Differentiable rendering needs 3D ground truth."</strong> Avoiding 3D ground truth is its purpose. The supervision is 2D images.
+@@ 84
+<strong>"Rasterization is only for surfaces, so 3DGS is a surface method."</strong> 3DGS rasterizes volume data: its primitives are semi-transparent and are blended, not depth-tested. <span class="src">p. 409</span>
+@@ 85
+Q1. One pixel sees a blob with grey level c = 1.0 and opacity α = 0.25 over a background b = 0.2. The photo shows 0.8. With L = (C − C_gt)², what is ∂L/∂α, and what does gradient descent do?
+@@ 86
+−0.64, so α increases
+@@ 87
++0.64, so α decreases
+@@ 88
+0, the pixel does not depend on α
+@@ 89
+−0.32, so α decreases
+@@ 90
+C = 0.25 × 1.0 + 0.75 × 0.2 = 0.4. ∂L/∂α = 2(0.4 − 0.8)(1.0 − 0.2) = −0.64. Gradient descent moves against the gradient, so α goes up and the pixel gets brighter.
+@@ 91
+Q2. Why did research move from training implicit functions on 3D data to differentiable rendering?
+@@ 92
+MLPs cannot represent 3D shapes
+@@ 93
+3D supervision gives discontinuous surfaces
+@@ 94
+Ground-truth 3D data is costly to obtain, while 2D images are easy to collect
+@@ 95
+Rendering is faster than evaluating an MLP
+@@ 96
+DeepSDF-style training works but needs 3D ground truth, which does not scale. Differentiable rendering lets ordinary images supervise the 3D parameters.
+@@ 97
+Q3. Which loop structure describes splatting, as opposed to ray marching?
+@@ 98
+For each pixel, sample points along its ray and query the scene at each
+@@ 99
+For each primitive, project it onto the image and update the pixels it covers
+@@ 100
+For each voxel, cast a ray to every camera
+@@ 101
+For each pixel, find the nearest surface and stop
+@@ 102
+Rasterization iterates over primitives. That lets it skip empty space entirely, which is where its speed comes from.
+@@ 103
+Q4. A ray's first sample is empty (α₁ = 0, colour c₁ = 0.5) and its second is an opaque wall (α₂ = 1, c₂ = 0.9). With C = α₁c₁ + (1 − α₁)α₂c₂, what is ∂C/∂α₁?
+@@ 104
+0, because the sample is empty
+@@ 105
+∂C/∂α₁ = c₁ − α₂c₂ = 0.5 − 0.9 = −0.4. Adding matter at the empty sample would darken the pixel, and the derivative says so even though nothing is there yet.
+@@ 106
+Implicit neural representations store a shape as a function (occupancy or SDF) computed by an MLP: continuous and compact, but they need 3D ground truth to train.
+@@ 107
+Differentiable rendering removes that need: render, compare with real images, and send the gradient of the loss back to the scene parameters, which can include camera poses.
+@@ 108
+Surfaces are rasterized, volumes are ray-marched. Volumes give useful gradients everywhere along a ray, before any surface is located.
+@@ 109
+NeRF is an MLP rendered by ray marching. 3DGS is a set of semi-transparent Gaussians rendered by rasterization, which is much faster to render.
+@@ 110
+<em>SLAM Handbook</em>, Chapter 14 opening and §14.1 "3D Scene Representation and Differentiable Rendering", pp. 397–401, Figures 14.1–14.3.
+@@ 111
+The one-pixel and two-sample gradients in "Filling the gap" are direct applications of the chain rule to the alpha-blending formula, which the book states as equation (14.6).

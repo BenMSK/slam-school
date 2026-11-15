@@ -1,0 +1,190 @@
+@@ 1
+<span class="eyebrow">16주차 · Day 5</span>
+@@ 2
+bias 갱신, IMU factor, 그리고 더 나은 적분
+@@ 3
+오늘이 끝나면 bias 추정값이 바뀌었을 때 다시 적분하지 않고 preintegrated measurement를 보정하고, IMU factor와 bias factor의 residual을 쓰고, rectangle rule이 정확도에서 치르는 대가를 말할 수 있습니다.
+@@ 4
+약 60분 · §11.2.2.3–§11.2.3, pp. 314–319 읽기 (5쪽) · 16주차 Day 4, 2주차 Day 2 필요
+@@ 5
+먼저 읽기: §11.2.2.3, §11.2.2.4, §11.2.3, pp. 314–319
+@@ 6
+p. 314 아래쪽의 "Incorporating Bias Updates"에서 시작해 p. 319에서 §11.3이 시작하는 곳까지 읽습니다. 찾아볼 것:
+@@ 7
+p. 315의 (11.30): 어느 갱신이 곱셈이고 어느 것이 덧셈인지, 그리고 Jacobian이 "remain constant"라고 말하는 문장.
+@@ 8
+(11.31): 각 residual을 어제 본 (11.23)의 한 줄과 짝지어 보세요.
+@@ 9
+pp. 315–316의 bias 모델 (11.32)–(11.34), 그리고 이산 covariance가 \(\Delta t_{ij}\)에 따라 어떻게 변하는지.
+@@ 10
+Figure 11.2와 11.3 (pp. 317–318) 제목에 있는 RMSE 값. 네 방법의 순위를 매겨 보세요.
+@@ 11
+p. 319의 식 (11.35)–(11.36): 왜 회전이 가속도보다 적분하기 어려운지.
+@@ 12
+어제의 increment는 keyframe \(i\)의 pose와 속도에서는 자유로웠지만 여전히 bias 추정값에 의존했습니다. 한 번의 적분 동안 누적한 Jacobian으로 1차 보정을 하면, 다시 적분해야 할 마지막 이유가 사라집니다. 보정된 increment는 keyframe 쌍마다 9차원 residual 하나로 factor graph에 들어가고, bias가 천천히 변한다고 말하는 작은 factor가 여기에 함께 붙습니다.
+@@ 13
+1. bias 추정값이 바뀔 때
+@@ 14
+increment \(\Delta\tilde{\mathbf{R}}_{ij}, \Delta\tilde{\mathbf{v}}_{ij}, \Delta\tilde{\mathbf{p}}_{ij}\)는 모든 샘플에서 bias 추정값 \(\bar{\mathbf{b}}_i = \{\bar{\mathbf{b}}^g_i, \bar{\mathbf{b}}^a_i\}\)를 빼서 계산했습니다. bias는 최적화의 미지수이므로 solver가 이를 수정합니다: \(\mathbf{b} \leftarrow \bar{\mathbf{b}} + \delta\mathbf{b}\). 다시 적분하면 preintegration이 없애려던 비용이 되돌아옵니다. 책은 대신 \(\delta\mathbf{b}\)에 대해 1차까지 전개합니다. <span class="src">§11.2.2.3 · pp. 314–315</span>
+@@ 15
+벡터는 더해서 보정합니다. 회전은 오른쪽에 작은 회전을 곱해서 보정하는데, 회전은 벡터 공간을 이루지 않기 때문입니다(<a href="#d21">4주차 · Day 3</a>). 다섯 개의 Jacobian은 \(\bar{\mathbf{b}}_i\)에서 평가하며, preintegration 중에 한 번 계산한 뒤 일정하게 유지합니다. 책은 이 Jacobian의 식을 제시하지 않고 원 논문을 참조하라고 합니다. <span class="src">§11.2.2.3 · p. 315</span>
+@@ 16
+빈틈 채우기: Jacobian은 어떻게 생겼는가
+@@ 17
+<strong>accelerometer bias.</strong> 계산식 \(\Delta\tilde{\mathbf{v}}_{ij} = \sum_k\Delta\tilde{\mathbf{R}}_{ik}(\tilde{\mathbf{a}}_k - \mathbf{b}^a)\Delta t\)를 보세요. \(\mathbf{b}^a\)에 대해 선형이므로 도함수를 바로 읽을 수 있고, 보정은 정확합니다.
+@@ 18
+몸체가 회전하지 않으면 이 값은 \(-\Delta t_{ij}\mathbf{I}\)와 \(-\tfrac12\Delta t_{ij}^2\mathbf{I}\)입니다. 즉 bias \(\delta b\)는 일정한 가속도가 늘 그렇듯 속도를 \(\delta b\,\Delta t_{ij}\)만큼, 위치를 \(\tfrac12\delta b\,\Delta t_{ij}^2\)만큼 줄입니다.
+@@ 19
+<strong>평면에서의 gyroscope bias.</strong> 각도 increment는 \(\Delta\tilde\theta_{ij} = \sum_k(\tilde\omega_k - b^g)\Delta t\)이므로 \(\partial\Delta\theta_{ij}/\partial b^g = -\Delta t_{ij}\)이며, 이것도 정확합니다. 하지만 gyroscope bias가 바뀌면 accelerometer 샘플을 회전시키는 모든 \(\Delta\tilde{\mathbf{R}}_{ik}\)도 바뀝니다. \(\mathbf{J}\)를 90° 회전이라 하면 \(\tfrac{d}{d\theta}\mathbf{R}(\theta) = \mathbf{J}\mathbf{R}(\theta)\)이므로
+@@ 20
+\(\mathbf{R}(\theta)\)가 \(\theta\)에 대해 선형이 아니므로 이것은 진짜 1차 근사입니다. 버려진 부분은 \((\delta b^g)^2\)에 비례합니다.
+@@ 21
+<strong>3-D에서는</strong>(Forster et al.) 구조가 같습니다. \(\partial\Delta\bar{\mathbf{R}}_{ij}/\partial\mathbf{b}^g = -\sum_k\Delta\tilde{\mathbf{R}}_{k+1\,j}\T\mathbf{J}^k_r\Delta t\)인데, 이는 bias 오차가 모든 샘플에서 똑같은 noise 역할을 하는 (11.28)입니다. 또 \(\partial\Delta\bar{\mathbf{v}}_{ij}/\partial\mathbf{b}^g = -\sum_k\Delta\bar{\mathbf{R}}_{ik}(\tilde{\mathbf{a}}_k - \bar{\mathbf{b}}^a)^\wedge\,\tfrac{\partial\Delta\bar{\mathbf{R}}_{ik}}{\partial\mathbf{b}^g}\Delta t\)입니다. 모두 샘플이 들어올 때마다 갱신되는 누적합입니다.
+@@ 22
+직접 해 보기: Day 4의 1초짜리 increment는 bias 추정값 0으로 적분했습니다. gyroscope bias 갱신값을 움직이면서 세 가지 대응 방법을 비교해 보세요.
+@@ 23
+눈여겨볼 점: 1°/s의 갱신을 무시하면 Δp가 31.5 mm 틀리지만, 1차 보정은 전체 재적분과 0.14 mm 이내로 일치하며 IMU 샘플을 하나도 읽지 않습니다. 남은 오차는 갱신량의 제곱에 비례해 커집니다. 5°/s에서는 3.4 mm이고, 보정하지 않으면 157 mm입니다. gyroscope 갱신을 0으로 놓고 accelerometer 슬라이더를 움직여 보세요. increment가 accelerometer bias에 대해 정확히 선형이므로 보정 후 오차는 0.00 mm로 유지됩니다.
+@@ 24
+2. preintegrated IMU factor
+@@ 25
+어제의 모델 (11.23)은 "계산된 increment = state의 함수 + covariance \(\boldsymbol{\Sigma}_{ij}\)인 Gaussian noise"라고 말합니다. <a href="#d8">2주차 · Day 2</a>에서처럼 residual은 두 변의 차이이며, raw increment 대신 (11.30)으로 bias를 보정한 increment를 씁니다. <span class="src">§11.2.2.4 · p. 315</span>
+@@ 26
+이들을 쌓으면 \(\mathbf{r}_{\mathcal{I}_{ij}} \in \R^9\)가 되고, factor는 least-squares 목적 함수에 \(\norm{\mathbf{r}_{\mathcal{I}_{ij}}}^2_{\boldsymbol{\Sigma}_{ij}} = \mathbf{r}\T\boldsymbol{\Sigma}_{ij}^{-1}\mathbf{r}\)를 더합니다. 회전 residual은 "측정된 increment의 역 곱하기 예측된 increment"의 회전 벡터이며, state가 측정값을 재현하면 0입니다. 나머지 두 residual은 단순한 차이입니다. 이 factor는 두 keyframe의 회전, 위치, 속도와 \(i\)의 bias에 연결됩니다.
+@@ 27
+평면에서의 숫자: Day 4의 위젯은 \(\sigma = 0.115^\circ\)와 함께 \(\Delta\tilde\theta_{ij} = 19.90^\circ\)를 저장했습니다. 현재 state가 로봇이 \(\theta_j - \theta_i = 20.50^\circ\)만큼 돌았다고 하면 residual은 0.60°, 즉 5.2σ이고 cost에 \(5.2^2 \approx 27\)을 더합니다. optimizer는 두 orientation의 차이를 19.9° 쪽으로 당기거나, 그 차이를 설명하도록 gyroscope bias를 옮길 것입니다.
+@@ 28 attr
+두 keyframe에 대한 factor graph. 위 줄에는 keyframe i와 j에서의 회전, 위치, 속도를 담은 state node 두 개가 preintegrated IMU factor로 연결되어 있습니다. 아래 줄에는 bias node 두 개가 bias random-walk factor로 연결되어 있습니다. IMU factor는 i의 bias node에도 연결됩니다.
+@@ 29
+keyframe i의 R, p, v
+@@ 30
+keyframe j의 R, p, v
+@@ 31
+=
+@@ 32
+=
+@@ 33
+i의 gyro·accel bias
+@@ 34
+j의 gyro·accel bias
+@@ 35
+keyframe 구간 하나가 graph에 더하는 것. 각 keyframe에는 미지수가 15개 있습니다. 회전 3, 위치 3, 속도 3, 그리고 bias마다 3개입니다. 그리지 않은 카메라나 LiDAR factor는 위쪽 node에 붙습니다.
+@@ 36
+3. bias 자체의 모델
+@@ 37
+한 구간 안에서는 bias를 일정하다고 보았습니다(11.15). 구간을 넘어가면서는 천천히 움직일 수 있습니다. 책은 bias를 적분된 white noise로 모델링합니다. <span class="src">§11.2.2.4 · pp. 315–316</span>
+@@ 38
+여기서 이산 noise의 covariance는 \(\boldsymbol{\Sigma}^{bgd} = \Delta t_{ij}\operatorname{Cov}(\boldsymbol{\eta}^{bg})\)와 \(\boldsymbol{\Sigma}^{bad} = \Delta t_{ij}\operatorname{Cov}(\boldsymbol{\eta}^{ba})\)입니다. 이것이 <a href="#d92">Day 2</a>의 random walk입니다. 변화량의 분산이 경과 시간에 비례해 커집니다. covariance를 \(\Delta t\)로 <em>나누는</em> 샘플 noise와 비교해 보세요. 이에 대응하는 factor는 연속한 keyframe 사이의 bias 변화에 벌점을 줍니다.
+@@ 39
+예: gyroscope bias random walk가 \(2\times10^{-5}\) rad/s²/√Hz이고 keyframe 간격이 0.25 s이면, keyframe 사이 변화량의 표준편차는 \(2\times10^{-5}\times\sqrt{0.25} = 1\times10^{-5}\) rad/s입니다. \(10^{-4}\) rad/s만큼 뛰자는 제안은 10σ 사건이며 cost가 100입니다. 이 factor가 없으면 각 keyframe의 bias가 IMU와 카메라 사이의 어떤 불일치든 흡수할 수 있습니다. 이 factor가 있으면 bias는 천천히 변하는 곡선이어야 하고, 바로 그 덕분에 추정할 수 있게 됩니다.
+@@ 40
+4. 더 나은 적분
+@@ 41
+지금까지는 모두 다음 샘플이 올 때까지 각 샘플을 일정하게 유지하는 방식 (11.12)를 썼습니다. 이것이 <strong>rectangle rule</strong>(직사각형 공식), 즉 Euler method입니다. §11.2.3은 이 방식의 대가와 대안을 살펴봅니다. <span class="src">§11.2.3.1 · p. 316</span> 책의 Figure 11.2와 11.3은 예시 가속도 신호 하나를 2 s 동안 네 가지 방법으로 적분하고 오차를 보고합니다.
+@@ 42
+방법
+@@ 43
+샘플 사이에서 가정한 신호
+@@ 44
+RMSE 속도
+@@ 45
+RMSE 위치
+@@ 46
+Euler, 낮은 샘플링 주파수 (Fig. 11.2, 위)
+@@ 47
+상수
+@@ 48
+Euler, 더 높은 샘플링 주파수 (Fig. 11.2, 아래)
+@@ 49
+Piecewise-linear (Fig. 11.3, 위)
+@@ 50
+직선: constant-jerk motion model
+@@ 51
+Gaussian process regression (Fig. 11.3, 아래)
+@@ 52
+매끄러운 곡선, motion model 없음
+@@ 53
+<span class="src">§11.2.3 · pp. 317–318</span> 샘플링 주파수를 높이면 도움이 되지만, 주파수는 하드웨어의 특성입니다. 다른 길은 샘플 사이의 신호를 더 잘 모델링하는 것입니다. 우리만의 신호로 시험해 봅시다.
+@@ 54
+눈여겨볼 점: 10 Hz에서 rectangle rule은 위치 RMS 오차가 10.5 mm, piecewise-linear 규칙은 1.4 mm입니다. 주파수를 20 Hz로 두 배 올리면 앞의 것은 절반(5.5 mm)이 되고, 뒤의 것은 4분의 1(0.33 mm)로 줄어듭니다.
+@@ 55
+빈틈 채우기: 1차 대 2차
+@@ 56
+한 step 동안 rectangle rule은 \(a(t)\)를 \(a(t_k)\)로 바꿉니다. Taylor 전개에 따르면 실제 적분은 \(a(t_k)\Delta t + \tfrac12\dot a(t_k)\Delta t^2 + \dots\)이므로, step마다 약 \(\tfrac12\dot a\,\Delta t^2\)만큼 틀립니다. step이 \(T/\Delta t\)개이므로 누적 오차는 \(\Delta t\) 차수입니다. step을 절반으로 하면 오차도 절반입니다. piecewise-linear 신호를 적분하는 것과 같은 trapezoid rule(사다리꼴 공식)은 그 항을 상쇄해 step당 오차가 \(\Delta t^3\) 차수로 남고, 따라서 누적 오차는 \(\Delta t^2\) 차수입니다. step을 절반으로 하면 오차는 4분의 1입니다.
+@@ 57
+책이 살펴보는 방법들을 간단히 정리합니다. <span class="src">§11.2.3 · pp. 316–319</span>
+@@ 58
+<strong>Upsampling.</strong> 샘플에 Gaussian process(<a href="#d27">5주차 · Day 3</a>)를 맞추고 더 높은 주파수로 query한 다음, 이전처럼 rectangle rule로 적분합니다.
+@@ 59
+<strong>운동 가정 아래의 closed-form 적분.</strong> 표준 preintegration은 한 step 동안 가속도가 world frame에서 일정하다고 가정합니다. body frame에서 일정하다고 가정하면("local" 가속도) 실제 움직임에 더 잘 맞습니다. 책은 EuRoC dataset에서 visual-inertial odometry 정확도가 약 5% 좋아졌다고 인용합니다.
+@@ 60
+<strong>연속 가속도.</strong> 회전 보정된 샘플 \(\hat{\mathbf{a}}_k = \Delta\mathbf{R}_{ik}\tilde{\mathbf{a}}_k\)를 연속 함수로 표현하고 해석적으로 적분합니다. piecewise-linear이면 trapezoid rule이 되고, squared-exponential kernel을 쓴 Gaussian process는 적분이 선형 연산이므로 정확히 적분할 수 있습니다.
+@@ 61
+<strong>연속 회전.</strong> 어려운 부분입니다. \(\dot{\mathbf{R}} = \mathbf{R}\boldsymbol{\omega}^\wedge\)의 정확한 해는 작은 회전들의 무한 곱(11.35)이며, 회전은 교환 법칙이 성립하지 않으므로 일반적인 closed form이 없습니다. 한 가지 접근은 \(\mathbf{R} = \Exp(\mathbf{r})\)인 회전 벡터 \(\mathbf{r}(t)\)를 다룹니다. 그 동역학은 \(\dot{\mathbf{r}} = \mathbf{J}_r(\mathbf{r})^{-1}\boldsymbol{\omega}^b_b\) (11.36)이고, gyroscope 측정값으로 \(\dot{\mathbf{r}}\)에 Gaussian process를 맞춥니다. 책은 표준 이산 방식보다 정확도가 적어도 한 자릿수 좋아졌다고 보고합니다. <span class="src">§11.2.3.3 · p. 319</span>
+@@ 62
+회전 오차는 보기보다 중요합니다. 이유는 Day 3에서 찾은 것과 같습니다. <a href="#d93">dead reckoning 위젯</a>으로 돌아가서 bias와 noise 슬라이더를 모두 0으로 놓고, gyroscope 출력을 "순간 샘플"로 바꿔 보세요. 20 s 뒤의 오차가 6 cm에서 2.8 m로 뜁니다. 센서에는 아무 문제가 없습니다. pitch rate에 rectangle rule을 쓰면 차량이 언덕 위에 있는 동안 약 0.1°의 기울기 오차가 남고, 나머지는 gravity가 합니다.
+@@ 63
+<strong>"bias를 갱신하면 preintegration을 다시 해야 한다."</strong> 갱신이 작으면 저장된 Jacobian이 1차까지 보정합니다. 전체 재적분은 bias가 \(\bar{\mathbf{b}}_i\)에서 멀리 움직여 버려진 2차 항이 중요해졌을 때에만 그 비용을 치를 가치가 있습니다.
+@@ 64
+<strong>"평균처럼, 구간이 길수록 bias covariance가 줄어든다."</strong> 커집니다: \(\boldsymbol{\Sigma}^{bgd} = \Delta t_{ij}\operatorname{Cov}(\boldsymbol{\eta}^{bg})\). random walk는 시간이 더 주어질수록 더 멀리 떠돕니다.
+@@ 65
+<strong>"IMU factor는 절대 위치를 제약한다."</strong> IMU factor가 제약하는 것은 \(j\)의 state가 \(i\)의 state와 어떤 관계인지입니다. 절대 위치와 yaw는 다른 곳에서 와야 하며, 이것이 다음 주의 주제입니다.
+@@ 66
+Q1. (11.30)에서 속도와 위치 increment는 항을 더해서 보정하지만, 회전 increment는 Exp(·)를 곱해서 보정합니다. 이유는 무엇입니까?
+@@ 67
+gyroscope bias가 accelerometer bias보다 커서
+@@ 68
+행렬에서는 곱셈이 덧셈보다 싸서
+@@ 69
+회전은 벡터 공간이 아니며, 작은 변화는 작은 회전을 합성해서 적용하기 때문에
+@@ 70
+회전 increment는 bias에 의존하지 않아서
+@@ 71
+회전 행렬에 행렬을 더하면 회전이 되지 않습니다. SO(3)에서 perturbation은 곱해지는 작은 회전이며, 여기서는 4주차에서처럼 오른쪽에 곱합니다.
+@@ 72
+Q2. 평면의 경우. bias 추정값 0으로 Δt_ij = 1 s 동안 preintegration한 각도가 20.0°입니다. gyroscope bias 추정값이 +0.5°/s로 갱신됩니다. 보정된 각도 increment는 무엇입니까?
+@@ 73
+Jacobian은 −Δt_ij = −1 s이므로 보정량은 −1 × 0.5 = −0.5°입니다. 양의 bias는 gyroscope가 각속도를 과대 보고했다는 뜻입니다.
+@@ 74
+Q3. 두 keyframe 사이의 시간이 두 배가 됩니다. bias factor (11.34)가 bias 변화에 허용하는 표준편차는 어떻게 됩니까?
+@@ 75
+√2배 커진다
+@@ 76
+두 배가 된다
+@@ 77
+절반이 된다
+@@ 78
+변하지 않는다
+@@ 79
+covariance는 연속 covariance의 Δt_ij배이므로 두 배가 되고, 표준편차는 √2배 커집니다.
+@@ 80
+Q4. 매끄러운 가속도 신호의 샘플링 주파수를 네 배로 올립니다. piecewise-linear(trapezoid) 적분의 오차는 대략 몇 분의 1로 줄어듭니까?
+@@ 81
+trapezoid rule은 2차입니다. 오차가 Δt²에 비례합니다. step이 4배 작아지면 오차는 16배 작아집니다. rectangle rule이라면 4배만 좋아집니다.
+@@ 82
+Q5. keyframe i와 j 사이의 preintegrated IMU factor (11.31)에는 어떤 미지수가 관여합니까?
+@@ 83
+i와 j의 pose만
+@@ 84
+i와 j의 회전, 위치, 속도, 그리고 i의 bias
+@@ 85
+i와 j 사이의 모든 IMU 샘플마다 state 하나씩
+@@ 86
+i와 j의 bias만
+@@ 87
+residual에는 양 끝의 R, p, v와, δb를 통해 i의 bias가 들어 있습니다. j의 bias는 별도의 bias factor (11.34)로 들어갑니다.
+@@ 88
+바뀐 bias 추정값은 preintegration 중에 누적한 Jacobian을 이용한 increment의 1차 갱신, 식 (11.30)으로 흡수됩니다. 샘플을 다시 읽지 않습니다.
+@@ 89
+이 갱신은 accelerometer bias에 대해서는 정확하고, gyroscope bias에 대해서는 갱신량의 제곱에 비례하는 오차를 가진 근사입니다.
+@@ 90
+IMU factor는 \(\boldsymbol{\Sigma}_{ij}\)로 가중한 9차원 residual (11.31)이며, 두 keyframe의 회전, 위치, 속도와 첫 keyframe의 bias를 잇습니다.
+@@ 91
+bias는 keyframe 사이에서 random walk이며, covariance는 \(\Delta t_{ij}\)에 비례합니다. 식 (11.32)–(11.34).
+@@ 92
+표준 preintegration은 rectangle rule을 씁니다. piecewise-linear 모델과 Gaussian-process 모델로 신호를 표현하면 더 정확하게 적분되며, 어려운 부분은 회전입니다.
+@@ 93
+=
+@@ 94
+Forster, Carlone, Dellaert, Scaramuzza, <em>On-Manifold Preintegration for Real-Time Visual-Inertial Odometry</em>, IEEE Transactions on Robotics, 2017 (bias Jacobian의 유도).
+@@ 95
+Süli and Mayers, <em>An Introduction to Numerical Analysis</em>, 2003 (rectangle rule과 trapezoid rule의 오차 차수).

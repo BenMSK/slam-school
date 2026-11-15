@@ -1,0 +1,176 @@
+@@ 1
+<span class="eyebrow">19주차 · 복습</span>
+@@ 2
+19주차 복습: network와 factor graph가 만나는 곳
+@@ 3
+오늘이 끝나면 warp, correlation lookup, confidence-weighted Gauss-Newton step, pointmap loss를 손으로 계산하고, 13장의 각 시스템을 "학습된 구성 요소"에서 "학습된 pipeline"까지 이어지는 선 위에 놓을 수 있습니다.
+@@ 4
+Part III는 SLAM을 Spatial AI 쪽으로 돌려놓고, 13장은 그 첫걸음을 보여 줍니다. 기하를 포기하지 않고 pipeline에 학습을 넣는 것입니다. network는 3D label이나 view-synthesis loss로 학습해 depth나 pose를 예측할 수 있고, 그 예측은 factor가 됩니다(DVSO, D3VO). network는 match나 optical flow도 예측할 수 있습니다. RAFT는 all-pairs correlation volume을 한 번 만들고, lookup을 거듭하며 flow 추정값을 다듬습니다. DROID-SLAM은 loop를 닫습니다. network가 flow revision과 confidence를 출력하면, differentiable bundle-adjustment layer가 weighted Gauss-Newton으로 이를 pose와 depth update로 바꾸며, 전체를 pose error로 학습합니다. DPVO는 같은 일을 sparse patch에서 합니다. DUSt3R는 가장 멀리 나아가, calibration되지 않은 이미지 쌍에서 픽셀마다 3D 점을 regression합니다. 카메라와 pose는 나중에 읽어 내고, 많은 쌍은 confidence 가중 alignment로 융합합니다. 어느 경우든 graph 위의 least-squares 문제는 여전히 남아 있습니다.
+@@ 5
+query 하나에 대한 attention
+@@ 6
+\(a_j = e^{s_j} / \sum_m e^{s_m}\), \(s_j = \mathbf{q}\T\mathbf{k}_j\); 출력 \(\sum_j a_j \mathbf{v}_j\)
+@@ 7
+=
+@@ 8
+pose regression loss
+@@ 9
+=
+@@ 10
+depth가 주어진 픽셀의 warp
+@@ 11
+\(\mathbf{x}^2 = \pi_c(\mathbf{T}^2_1\, \pi_c^{-1}(\mathbf{x}^1, d^1))\); 옆 방향 baseline \(b\)이면: \(x^2 = x^1 - f b / d\)
+@@ 12
+=
+@@ 13
+합성된 view
+@@ 14
+\(\tilde{I}_2(\mathbf{x}) = I_2(\omega_{1\to2}(\mathbf{x}, \mathbf{d}(\mathbf{x})))\), bilinear interpolation으로 읽음
+@@ 15
+=
+@@ 16
+=
+@@ 17
+\(\mathbf{C}_{ijkl} = \sum_m g_\theta(I_1)_{ijm}\, g_\theta(I_2)_{klm}\), 또는 \(\mathbf{C} = \mathbf{F}_1\mathbf{F}_2\T\)
+@@ 18
+=
+@@ 19
+lookup과 update
+@@ 20
+\((u', v') = \mathbf{f}(u,v) + (u,v)\)일 때 \((u', v')/2^l\) 주변의 \(\{-r, \dots, r\}^2\)에서 \(\mathbf{C}^l\)을 읽음; 그다음 \(\mathbf{f}^{k+1} = \boldsymbol{\delta}\mathbf{f}^k + \mathbf{f}^k\)
+@@ 21
+=
+@@ 22
+=
+@@ 23
+=
+@@ 24
+=
+@@ 25
+=
+@@ 26
+=
+@@ 27
+=
+@@ 28
+=
+@@ 29
+DUSt3R loss
+@@ 30
+\(\ell_{\text{regr}} = \norm{\mathbf{X}_i / z - \hat{\mathbf{X}}_i / \bar{z}}\); \(\mathcal{L}_{\text{conf}} = \sum C_i \ell_{\text{regr}} - \alpha \log C_i\); 최적 \(C = \alpha/\ell\)
+@@ 31
+=
+@@ 32
+Q1. 어떤 시스템의 network가 flow 보정과 픽셀별 confidence를 출력하고, Gauss-Newton layer가 이를 pose로 바꾸며, training loss는 pose에 걸립니다. 어떤 종류의 방법입니까?
+@@ 33
+고전적인 pipeline에 끼운 학습된 구성 요소
+@@ 34
+factor로 더한 예측 3D 속성
+@@ 35
+직접 pointmap regression
+@@ 36
+differentiable optimizer를 거치는 end-to-end training
+@@ 37
+loss를 optimizer 다음에서 재고, 그 gradient가 optimizer를 거슬러 지나갑니다. DROID-SLAM의 설계입니다 (§13.3).
+@@ 38
+Q2. 두 key의 attention score가 3과 1입니다. 첫 번째 key가 받는 가중치는 얼마입니까? (e² = 7.39)
+@@ 39
+e³/(e³ + e¹) = e²/(e² + 1) = 7.39/8.39 = 0.88. score의 차이만 중요합니다.
+@@ 40
+Q3. f = 700 px인 두 카메라가 옆으로 0.3 m 떨어져 있습니다. 한 픽셀이 두 이미지 사이에서 14 px 이동합니다. 점은 얼마나 멀리 있습니까?
+@@ 41
+shift = f·b/d이므로 d = f·b/shift = 700 · 0.3 / 14 = 15 m입니다.
+@@ 42
+Q4. DVSO는 고전적인 direct 시스템 DSO에 무엇을 더합니까?
+@@ 43
+photometric error를 대체하는 학습된 feature matcher
+@@ 44
+두 번째 물리적 카메라
+@@ 45
+DSO의 depth를 network가 예측한 depth와 일관되게 유지하는 factor
+@@ 46
+loop closure를 위한 relocalization 모듈
+@@ 47
+network의 metric depth는 가상의 두 번째 카메라처럼 작용하며, 추가 factor로 들어갑니다 (p. 372).
+@@ 48
+Q5. feature map이 32 × 40입니다. correlation pyramid의 level 2에는 원소가 몇 개 있습니까?
+@@ 49
+level 2의 shape는 32 × 40 × 8 × 10입니다. 이미지 1의 픽셀 1280개에 이미지 2의 pooling된 칸 80개를 곱하면 102,400입니다.
+@@ 50
+Q6. lookup radius r = 4이고 pyramid가 네 level일 때, RAFT는 iteration 한 번에 픽셀 하나당 correlation 값을 몇 개 읽습니까?
+@@ 51
+level마다 (2·4 + 1) × (2·4 + 1) = 81 격자이고, level이 네 개이므로 324입니다.
+@@ 52
+Q7. DBA cost (13.11)에서 confidence map w의 역할은 무엇입니까?
+@@ 53
+각 픽셀이 요청한 flow 변화가 Gauss-Newton step에서 얼마나 강하게 반영되는지 정합니다
+@@ 54
+frame이 keyframe이 될 확률입니다
+@@ 55
+measurement function의 Jacobian을 대체합니다
+@@ 56
+사용자에게 보고하는 depth 불확실성입니다
+@@ 57
+가중치는 normal equations에 W로 들어갑니다. network가 믿지 않는 픽셀은 pose와 depth update에 거의 영향을 주지 않습니다.
+@@ 58
+Q8. DUSt3R는 두 번째 이미지에 대해 X(2,1)을 출력합니다. 그 점들은 어느 좌표 frame에 있습니까?
+@@ 59
+카메라 2의 frame
+@@ 60
+dataset의 첫 이미지로 고정한 world frame
+@@ 61
+카메라 1의 frame
+@@ 62
+이미지 2의 정규화된 이미지 좌표
+@@ 63
+한 쌍의 두 pointmap은 모두 첫 번째 이미지의 frame으로 표현되며, 그래서 relative pose를 복원할 수 있습니다 (p. 388).
+@@ 64
+<strong>warp와 induced flow.</strong> 카메라의 \(f = 600\) px, principal point는 \((320, 240)\)입니다. 이미지 1의 픽셀 \((380, 240)\)의 depth는 3 m입니다. 카메라 2는 같은 방향으로 카메라 1의 0.3 m 오른쪽에 있습니다. (a) 이 픽셀은 이미지 2의 어디에 떨어지고, induced flow는 얼마입니까? (b) depth를 6 m로 잘못 잡으면 어디에 떨어집니까?
+@@ 65
+(a) back-project: \(X = d\,(x - c_x)/f = 3 \cdot 60/600 = 0.3\) m이므로 점은 frame 1에서 \((0.3, 0, 3)\)입니다. frame 2에서는 \((0.3 - 0.3, 0, 3) = (0, 0, 3)\)입니다. 투영: \(x^2 = 600 \cdot 0/3 + 320 = 320\). 픽셀은 \((320, 240)\)에 떨어지고 induced flow는 \((-60, 0)\) px입니다. 확인: \(f b / d = 600 \cdot 0.3 / 3 = 60\).
+@@ 66
+(b) \(d = 6\)이면 \(X = 6 \cdot 60/600 = 0.6\)이고, 점은 \((0.6, 0, 6)\), frame 2에서 \((0.3, 0, 6)\)이며, \(x^2 = 600 \cdot 0.3/6 + 320 = 350\)입니다. flow는 \(-30\) px가 됩니다. view-synthesis loss는 이미지 1의 380을 이미지 2의 320이 아니라 350과 비교하게 되고, 일반적으로 다른 밝기를 보게 됩니다.
+@@ 67
+<strong>correlation과 lookup.</strong> 1-D 이미지 두 장이 각각 픽셀 세 개와 2-channel feature를 가집니다. 이미지 1: \((1, 0)\), \((0, 1)\), \((0.6, 0.8)\). 이미지 2: \((0, 1)\), \((0.8, 0.6)\), \((1, 0)\). (a) \(3 \times 3\) correlation volume을 계산하십시오. (b) 이미지 1의 각 픽셀은 이미지 2의 어느 픽셀과 가장 잘 맞고, 이는 어떤 flow를 뜻합니까? (c) 이미지 1의 픽셀 3의 현재 flow는 \(-0.5\)입니다. \(r = 0\)인 lookup은 어떤 값을 돌려줍니까?
+@@ 68
+(a) 각 원소는 내적입니다:
+@@ 69
+(b) 행 최댓값: 픽셀 1 → 픽셀 3 (1.0), flow \(+2\). 픽셀 2 → 픽셀 1 (1.0), flow \(-1\). 픽셀 3 → 픽셀 2 (0.96), flow \(-1\).
+@@ 70
+(c) 현재 match는 \(3 - 0.5 = 2.5\)에 있습니다. \(\mathbf{C}[3][2] = 0.96\)과 \(\mathbf{C}[3][3] = 0.6\) 사이의 linear interpolation은 \(0.5 \cdot 0.96 + 0.5 \cdot 0.6 = 0.78\)입니다. radius가 더 크면 lookup은 1.5와 3.5의 값도 돌려주고, update operator는 위치가 작아지는 쪽으로 correlation이 커진다는 것을 보게 됩니다.
+@@ 71
+<strong>confidence-weighted Gauss-Newton.</strong> \(f = 500\) px인 카메라가 미지의 \(\Delta\)(미터)만큼 옆으로 이동합니다. 그러면 depth \(d_k\)의 픽셀은 flow가 \(J_k \Delta\)만큼 바뀌며, \(J_k = -f/d_k\)입니다. 세 픽셀의 depth는 2, 5, 10 m이고, network는 flow 변화 \(\delta f = (-5.0, -2.1, -4.0)\) px를 요청합니다. (a) 가중치가 같을 때 \(\Delta\)를 구하십시오. (b) 가중치 \((1, 1, 0.1)\)로 다시 구하십시오. (c) 실제 움직임은 0.02 m였습니다. 어느 픽셀이 outlier였고, (a)에서도 피해가 제한적이었던 이유는 무엇입니까?
+@@ 72
+Jacobian은 \(J = (-250, -100, -50)\) px/m입니다. 미지수 하나에 대한 weighted normal equation은 \(\Delta = \sum_k w_k J_k\, \delta f_k / \sum_k w_k J_k^2\)입니다.
+@@ 73
+(a) 분자: \(250 \cdot 5 + 100 \cdot 2.1 + 50 \cdot 4 = 1250 + 210 + 200 = 1660\). 분모: \(62500 + 10000 + 2500 = 75000\). \(\Delta = 0.0221\) m.
+@@ 74
+(b) 분자: \(1250 + 210 + 20 = 1480\). 분모: \(62500 + 10000 + 250 = 72750\). \(\Delta = 0.0203\) m.
+@@ 75
+(c) 0.02 m 움직임은 flow 변화 \((-5, -2, -1)\)을 예측합니다. 세 번째 픽셀은 \(-4\)를 요청했으므로 outlier입니다. 이 픽셀은 멀리 있어서 Jacobian이 작고, 가까운 픽셀의 \(62500\)에 비해 \(J^2 = 2500\)으로 합에 들어갑니다. 먼 점은 이동을 약하게만 제약합니다. 이 픽셀의 가중치를 낮추면 남은 오차 대부분이 사라져, 0.0021 m에서 0.0003 m로 줄어듭니다.
+@@ 76
+<strong>DUSt3R의 loss.</strong> 2-D에서 계산합니다. ground-truth 점: \((0, 2)\), \((0, 4)\), \((3, 4)\). (a) 예측은 \((0, 3)\), \((0, 6)\), \((4.5, 6)\)입니다. 각 점의 \(\ell_{\text{regr}}\)를 계산하십시오. (b) 세 번째 예측이 대신 \((0, 7.5)\)입니다. 세 loss를 다시 계산하십시오. (c) \(\alpha = 0.5\)일 때, (13.17)은 (b)의 세 번째 점과 \(\ell = 0.1\)인 점에 각각 어떤 confidence를 선호합니까? 그때 각 점은 loss에 얼마를 기여합니까?
+@@ 77
+(a) ground-truth 거리는 2, 4, 5이므로 \(\bar{z} = 11/3 = 3.667\)입니다. 예측 거리는 3, 6, 7.5이므로 \(z = 16.5/3 = 5.5\)입니다. 모든 예측 점이 실제값의 1.5배이고 \(z = 1.5\,\bar{z}\)이므로, 정규화된 점이 일치하고 세 loss 모두 0입니다.
+@@ 78
+(b) 예측 거리는 여전히 3, 6, 7.5이므로 \(z = 5.5\) 그대로입니다. 정규화된 예측: \((0, 0.545)\), \((0, 1.091)\), \((0, 1.364)\). 정규화된 실제값: \((0, 0.545)\), \((0, 1.091)\), \((0.818, 1.091)\). 처음 두 loss는 0입니다. 세 번째는 \(\sqrt{0.818^2 + 0.273^2} = \sqrt{0.669 + 0.074} = 0.862\)입니다.
+@@ 79
+(c) 점 하나에 대해 \(C\ell - \alpha \log C\)는 \(C = \alpha/\ell\)이 1보다 클 때 그 값에서 최소입니다. 세 번째 점: \(\alpha/\ell = 0.5/0.862 = 0.58\)로 1보다 작으므로, network는 \(C\)를 하한 1 쪽으로 몰고, 이 점은 약 \(0.862\)를 기여합니다. \(\ell = 0.1\)인 점은 \(C = 5\)를 얻고 \(5 \cdot 0.1 - 0.5 \ln 5 = 0.5 - 0.805 = -0.305\)를 기여합니다.
+@@ 80
+"differentiable"이 주는 이점 설명하기: 이미지나 pose에서 잰 loss로, 앞단에서 depth, pose, 가중치를 만든 것이 무엇이든 학습시킬 수 있다.
+@@ 81
+view-synthesis 아이디어를 한 줄로 쓰기: depth와 pose로 한 이미지를 다른 이미지로부터 다시 그리고, 그 차이에 penalty를 준다. 다음 주의 map도 같은 방식으로 학습합니다.
+@@ 82
+softmax와 가중 평균을 손으로 계산하기.
+@@ 83
+weighted least-squares step을 세워서 풀고, DROID-SLAM에서 가중치가 어디서 오는지 말하기.
+@@ 84
+pointmap을 정의하고, DUSt3R의 loss가 global scale을 무시하는 이유 말하기.
+@@ 85
+DVSO, D3VO, DROID-SLAM, DPVO, DUSt3R 각각에서 무엇을 학습하고 무엇을 여전히 최적화하는지 말하기.
+@@ 86
+<em>SLAM Handbook</em>, Prelude to Part III, pp. 361–365, 그리고 13장 "Boosting SLAM with Deep Learning", pp. 366–396.
+@@ 87
+Hartley, Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (문제의 투영과 disparity).
+@@ 88
+Nocedal, Wright, <em>Numerical Optimization</em>, 2006 (weighted Gauss-Newton step).

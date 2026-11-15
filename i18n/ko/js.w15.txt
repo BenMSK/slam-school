@@ -1,0 +1,272 @@
+@@ w15
+"aria-label":"Top: events of a 60-pixel event camera plotted as pixel against time while a bright bar moves across. Bottom: the pixel values of three frames taken by a 30 Hz frame camera of the same scene."
+==
+"aria-label":"위: 밝은 막대가 지나가는 동안 60픽셀 event camera의 event를 픽셀 대 시간으로 그린 그림. 아래: 같은 장면을 30 Hz frame camera로 찍은 frame 세 장의 픽셀 값."
+@@ w15
+"Event camera: every event at its pixel (→) and time (↓)"
+==
+"Event camera: 각 event를 픽셀(→)과 시간(↓) 위치에 표시"
+@@ w15
+"Frame camera: 8-bit pixel values of its three frames"
+==
+"Frame camera: frame 세 장의 8-bit 픽셀 값"
+@@ w15
+(k?"":"pixel ")
+==
+(k?"":"픽셀 ")
+@@ w15
+stat("Events in 100 ms",
+==
+stat("100 ms 동안의 event",
+@@ w15
+stat("Events per edge, per pixel",
+==
+stat("edge당·픽셀당 event",
+@@ w15
+stat("Blur in one frame",
+==
+stat("frame 하나의 blur",
+@@ w15
+"speed × exposure"
+==
+"속도 × 노출 시간"
+@@ w15
+stat("Jump between frames",
+==
+stat("frame 사이 이동",
+@@ w15
+"speed ÷ 30 Hz"
+==
+"속도 ÷ 30 Hz"
+@@ w15
+stat("Bar minus background",(lv(1)-lv(DARK))+" of 255","grey levels in a sharp frame")
+==
+stat("막대 − 배경",(lv(1)-lv(DARK))+" / 255","선명한 frame의 grey level")
+@@ w15
+h("div",{class:"vt"},"Event camera and frame camera, same scene")
+==
+h("div",{class:"vt"},"같은 장면을 보는 event camera와 frame camera")
+@@ w15
+"A bright bar (10 times brighter than the background, edges 3 pixels wide) moves to the right across 60 pixels for 100 ms. Each pixel applies equation (10.1)."
+==
+"밝은 막대(배경보다 10배 밝고 edge 폭은 3픽셀)가 100 ms 동안 60픽셀을 가로질러 오른쪽으로 움직입니다. 각 픽셀은 식 (10.1)을 적용합니다."
+@@ w15
+range("Speed",
+==
+range("속도",
+@@ w15
+range("Exposure time",
+==
+range("노출 시간",
+@@ w15
+select("Scene light",[["1","normal"],["0.01","100 times dimmer"],["100","100 times brighter"]]
+==
+select("장면 조명",[["1","보통"],["0.01","100배 어둡게"],["100","100배 밝게"]]
+@@ w15
+[ON,"ON event (brighter)"],[OFF,"OFF event (darker)"],["var(--c2)","frame: exposure band (top), pixel values (bottom)"]
+==
+[ON,"ON event (밝아짐)"],[OFF,"OFF event (어두워짐)"],["var(--c2)","frame: 노출 구간 (위), 픽셀 값 (아래)"]
+@@ w15
+"aria-label":"The events of a moving bar with a time window marked, and below it the same window as an event frame, a time surface, and a four-bin voxel grid, each drawn as a row of 60 pixels."
+==
+"aria-label":"움직이는 막대의 event와 표시된 time window. 그 아래에 같은 window를 event frame, time surface, bin 네 개의 voxel grid로 나타냈으며, 각각 60픽셀 한 줄로 그림."
+@@ w15
+"All events (pixel →, time ↓). The shaded band is the window that gets converted."
+==
+"모든 event (픽셀 →, 시간 ↓). 음영 띠가 변환되는 window입니다."
+@@ w15
+"Event frame: sum of polarities per pixel over the window"
+==
+"Event frame: window 동안 픽셀별 polarity의 합"
+@@ w15
+"Time surface: exp(−(now − time of the pixel's last event) / τ)"
+==
+"Time surface: exp(−(현재 − 픽셀의 마지막 event 시각) / τ)"
+@@ w15
+"Voxel grid: "+B+" time bins across the window, oldest on top"
+==
+"Voxel grid: window를 time bin "+B+"개로 나눔, 오래된 bin이 위"
+@@ w15
+stat("Events in the window",String(win.length),"from "+Math.max(0,t0)+" to "+now+" ms")
+==
+stat("window 안의 event",String(win.length),Math.max(0,t0)+"–"+now+" ms")
+@@ w15
+stat("Pixels with ON and OFF",
+==
+stat("ON과 OFF를 모두 받은 픽셀",
+@@ w15
+"their polarities cancel in the event frame"
+==
+"event frame에서 polarity가 상쇄됨"
+@@ w15
+stat("Largest |sum| in the event frame",String(mf),"per-edge count is 7")
+==
+stat("event frame의 최대 |합|",String(mf),"edge당 개수는 7")
+@@ w15
+stat("Timing kept",(D/(B-1)).toFixed(1)+" ms","voxel bin spacing; the event frame keeps none")
+==
+stat("남는 시간 정보",(D/(B-1)).toFixed(1)+" ms","voxel bin 간격. event frame에는 없음")
+@@ w15
+h("div",{class:"vt"},"Three ways to turn events into an array")
+==
+h("div",{class:"vt"},"event를 배열로 바꾸는 세 가지 방법")
+@@ w15
+"The bar of Day 1 at 0.5 px/ms with C = 0.30. Pink is positive, blue is negative, violet is the time surface; stronger colour means larger value."
+==
+"Day 1의 막대, 0.5 px/ms, C = 0.30. 분홍은 양수, 파랑은 음수, 보라는 time surface이며, 색이 진할수록 값이 큽니다."
+@@ w15
+range("Now",
+==
+range("현재 시각",
+@@ w15
+range("Window length",
+==
+range("window 길이",
+@@ w15
+range("Decay τ",
+==
+range("감쇠 τ",
+@@ w15
+"aria-label":"Top: events drawn at their warped pixel position against time. Bottom: the image of warped events, the number of events that land on each pixel."
+==
+"aria-label":"위: warp된 픽셀 위치와 시간에 따라 그린 event. 아래: image of warped events, 즉 각 픽셀에 떨어진 event 수."
+@@ w15
+"Events after the warp x′ = x − θ (t − 30 ms). Warped pixel →, time ↓"
+==
+"warp x′ = x − θ (t − 30 ms) 뒤의 event. warp된 픽셀 →, 시간 ↓"
+@@ w15
+"Image of warped events: how many events land on each pixel"
+==
+"Image of warped events: 각 픽셀에 떨어진 event 수"
+@@ w15
+"tallest column: "+m.toFixed(1)+" events"
+==
+"가장 높은 기둥: event "+m.toFixed(1)+"개"
+@@ w15
+"pixel 0"
+==
+"픽셀 0"
+@@ w15
+aria:"Variance of the image of warped events as a function of the candidate speed. It has one sharp peak near 0.6 pixels per millisecond."
+==
+aria:"후보 속도에 따른 image of warped events의 분산. 0.6 px/ms 근처에 뾰족한 정점이 하나 있음."
+@@ w15
+label:"candidate speed θ (px/ms)"
+==
+label:"후보 속도 θ (px/ms)"
+@@ w15
+label:"variance"
+==
+label:"분산"
+@@ w15
+name:"variance of the IWE"
+==
+name:"IWE의 분산"
+@@ w15
+"Candidate speed θ"
+==
+"후보 속도 θ"
+@@ w15
+stat("Variance of the IWE",f(th).toFixed(1),"the objective")
+==
+stat("IWE의 분산",f(th).toFixed(1),"objective")
+@@ w15
+stat("Best θ on the curve",best.x.toFixed(2)+" px/ms","variance "+best.y.toFixed(1))
+==
+stat("곡선 위 최적 θ",best.x.toFixed(2)+" px/ms","분산 "+best.y.toFixed(1))
+@@ w15
+stat("True speed",VT.toFixed(2)+" px/ms",ev.length+" events, "+(ev.length-sig.length)+" of them noise")
+==
+stat("실제 속도",VT.toFixed(2)+" px/ms","event "+ev.length+"개 중 noise "+(ev.length-sig.length)+"개")
+@@ w15
+"Drag θ, or press Climb to let a local search do it."
+==
+"θ를 끌어 보거나, 언덕 오르기를 눌러 local search에 맡기세요."
+@@ w15
+"Climb from θ = "+from.toFixed(2)+": stopped at θ = "+t.toFixed(2)+" after "+n+" evaluations of the variance."
+==
+"θ = "+from.toFixed(2)+"에서 언덕 오르기: 분산을 "+n+"번 계산한 뒤 θ = "+t.toFixed(2)+"에서 멈춤."
+@@ w15
+h("div",{class:"vt"},"Contrast maximization in one dimension")
+==
+h("div",{class:"vt"},"1차원 contrast maximization")
+@@ w15
+"Two bars of different brightness move at an unknown constant speed for 60 ms. Every event is slid along a line of slope θ to where it would have been at 30 ms, and the slid events are counted per pixel."
+==
+"밝기가 다른 두 막대가 알 수 없는 일정한 속도로 60 ms 동안 움직입니다. 각 event를 기울기 θ인 직선을 따라 30 ms에 있었을 자리로 밀어 옮기고, 옮긴 event를 픽셀마다 셉니다."
+@@ w15
+range("Noise events",
+==
+range("noise event",
+@@ w15
+"% extra"
+==
+"% 추가"
+@@ w15
+button("Climb",
+==
+button("언덕 오르기",
+@@ w15
+button("Reset θ to 0",
+==
+button("θ를 0으로 초기화",
+@@ w15
+"aria-label":"Top view of a ground-truth path and an estimated path that contains one wrong turn, after the estimate has been rigidly aligned to the ground truth. Short lines join matching poses."
+==
+"aria-label":"ground truth 경로와 잘못된 회전이 한 번 들어간 추정 경로를 위에서 본 그림. 추정 경로는 ground truth에 rigid alignment한 상태이며, 짧은 선이 서로 대응하는 pose를 잇습니다."
+@@ w15
++" steps"
+==
++" step"
+@@ w15
+"after rigid alignment"
+==
+"rigid alignment 후"
+@@ w15
+stat("RPE translation (RMSE)",
+==
+stat("RPE 이동 (RMSE)",
+@@ w15
+"over 40 consecutive pairs"
+==
+"연속한 40쌍에 대해"
+@@ w15
+stat("Largest single RPE",
+==
+stat("가장 큰 단일 RPE",
+@@ w15
+"the glitch step; all others are 0"
+==
+"잘못된 step. 나머지는 모두 0"
+@@ w15
+stat("End-point error",
+==
+stat("끝점 오차",
+@@ w15
+"start poses matched, no alignment"
+==
+"시작 pose만 맞춤, alignment 없음"
+@@ w15
+h("div",{class:"vt"},"One wrong turn: ATE against RPE")
+==
+h("div",{class:"vt"},"잘못된 회전 한 번: ATE 대 RPE")
+@@ w15
+"A 40-step path (unit steps, one 90° bend). The estimate copies the true motion except for one extra turn at one step."
+==
+"40 step 경로 (step 길이 1, 90° 꺾임 한 번). 추정값은 한 step에서 추가 회전이 한 번 있는 것 말고는 실제 움직임을 그대로 따릅니다."
+@@ w15
+range("Size of the wrong turn",
+==
+range("잘못된 회전의 크기",
+@@ w15
+range("It happens at step",
+==
+range("일어나는 step",
+@@ w15
+"estimate, aligned (dot: the glitch)"
+==
+"추정, 정렬됨 (점: 잘못된 회전)"
+@@ w15
+"error at each pose"
+==
+"각 pose의 오차"

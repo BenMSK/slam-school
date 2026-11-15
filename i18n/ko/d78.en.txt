@@ -1,0 +1,172 @@
+@@ 1
+<span class="eyebrow">Week 13 · Review</span>
+@@ 2
+Week 13 review: LiDAR SLAM from pulse to pose graph
+@@ 3
+After today you can go from a time-of-flight measurement to a registered scan, a place descriptor, and a loop-closed pose graph, and do the small calculations at each step by hand.
+@@ 4
+A LiDAR times laser pulses to get ranges and pairs them with beam angles to get a point cloud, dense nearby and sparse far away, gathered over a sweep of about 0.1 s. Scan registration finds the rigid motion between two clouds: in closed form by SVD when the pairs are known, and by ICP, alternating nearest-neighbour matching with alignment, when they are not. Point-to-plane, GICP, and NDT change what "distance" means. A LiDAR odometry system wraps registration with motion compensation, feature selection or fast search, and a local map, and drifts by roughly 0.1% of the distance travelled. Place recognition describes whole scans so that revisits can be detected without trusting the drifted pose. Verified loop closures enter a pose graph, whose optimization redistributes the error over the trajectory, after which the map is updated to match.
+@@ 5
+Range from time of flight; gap between neighbouring points
+@@ 6
+§8.1, p. 225 · Day 1
+@@ 7
+Registration cost
+@@ 8
+(8.1), p. 228 · Day 2
+@@ 9
+Closed form for known pairs (point-to-point)
+@@ 10
+Horn's method, p. 227 · derived on Day 2
+@@ 11
+The same in 2D
+@@ 12
+Day 2
+@@ 13
+ICP correspondences
+@@ 14
+(8.3), p. 230 · Day 2
+@@ 15
+Point-to-plane residual and Jacobian row, \(\mathbf{m}_i = \mathbf{R}^{0\mathsf{T}}\mathbf{n}_i\)
+@@ 16
+Figure 8.3c, p. 229 · Day 2
+@@ 17
+Deskewing with constant velocity \(\boldsymbol{\varpi}\)
+@@ 18
+§8.2.2.1, p. 232 · Day 3
+@@ 19
+Neighbourhood covariance; edge, plane
+@@ 20
+\(\mathbf{C} = \tfrac1K\sum_j(\mathbf{x}_j-\bar{\mathbf{x}})(\mathbf{x}_j-\bar{\mathbf{x}})\T\); edge \(\lambda_1 \gg \lambda_2\); plane \(\lambda_2 \gg \lambda_3\)
+@@ 21
+§8.2.2.2, pp. 233–234 · Day 3
+@@ 22
+Polar descriptor distance; heading from the best shift \(n^\ast\)
+@@ 23
+§8.3.2.2, p. 239 · Day 4
+@@ 24
+Share of a loop-closure discrepancy \(e\) taken by step \(k\)
+@@ 25
+§8.4.2, p. 244 · Day 5
+@@ 26
+Q1. A surface is 45 m from a time-of-flight LiDAR. How long after emission does the echo arrive?
+@@ 27
+150 ns
+@@ 28
+300 ns
+@@ 29
+450 ns
+@@ 30
+30 ns
+@@ 31
+Δt = 2d/c = 90/(3×10⁸) = 3×10⁻⁷ s = 300 ns.
+@@ 32
+Q2. A wall facing a 3D LiDAR is moved from 10 m to 20 m. What happens to the number of points per square metre on it?
+@@ 33
+It drops to a quarter
+@@ 34
+The gap between neighbours is rΔθ in both the horizontal and the vertical direction. Doubling r doubles both gaps, so the density falls by a factor of four.
+@@ 35
+Q3. In the closed-form alignment you find det(VUᵀ) = −1. What does that mean, and what do you do?
+@@ 36
+VUᵀ is a reflection; use V diag(1, 1, −1) Uᵀ instead
+@@ 37
+The pairs are wrong; restart ICP
+@@ 38
+The rotation is 180°; negate t
+@@ 39
+H is singular; no solution exists
+@@ 40
+An orthogonal matrix with determinant −1 mirrors the cloud. Flipping the sign of the direction with the smallest singular value gives the best proper rotation.
+@@ 41
+Q4. Which statement about point-to-point ICP is true?
+@@ 42
+Its cost can rise during the matching step
+@@ 43
+It reaches zero cost whenever the scans show the same scene
+@@ 44
+Neither half-step can increase the cost, yet it may stop at a wrong alignment
+@@ 45
+It needs surface normals
+@@ 46
+Matching picks the closest partner for the current estimate and alignment is an exact minimization, so the cost is monotone. Convergence is to a local minimum that depends on the starting guess.
+@@ 47
+Q5. A sensor turns at 20°/s without translating; one sweep takes 0.1 s. Uncompensated, about how far sideways is a point at 20 m range displaced if it was measured at the very end of the sweep?
+@@ 48
+7 cm
+@@ 49
+The sensor has turned 2° = 0.0349 rad by the end of the sweep, and 20 m × 0.0349 = 0.70 m. Rotation errors grow with range.
+@@ 50
+Q6. A neighbourhood covariance has eigenvalues 0.9, 0.002, and 0.001. What kind of point is this, and which eigenvector is useful?
+@@ 51
+Planar; the smallest, as the normal
+@@ 52
+Scatter; none
+@@ 53
+Planar; the largest, as the normal
+@@ 54
+Edge; the largest, as the direction of the edge
+@@ 55
+One dominant eigenvalue means the points lie along a line. Its eigenvector is the line direction.
+@@ 56
+Q7. A polar descriptor has 24 sectors. The robot revisits a place with its heading changed by 135°. Which column shift should give the best match?
+@@ 57
+One sector is 360°/24 = 15°, and 135°/15° = 9 columns (or 24 − 9 = 15 counted the other way round).
+@@ 58
+Q8. Four odometry steps have equal variance. An exact loop closure shows the total is 1.2 m too long. By how much does the pose reached after the second step move?
+@@ 59
+0.3 m back
+@@ 60
+0.6 m back
+@@ 61
+1.2 m back
+@@ 62
+It does not move
+@@ 63
+Each step is shortened by 1.2/4 = 0.3 m. The pose after two steps has accumulated two corrections: 0.6 m.
+@@ 64
+A 2D LiDAR has an angular step of 0.25° and spins at 10 Hz on a vehicle driving at 12 m/s. (a) How many points does one scan contain? (b) What is the echo delay for a wall at 60 m? (c) How far apart are neighbouring points on that wall if it faces the sensor? (d) How far does the vehicle move during one scan?
+@@ 65
+(a) 360/0.25 = 1440 points. (b) \(\Delta t = 2d/c = 120/(3\times10^8) = 4\times10^{-7}\) s = 400 ns. (c) \(s \approx r\Delta\theta = 60 \times 0.25 \times \pi/180 = 0.262\) m. (d) One scan takes 0.1 s, so 12 × 0.1 = 1.2 m. That is more than four times the point spacing at 60 m, which is why the scan has to be deskewed.
+@@ 66
+Three pairs are given: \(\mathbf{q}_1 = (1, 0)\), \(\mathbf{q}_2 = (-1, 0)\), \(\mathbf{q}_3 = (0, 3)\) and \(\mathbf{p}_1 = (2, 0)\), \(\mathbf{p}_2 = (2, 2)\), \(\mathbf{p}_3 = (5, 1)\). Find the rotation angle \(\theta\) and translation \(\mathbf{t}\) with \(\mathbf{p}_i = \mathbf{R}(\theta)\mathbf{q}_i + \mathbf{t}\).
+@@ 67
+Centroids: \(\bar{\mathbf{q}} = (0, 1)\), \(\bar{\mathbf{p}} = (3, 1)\). Centred points: \(\mathbf{q}' = (1,-1),\ (-1,-1),\ (0, 2)\) and \(\mathbf{p}' = (-1,-1),\ (-1, 1),\ (2, 0)\).
+@@ 68
+\(\theta = \operatorname{atan2}(-8, 0) = -90^\circ\). A rotation by −90° sends \((x, y)\) to \((y, -x)\), so \(\mathbf{R}\bar{\mathbf{q}} = (1, 0)\) and \(\mathbf{t} = \bar{\mathbf{p}} - \mathbf{R}\bar{\mathbf{q}} = (2, 1)\). Check: \(\mathbf{R}\mathbf{q}_3 + \mathbf{t} = (3, 0) + (2, 1) = (5, 1) = \mathbf{p}_3\).
+@@ 69
+A 2D scan is matched to two walls with point-to-plane ICP. The current estimate is \(\mathbf{R}^0 = \mathbf{I}\), \(\mathbf{t}^0 = \mathbf{0}\), and the rotation is known to be correct, so only the translation update \(\boldsymbol{\rho}\) is solved for. Three pairs lie on a wall with normal \((1, 0)\) and have residual \(r^0 = 0.2\) m each. Two pairs lie on a wall with normal \((0, 1)\) and have \(r^0 = -0.1\) m each. (a) Find \(\boldsymbol{\rho}\). (b) What changes if the first wall is not visible?
+@@ 70
+(a) With \(\mathbf{R}^0 = \mathbf{I}\), \(\mathbf{m}_i = \mathbf{n}_i\) and the translation part of the Jacobian row is \(\mathbf{J}_i = -\mathbf{n}_i\T\). The normal equations are \(\big(\sum_i \mathbf{n}_i\mathbf{n}_i\T\big)\boldsymbol{\rho} = \sum_i \mathbf{n}_i r_i^0\):
+@@ 71
+Check: the new residuals are \(r_i^0 - \mathbf{n}_i\T\boldsymbol{\rho} = 0.2 - 0.2 = 0\) and \(-0.1 + 0.1 = 0\).
+@@ 72
+(b) The matrix becomes \(\begin{bmatrix} 0 & 0 \\ 0 & 2 \end{bmatrix}\), which is singular. The second component is still \(-0.1\), but the first is undetermined: sliding along the remaining wall changes no residual. This is the corridor degeneracy, and no number of extra points on that wall cures it.
+@@ 73
+A robot makes four odometry steps \(u = (5, 5, 5, 5)\) m with variances \((0.01, 0.01, 0.04, 0.04)\) m². A loop closure measures the displacement from the first pose to the last as \(z = 19.0\) m with variance \(\sigma_L^2 = 0.02\) m². (a) Find the corrected poses. (b) How much disagreement is left on the loop-closure edge, and why is it not zero? (c) What happens as \(\sigma_L^2 \to \infty\)?
+@@ 74
+(a) \(e = z - \sum u_k = 19 - 20 = -1\). The denominator is \(0.01 + 0.01 + 0.04 + 0.04 + 0.02 = 0.12\), so
+@@ 75
+The corrected steps are \(4.917, 4.917, 4.667, 4.667\), and the poses are \(0,\ 4.917,\ 9.833,\ 14.5,\ 19.167\).
+@@ 76
+(b) The corrected total is 19.167 m, so the loop-closure edge keeps a residual of \(19.0 - 19.167 = -0.167\) m \(= e\,\sigma_L^2/0.12\). The loop closure is itself noisy, so it takes a share of the disagreement in proportion to its own variance, like every other edge.
+@@ 77
+(c) All \(\delta_k \to 0\): a measurement with unbounded variance carries no information, and the odometry-only solution is kept. In the other limit, \(\sigma_L^2 \to 0\), the corrections sum to exactly \(e\).
+@@ 78
+Convert a time delay to a range and a (range, angle) pair to a point, and say how point spacing scales with range.
+@@ 79
+Write the registration cost (8.1), solve it for known pairs, and describe the two half-steps of ICP and why it needs a good initial guess.
+@@ 80
+Explain what the point-to-plane residual ignores, and why a corridor makes its normal equations singular.
+@@ 81
+Deskew a point given its time stamp and a constant velocity.
+@@ 82
+Explain how a polar descriptor turns a heading change into a column shift, and what invariance and awareness mean.
+@@ 83
+Describe what happens between a place-recognition candidate and an updated map.
+@@ 84
+<em>SLAM Handbook</em>, Chapter 8 "LiDAR SLAM", pp. 224–249.
+@@ 85
+Arun, Huang, Blostein, <em>Least-squares fitting of two 3-D point sets</em>, 1987; Umeyama, <em>Least-squares estimation of transformation parameters between two point patterns</em>, 1991.
+@@ 86
+Kim and Kim, <em>Scan Context: Egocentric spatial descriptor for place recognition within 3D point cloud map</em>, 2018.

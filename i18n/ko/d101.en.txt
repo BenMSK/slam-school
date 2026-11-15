@@ -1,0 +1,236 @@
+@@ 1
+<span class="eyebrow">Week 17 · Day 5</span>
+@@ 2
+Visual-inertial odometry in practice
+@@ 3
+After today you can describe the sliding-window factor graph of a visual-inertial odometry system, marginalize a state out of it, and explain how first-estimate Jacobians keep the estimator from inventing information about yaw.
+@@ 4
+About 60 min · Read §11.4.1 to §11.5, pp. 326–332 (6 pages, mostly prose) · Needs Week 17 Day 3 and Week 16 Day 4
+@@ 5
+Read first: §11.4.1–§11.5, pp. 326–332
+@@ 6
+These pages read quickly. While you read, look for:
+@@ 7
+The latency a VIO has to meet, and why (pp. 326–327).
+@@ 8
+In Figure 11.4, the four kinds of factor and which variables each one touches (p. 327).
+@@ 9
+What a fixed-lag smoother does with states that leave the window, and the drawback of the iSAM2 alternative (p. 327).
+@@ 10
+What drift the book calls good, and the numbers of the KAIST example (pp. 327–329).
+@@ 11
+Offline against online calibration, and three ways to synchronize sensors (pp. 329–330).
+@@ 12
+A visual-inertial odometry system is the preintegration factor graph of Week 16 with vision factors added, solved over a short sliding window so that the answer arrives within milliseconds. States that leave the window are marginalized into a prior. That prior is frozen at old linearization points, and if newer factors on the same variables are linearized elsewhere, the estimator gains information about global yaw that no sensor supplied. The observability analysis of Day 3 is what detects this and what fixes it.
+@@ 13
+1. What a VIO has to deliver
+@@ 14
+A VIO is used as the odometry source inside control loops and in virtual-reality headsets, and both need the estimate with very low delay, typically 10–50 ms. The book's example is a headset that refreshes between 72 and 120 times per second: that is one frame every \(1/72 \approx 13.9\) ms to \(1/120 \approx 8.3\) ms. A late pose shows the user a world that lags behind the head, and in a controller a long delay can destabilize tracking. <span class="src">§11.4.1 · pp. 326–327</span>
+@@ 15
+So the estimator cannot optimize the whole trajectory at every frame. It has to bound its work.
+@@ 16
+2. The factor graph
+@@ 17
+Figure 11.4 shows the graph. Each keyframe has three variable nodes: a pose (6 numbers), a velocity (3), and a bias pair (6). That is 15 per keyframe, the IMU error state of <a href="#d97">Day 1</a>. Landmarks add 3 each. <span class="src">§11.4.1 · p. 327, Fig. 11.4</span>
+@@ 18
+Connects
+@@ 19
+From
+@@ 20
+Preintegrated IMU
+@@ 21
+pose, velocity and bias of keyframe \(i\) with pose and velocity of keyframe \(i+1\)
+@@ 22
+9 numbers, (11.31)
+@@ 23
+<a href="#d94">Week 16 · Day 4</a>
+@@ 24
+bias \(i\) and bias \(i+1\)
+@@ 25
+6 numbers, (11.34)
+@@ 26
+Projection (vision)
+@@ 27
+one pose and one landmark
+@@ 28
+2 numbers per camera
+@@ 29
+<a href="#d63">Week 11 · Day 3</a>
+@@ 30
+Prior
+@@ 31
+the oldest states
+@@ 32
+as many as it constrains
+@@ 33
+fixes the gauge of Day 3; holds marginalized information
+@@ 34
+<strong>Size.</strong> A window of 10 keyframes that sees 100 landmarks has \(10 \times 15 + 100 \times 3 = 450\) unknowns. Many implementations eliminate the landmarks with the Schur complement (<a href="#d69">Week 12 · Day 3</a>), which leaves a dense system of only 150 unknowns to factor. <span class="src">§11.4.1 · p. 327</span>
+@@ 35 attr
+Six keyframe states x0 to x5 in a row, joined by IMU factors. Three landmarks above are joined to the keyframes that see them. A dashed frame encloses x1 to x5, the sliding window. State x0 is outside the frame and drawn dashed: it has been marginalized, and a prior factor attached to x1 holds what it knew.
+@@ 36
+marginalized
+@@ 37
+prior left by x0
+@@ 38
+sliding window
+@@ 39
+landmarks
+@@ 40
+A sliding window. Each circle stands for the pose, velocity, and bias of one keyframe; violet squares are preintegrated IMU factors; amber lines are projection factors. When x0 leaves the window, everything its factors knew about the remaining variables is kept as a prior factor.
+@@ 41
+3. Fixed-lag smoothing and marginalization
+@@ 42
+Factor-graph VIO systems usually run a <strong>fixed-lag smoother</strong>, also called <strong>sliding-window optimization</strong>: only the states of a receding horizon, for example the last 5 to 10 seconds, are optimized. A longer horizon is more accurate and costs more. States and factors that fall out of the horizon are <strong>marginalized</strong>. <span class="src">§11.4.1 · p. 327</span>
+@@ 43
+Filling the gap: what marginalizing a state does to the information matrix
+@@ 44
+Split the unknowns into the part to remove (\(m\)) and the part to keep (\(r\)). The linearized factors that touch \(m\) give an information matrix in blocks. Marginalizing is the Schur complement of <a href="#d15">Week 3 · Day 3</a>:
+@@ 45
+<strong>Smallest example.</strong> Two scalar positions \(x_0, x_1\). A prior on \(x_0\) with variance 0.25 (information 4) and an odometry factor \(x_1 - x_0 = u\) with variance 1 (information 1) give
+@@ 46
+The variance of \(x_1\) is \(1/0.8 = 1.25 = 0.25 + 1\): the two variances add, as they should along a chain.
+@@ 47
+<strong>Marginalization keeps unobservable directions unobservable.</strong> Suppose \(\boldsymbol{\Lambda}\mathbf{u} = \mathbf{0}\) with \(\mathbf{u} = (\mathbf{u}_m, \mathbf{u}_r)\). The first block row says \(\mathbf{u}_m = -\boldsymbol{\Lambda}_{mm}^{-1}\boldsymbol{\Lambda}_{mr}\mathbf{u}_r\). Insert that into the second block row, \(\boldsymbol{\Lambda}_{rm}\mathbf{u}_m + \boldsymbol{\Lambda}_{rr}\mathbf{u}_r = \mathbf{0}\), and you get \(\boldsymbol{\Lambda}_{\text{prior}}\mathbf{u}_r = \mathbf{0}\). The prior has the same null direction, restricted to the variables that remain. Without the prior on \(x_0\) in the example, \(\boldsymbol{\Lambda} = \begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}\) has the null vector \((1, 1)\) and \(\Lambda_{\text{prior}} = 1 - 1 = 0\): nothing is known about \(x_1\) alone.
+@@ 48
+The alternative the book mentions is an incremental solver such as iSAM2 (<a href="#d17">Week 3 · Day 5</a>), which keeps the whole history and reuses earlier computation. It can be very accurate, but its run time per update is not bounded and can spike, which a latency-critical system cannot accept. <span class="src">§11.4.1 · p. 327</span>
+@@ 49
+4. Consistency and first-estimate Jacobians
+@@ 50
+The book introduces observability analysis partly as a tool "to improve estimation consistency", and its example system is named after the technique: First-Estimate Jacobian (FEJ) window bundle adjustment. <span class="src">§11.3 · p. 320; §11.4.1 · p. 328</span> It does not explain the mechanism. Here it is.
+@@ 51
+An estimator is <strong>consistent</strong> when the covariance it reports matches the errors it actually makes. An inconsistent estimator is usually overconfident: it reports a small covariance and then trusts new measurements too little.
+@@ 52
+Filling the gap: how a sliding window invents information
+@@ 53
+A marginalization prior is a quadratic built from Jacobians evaluated at the estimates of that moment. Call them estimate A. The original factors are gone, so the prior can never be relinearized. Later, new factors arrive that involve some of the same variables, and Gauss-Newton linearizes them at the current estimates. Call them estimate B.
+@@ 54
+Now look at the yaw null vector of Day 3. Its blocks are \(-\mathbf{p}\times\mathbf{g}\) and \(-\mathbf{p}_f\times\mathbf{g}\): they contain the values of the variables themselves. The prior's information matrix has the null vector built from A. The new factors have the null vector built from B. If A and B differ, no single vector is in both nullspaces, and the sum of the two information matrices has no yaw null vector at all. Its rank has gone up by one. The estimator now holds a finite variance for global yaw, although no sensor measured it. That is information from nowhere, and it makes the estimator overconfident.
+@@ 55
+The three shift vectors contain only identity blocks. They do not depend on the linearization point, so they survive.
+@@ 56
+<strong>The fix.</strong> For every variable that takes part in the prior, keep evaluating Jacobians at the estimate that was used when the prior was built, its "first estimate", even though the variable's value keeps being updated. Then all factors share one null vector and yaw stays unobservable. The price is a slightly less accurate linearization.
+@@ 57
+Try it: a window of 2-D poses and landmarks after the first pose has been marginalized. Move the slider to zero and back, then switch on first-estimate Jacobians.
+@@ 58
+Notice: with the slider at zero, A and B coincide and three eigenvalues are zero (x, y, yaw). As soon as the estimate has moved, only two are zero and a third small eigenvalue appears: the estimator now "knows" its global yaw. With first-estimate Jacobians the third zero comes back for any slider value.
+@@ 59
+5. How good is it?
+@@ 60
+The book lists widely used systems (a visual-inertial ORB-SLAM, Direct Sparse Visual-Inertial Odometry, VINS-Mono, OpenVINS, Kimera, BASALT, DM-VIO) and gives a yardstick: a good VIO drifts by less than 1% of the distance travelled, and in some cases as little as 0.1%. <span class="src">§11.4.1 · pp. 327–328</span>
+@@ 61
+Its worked example is a sliding-window FEJ system on a 36-minute, 11.42 km drive through a city (KAIST urban dataset, sequence 38), with a camera at 10 Hz and an IMU at 100 Hz, so ten IMU samples are preintegrated per frame. With no loop closure, the final error is about 2.05° and 21.2 m, which the book states as 0.18% of the distance. <span class="src">§11.4.1 · pp. 328–329, Fig. 11.5</span>
+@@ 62
+6. Calibration and time synchronization
+@@ 63
+<strong>Extrinsic calibration</strong> is the estimation of the relative pose between sensors, for example the camera with respect to the IMU. Every measurement model this week assumed it known. <span class="src">§11.4.2 · p. 329</span>
+@@ 64
+For
+@@ 65
+Against
+@@ 66
+Offline
+@@ 67
+a procedure before deployment: a calibration target, a known motion pattern, or prior knowledge of the environment
+@@ 68
+generally more accurate
+@@ 69
+takes time, equipment, and trained operators
+@@ 70
+Online
+@@ 71
+the extrinsic parameters are added to the estimated state
+@@ 72
+no procedure; adapts if a sensor shifts
+@@ 73
+can be less accurate; the problem gets harder and may become ill-posed
+@@ 74
+"Ill-posed" is this week's subject again: the extrinsics are extra unknowns, and for some motions they are unobservable.
+@@ 75
+<strong>Temporal synchronization</strong> makes sure all sensors agree on when each measurement was taken. A time offset that is not accounted for corrupts the trajectory estimate and can bias benchmark results. <span class="src">§11.4.3 · pp. 329–330</span> The size of the effect is plain kinematics: if an image is stamped \(t_d\) too late, the estimator pairs it with a pose that is off by about \(\mathbf{v}\,t_d\) in position and \(\boldsymbol{\omega}\,t_d\) in angle. At 10 m/s and \(t_d = 5\) ms that is 5 cm; at a turn rate of 100°/s it is 0.5°.
+@@ 76
+The book lists the options: a hardware trigger that fires all sensors from one clock; a clock-synchronization protocol such as PTP over Ethernet; time-stamping at the sensor and aligning afterwards, which is less accurate and robust; or, when none of these is possible, estimating the time offset as one more state variable. <span class="src">§11.4.3 · p. 330</span>
+@@ 77
+7. Where the field is going
+@@ 78
+Trend (§11.5, pp. 330–332)
+@@ 79
+Idea in one line
+@@ 80
+Extended pose preintegration
+@@ 81
+better uncertainty models for preintegration, including Earth rotation (Coriolis and centrifugal terms)
+@@ 82
+Continuous-time state representations
+@@ 83
+B-splines or Gaussian-process priors (<a href="#d27">Week 5 · Day 3</a>) absorb high-rate IMU data without adding state variables
+@@ 84
+Proprioception-only odometry
+@@ 85
+knowledge of the robot's kinematics, such as foot contacts or a wheel-mounted IMU, constrains the drift
+@@ 86
+Inertial-only odometry
+@@ 87
+learned models reduce drift when vision drops out; generalization to new sensors and motions is still limited
+@@ 88
+Ultra-efficient VIO at the edge
+@@ 89
+on small devices, moving data costs more energy than computing; quantized and square-root filters help
+@@ 90
+<strong>"States that leave the window are thrown away."</strong> They are marginalized: what they implied about the remaining states stays, as a prior factor.
+@@ 91
+<strong>"First-estimate Jacobians freeze the estimate."</strong> The estimate keeps moving. Only the point at which the Jacobians are evaluated is held, and only for variables tied to the prior.
+@@ 92
+<strong>"A drift of 0.18% means the pose is accurate to 0.18%."</strong> It is the final position error divided by the path length, without loop closure. The error keeps growing with distance.
+@@ 93
+Q1. A sliding window holds 8 keyframes and 60 point landmarks. How many unknowns does the optimizer have before any elimination?
+@@ 94
+\(8 \times 15 = 120\) for poses, velocities, and biases, plus \(60 \times 3 = 180\) for the landmarks.
+@@ 95
+Q2. Scalar states \(x_0, x_1\). A prior on \(x_0\) has variance 1, the odometry factor between them has variance 1. After marginalizing \(x_0\), what is the information on \(x_1\)?
+@@ 96
+\(\boldsymbol{\Lambda} = \begin{bmatrix} 2 & -1 \\ -1 & 1 \end{bmatrix}\), so \(\Lambda_{\text{prior}} = 1 - (-1)\cdot\tfrac12\cdot(-1) = 0.5\). The variance is 2, the sum of the two variances.
+@@ 97
+Q3. Why does a latency-critical VIO usually prefer a fixed-lag smoother to iSAM2?
+@@ 98
+Its work per update is bounded, while iSAM2 can have run-time spikes
+@@ 99
+It is more accurate than iSAM2
+@@ 100
+iSAM2 cannot use IMU factors
+@@ 101
+It needs no marginalization
+@@ 102
+The window has a fixed size, so each solve costs about the same. iSAM2 can be very accurate but gives no guarantee on latency.
+@@ 103
+Q4. In a sliding window without first-estimate Jacobians, which unobservable direction is typically lost, and why that one?
+@@ 104
+Global position, because its null vectors are identity blocks
+@@ 105
+Scale, because the IMU measures it
+@@ 106
+Yaw, because its null vector depends on the linearization point
+@@ 107
+Roll and pitch, because gravity changes
+@@ 108
+The yaw null vector contains the positions themselves. A prior linearized at one estimate and new factors linearized at another do not share it. The shift null vectors are the same at every linearization point.
+@@ 109
+Q5. A camera's time stamps are 10 ms late on a vehicle moving at 20 m/s. Roughly how large is the position error this introduces for each image?
+@@ 110
+0.2 mm
+@@ 111
+A VIO must answer within about 10–50 ms, so it optimizes a sliding window of recent keyframes: 15 unknowns per keyframe plus 3 per landmark.
+@@ 112
+Its factors are preintegrated IMU, bias, projection, and prior factors.
+@@ 113
+States leaving the window are marginalized with a Schur complement, which preserves unobservable directions.
+@@ 114
+Mixing linearization points for one variable destroys the yaw null vector and makes the estimator overconfident. First-estimate Jacobians prevent it.
+@@ 115
+Good systems drift by well under 1% of the distance travelled. Extrinsic calibration and time synchronization have to be right for that.
+@@ 116
+<em>SLAM Handbook</em>, §11.4.1–§11.4.3 and §11.5, pp. 326–332, Figures 11.4 and 11.5.
+@@ 117
+The inconsistency mechanism and first-estimate Jacobians follow Huang, Mourikis, Roumeliotis, <em>Observability-based Rules for Designing Consistent EKF SLAM Estimators</em>, 2010.
+@@ 118
+The marginalization algebra follows Barfoot, <em>State Estimation for Robotics</em>, 2017.

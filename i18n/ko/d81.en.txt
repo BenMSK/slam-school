@@ -1,0 +1,238 @@
+@@ 1
+<span class="eyebrow">Week 14 · Day 3</span>
+@@ 2
+Radar odometry: ego-velocity from Doppler, and matching scans
+@@ 3
+After today you can estimate a sensor's velocity from the Doppler readings of one radar scan by least squares, reject moving objects, and compare the Doppler, direct, feature-based and registration-based families of radar odometry.
+@@ 4
+About 60 min · Read §9.2, pp. 261–268 (8 pages) · Needs Week 6 Day 2
+@@ 5
+Read first: §9.2, pp. 261–268
+@@ 6
+The typical drift of spinning-radar odometry and the word "correspondence-free" (p. 261).
+@@ 7
+The Doppler factor example on pp. 263–264: what the state vector contains, and equations (9.11)–(9.14).
+@@ 8
+For each of §9.2.2, §9.2.3 and §9.2.4 (pp. 265–268): what exactly is matched between two scans.
+@@ 9
+The size of the improvement from motion compensation (p. 268).
+@@ 10
+Every static point in a radar scan reports how fast the sensor is closing in on it. That is one linear equation in the sensor's velocity, and one scan holds dozens of them, so the velocity comes out of a small least-squares problem with no matching between scans at all. Rotation is invisible to this trick and position still has to be integrated, so radar also uses the scan-matching methods you know from LiDAR, adapted to sparser and noisier data.
+@@ 11
+1. One scan, one velocity
+@@ 12
+<strong>Radar odometry</strong> estimates the sensor's own motion (its <strong>egomotion</strong>) from a sequence of radar readings. Like every odometry it drifts: methods for spinning radar accumulate on the order of 1–2% of translational drift per 100 m. <span class="src">§9.2 · p. 261</span>
+@@ 13
+The radar-specific method uses the Doppler reading of each point. Let \(\mathbf{v}^s\) be the velocity of the sensor, written in the sensor frame, and \(\mathbf{r}^s\) the vector from the sensor to a target. If the target is static, its Doppler reading is the projection of the sensor velocity on the direction to the target: <span class="src">§9.2.1 · p. 264</span>
+@@ 14
+Filling the gap: where the dot product comes from, and its sign
+@@ 15
+Let the sensor be at position \(\mathbf{s}(t)\) and a static target at \(\mathbf{p}\). The range is \(r = \norm{\mathbf{p} - \mathbf{s}}\), so \(r^2 = (\mathbf{p}-\mathbf{s})\T(\mathbf{p}-\mathbf{s})\). Differentiate both sides with respect to time, using \(\dot{\mathbf{p}} = \mathbf{0}\) and \(\dot{\mathbf{s}} = \mathbf{v}\):
+@@ 16
+The range shrinks at the rate \(\mathbf{u}\T\mathbf{v}\). Equation (9.13) therefore describes a Doppler reading that is positive when sensor and target approach each other: a <strong>closing speed</strong>. A sensor that reports the range rate \(\dot r\) instead (positive when the range grows, the convention of Day 1) gives the same number with the opposite sign. Check which one your sensor uses before fitting anything.
+@@ 17
+In a 2D scan a point at azimuth \(\theta\) has direction \(\mathbf{u} = (\cos\theta, \sin\theta)\), so the reading of point \(i\) is
+@@ 18
+where \(\beta\) is the direction of travel. Plotted against azimuth, the readings of all static points lie on one cosine. Its height is the speed and its peak is at the direction of travel. In 3D, with elevation \(\phi\), the direction is \(\mathbf{u} = (\cos\phi\cos\theta,\ \cos\phi\sin\theta,\ \sin\phi)\) and there are three unknowns.
+@@ 19
+Stack the directions as rows of a matrix \(\mathbf{A}\) and the readings in a vector \(\mathbf{y}\). The velocity is the least-squares solution from <a href="#d4">Week 1 · Day 4</a>:
+@@ 20
+where \(\sigma\) is the standard deviation of the Doppler noise.
+@@ 21
+<strong>Worked example.</strong> Three static points at azimuths 0°, 60° and −60° read 10.000, 6.732 and 3.268 m/s. The rows of \(\mathbf{A}\) are \((1, 0)\), \((0.5, 0.866)\), \((0.5, -0.866)\).
+@@ 22
+The sensor moves at 10 m/s forward and 2 m/s to the left. Now squeeze the same three points into a narrow view, at 0° and ±10°. Then \(\mathbf{A}\T\mathbf{A} = \diag(1 + 2\cos^2 10°,\ 2\sin^2 10°) = \diag(2.94,\ 0.060)\). The sideways variance is \(2.94/0.060 = 49\) times the forward one, so the sideways velocity is 7 times less certain. A narrow field of view sees forward speed well and sideways speed badly.
+@@ 23
+2. Moving objects are outliers
+@@ 24
+The model assumes every target is static. A point on a moving car breaks it: its reading contains the car's velocity too, and it falls off the cosine. Least squares has no defence against such points (<a href="#d31">Week 6 · Day 1</a>). The book names two remedies. One is RANSAC (<a href="#d32">Week 6 · Day 2</a>) followed by least squares on the inliers; in 3D a sample is three points, because there are three unknowns and each point gives one equation. <span class="src">§9.2.1 · p. 262</span> The other is a robust loss on the Doppler residual, the Cauchy loss in the book's example (<a href="#d34">Week 6 · Day 4</a>). <span class="src">§9.2.1 · p. 265</span>
+@@ 25
+Try it: the right panel plots each point's closing speed against its azimuth. Press "Reject outliers", then narrow the field of view to 60°.
+@@ 26
+Notice: at the start the true velocity is (9.40, 3.42) m/s and plain least squares returns about (10.79, 7.36), more than 4 m/s off, because a quarter of the points sit on two moving cars. After outlier rejection 45 of the 60 points are kept and the estimate is within 0.1 m/s. With the field of view at 60°, the one-sigma uncertainty of the leftward component roughly doubles (0.029 to 0.056 m/s) while the forward one barely moves, as in the worked example.
+@@ 27
+The points RANSAC throws away are useful in their own right: they mark the moving objects. Several pipelines use the Doppler fit as a filter and remove those points before registration or place recognition. <span class="src">§9.2.4 · p. 268</span>
+@@ 28
+3. What Doppler cannot see, and the factor-graph version
+@@ 29
+Spin a radar on the spot. No range to any static point changes, so every Doppler reading is zero. <strong>Rotational velocity is not observable</strong> from the per-point velocities of a single radar, unless something is assumed about how the vehicle moves. <span class="src">§9.2.1 · pp. 262–263</span> The usual fix is a gyroscope. A registration-free combination of Doppler and IMU gave the lowest error in a comparison on 3+1D radar, with drift as low as 0.3% over 4.5 km. <span class="src">§9.2.1 · p. 263</span>
+@@ 30
+Filling the gap: how a mounting offset makes rotation visible
+@@ 31
+The other fix uses rigid-body kinematics. If the vehicle has velocity \(\mathbf{v}_b\) at a reference point and turns with angular velocity \(\boldsymbol{\omega}\), a sensor mounted at offset \(\boldsymbol{\ell}\) from that point moves with
+@@ 32
+In the plane, with yaw rate \(\omega\) and \(\boldsymbol{\ell} = (\ell_x, \ell_y)\), the extra term is \(\omega\,(-\ell_y,\ \ell_x)\). So a radar away from the reference point does feel the rotation, as an extra velocity.
+@@ 33 attr
+Top view of a car. The rear axle centre moves straight forward with speed v. The radar is mounted a distance l ahead of it. Because the car is turning with yaw rate omega, the radar has the same forward speed v plus a sideways speed omega times l.
+@@ 34
+rear axle centre
+@@ 35
+radar
+@@ 36
+v forward
+@@ 37
+ω·ℓ sideways
+@@ 38
+yaw rate ω
+@@ 39
+A car that does not skid has no sideways velocity at the rear axle. Any sideways velocity the radar measures must then come from turning.
+@@ 40
+That is the idea behind estimating yaw rate from one radar on a car with Ackermann steering when the mounting point is known. <span class="src">§9.2.1 · p. 263</span> With the radar 2 m ahead of the rear axle and a fitted sideways velocity of 0.4 m/s, the yaw rate is \(\omega = 0.4/2 = 0.2\) rad/s. The same coupling appears when the radar and the IMU are not at the same place. <span class="src">§9.2.1 · p. 265</span>
+@@ 41
+The book's worked example estimates velocity over a sliding window of \(K\) radar scans, with IMU measurements linking consecutive states. The state is \(\mathbf{x} = \begin{bmatrix}\mathbf{v}^{s\top} & \mathbf{q}^{w\top}_s & \mathbf{b}\T\end{bmatrix}\T\): the velocity, the orientation quaternion, and the IMU bias. <span class="src">§9.2.1 · pp. 263–264</span> The cost is
+@@ 42
+with the Doppler error of target \(d\) in scan \(k\) and its weight
+@@ 43
+Piece
+@@ 44
+Why it is there
+@@ 45
+e<sub>d,k</sub>, equation (9.14)
+@@ 46
+Measured Doppler minus the Doppler predicted from the velocity state: the residual of section 1
+@@ 47
+Each target is a unary factor on the velocity of scan k. The book applies the Cauchy robust loss to it
+@@ 48
+w<sub>d,k</sub>, equation (9.12)
+@@ 49
+The intensity of the target divided by the summed intensity of the scan
+@@ 50
+Strong returns are trusted more than weak ones
+@@ 51
+Inertial term
+@@ 52
+IMU error between scans k and k+1, weighted by W<sub>k</sub>
+@@ 53
+Integrated accelerometer readings connect consecutive velocities
+@@ 54
+Bias b in the state
+@@ 55
+Slowly varying offset of the IMU
+@@ 56
+Radar velocities have no bias, so the IMU bias becomes observable
+@@ 57
+Orientation q in the state
+@@ 58
+Attitude of the sensor: pitch and roll matter
+@@ 59
+The accelerometer also feels gravity, and removing it requires knowing which way is down
+@@ 60
+This is a factor graph in the sense of <a href="#d7">Week 2 · Day 1</a>: a chain of states, binary IMU factors between neighbours, and many unary Doppler factors on each state (Figure 9.9).
+@@ 61
+4. Matching scans: three families
+@@ 62
+Velocity must be integrated to get position, and rotation needs help. The other families estimate the relative pose between nearby scans by finding what the scans have in common. <span class="src">§9.2 · pp. 261–262</span>
+@@ 63
+How the relative pose is found
+@@ 64
+Watch out for
+@@ 65
+Direct, §9.2.2
+@@ 66
+The raw radargram
+@@ 67
+Correlation. A rotation of the sensor is a shift of the polar image along its azimuth axis, so phase correlation gives the rotation; correlating the Cartesian images then gives the translation. A learned variant masks out the parts of the radargram that are not stable
+@@ 68
+Assumes the power returned from a place stays the same over time. Moving objects and noise artifacts break this
+@@ 69
+Feature-based, §9.2.3
+@@ 70
+Keypoints with descriptors, as in vision (SIFT, SURF, ORB, or radar-specific ones)
+@@ 71
+Match descriptors, reject outliers with RANSAC, then align the matched points in closed form with the SVD (<a href="#d74">Week 13 · Day 2</a>)
+@@ 72
+Tolerates a poor initial guess, but descriptors are harder to make repeatable in radar. Learned features need training data with ground-truth poses
+@@ 73
+Registration-based, §9.2.4
+@@ 74
+A point cloud from CFAR, BFAR or k-strongest filtering
+@@ 75
+ICP- or NDT-style registration, usually against several previous keyframes or a submap
+@@ 76
+Too few points lose information and too many bring in noise. Association by proximity needs a good initial guess
+@@ 77
+Why register against several keyframes and not just the last scan? Radar clouds are sparse and noisy, so a single pair is fragile. More keyframes give more correspondences, which adds constraints in feature-poor places, and they give redundancy in time, so a sudden occlusion or a moving object has less effect. <span class="src">§9.2.4 · p. 267</span> CFEAR is the book's main example. It keeps the k strongest returns per azimuth, registers each new cloud jointly against the \(s\) most recent keyframes with a point-to-point, point-to-line or point-to-distribution error, and weights each match by the agreement of the normal vectors, the planarity, and the number of points nearby. <span class="src">§9.2.4 · p. 267</span>
+@@ 78
+For 3+1D radar the two worlds combine. The Doppler least-squares velocity of section 1 is the initial estimate and registration refines it. One method weights points by a covariance that grows with distance from the sensor, because azimuth and elevation are coarse (Day 2). Another matches each point to a weighted set of nearby distributions to cope with sparse clouds. <span class="src">§9.2.4 · p. 268</span>
+@@ 79
+5. Motion compensation
+@@ 80
+Day 2 showed that a 4 Hz scan is smeared by the vehicle's own motion. Correcting it with a constant-velocity model is reported to reduce the absolute trajectory error by 29% for such a sensor. <span class="src">§9.2.5 · p. 268</span> The recipe: take the relative pose between the last two scans and their time stamps, divide to get a velocity, and move every point according to its own time stamp.
+@@ 81
+Filling the gap: the correction for one point
+@@ 82
+Let the scan be referred to the time \(t_{\text{ref}}\), and let a point \(\mathbf{p}_i\) be measured \(\Delta t_i = t_i - t_{\text{ref}}\) later, in the sensor frame of that later moment. If the sensor moves with constant velocity \(\mathbf{v}\) and yaw rate \(\omega\), then by time \(t_i\) it has turned by \(\omega\Delta t_i\) and moved by about \(\mathbf{v}\Delta t_i\). Expressed in the frame at \(t_{\text{ref}}\), the point is, to first order in \(\Delta t_i\),
+@@ 83
+where \(\mathbf{R}(\cdot)\) is a 2D rotation matrix. At 4 Hz and 15 m/s straight ahead, the last point of the sweep has \(\Delta t_i = 0.25\) s and moves by 3.75 m. The same velocity also predicts where the next scan will be, which gives registration its initial guess. <span class="src">§9.2.5 · p. 268</span>
+@@ 84
+This is still a discrete-pose approach. A continuous-time trajectory (a spline or a Gaussian process, <a href="#d25">Week 5 · Day 1</a>) can be queried at the exact time of every measurement and gives a smoother result. <span class="src">§9.2.5 · p. 268</span>
+@@ 85
+<strong>"Doppler odometry needs matching between scans."</strong> It needs none. The velocity comes from a single scan, which is why the book calls it correspondence-free.
+@@ 86
+<strong>"More points always fix a bad fit."</strong> Not if they are moving objects. Sixty points with fifteen outliers gave an error above 4 m/s in the widget. Reject first, then fit.
+@@ 87
+<strong>"A radar gives the full 6-DoF motion from Doppler."</strong> Doppler gives linear velocity. Rotation needs a gyroscope, a kinematic assumption with a known mounting offset, or scan matching.
+@@ 88
+<strong>"CFEAR and CFAR are the same thing."</strong> CFAR is a detection filter (Day 2). CFEAR is an odometry method.
+@@ 89
+Q1. A sensor drives straight ahead at 12 m/s. What closing speed does it measure for a static point at azimuth 60°?
+@@ 90
+The reading is the projection on the direction to the point: 12 × cos 60° = 6 m/s.
+@@ 91
+Q2. A radar sits exactly on the vehicle's rotation centre, and the vehicle turns on the spot. Why do the Doppler readings say nothing about the turn?
+@@ 92
+Turning does not change the range to any static point
+@@ 93
+The Doppler shift of rotation is above the aliasing limit
+@@ 94
+Static points have zero radar cross section while turning
+@@ 95
+The readings cancel on average over 360°
+@@ 96
+Doppler measures the rate of change of range. A pure rotation about the sensor leaves every range unchanged, so every reading is zero.
+@@ 97
+Q3. All detections of a forward-looking radar lie within ±10° of straight ahead. Which part of the velocity estimate is least certain?
+@@ 98
+The forward speed
+@@ 99
+Both equally
+@@ 100
+Neither: the fit is exact
+@@ 101
+The sideways speed
+@@ 102
+The sideways velocity enters each equation through sin θ, which is at most 0.17 here. The matching entry of AᵀA is small, so its inverse, the variance, is large.
+@@ 103
+Q4. Why does RANSAC on a 3+1D radar scan draw three points per sample?
+@@ 104
+Three points define a plane
+@@ 105
+The velocity has three unknown components and each point gives one equation
+@@ 106
+Three is the number of moving objects expected
+@@ 107
+Each point has three coordinates
+@@ 108
+A minimal sample has as many equations as unknowns. Each Doppler reading is one linear equation in the three components of the velocity.
+@@ 109
+Q5. A radar rotates at 4 Hz on a vehicle driving at 20 m/s. Without motion compensation, how far apart are the positions from which the first and last azimuth of one scan were taken?
+@@ 110
+One rotation takes 1/4 s. In that time the vehicle moves 20 × 0.25 = 5 m.
+@@ 111
+A static point's Doppler reading is the sensor velocity projected on the direction to the point. Across azimuth the readings form a cosine.
+@@ 112
+Stacking the directions gives a linear least-squares problem for the velocity. Its covariance \(\sigma^2(\mathbf{A}\T\mathbf{A})^{-1}\) shows which components the field of view supports.
+@@ 113
+Moving objects are outliers. RANSAC or a robust loss removes them, and the rejected points identify the movers.
+@@ 114
+Rotation is not observable from one radar's Doppler alone. Add a gyroscope, a kinematic model, or scan matching.
+@@ 115
+Direct, feature-based and registration-based methods align scans. Radar versions register to several keyframes and compensate for motion during the scan.
+@@ 116
+<em>SLAM Handbook</em>, Ch. 9, §9.2 "Radar Odometry", pp. 261–268, equations (9.11)–(9.14), Figures 9.8–9.9.
+@@ 117
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (linear least squares and its covariance).
+@@ 118
+Lynch and Park, <em>Modern Robotics</em>, 2017 (velocity of a point on a rotating rigid body).
+@@ 119
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (velocity motion model used for the constant-velocity correction).

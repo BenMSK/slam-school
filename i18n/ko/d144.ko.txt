@@ -1,0 +1,458 @@
+@@ 1
+<span class="eyebrow">24주차 · 복습</span>
+@@ 2
+24주차 복습: 계산 구조, Part III, 그리고 코스 전체
+@@ 3
+오늘이 끝나면 Gaussian belief propagation과 이번 주의 다른 계산들을 손으로 풀고, Part III의 모든 장을 하나의 표에 배치하고, factor graph에서 Spatial AI 시스템에 이르는 길을 기억만으로 그릴 수 있습니다.
+@@ 4
+18장은 Spatial AI가 SLAM의 연장이라고 주장합니다. 기기는 persistent하고 metric에 가까운 world model을 유지하고, closed loop 안에서 모든 측정값을 그 모델과 대조합니다. 제품은 크기, 비용, 전력을 제한하고, Dennard scaling이 무너지면서 single-core 속도가 더 이상 오르지 않으므로, 계산은 데이터 이동이 적은 다수의 단순한 장치에 퍼져야 합니다. 이 설계는 문제 속의 각 graph에 그에 맞는 하드웨어를 줍니다. 스스로 유지 관리하는 map store, real-time loop, 그리고 센서에서의 처리입니다. Gaussian belief propagation은 이에 맞는 추정 알고리즘입니다. local message만 필요하고 어떤 schedule도 견디며, 같은 factor graph 안에서 학습까지 담을 수 있기 때문입니다. 성공은 십여 개의 지표로 한꺼번에, trade-off로 읽어서 판단해야 합니다.
+@@ 5
+측정값 하나 더 fusion하기
+@@ 6
+\(\Lambda \leftarrow \Lambda + 1/\sigma^2,\ \ \eta \leftarrow \eta + z/\sigma^2\); 가중치가 같으면 \(\mu_{n} = \mu_{n-1} + (z_n - \mu_{n-1})/n\)
+@@ 7
+§18.3, p. 528에 대한 앱의 보충 · <a href="#d140">Day 2</a>
+@@ 8
+스위칭 전력과 Dennard scaling
+@@ 9
+\(P = CV^2f\). \(k\)분의 1로 축소: \(V \to V/k\)이면 전력 밀도 \(\times 1\); \(V\) 고정, \(f \to kf\)이면 \(\times k^2\)
+@@ 10
+§18.4.1, pp. 528–529의 개념 · <a href="#d140">Day 2</a>
+@@ 11
+한 pose에서 본 두 landmark의 상관계수
+@@ 12
+§18.5.1.1, p. 535에 대한 앱의 보충 · <a href="#d141">Day 3</a>
+@@ 13
+local 평균
+@@ 14
+\(x_i \leftarrow x_i + \sum_j w_{ij}(x_j - x_i)\), \(w_{ij} = \dfrac{1}{1+\max(d_i,d_j)}\); 평균으로 수렴
+@@ 15
+§18.5.3, p. 539에 대한 앱의 보충 · <a href="#d141">Day 3</a>
+@@ 16
+information form의 linear factor
+@@ 17
+§18.6에 대한 앱의 보충 · <a href="#d142">Day 4</a>
+@@ 18
+GBP belief, 그리고 variable에서 factor로 가는 message
+@@ 19
+\(\boldsymbol{\Lambda}_{b(x)} = \sum_f \boldsymbol{\Lambda}_{f\to x}\); \(\ \boldsymbol{\Lambda}_{x\to f} = \boldsymbol{\Lambda}_{b(x)} - \boldsymbol{\Lambda}_{f\to x}\) (\(\boldsymbol{\eta}\)도 마찬가지)
+@@ 20
+§18.6, p. 541에 대한 앱의 보충 · <a href="#d142">Day 4</a>
+@@ 21
+GBP의 factor에서 variable로 가는 message
+@@ 22
+들어온 message를 factor에 더한 뒤 \(\boldsymbol{\Lambda}_{aa} - \boldsymbol{\Lambda}_{ab}\boldsymbol{\Lambda}_{bb}^{-1}\boldsymbol{\Lambda}_{ba}\)와 \(\boldsymbol{\eta}_a - \boldsymbol{\Lambda}_{ab}\boldsymbol{\Lambda}_{bb}^{-1}\boldsymbol{\eta}_b\)
+@@ 23
+odometry factor를 지나는 message
+@@ 24
+평균 \(\mu_{\text{in}} \pm z\), 분산 \(\sigma_{\text{in}}^2 + \sigma^2\)
+@@ 25
+=
+@@ 26
+=
+@@ 27
+\(A\)가 모든 지표에서 나쁘지 않고 하나에서 더 나으면 \(A\)가 \(B\)를 dominate
+@@ 28
+§18.8, p. 546의 용어 · <a href="#d143">Day 5</a>
+@@ 29
+2. 종합 퀴즈: 24주차
+@@ 30
+Q1. 다음 중 §18.2의 Spatial AI 시스템 여섯 가지 성질에 <em>속하지 않는</em> 것은 무엇입니까?
+@@ 31
+들어오는 모든 시각 데이터를 예측 모델과 대조함
+@@ 32
+map 전체를 항상 최고 품질로 유지함
+@@ 33
+world model이 적어도 국소적으로는 metric에 가까움
+@@ 34
+센서와 저전력 처리 장치가 이동하는 기기에 embedded되어 있음
+@@ 35
+성질 5는 그 반대를 말합니다. 기기가 보고 있고 곧 행동할 곳만 최고 품질로 두고, 나머지는 다시 방문할 때 높일 수 있는 낮은 품질 수준으로 저장합니다.
+@@ 36
+Q2. 카메라가 landmark 9개가 시야에 있는 저장된 map에 대해 tracking하고, 측정 noise는 σ = 0.06입니다. 위치 추정값에 새로 생기는 noise의 표준편차는 얼마입니까?
+@@ 37
+독립 측정값 9개를 평균하면 σ가 √9로 나뉩니다: 0.06/3 = 0.02.
+@@ 38
+Q3. 추정값이 (η, Λ) = (40, 20)으로 저장되어 있습니다. 분산 0.2인 새 측정값 z = 5가 들어옵니다. 새 평균은 얼마입니까?
+@@ 39
+측정값은 Λ = 1/0.2 = 5와 η = 5/0.2 = 25를 더합니다. 새 쌍은 (65, 25)이고, 평균은 65/25 = 2.6입니다.
+@@ 40
+Q4. k = 3인 이상적인 Dennard scaling에서 트랜지스터 하나의 스위칭 전력은 몇 배로 바뀝니까?
+@@ 41
+C → C/3, V² → V²/9, f → 3f이므로 P → P × (1/3)(1/9)(3) = P/9. 면적당 트랜지스터가 아홉 배 들어가므로 전력 밀도는 그대로입니다.
+@@ 42
+Q5. 서로만 연결된 픽셀 프로세서 두 개가 2와 8을 가지고 있습니다. Day 3의 평균 규칙으로 한 round 뒤 두 값은 무엇입니까?
+@@ 43
+4와 6
+@@ 44
+5와 5
+@@ 45
+8과 2
+@@ 46
+3과 7
+@@ 47
+각각 이웃이 하나이므로 가중치는 1/(1 + 1) = 1/2입니다. 첫 번째는 2 + (8 − 2)/2 = 5, 두 번째는 8 + (2 − 8)/2 = 5가 됩니다.
+@@ 48
+Q6. odometry factor의 w = 1/σ² = 3입니다. 한 pose에서 도착한 message의 Λ = 6입니다. factor가 다른 pose에 보내는 message의 Λ는 얼마입니까?
+@@ 49
+Λ = wΛin/(w + Λin) = 18/9 = 2. 분산으로 보면 1/6 + 1/3 = 1/2.
+@@ 50
+Q7. GBP Learning에서 neural network의 weight 역할을 하는 것은 무엇입니까?
+@@ 51
+factor graph 안의 random variable로, 모든 관측이 공유하고 GBP로 추론됨
+@@ 52
+측정 factor의 noise covariance
+@@ 53
+message schedule
+@@ 54
+시스템이 돌기 전에 gradient descent로 정해 둔 상수
+@@ 55
+parameter는 다른 것과 다름없는 variable이고, 입력, 출력, activation은 관측마다 복사되는 variable입니다. graph 위의 inference가 곧 학습입니다.
+@@ 56
+Q8. 네 가지 구성을 (전력, drift)로 나타내면 A = (1 W, 3.0%), B = (2 W, 2.2%), C = (4 W, 1.4%), D = (8 W, 1.3%)입니다. 예산이 5 W일 때 drift가 가장 낮은 것을 고르려면 무엇을 골라야 합니까?
+@@ 57
+넷 모두 Pareto front 위에 있습니다. D는 예산을 넘고, A, B, C 중 drift가 가장 낮은 것은 1.4%인 C입니다.
+@@ 58
+직선 위의 pose 세 개. prior: \(x_0 = 0\), 분산 0.04. odometry: \(x_1 - x_0 = 1.0\), \(x_2 - x_1 = 1.2\), 각각 분산 0.09. GBP를 손으로 돌려 각 belief의 평균과 분산을 구하세요. \(x_0\) 쪽으로 되돌아가는 message가 아무것도 나르지 않는 이유는 무엇입니까?
+@@ 59
+prior가 \(x_0\)에 평균 0, 분산 0.04를 줍니다. 첫 번째 odometry factor를 지나면 평균에 step이 더해지고 분산이 더해집니다. \(x_1\)은 평균 1.0, 분산 \(0.04 + 0.09 = 0.13\)입니다. 두 번째 factor를 지나면 \(x_2\)는 평균 2.2, 분산 \(0.13 + 0.09 = 0.22\)입니다.
+@@ 60
+\(x_2\)가 두 번째 odometry factor에 보내는 message는 \(x_2\)의 belief에서 그 factor가 보낸 것을 뺀 것인데, \(x_2\)에는 다른 factor가 없으므로 0입니다. 정보를 0만큼 받은 factor는 다음으로도 0을 보냅니다 (\(\Lambda = w\cdot 0/(w+0) = 0\)). 하류에 측정값이 없으니 상류에 알릴 것도 없습니다.
+@@ 61
+문제 1에 position fix를 더합니다: \(x_2 = 2.0\), 분산 0.02. \(x_2\)와 \(x_1\)의 새 belief를 계산하세요.
+@@ 62
+<em>\(x_2\)의 belief.</em> 들어오는 message는 두 개입니다. odometry에서 온 것(평균 2.2, 분산 0.22)은 \((\eta,\Lambda) = (10,\ 4.545)\)이고, fix에서 온 것은 \((100,\ 50)\)입니다. 합: \((110,\ 54.545)\). 평균 \(110/54.545 = 2.017\), 분산 \(1/54.545 = 0.0183\).
+@@ 63
+<em>\(x_1\)로 돌아가는 message.</em> \(x_2\)는 두 번째 odometry factor에게 자기 belief에서 그 factor의 message를 뺀 것을 보내는데, 남는 것은 fix입니다: 평균 2.0, 분산 0.02. factor는 이것을 step만큼 빼고 분산을 더해 넘깁니다: 평균 \(2.0 - 1.2 = 0.8\), 분산 \(0.02 + 0.09 = 0.11\).
+@@ 64
+<em>\(x_1\)의 belief.</em> 앞쪽 message(평균 1.0, 분산 0.13)는 \((7.692,\ 7.692)\)이고, 뒤쪽 message(평균 0.8, 분산 0.11)는 \((7.273,\ 9.091)\)입니다. 합: \((14.965,\ 16.783)\). 평균 \(0.892\), 분산 \(0.0596\). \(3\times3\) 연립방정식 \(\boldsymbol{\Lambda}\boldsymbol{\mu} = \boldsymbol{\eta}\)를 직접 풀어도 같은 숫자가 나옵니다. graph에 loop가 없기 때문입니다.
+@@ 65
+픽셀 프로세서 네 개가 고리 모양으로 놓여 각자 두 이웃과 연결되어 있고, 0, 4, 8, 4를 가지고 있습니다. \(w_{ij} = 1/(1+\max(d_i,d_j))\)인 평균 규칙을 써서 한 round 뒤의 값과, 모든 픽셀이 평균의 0.05 이내로 들어올 때까지의 round 수를 구하세요.
+@@ 66
+모든 픽셀의 degree가 2이므로 모든 가중치는 \(1/3\)입니다. 평균은 \(16/4 = 4\)입니다.
+@@ 67
+Round 1: 픽셀 1은 \(0 + \tfrac13(4-0) + \tfrac13(4-0) = 2.67\)이 됩니다. 픽셀 3은 \(8 + \tfrac13(4-8) + \tfrac13(4-8) = 5.33\)이 됩니다. 픽셀 2와 4는 4만큼 낮은 이웃 하나와 4만큼 높은 이웃 하나를 보므로 4에 머뭅니다. 값은 2.67, 4, 5.33, 4이고, 합은 여전히 16입니다.
+@@ 68
+평균에서의 편차는 \((-4, 0, 4, 0)\)에서 \((-1.33, 0, 1.33, 0)\)이 되었습니다. 매 round 편차에 \(1/3\)이 곱해집니다. \(t\) round 뒤 가장 큰 편차는 \(4/3^t\)입니다. \(t = 3\)에서 \(4/27 = 0.148\), \(t = 4\)에서 \(4/81 = 0.049\)입니다. 네 round입니다.
+@@ 69
+(심화.) pose chain에서 GBP의 forward step 하나가 Kalman filter의 predict-and-update step 하나와 같다는 것을 숫자로 보이세요. prior: \(x_0\)은 평균 0, 분산 1. odometry: \(x_1 - x_0 = 1\), 분산 1. position fix: \(x_1 = 3\), 분산 1.
+@@ 70
+<em>Kalman filter.</em> predict: 평균 \(0 + 1 = 1\), 분산 \(1 + 1 = 2\). fix로 update: gain \(K = 2/(2+1) = 2/3\), 평균 \(1 + \tfrac23(3 - 1) = 2.33\), 분산 \((1 - \tfrac23)\cdot 2 = 0.667\).
+@@ 71
+<em>GBP.</em> odometry factor가 \(x_1\)에 보내는 message가 예측입니다: 평균 1, 분산 2, 따라서 \((\eta,\Lambda) = (0.5,\ 0.5)\). fix는 \((3,\ 1)\)을 보냅니다. belief는 그 합 \((3.5,\ 1.5)\)입니다: 평균 \(3.5/1.5 = 2.33\), 분산 \(1/1.5 = 0.667\).
+@@ 72
+factor에서 variable로 가는 message가 predict step이고, fix의 message를 더하는 것이 information form으로 쓴 update step입니다. chain을 따라 뒤로 보내는 message는 filter를 smoother로 바꿉니다. <a href="#d3">1주차 · Day 3</a>과 비교해 보세요.
+@@ 73
+4. Part III 복습: 19–24주차
+@@ 74
+Part III는 SLAM이 해결되었는지 묻는 것으로 시작했고, 작고 정적이며 feature가 풍부한 실내 scene에서만 그렇다고 답했습니다. <span class="src">Prelude III · p. 361</span> 각 장은 제약 하나를 없애거나 능력 하나를 더했습니다.
+@@ 75
+주차
+@@ 76
+Part I, II의 SLAM에 더하는 것
+@@ 77
+간직할 아이디어
+@@ 78
+=
+@@ 79
+학습된 depth, matching, optical flow; differentiable bundle adjustment; pointmap
+@@ 80
+network가 측정값과 그 confidence를 공급할 수 있습니다. 그것을 fusion하는 것은 여전히 factor graph입니다.
+@@ 81
+=
+@@ 82
+rendering해서 이미지와 비교하는 방식으로 최적화되는 map
+@@ 83
+rendering이 differentiable하면 photometric error로 map과 pose를 함께 학습할 수 있습니다.
+@@ 84
+=
+@@ 85
+움직이는 물체, 방문 사이에 변하는 scene, 변형되는 표면
+@@ 86
+정적인 세계가 없으면 시스템은 무엇을 지우고, 무엇을 tracking하고, 무엇을 갱신할지 결정해야 합니다.
+@@ 87
+=
+@@ 88
+landmark로서의 object, dense map 위의 label, 계층적 3D scene graph
+@@ 89
+semantics는 factor graph에 이산 미지수를, map에 추상화의 층을 더합니다.
+@@ 90
+=
+@@ 91
+foundation model의 feature를 map에 저장; open-vocabulary query
+@@ 92
+map은 language model을 장소에 grounding하고, 모델은 map에 미리 정해지지 않은 어휘를 줍니다.
+@@ 93
+=
+@@ 94
+이 모든 것을 실제 기기에서 돌리는 방법
+@@ 95
+계산 속의 graph를 찾고, 그것과 같은 모양의 하드웨어를 줍니다.
+@@ 96
+5. 한 쪽으로 보는 코스 전체
+@@ 97 attr
+세 띠로 된 개념도. Part I, back-end: factor graph, sparse solver, Lie group과 Gaussian process, robust estimation, solver gradient, dense map, certified optimum, 정확도 한계. Part II, front-end: 카메라, LiDAR, radar, event camera, IMU, 다리이며 각각이 factor가 됩니다. Part III, Spatial AI: 학습된 front-end, rendering 기반 map, 동적 scene, semantics와 scene graph, open-world 모델, 계산 구조. 아래쪽 상자는 그 밑에 깔린 하나의 아이디어를 말합니다.
+@@ 98
+Part I · back-end (1–10주차)
+@@ 99
+Factor graph
+@@ 100
+1–2주차
+@@ 101
+Sparse solver
+@@ 102
+3주차
+@@ 103
+Lie group, GP
+@@ 104
+4–5주차
+@@ 105
+=
+@@ 106
+6주차
+@@ 107
+Solver gradient
+@@ 108
+7주차
+@@ 109
+Dense map
+@@ 110
+8주차
+@@ 111
+certified 최적해
+@@ 112
+9주차
+@@ 113
+정확도 한계
+@@ 114
+10주차
+@@ 115
+Part II · front-end (11–18주차)
+@@ 116
+각 센서가 factor가 됨
+@@ 117
+11–12주차
+@@ 118
+13주차
+@@ 119
+14주차
+@@ 120
+15주차
+@@ 121
+16–17주차
+@@ 122
+다리
+@@ 123
+18주차
+@@ 124
+Part III · Spatial AI (19–24주차)
+@@ 125
+같은 estimator, 더 풍부한 map
+@@ 126
+학습된
+@@ 127
+front-end
+@@ 128
+19주차
+@@ 129
+rendering
+@@ 130
+기반 map
+@@ 131
+20주차
+@@ 132
+동적
+@@ 133
+scene
+@@ 134
+21주차
+@@ 135
+=
+@@ 136
+scene graph
+@@ 137
+22주차
+@@ 138
+=
+@@ 139
+모델
+@@ 140
+23주차
+@@ 141
+계산
+@@ 142
+구조
+@@ 143
+24주차
+@@ 144
+밑에 깔린 하나의 아이디어: 미지수는 variable, 모든 측정값과 prior는 factor이며,
+@@ 145
+추정값은 whitening된 residual 제곱의 합을 최소화합니다.
+@@ 146
+세 띠로 본 코스. Part I은 estimator 하나를 만들었습니다. Part II는 여섯 종류의 센서로 그 estimator에 데이터를 공급했습니다. Part III는 map을 더 풍부하게 만들고, 이 모든 것을 기기 위에서 어떻게 돌릴지 물었습니다.
+@@ 147
+이 그림을 한 문장처럼 읽어 보세요. factor graph는 무엇이 무엇에 의존하는지 말합니다 (<a href="#d7">2주차</a>). Gaussian noise가 이를 least squares로 바꾸고, sparsity가 그것을 대규모로 풀 수 있게 합니다 (<a href="#d13">3주차</a>). Part II의 각 센서는 같은 graph에 자기 residual을 더합니다. reprojection error(<a href="#d65">11주차</a>)부터 preintegration된 IMU 증분(<a href="#d94">16주차</a>)까지입니다. Part III는 graph를 그대로 두고 그 위에 무엇이 걸리는지를 바꿉니다. 이번 주는 graph에게 message를 주고받으며 스스로를 돌리라고 요청합니다.
+@@ 148
+6. 코스 퀴즈: 1–24주차
+@@ 149
+스스로 확인하기: 코스 전체
+@@ 150
+Q1 (2주차). 모든 factor에 Gaussian noise가 있을 때, factor graph에서의 MAP inference는 무엇과 같습니까?
+@@ 151
+prior에서 pose 샘플링하기
+@@ 152
+만족된 측정값의 수 최대화하기
+@@ 153
+각각 역 covariance로 가중한 residual 제곱합 최소화하기
+@@ 154
+측정값의 covariance matrix 역행렬 구하기
+@@ 155
+Gaussian 곱의 음의 log는 Mahalanobis distance 제곱의 합이며, 이는 nonlinear least-squares 문제입니다.
+@@ 156
+Q2 (3주차). 나쁜 elimination 순서가 sparse Cholesky를 느리게 만들 수 있는 이유는 무엇입니까?
+@@ 157
+variable 하나를 eliminate하면 남은 이웃이 모두 연결되어 fill-in이 생김
+@@ 158
+least-squares 문제의 해가 바뀜
+@@ 159
+information matrix가 indefinite해짐
+@@ 160
+graph에서 loop closure가 사라짐
+@@ 161
+elimination할 때마다 그 variable의 separator 위에 factor가 생깁니다. 순서가 나쁘면 separator가 커져서 삼각 factor가 0이 아닌 원소로 채워집니다. 답 자체는 어떤 순서로 해도 같습니다.
+@@ 162
+Q3 (4주차). 책의 규약에서 Gauss-Newton은 계산한 step ξ를 pose T에 어떻게 적용합니까?
+@@ 163
+=
+@@ 164
+=
+@@ 165
+pose는 vector가 아닙니다. step은 tangent space에서 계산되고 오른쪽에서 exponential map으로 적용되며, 그래서 T가 올바른 pose로 유지됩니다.
+@@ 166
+Q4 (6주차). 매칭의 절반이 inlier이고 minimal sample에 매칭 3개가 필요합니다. 모두 inlier인 sample을 적어도 하나 뽑을 확률이 99%가 되려면 RANSAC iteration이 대략 몇 번 필요합니까?
+@@ 167
+모두 inlier인 sample의 확률은 0.5³ = 0.125입니다. N = log(0.01)/log(1 − 0.125) = 4.605/0.1335 ≈ 34.5이므로 35번입니다.
+@@ 168
+Q5 (9주차). pose-graph 문제의 Shor's relaxation이 값 d*를 돌려줍니다. 참 최적값은 p*입니다. 무엇이 보장됩니까?
+@@ 169
+항상 d* = p*
+@@ 170
+d* ≤ p*이고, 해 행렬의 rank가 1이면 등호가 certify됨
+@@ 171
+아무것도 보장되지 않음, relaxation은 heuristic이므로
+@@ 172
+relaxation은 feasible set을 넓히므로 그 최솟값은 lower bound입니다. relax한 해가 rank 1이면 원래 문제에서도 feasible하므로 global optimum입니다.
+@@ 173
+Q6 (12주차). bundle adjustment에서 landmark를 Schur complement로 먼저 eliminate하는 이유는 무엇입니까?
+@@ 174
+각 landmark의 block은 작고 서로 독립이라 역행렬을 싸게 구할 수 있고, 카메라에 대한 훨씬 작은 시스템이 남음
+@@ 175
+landmark는 카메라보다 덜 중요함
+@@ 176
+카메라는 eliminate할 수 없음
+@@ 177
+gauge freedom을 없앰
+@@ 178
+두 landmark를 잇는 factor가 없으므로 information matrix의 landmark 부분은 block diagonal입니다. 이를 eliminate하면 reduced camera system이 됩니다.
+@@ 179
+Q7 (13주차). point-to-point ICP의 iteration 한 번은 무엇을 합니까?
+@@ 180
+descriptor를 추출하고 매칭한 뒤 triangulation함
+@@ 181
+map을 rendering하고 픽셀 색을 비교함
+@@ 182
+scan을 signed distance field에 통합함
+@@ 183
+각 점을 다른 cloud에서 가장 가까운 이웃과 짝짓고, rigid 변환을 closed form으로 풂
+@@ 184
+ICP는 nearest neighbour에 의한 data association과 (SVD에 의한) closed-form 정렬을 번갈아 하고, 변환이 더 이상 바뀌지 않을 때까지 반복합니다.
+@@ 185
+Q8 (15주차). event camera의 픽셀은 언제 event를 냅니까?
+@@ 186
+global frame clock이 한 번 칠 때마다
+@@ 187
+마지막 event 이후 log 밝기가 contrast threshold보다 많이 변했을 때
+@@ 188
+밝기가 고정된 수준을 넘을 때
+@@ 189
+이웃 픽셀이 event를 낼 때
+@@ 190
+각 픽셀은 독립적이고 asynchronous하게 동작하며, 밝기 변화의 시각과 부호를 보고합니다. 정지한 카메라가 보는 정적인 scene은 데이터를 거의 만들지 않습니다.
+@@ 191
+Q9 (17주차). 일반적인 움직임에서 visual-inertial odometry의 state 중 unobservable한 방향은 몇 개입니까?
+@@ 192
+세 개: global 위치
+@@ 193
+네 개: global 위치와 중력 축 회전
+@@ 194
+일곱 개: 위치, 방향, scale
+@@ 195
+accelerometer는 중력을 보므로 roll과 pitch가 정해지고 scale이 observable해집니다. global 위치와 yaw는 결코 측정되지 않아 자유롭게 남습니다.
+@@ 196
+Q10 (20주차). 3D Gaussian splatting은 어떤 순서로 픽셀을 만듭니까?
+@@ 197
+Gaussian을 이미지에 투영하고, depth로 정렬하고, 앞에서 뒤로 alpha-blend함
+@@ 198
+ray를 따라 점을 샘플링하고, MLP에 query하고, density를 합함
+@@ 199
+ray와 mesh의 교점을 구한 뒤 texture를 조회함
+@@ 200
+뒤에서 앞으로 blend한 뒤 투영함
+@@ 201
+splatting은 rasterization입니다: 투영, 정렬, blend. 각 ray를 따라 MLP를 샘플링하는 것은 NeRF의 volume rendering입니다.
+@@ 202
+Q11 (23주차). map을 "open-vocabulary"로 만드는 것은 무엇입니까?
+@@ 203
+예전 map보다 많은 object class를 저장함
+@@ 204
+neural network 없이 만들어짐
+@@ 205
+로봇 사이에 공개적으로 공유됨
+@@ 206
+vision-language model의 feature를 저장하므로, 미리 정해지지 않은 텍스트로 query할 수 있음
+@@ 207
+closed-set map은 training 시점에 고른 목록의 label을 담습니다. open-vocabulary map은 나중에 어떤 텍스트 query와도 비교할 수 있는 embedding을 담습니다.
+@@ 208
+Q12 (3주차와 24주차). variable elimination과 Gaussian belief propagation의 공통점은 무엇입니까?
+@@ 209
+둘 다 global variable ordering이 필요함
+@@ 210
+둘 다 Schur complement로 Gaussian factor에서 variable을 없앰; GBP는 이를 각 message 안에서 하고 graph를 바꾸지 않음
+@@ 211
+둘 다 factor graph에 fill-in edge를 만듦
+@@ 212
+둘 다 loop가 있는 graph에서 정확한 marginal 분산을 줌
+@@ 213
+factor에서 variable로 가는 message는 local elimination입니다. elimination은 이를 global 순서로 한 번 적용하며 정확합니다. GBP는 이를 모든 곳에서 반복 적용하며, 수렴하면 평균이 정확합니다.
+@@ 214
+7. 다음에 갈 곳
+@@ 215
+<strong>toy system 하나를 end to end로 만들어 보세요.</strong> Epilogue의 조언입니다. 첫 시스템으로 좋은 예는 이렇습니다. simulation한 odometry와 loop closure가 있는 2D pose graph를 Gauss-Newton으로 풀고 (<a href="#d10">2주차 · Day 4</a>), 다음에 outlier와 robust loss를 넣고 (<a href="#d34">6주차 · Day 4</a>), 다시 GBP로 풀어 (<a href="#d142">Day 4</a>) 비교합니다.
+@@ 216
+<strong>실제 라이브러리를 써 보세요.</strong> 책은 1장에서 GTSAM을, 4장에서 differentiable optimization을 위한 Theseus와 PyPose를 소개합니다. toy system을 그중 하나로 다시 만들어 보세요.
+@@ 217
+<strong>live 카메라로 완전한 시스템을 돌려 보세요.</strong> §18.8은 ORB-SLAM부터 MASt3R-SLAM까지 공개 real-time 시스템을 나열합니다 (p. 546). 실패할 때까지 밀어붙이고, 어떻게 실패했는지 적어 두세요.
+@@ 218
+거의 모든 장의 끝에 있는 "Further Readings &amp; Recent Trends" 절의 <strong>포인터를 따라가 보세요</strong>.
+@@ 219
+<strong>open problem을 하나 고르세요.</strong> Part III prelude는 SLAM이 해결되지 않은 곳을 나열합니다. 수중, 다른 행성, 재난 지역, 혼잡한 도심 교통입니다 (p. 361).
+@@ 220
+다음을 할 수 있다면 이 코스를 마친 것입니다
+@@ 221
+SLAM 문제를 factor graph로 쓰고 whitening된 least squares로 바꿀 수 있습니다.
+@@ 222
+sparsity, elimination 순서, incremental update가 그 문제를 real-time으로 풀 수 있는지를 결정하는 이유를 설명할 수 있습니다.
+@@ 223
+Part II의 각 센서가 기여하는 residual을 제시하고, 각 센서가 관측할 수 없는 것을 말할 수 있습니다.
+@@ 224
+Part III에서 학습된 구성 요소가 무엇을 더하고, estimator가 여전히 무엇을 하는지 말할 수 있습니다.
+@@ 225
+odometry factor를 지나는 GBP message를 유도하고, 그 결과가 언제 정확한지 말할 수 있습니다.
+@@ 226
+trajectory error 외에 시스템에 대해 보고할 지표를 꼽을 수 있습니다.
+@@ 227
+<em>SLAM Handbook</em>, 18장과 Epilogue, pp. 521–549; Part III Prelude, pp. 361–365; 코스 지도에 쓴 Part I, II Prelude, pp. 3–18과 185–192.
+@@ 228
+Davison과 Ortiz, <em>FutureMapping 2: Gaussian Belief Propagation for Spatial AI</em>, 2019; Weiss와 Freeman, <em>Correctness of belief propagation in Gaussian graphical models of arbitrary topology</em>, 2001.
+@@ 229
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (문제 4의 Kalman filter).

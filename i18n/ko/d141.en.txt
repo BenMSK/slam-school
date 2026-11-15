@@ -1,0 +1,152 @@
+@@ 1
+<span class="eyebrow">Week 24 · Day 3</span>
+@@ 2
+Mapping Spatial AI graphs to hardware: map store, real-time loop, and the image plane
+@@ 3
+After today you can sketch the chapter's design for a Spatial AI processor, say which computations belong in the map store, the real-time loop, and the sensor, and show how purely local message passing reaches a global estimate.
+@@ 4
+About 60 min · Read §18.5, pp. 532–540 (8 pages) · Needs Week 3 Day 3 and Week 24 Day 2
+@@ 5
+Read first: §18.5, pp. 532–540
+@@ 6
+The blocks of Figure 18.1, and why the bulk of the computation stays in one central processor (p. 533).
+@@ 7
+Why features observed together end up strongly correlated, and how that gives a sparse graph (p. 535).
+@@ 8
+The five maintenance jobs inside the map store (p. 536) and the five elements of the real-time loop (p. 537).
+@@ 9
+Local against global regularization in tracking, and the proposal that follows (p. 539).
+@@ 10
+The algorithms of Spatial AI already have graph structure: the map is a graph of features, the real-time loop is a fixed processing graph, and an image is a grid of pixels. The chapter's design gives each graph hardware of the same shape, so that most computation happens where its data already sits, and connects the pieces with as few bits as possible.
+@@ 11
+1. The design in one picture
+@@ 12
+The chapter considers one device working with on-board resources only, since that works anywhere. <span class="src">§18.5 · pp. 532–533</span> Its claim is that long-term efficiency comes from matching the graph structures of the algorithms to the physical layout of the hardware. That argues for pushing work out toward the sensors. Yet most of the computation stays central, for one reason: the world model. Every new piece of data is in the end compared with it, and then either updates it or is discarded. <span class="src">§18.5 · p. 533</span> Figure 18.1 draws the result as a "Spatial AI brain". <span class="src">§18.5.1 · p. 534</span>
+@@ 13
+Block
+@@ 14
+Job
+@@ 15
+Close-to-sensor processor, one per camera
+@@ 16
+Reduce the image stream before it leaves the sensor
+@@ 17
+Every pixel, all the time
+@@ 18
+Camera interface (in the main processor)
+@@ 19
+Model and predict the data arriving from its camera
+@@ 20
+Every frame
+@@ 21
+Real-time loop
+@@ 22
+Connect the image stream to the world model
+@@ 23
+Map store
+@@ 24
+Hold the world model and maintain it
+@@ 25
+In the background
+@@ 26
+Sensor and actuator interfaces
+@@ 27
+Other inputs, and outputs to the task
+@@ 28
+As the task demands
+@@ 29
+The last column is this app's reading; the book gives no rates. The central unit is not a CPU with RAM. A CPU reaches any memory cell at about the same cost, but spatial data is local, and so is the work of adding to it. The design asks for storage and processing combined in one graph-shaped unit, like Graphcore's IPU, where a program is compiled into a layout of operations, data, and communication channels over the cores. <span class="src">§18.5.1 · p. 534</span>
+@@ 30
+2. The map store: a graph that maintains itself
+@@ 31
+A "feature" here is any abstraction of a scene entity, from a point to an object. Each can be measured only from some region of camera positions, so as the camera moves, features come into view in overlapping groups. Features measured at the same time become strongly correlated through the uncertain camera state, features a short motion apart less so, and distant ones only weakly. Join strongly correlated features, cut edges below a threshold, and a sparse graph of nearby features is left. <span class="src">§18.5.1.1 · p. 535</span>
+@@ 32
+Filling the gap: "correlated through the camera state", with numbers
+@@ 33
+In one dimension, let the camera's position have error variance \(\sigma_x^2\). It measures two landmarks, each with independent noise of variance \(\sigma_z^2\), and places them at \(\hat{l}_i = \hat{x} + z_i\). Each landmark's error is the camera's error plus its own noise:
+@@ 34
+The shared term \(\hat{x}-x\) is the covariance, so the correlation is \(\rho = \sigma_x^2/(\sigma_x^2 + \sigma_z^2)\). With \(\sigma_x = 0.1\) and \(\sigma_z = 0.02\): \(\rho = 0.01/0.0104 = 0.96\). The camera does not know where it is, but it knows well where the landmarks are <em>relative to each other</em>.
+@@ 35
+Now let the camera take \(n\) odometry steps, each adding error variance \(\sigma_o^2\), before it measures landmark 2. Then \(\operatorname{var}(\hat{l}_2) = \sigma_x^2 + n\sigma_o^2 + \sigma_z^2\) while the shared part is still \(\sigma_x^2\). With \(n\sigma_o^2 = 0.09\):
+@@ 36
+More motion between two observations means a weaker edge. In the language of <a href="#d15">Week 3 · Day 3</a>: eliminating a pose links every pair of features seen from it, so the feature graph follows co-visibility.
+@@ 37
+A pose graph has the same shape with poses in place of features, and the chapter sees no fundamental difference. Its conclusion: represent space by a graph of features, linked in multi-scale patterns that follow camera motion, and able to generate dense predictions. <span class="src">§18.5.1.1 · pp. 535–536</span> That graph is laid out across many cores whose connections mirror it. Much of large-scale SLAM can then run <em>inside</em> the store as maintenance: clustering features and segmenting objects, detecting loop closures, optimizing after them, smoothing the map, and discovering new semantic categories. Smoothing and segmentation act on each part separately; global optimization can use message passing (<a href="#d142">tomorrow</a>). Memory sets a deadline: an IPU has about 1 MB per tile, about 1 GB over 1000 tiles, so dense data should be abstracted quickly toward a compact object-level form. <span class="src">§18.5.1.1 · p. 536</span>
+@@ 38
+3. The real-time loop, and the problem of a moving window
+@@ 39
+The chapter expects the tightest loop to look like today's dense SLAM (<a href="#d71">Week 12 · Day 5</a>): model the world in enough generative detail that every new pixel can be compared with a prediction. Its elements are <strong>labeling</strong> (pixels to features, usually by a network), <strong>rendering</strong> (a dense predicted image from the map), <strong>tracking</strong> (aligning prediction and image, finding outliers and independent motion), <strong>fusion</strong> (writing geometry and labels back), and self-supervised learning. Rendering reads the map and fusion writes it. <span class="src">§18.5.2 · p. 537</span>
+@@ 40
+These are fixed blocks of massively parallel work and suit a fixed processing graph. The hard part is the link to the map: the part in view changes constantly with motion, so no fixed data path leads to "the relevant memory". The proposed answer is a set of <strong>interface nodes</strong>, communication specialists wired to the loop on one side and to many sites of the map graph on the other. If the store has a <strong>small-world</strong> topology, where any two nodes are a few hops apart, they can copy any needed part of the map in a few operations. <span class="src">§18.5.2 · pp. 537–538</span>
+@@ 41
+4. Processing close to the image plane
+@@ 42
+Pixels form a grid, and neighbouring pixels usually see the same object, so a graph linking each pixel to its four neighbours underlies smoothing in dense matching and optical flow. <span class="src">§18.5.3 · p. 538</span> A chip like SCAMP5 can do such bottom-up work itself. Optical flow fits well: its parallel form alternates a per-pixel data step with smoothing between neighbours. <span class="src">§18.5.3 · pp. 538–539</span>
+@@ 43
+SLAM tracking is harder because it wants one set of <em>global</em> motion parameters. On ordinary hardware, dense tracking alternates a parallel step (an error at every pixel) with a <strong>reduction</strong> step (sum all errors, update the parameters). The reduction is a global regularizer, and a grid of pixel processors cannot do it without sending everything to one place. The chapter's way out is to give up guaranteed global consistency and converge toward it: each pixel keeps its own estimate of the global parameters and shares it with its neighbours every iteration. After enough rounds any pixel can be asked for a usable answer, and longer links, or a small-world pattern, would speed this up. <span class="src">§18.5.3 · p. 539</span>
+@@ 44
+Try it: 64 pixels each hold a local estimate of one global number. The Rounds slider runs neighbour-to-neighbour averaging; the second slider adds long links.
+@@ 45
+Notice that with grid links only, the numbers smooth out locally within a few rounds but a left-to-right slope survives: after 20 rounds the spread is still 1.34, and it takes 100 rounds before every pixel is within 0.05 of the global mean, 2.045. Add 16 long-range links: the longest shortest path drops from 14 hops to 7, and the same agreement takes 32 rounds. No pixel ever computed a global sum.
+@@ 46
+Filling the gap: why local averaging finds the global mean
+@@ 47
+The book expects convergence and gives no rule. The simplest one: give every link \((i,j)\) a weight \(w_{ij} = w_{ji}\), and in each round let every pixel move toward each neighbour,
+@@ 48
+where \(d_i\) is the number of neighbours of pixel \(i\).
+@@ 49
+<em>The sum never changes.</em> Link \((i,j)\) adds \(w_{ij}(x_j - x_i)\) to pixel \(i\) and the opposite to pixel \(j\).
+@@ 50
+<em>The only resting state is agreement.</em> With these weights each new value is a weighted average of a pixel and its neighbours, so the largest value can only fall and the smallest only rise until all are equal. The sum is fixed, so the common value is the mean of the starting values, which is what the reduction step would have computed.
+@@ 51
+Check on three pixels in a row holding 1, 2, 6. The degrees are 1, 2, 1, so both links have weight \(1/3\). One round gives \(1 + \tfrac13(2-1) = 1.33\), \(2 + \tfrac13(1-2) + \tfrac13(6-2) = 3\), and \(6 + \tfrac13(2-6) = 4.67\). The sum is still 9, and the values head for 3.
+@@ 52
+Information moves one hop per round, so the shape of the graph sets the speed. Averaging treats all pixels as equally reliable; Gaussian belief propagation, tomorrow, passes uncertainty along with the estimate.
+@@ 53
+The flow need not be one-way. If the main processor sends its prediction to the camera, the camera needs to report only what differs. An event camera reports a pixel when its brightness changes, which amounts to predicting that nothing changes; a <strong>model-based event camera</strong> would report a pixel when it departs from the model's prediction. <span class="src">§18.5.1 · p. 535; §18.5.3 · p. 540</span> The aim throughout is fewer bits on the link, and with them less communication power. <span class="src">§18.4.2 · p. 532</span>
+@@ 54
+Q1. Three pixels in a row hold 0, 3, 9 and average with the weights from "Filling the gap". What does the middle pixel hold after one round?
+@@ 55
+Both links have weight 1/3. The middle pixel becomes 3 + (0 − 3)/3 + (9 − 3)/3 = 4. The ends become 1 and 7, and the sum stays 12.
+@@ 56
+Q2. Two landmarks are measured from the same camera pose. The pose error variance is 0.04 and each measurement has noise variance 0.01. What is the correlation between the two landmark estimates?
+@@ 57
+ρ = σx² / (σx² + σz²) = 0.04 / 0.05 = 0.8. The shared camera error is the covariance.
+@@ 58
+Q3. Which job does the chapter place inside the map store and not in the real-time loop?
+@@ 59
+Rendering a predicted view
+@@ 60
+Aligning the prediction with the new image
+@@ 61
+Labeling the pixels of the incoming image
+@@ 62
+Optimizing the map after a loop closure
+@@ 63
+Loop-closure detection and optimization, smoothing, and clustering are maintenance the store performs on itself. Rendering, tracking, and fusion connect the live image to the map.
+@@ 64
+Q4. Why does the design need interface nodes between the real-time loop and the map store?
+@@ 65
+The map store cannot do any processing of its own
+@@ 66
+The part of the map in view keeps changing, so no fixed data path reaches it
+@@ 67
+The real-time loop runs on a separate chip
+@@ 68
+Loop closures must be approved by a central node
+@@ 69
+Motion changes which map nodes the loop needs. Interface nodes linked to many sites of a small-world map graph can fetch any part in a few hops.
+@@ 70
+The design matches hardware to the graphs in the algorithms, but keeps most computation central because all data is compared with one world model.
+@@ 71
+The map is a sparse graph: features seen together are strongly correlated through the camera state. The store holds it across many cores and maintains it in place.
+@@ 72
+The real-time loop labels, renders, tracks, and fuses. Interface nodes and a small-world map topology connect it to a map whose relevant part keeps moving.
+@@ 73
+Near the image plane a global estimate can be reached by local message passing, at a cost in rounds that depends on the graph. Two-way links let a sensor send only what the model did not predict.
+@@ 74
+<em>SLAM Handbook</em>, Chapter 18, §18.5 "Mapping Spatial AI Graphs to Hardware", pp. 532–540, Figure 18.1.
+@@ 75
+Xiao and Boyd, <em>Fast linear iterations for distributed averaging</em>, 2004 (averaging over a graph with symmetric weights).
+@@ 76
+Xiao, Boyd, Lall, <em>A scheme for robust distributed sensor fusion based on average consensus</em>, 2005 (the Metropolis weights used in the widget).

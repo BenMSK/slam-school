@@ -1,0 +1,216 @@
+@@ 1
+<span class="eyebrow">23주차 · Day 5</span>
+@@ 2
+로봇에게 아직 map이 필요할까? language model, map, 그리고 robot foundation model
+@@ 3
+오늘이 끝나면 language model을 map에 연결하는 두 가지 방식을 설명하고, map을 대형 모델로 대체하는 문제에 대해 책이 말하는 바를 전하고, vision-language-action policy가 mapping pipeline과 어떻게 다른지 설명할 수 있습니다.
+@@ 4
+약 60분 · §17.4, pp. 514–520 읽기 (7쪽) · 23주차 Day 4 필요
+@@ 5
+먼저 읽기: §17.4, pp. 514–520
+@@ 6
+LLM을 map과 통합하는 두 방식, "map prompting"과 "map API" (pp. 514–515).
+@@ 7
+long-context VLM을 쓴 두 실험, 그리고 책의 입장을 밝히는 이탤릭 문장 (p. 515).
+@@ 8
+로봇 데이터의 형태 \(\mathcal{D} = \{\mathbf{z}_t, \mathbf{u}_t\}_{t=1}^{T}\), 그리고 VLA 모델이 출력하는 것 (pp. 517–518).
+@@ 9
+이 장의 마지막 문단 (p. 520).
+@@ 10
+두 흐름이 반대 방향으로 당깁니다. 하나는 language model을 map<em>에</em> 연결해서 그 지식을 실제 장소에 묶습니다. 다른 하나는 이미지나 로봇 데이터로 매우 큰 모델을 학습해서 명시적인 map <em>없이</em> 해내기를 바랍니다. 이 절은 빠르게 움직이는 연구의 스냅숏입니다. 아래 내용은 모두 책의 2026년 4월 판이 보고하는 것이며, 세부 사항은 곧 낡을 것으로 보세요.
+@@ 11
+1. language model에게 map 건네기
+@@ 12
+LLM은 세상에 대해 많이 알지만 <em>이</em> 방에 대해서는 아무것도 모릅니다. <strong>Grounding</strong>은 LLM의 추론을 물리적인 scene에 묶는 것입니다. 책은 map으로 이를 하는 두 방식을 강조합니다. <span class="src">§17.4.1 · pp. 514–515</span>
+@@ 13
+이 코스의 예시입니다. 함수 이름은 책의 예(p. 515)이고, 내용은 지어낸 것입니다.
+@@ 14
+=
+@@ 15
+=
+@@ 16
+LLM이 받는 것
+@@ 17
+map 전체를 구조화된 텍스트(JSON 또는 YAML)로. caption이 달린 scene graph는 이미 거의 그런 형태임
+@@ 18
+함수 signature 몇 개, 그리고 LLM이 한 호출의 결과
+@@ 19
+호출에 답하는 것
+@@ 20
+없음: LLM이 읽기만 함
+@@ 21
+Day 3의 query 방식, 예: \(\argmax_o \langle \mathbf{f}_o, \mathbf{f}_T \rangle\)
+@@ 22
+책이 밝힌 한계
+@@ 23
+세밀한 geometry를 전달하지 못함. sparse하고 텍스트로 표현할 수 있는 map이 필요함. LLM이 텍스트 속 좌표를 얼마나 잘 쓰는지 불분명함
+@@ 24
+LLM은 자신이 요청한 것만 봄
+@@ 25
+VLM으로 만든 map을 텍스트로 LLM에 넘기는 시스템은 책이 <strong>Socratic model</strong>이라고 부르는 것의 한 사례입니다. pretrained 모델들을 module로 조합한 것입니다. map API를 쓰면 map 호출을 LLM 호출, 로봇 명령과 번갈아 섞을 수 있습니다. 이것이 <strong>tool calling</strong> 패턴으로, LLM이 답을 생성하는 동안 외부 함수를 자유롭게 호출하고 그 출력을 씁니다. 책의 예인 NLMap에서는 LLM이 사용자 요청을 제안 object들로 나누고, open-vocabulary map에 query해서 각 object가 있는지, 어디 있는지 확인합니다. <span class="src">§17.4.1 · p. 515</span>
+@@ 26
+2. 대형 모델이 map을 대체할 수 있을까?
+@@ 27
+책은 여기서 첫 쪽들에서 던진 질문으로 돌아옵니다. 명시적인 map이 정말 필요한가? <span class="src">§17.4.2 · p. 515</span>
+@@ 28
+책이 인용하는 근거
+@@ 29
+한 일
+@@ 30
+알아낸 것
+@@ 31
+=
+@@ 32
+VLM과 scene graph를 결합하는 방식들을 비교함
+@@ 33
+그 benchmark에서는 GPT-4V에 frame 50장을 직접 prompt로 준 것이 명시적인 scene graph prompt보다 나았음
+@@ 34
+=
+@@ 35
+VLM에게 frame 948장으로 된 사무실 전체 투어를 주고, 사용자 요청에 맞는 목표 이미지를 물음
+@@ 36
+목표 이미지를 map 기반 navigation pipeline에 넘겼을 때 작동함. VLM이 action을 직접 출력하는 map 없는 변형은 효과가 없었음
+@@ 37
+Geometry-aware VLM
+@@ 38
+대부분의 VLM에 기본으로는 없는 geometry와 물리에 대한 인식을 강화한 모델
+@@ 39
+단일 이미지로 인상적인 3D 추론을 하지만, SLAM을 pipeline에 넣었을 때 보이는 embodied intelligence와는 여전히 격차가 있음
+@@ 40
+즉 한 benchmark는 날것의 frame 쪽을 들어 주고, 한 로봇은 움직이려면 여전히 map이 필요했습니다. 현재 책의 해석은 이렇습니다. LLM이나 VLM 기반 agent에게 명시적인 map이 필요한지는 주로 task의 <strong>spatial and temporal horizons</strong>(공간적·시간적 범위)에 달린 것으로 보이며, 이 질문은 열려 있습니다. <span class="src">§17.4.2 · pp. 515–516</span> 책은 long-context VLM이 이미지 뒤의 공간 구조를 얼마나 일관되게 이해하는지도 불분명하다고 덧붙입니다.
+@@ 41
+집 사진 50장이면 "소파는 무슨 색이야?"에 답하기에 충분해요. 한 시간 전에 둘러본 사무실에서 회의실부터 현관까지 걸어가는 건 다른 종류의 문제예요. 걸음이 많고, 걸음마다 바로 앞 걸음이 나를 어디에 데려다 놓았는지에 달려 있거든요. 앞의 것은 horizon이 짧고, 뒤의 것은 horizon이 길어요.
+@@ 42
+3. 로봇용 foundation model에는 로봇 데이터가 필요하다
+@@ 43
+텍스트와 이미지에는 인터넷이 있었습니다. 이 방법이 새 분야에서 통한 예로 책은 3D vision의 DUSt3R를 듭니다 (<a href="#d113">19주차 · Day 5</a>). <strong>robotics foundation model</strong>은 기본 generalist policy가 될 것입니다. 여러 로봇 몸체에서 여러 skill을 수행하고, 세계를 암묵적으로만 표현하는 하나의 모델입니다. 학습 데이터는 센서–action 쌍의 trajectory \(\mathcal{D} = \{\mathbf{z}_t, \mathbf{u}_t\}_{t=1}^{T}\)이며, 로봇이나 simulation에서 모아야 합니다. <span class="src">§17.4.3 · pp. 516–517</span>
+@@ 44
+책이 밝힌 규모
+@@ 45
+=
+@@ 46
+trajectory 130k 개, 로봇 13대로 된 fleet, task 700개, 17개월 동안 수집
+@@ 47
+=
+@@ 48
+24개 환경에서 skill 13개에 대한 demonstration 50k 개 이상
+@@ 49
+=
+@@ 50
+여러 기관이 함께 모은 다양한 로봇 상호작용 dataset. 주로 manipulation policy용
+@@ 51
+=
+@@ 52
+위의 것들과 다른 것들을 합침: episode 1M 개 이상, robot embodiment 22종, skill 527개, 실험실 34곳
+@@ 53
+Day 2와 규모를 비교해 보세요. CLIP은 이미지–caption 쌍 400M 개로 학습했습니다. 그래서 많은 노력이 demonstration을 싸게 만드는 데 들어갑니다. VR headset을 쓰는 teleoperation(DROID), 사람의 움직임을 따라 하는 저가 manipulator 한 쌍으로 된 ALOHA, 그리고 로봇 gripper와 그 eye-in-hand 센서에 맞춘 Universal Manipulation Interface의 손에 드는 gripper입니다. <span class="src">§17.4.3 · p. 517</span> 이 dataset들은 주로 잡기 같은 <em>skill</em>을 가르칩니다. 더 긴 task는 더 긴 demonstration으로, 또는 짧은 것들을 이어 붙여서 얻으려 합니다.
+@@ 54
+4. 명시적인 map 없이 행동하는 policy
+@@ 55
+가장 단순한 학습 방법은 <strong>behaviour cloning</strong>(행동 복제)입니다. 관측을 action으로 바꾸는 함수를 supervised learning으로 배웁니다. 책은 이 방법이 깨지기 쉽다고 말합니다. demonstration에는 최적이 아닌 데이터가 거의 없어서, 작은 이탈만으로도 모델이 out of distribution 상태로 빠지기 때문입니다. <span class="src">§17.4.3 · p. 517</span>
+@@ 56
+빈틈 채우기: 작은 오차가 쌓이는 이유
+@@ 57
+복제한 policy가 demonstration과 비슷한 state에 있는 동안 step마다 확률 \(\epsilon\)으로 실수한다고 합시다. 전문가는 실수에서 회복하는 법을 한 번도 보여 주지 않으므로, 최악의 경우 실수 한 번이 로봇을 낯선 state로 보내고, 로봇은 \(T\)-step episode의 남은 동안 계속 실수합니다. 그러면 step \(t\)의 첫 실수는 잘못된 step \(T - t + 1\)개를 낳고, 잘못된 step 수의 기댓값은 많아야 다음과 같습니다
+@@ 58
+오차가 쌓이지 않는다면 \(\epsilon T\)일 것입니다. \(\epsilon = 0.01\), \(T = 100\)이면 잘못된 step 1개 대 최악의 경우 약 50개입니다. 이 bound는 horizon의 <em>제곱</em>으로 커지며, 이것은 책이 2절에서 가리킨 바로 그 horizon입니다. 명시적인 map과 planner는 다르게 동작합니다. 실수한 뒤 로봇은 relocalize하고 다시 계획합니다.
+@@ 59
+책이 꼽는 예
+@@ 60
+=
+@@ 61
+Day 2에서 본 것 같은 transformer로, 출력 token을 바로 제어 action으로 읽음
+@@ 62
+GATO, PaLM-E, RT1, RT2, RT1-X와 RT2-X (Open-X-Embodiment로 학습), OpenVLA, π0
+@@ 63
+=
+@@ 64
+action 하나가 아니라 action sequence를 출력. 책은 이것이 일반화에 중요한 것으로 드러났다고 함
+@@ 65
+ALOHA용으로 설계된 ACT
+@@ 66
+=
+@@ 67
+generative model이 점진적인 noise 추가 과정을 되돌리도록 학습함. 여기서는 로봇이 보는 것을 조건으로 무작위 noise를 action으로 denoise함
+@@ 68
+Diffusion Policy. Octo는 transformer의 출력을 diffusion action head에 넣음
+@@ 69
+=
+@@ 70
+reward로부터 학습. 위의 dataset에는 reward가 없으므로 simulation, 그리고 다른 policy의 fine-tuning에 알맞음
+@@ 71
+(이름을 든 예 없음)
+@@ 72
+<span class="src">§17.4.3 · pp. 517–519</span> 비용을 짐작하게 하는 숫자가 하나 있습니다. 책에 따르면 오픈소스 vision 및 language 구성 요소로 만든 OpenVLA는 A100 GPU 64개로 된 cluster에서 15일 동안 fine-tuning했습니다. <span class="src">§17.4.3 · p. 518</span> 책은 또한 이런 모델이 커질수록 환경의 어떤 representation을 암묵적으로 담는 능력이 좋아지는 것으로 보이며, 이것이 명시적인 map이 여전히 필요한 곳을 바꿀 수도 있다고 봅니다. <span class="src">§17.4.3 · p. 519</span>
+@@ 73
+5. 이 장이 닿는 결론
+@@ 74
+책은 승자를 고르지 않습니다. 로봇 dataset과 모델의 규모를 키우고 인터넷 규모의 VLM, LLM과 결합하면 명시적인 map이 쓸모없어질 수도 있다고 봅니다. 반면 transformer가 compositional 추론이나 chain-of-thought 추론에 어려움을 겪는다는 근거를 인용하며, 그래서 state 개념을 가진 neural memory 메커니즘(책은 structured state space model을 꼽습니다)이 다시 떠오르고 있지만 그 한계는 아직 불분명하다고 말합니다. 크고 복잡한 환경에서 compositional task로의 일반화는 SLAM 같은 과정으로 학습한 명시적 구조에서 올 가능성이 그만큼, 또는 그 이상이라고 판단합니다. 그리고 둘이 상호 보완적이라고 제안합니다. 세계를 지각하고, 표현하고, 이해하는 것이 행동보다 먼저이며, 명시적인 world model은 도움이 될 뿐이라는 것입니다. <span class="src">§17.4.4 · pp. 519–520</span>
+@@ 75
+<strong>"책은 VLM 때문에 map이 필요 없어졌다고 말한다."</strong> 책은 frame이 scene graph prompt보다 나았던 benchmark 하나와 map 없는 변형이 실패한 로봇 하나를 보고하고, task의 horizon에 달려 있다고 결론짓습니다.
+@@ 76
+<strong>"VLA 모델에는 세계의 representation이 전혀 없다."</strong> 들여다보거나 query할 수 있는 <em>명시적인</em> representation이 없을 뿐입니다. 무엇을 알든 weight와 context 속에 암묵적으로 들어 있습니다.
+@@ 77
+<strong>"이 모델 목록이 state of the art다."</strong> 책 스스로 이 절이 망라적이지 않으며 새 모델이 매우 자주 나온다고 말합니다.
+@@ 78
+Q1. 사용자가 "머그잔은 싱크대에서 몇 미터 떨어져 있어?"라고 묻습니다. map은 object feature가 있는 dense metric map입니다. §17.4.1에 따르면 어떤 통합 방식이 맞습니까?
+@@ 79
+map prompting. 모든 map은 JSON으로 쓸 수 있기 때문
+@@ 80
+distance("mug", "sink") 같은 map API 호출. 텍스트 prompt는 세밀한 geometry를 전달하지 못하기 때문
+@@ 81
+둘 다 아님. LLM은 map을 쓸 수 없기 때문
+@@ 82
+LLM을 map으로 fine-tuning하기
+@@ 83
+map prompting은 sparse하고 텍스트로 표현할 수 있는 map으로 제한되며 geometry를 잘 전달하지 못합니다. map API는 geometry를 map에 둔 채 답만 돌려줍니다.
+@@ 84
+Q2. 책이 보고하는 Mobility VLA 결과는 무엇을 시사합니까?
+@@ 85
+frame 948장을 받은 VLM은 navigation action을 직접 출력할 수 있음
+@@ 86
+VLM은 긴 투어에서 목표 이미지를 찾지 못함
+@@ 87
+map은 question answering에만 필요함
+@@ 88
+VLM이 목표는 고를 수 있었지만, 거기까지 가는 데는 여전히 map 기반 navigation pipeline에 의존했음
+@@ 89
+VLM은 투어에서 목표 이미지를 골랐습니다. VLM이 action을 직접 출력하는 map 없는 변형은 효과가 없는 것으로 나타났습니다.
+@@ 90
+Q3. 복제한 policy가 50-step task에서 step마다 확률 0.02로 실수합니다. 최악의 경우 논증으로는 잘못된 step을 대략 몇 개로 예상해야 하며, 오차가 쌓이지 않는다면 몇 개입니까?
+@@ 91
+약 25 대 1
+@@ 92
+약 1 대 1
+@@ 93
+약 50 대 25
+@@ 94
+약 2.5 대 1
+@@ 95
+최악의 경우 εT²/2 = 0.02 × 2500 / 2 = 25. 쌓이지 않으면 εT = 0.02 × 50 = 1.
+@@ 96
+Q4. 책의 설명에서 어떤 모델을 vision-language-action 모델로 만드는 것은 무엇입니까?
+@@ 97
+행동하기 전에 3D scene graph를 만듦
+@@ 98
+reinforcement learning으로만 학습함
+@@ 99
+transformer의 출력 token을 바로 제어 action으로 해석함
+@@ 100
+action마다 map API를 호출함
+@@ 101
+VLA는 Day 2의 language model, vision-language model의 구조를 유지하고, 출력 token의 의미를 로봇 action으로 바꿉니다.
+@@ 102
+LLM은 텍스트 map을 prompt에 넣거나, 바깥에 있는 map의 함수를 호출하게 해서 grounding할 수 있습니다.
+@@ 103
+책의 2026년 4월 판 기준으로 대형 VLM은 날것의 frame으로 일부 질문에 답하지만, 로봇 예는 navigation에 여전히 map이 필요했습니다. 필요 여부는 공간적·시간적 horizon에 달려 있습니다.
+@@ 104
+robot foundation model은 센서–action trajectory로 policy를 학습하며, 이 데이터는 인터넷 텍스트와 이미지보다 훨씬 귀합니다.
+@@ 105
+behaviour cloning은 오차가 쌓입니다. VLA 모델, action chunking, diffusion policy, reinforcement learning이 현재의 계열입니다.
+@@ 106
+책의 마지막 견해: SLAM을 통한 명시적인 world modelling과 generalist policy는 상호 보완적입니다.
+@@ 107
+<em>SLAM Handbook</em>, §17.4 "Further Readings &amp; Recent Trends" (§17.4.1–17.4.4), pp. 514–520. 이름이 나온 모델, dataset, 결과에 관한 모든 서술은 책에 나온 그대로입니다.
+@@ 108
+오차가 쌓이는 논증은 Ross and Bagnell, <em>Efficient Reductions for Imitation Learning</em>, 2010을 따릅니다.

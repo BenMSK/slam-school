@@ -1,0 +1,214 @@
+@@ 1
+<span class="eyebrow">9주차 · Day 1</span>
+@@ 2
+Local minimum, certificate, 그리고 convex 문제가 쉬운 이유
+@@ 3
+오늘이 끝나면 local SLAM solver가 눈치채지 못한 채 틀린 답을 내놓을 수 있는 이유를 설명하고, certifiably optimal solver가 무엇을 보장하는지 말하고, 어떤 집합이나 함수가 convex인지 판별할 수 있습니다.
+@@ 4
+약 60분 · 6장 도입부와 §6.1 앞부분, pp. 149–152 읽기 (3쪽) · 2주차 Day 4 필요
+@@ 5
+먼저 읽기: 6장 도입부와 §6.1의 §6.1.1 제목 직전까지, pp. 149–152
+@@ 6
+이 장이 답하려는 두 질문 (p. 149). 이번 주는 첫 번째 질문을 다룹니다.
+@@ 7
+책이 NP-hard라고 꼽는 세 가지 SLAM 문제 (p. 150).
+@@ 8
+Figure 6.1 (p. 151): 어느 패널이 global optimum이고, 나머지 둘은 어떻게 만들어졌는지.
+@@ 9
+certifiable 알고리즘이 NP-hardness와 모순되지 않는 이유를 말하는 p. 151의 문장.
+@@ 10
+2주차와 3주차의 solver는 initial guess에서 출발해 내리막을 따라 걷습니다. SLAM cost는 convex가 아니므로 내리막길이 가장 낮지 않은 골짜기에서 끝날 수 있고, solver는 그것을 알아낼 방법이 없습니다. <strong>certifiably optimal</strong> solver는 추정값과 함께, 그 추정값이 가능한 최선의 해보다 얼마나 나쁠 수 있는지를 bound하는 숫자를 돌려주며, 그 gap이 0임을 증명하는 경우도 많습니다.
+@@ 11
+1. SLAM 최적화 문제에 대한 두 질문
+@@ 12
+1장부터 3장까지는 SLAM을 최적화 문제로 바꾸고 반복적인 local 방법으로 풀었습니다: Gauss-Newton, Levenberg-Marquardt, gradient descent (<a href="#d10">2주차 · Day 4</a>). 6장은 한 걸음 물러서서 그 문제에 대해 두 가지를 묻습니다. <span class="src">Ch. 6 · p. 149</span>
+@@ 13
+다루는 내용
+@@ 14
+<em>global</em> optimum을, 가능하면 initial guess 없이 계산하고, 그렇게 했다는 것을 확인할 수 있습니까?
+@@ 15
+계산과 신뢰성
+@@ 16
+§6.1, 이번 주와 다음 주 전반부
+@@ 17
+그 최선의 해는 실제값에 얼마나 가깝고, 오차를 좌우하는 것은 무엇입니까?
+@@ 18
+정확도의 근본적 한계
+@@ 19
+§6.2, 다음 주
+@@ 20
+2. 확신에 찬 채 틀리는 local solver
+@@ 21
+근처에 cost가 더 낮은 점이 없으면 그 점은 cost \(f\)의 <strong>local minimum</strong>(국소 최솟값)이고, 어디에도 cost가 더 낮은 점이 없으면 <strong>global minimum</strong>(전역 최솟값)입니다. Local solver는 gradient가 0이 되고 cost가 더 줄지 않으면 멈추는데, 이는 두 경우 모두에 해당합니다. Figure 6.1은 이것이 실제 데이터에서 무엇을 뜻하는지 보여 줍니다: 주차장 dataset 하나, cost function 하나, 그리고 모두 local minimum인 trajectory 셋. 그중 하나만 global minimum이고, 나머지 둘은 무작위 시작점에서 나왔습니다. <span class="src">Figure 6.1 · p. 151</span>
+@@ 22
+책은 이것이 운이 나빠서가 아니라고 덧붙입니다. SLAM의 몇몇 특수한 경우, 그중에서도 angular synchronization, rotation averaging, pose-graph optimization (PGO)은 <strong>NP-hard</strong>입니다: P = NP가 아닌 한, 모든 instance를 효율적으로 푸는 알고리즘은 없습니다. <span class="src">§6.1 · p. 150</span> 그래도 실제로는 SLAM이 대개 잘 작동합니다: odometry가 좋은 initial guess를 주고, 여러 최적화 방법은 나쁜 initial guess에서도 거의 최적인 해에 도달합니다. 하지만 기성 local 방법이 잘 설정된(well-posed) 문제에서도 크게 틀린 추정값을 낼 수 있습니다. <span class="src">§6.1 · p. 150</span>
+@@ 23
+Figure 6.1을 작게 재현해 볼 수 있습니다. 로봇 pose 10개가 고리 위에 있고, heading \(\theta_1,\dots,\theta_{10}\)만 미지수입니다. 각 edge \((i,j)\)는 heading 차이 \(\theta_j-\theta_i\)를 noise와 함께 잰 측정값 \(\tilde\theta_{ij}\)입니다: 고리를 따라 10개, 그리고 pose 1에서 pose 5로 가는 chord 하나. Cost는 다음과 같습니다.
+@@ 24
+각 edge는 자신의 <strong>residual</strong>(잔차) \(r_{ij}\)에 대한 값을 치릅니다. Residual이 0이면 치르는 값도 0이고, residual이 작으면 약 \(2r_{ij}^2\)이며 (\(1-\cos r \approx r^2/2\)이므로), \(r_{ij}\)가 한 바퀴만큼 커져도 변하지 않습니다. 각도라면 당연히 그래야 합니다. Day 3에서 이것이 바로 평면에서 책의 PGO cost 중 회전 부분임을 보입니다. 이 문제가 책이 NP-hard로 꼽은 angular synchronization입니다.
+@@ 25
+직접 해 보기: 위젯은 무작위 heading에서 gradient descent를 시작합니다. Cost를 보고, "새 시작점"을 몇 번 누른 다음 "시작점 20개 실행"을 누르십시오.
+@@ 26
+눈여겨볼 점: 첫 실행은 cost 11.595에서 멈추는데, gradient는 0이고 edge residual은 최대 55°입니다. 반면 다음 시작점은 0.091에 도달합니다. 시작점 20개 중 16개가 0.091에 도달하고, 4개는 10.257이나 11.595에서 멈춥니다. 멈춘 실행 안의 어떤 것도 그것이 갇혀 있다고 알려 주지 않습니다.
+@@ 27
+빈틈 채우기: loop가 local minimum을 만드는 이유
+@@ 28
+가장 단순한 경우를 봅시다: 측정값이 완벽하고 chord가 없는, \(n\)개 heading의 고리. 고리를 한 바퀴 돌면 heading 차이 \(\theta_{i+1}-\theta_i\)의 합은 0이고, 완벽한 측정값의 합은 한 바퀴의 정수배입니다. 따라서 어떤 추측값이든 그 residual \(r_1,\dots,r_n\)의 합은 한 바퀴의 정수배여야 합니다:
+@@ 29
+Heading \(\theta_i\)는 두 residual에 들어갑니다. 들어오는 edge에는 더하기 부호로, 나가는 edge에는 빼기 부호로 들어갑니다. 따라서 \(\partial f/\partial\theta_i = 4\sin r_{\text{in}} - 4\sin r_{\text{out}}\)이고, 모든 edge의 \(\sin r\)이 같으면 gradient가 0입니다. 그렇게 하는 한 가지 방법은 합을 고르게 나누어 모든 edge에 \(r_i = 2\pi k/n\)을 주는 것이고, 그 cost는 다음과 같습니다.
+@@ 30
+\(k=0\)이면 이것은 cost 0인 실제 해입니다. \(k=\pm1\)이면 추정값이 고리 전체에 고르게 퍼진 한 바퀴를 더 감습니다. \(4(1-\cos r)\)의 2차 도함수는 \(4\cos r\)이므로, \(\cos(2\pi k/n) \gt 0\), 즉 \(|k| \lt n/4\)인 한 각 edge의 cost는 여전히 아래로 볼록합니다. \(n=10\)이면 \(k=\pm1\)에서 cost \(40(1-\cos 36^\circ) = 7.64\)인, \(k=\pm2\)에서 cost \(40(1-\cos 72^\circ) = 27.64\)인 진짜 local minimum이 생깁니다.
+@@ 31
+\(k=1\)에서 \(k=0\)으로 가려면 어떤 edge가 cost가 가장 높은 residual 180°를 지나야 합니다. Gradient descent는 결코 오르막으로 가지 않으므로 그 자리에 머뭅니다. 위젯의 graph에는 chord와 noise가 있어 숫자는 바뀌지만 (7.64 대신 10.257과 11.595) 메커니즘은 그대로입니다: 갇힌 두 해는 chord가 닫는 loop 5–6–7–8–9–10–1을 따라 한 바퀴를 더 감고 있으며, 하나는 한 방향, 다른 하나는 반대 방향입니다. 분홍색 edge는 그 한 바퀴가 퍼진 곳을 보여 줍니다.
+@@ 32
+3. Certifiably optimal solver가 보장하는 것
+@@ 33
+어떤 해든 가질 수 있는 가장 낮은 cost를 \(p^\star\)로 씁니다. <strong>certifiably optimal</strong>(또는 certifiably correct) 방법은 추정값 \(\hat{\mathbf{x}}\)와 함께 <strong>lower bound</strong>(하한) \(d^\star \le p^\star\)도 돌려주는데, 이 bound는 local search가 아니라 convex relaxation으로 계산합니다. <span class="src">§6.1 · p. 151</span> 이 bound가 certificate입니다:
+@@ 34 attr
+가로 cost 축에 왼쪽부터 세 표시가 있습니다: relaxation bound인 d star, 실제 optimum인 p star, 그리고 우리 추정값의 cost인 f of x hat. p star에서 f of x hat까지의 짧은 괄호는 알 수 없는 실제 suboptimality입니다. d star에서 f of x hat까지의 더 긴 괄호는 우리가 계산할 수 있는 bound입니다.
+@@ 35
+=
+@@ 36
+=
+@@ 37
+실제 optimum
+@@ 38
+추정값의 cost
+@@ 39
+실제 suboptimality (알 수 없음)
+@@ 40
+계산 가능한 bound: f(x̂) − d*
+@@ 41
+p*는 결코 알 수 없지만, 우리가 가진 두 숫자 사이에 갇혀 있습니다. 두 숫자가 일치하면 추정값이 최적임이 증명됩니다.
+@@ 42
+\(d^\star \le p^\star \le f(\hat{\mathbf{x}})\)이므로, 추정값은 가능한 최선보다 최대 \(f(\hat{\mathbf{x}})-d^\star\)만큼 나쁩니다. 그 차이가 0이면 \(\hat{\mathbf{x}}\)는 global minimum이며, 이는 증명된 사실입니다.
+@@ 43
+이것은 NP-hardness와 모순되지 않습니다. 어려운 instance에서는 이 방법이 gap이 있는 bound만 돌려주고 최적성 증명은 내놓지 못해도 됩니다. 책은 그래도 이 방법이 가치 있는 두 가지 이유를 듭니다: 실제 SLAM 문제의 noise 수준에서는 gap이 거의 항상 0이고, 0이 아닐 때는 그 실패 자체가 로봇이 대응할 수 있는 경고가 됩니다. <span class="src">§6.1 · p. 151</span>
+@@ 44
+Local solver는 안개 속의 등산객과 같아요. 어느 쪽으로 가도 오르막이면 멈춰요. Certifiable solver는 여기에 더해, 지도 전체에서 가장 낮은 지점의 고도를 알려 주는 고도계도 들고 있어요. 등산객의 고도가 그 값과 같으면 바닥에 있는 거예요. 다르면, 그 차이가 진짜 바닥이 얼마나 더 낮을 수 있는지 알려 줘요.
+@@ 45
+4. Convexity: 모든 local minimum이 global minimum이 되는 경우
+@@ 46
+책은 convex 문제가 왜 쉬운지 이미 안다고 가정합니다. 여기에 필요한 최소한을 정리합니다. 집합 \(\mathcal{C}\)의 임의의 두 점을 잇는 선분이 항상 그 집합 안에 있으면 그 집합은 <strong>convex</strong>(볼록)입니다. 함수 \(f\)의 그래프가 자신의 chord보다 위로 올라가는 일이 없으면 그 함수는 <strong>convex</strong>입니다: 모든 \(\mathbf{x},\mathbf{y}\)와 모든 \(t\in[0,1]\)에 대해
+@@ 47
+<strong>convex problem</strong>은 convex set 위에서 convex function을 최소화하는 문제입니다.
+@@ 48 attr
+두 그래프. 왼쪽은 그릇 모양의 convex 곡선으로, 그 위에 수평 chord가 놓여 있고 최솟값이 하나입니다. 오른쪽은 골짜기가 둘인 곡선으로, 왼쪽에 더 낮은 global minimum, 오른쪽에 더 높은 local minimum이 있습니다. 두 골짜기 바닥을 잇는 chord는 그 사이 둔덕의 아래를 지나갑니다.
+@@ 49
+=
+@@ 50
+유일한 minimum
+@@ 51
+모든 chord는 그래프와
+@@ 52
+겹치거나 그 위에 있음
+@@ 53
+Convex 아님
+@@ 54
+그래프 아래의 chord
+@@ 55
+=
+@@ 56
+=
+@@ 57
+왼쪽: convex function에는 골짜기가 하나뿐입니다. 오른쪽: 그래프 아래로 내려가는 chord가 하나만 있어도 함수는 non-convex가 되고, 두 번째 골짜기가 생길 수 있습니다.
+@@ 58
+빈틈 채우기: convex problem의 local minimum은 global minimum
+@@ 59
+\(\mathbf{x}\)가 local minimum인데 다른 feasible point \(\mathbf{y}\)가 더 좋다고, 즉 \(f(\mathbf{y}) \lt f(\mathbf{x})\)라고 가정합시다. \(\mathbf{x}\)에서 \(\mathbf{y}\) 쪽으로 작은 step \(t\)만큼 걸어가 \(\mathbf{z}=(1-t)\mathbf{x}+t\mathbf{y}\)에 도달합니다. 집합이 convex이므로 \(\mathbf{z}\)는 feasible합니다. 함수가 convex이므로
+@@ 60
+이는 아무리 작은 \(t\in(0,1]\)에 대해서도 성립하므로, \(\mathbf{x}\)에 얼마든지 가까운 곳에 더 좋은 점이 있습니다. 그렇다면 \(\mathbf{x}\)는 local minimum이 아니었습니다. 가정이 틀렸고, 더 좋은 \(\mathbf{y}\)는 존재하지 않습니다.
+@@ 61
+이번 주 내내 다시 쓸 네 가지 간단한 판별법:
+@@ 62
+대상
+@@ 63
+Convex 여부
+@@ 64
+\(f(x)=x^2\), 또는 임의의 least-squares cost \(\norm{\mathbf{A}\mathbf{x}-\mathbf{b}}^2\)
+@@ 65
+2차 도함수 \(2\) 또는 \(2\mathbf{A}\T\mathbf{A}\)는 결코 음수가 아닙니다. 두 번 미분 가능한 함수는 Hessian이 모든 곳에서 positive semidefinite일 때, 그리고 그때에만 convex입니다.
+@@ 66
+\(f(r)=4(1-\cos r)\), 위의 edge cost
+@@ 67
+2차 도함수 \(4\cos r\)은 \(90^\circ \lt |r| \le 180^\circ\)에서 음수입니다.
+@@ 68
+단위원 \(\{\mathbf{x}: \norm{\mathbf{x}}=1\}\), 그리고 회전들의 집합 \(\SO(2)\)
+@@ 69
+\((1,0)\)과 \((-1,0)\)의 중점은 원점이고, 원점은 원 위에 있지 않습니다. 마찬가지로 0° 회전과 180° 회전의 평균은 영행렬이며, 이는 회전이 아닙니다.
+@@ 70
+\(\mathbf{X}\succeq 0\)인 대칭 행렬 (positive semidefinite, 모든 \(\mathbf{v}\)에 대해 \(\mathbf{v}\T\mathbf{X}\mathbf{v}\ge 0\))
+@@ 71
+\(\mathbf{X}\succeq0\)이고 \(\mathbf{Y}\succeq0\)이면 \(\mathbf{v}\T(t\mathbf{X}+(1-t)\mathbf{Y})\mathbf{v} = t\,\mathbf{v}\T\mathbf{X}\mathbf{v}+(1-t)\,\mathbf{v}\T\mathbf{Y}\mathbf{v} \ge 0\)입니다.
+@@ 72
+셋째 행이 문제의 근원입니다: 미지수에 회전이 들어간 문제는 feasible set이 non-convex입니다 (<a href="#d19">4주차 · Day 1</a>). 넷째 행이 탈출구이며, 내일부터 다룹니다.
+@@ 73
+5. Relaxation: 어려운 문제를 bound하는 더 쉬운 문제
+@@ 74
+최소화 문제의 <strong>relaxation</strong>(완화)은 objective는 그대로 두고 feasible set을 넓힙니다. 더 많은 후보 위에서 최소화하면 최솟값은 낮아질 수만 있으므로, relaxation의 최적값 \(d^\star\)는 \(p^\star\)의 lower bound입니다. 그리고 relaxation의 minimizer가 마침 원래 feasible set 안에 있다면, 그것은 원래 문제에서도 최적입니다. 더 큰 집합 안의 어떤 것도 그것보다 좋지 않기 때문입니다.
+@@ 75
+한 줄짜리 예. \((x-0.4)^2\)를 두 점 \(x\in\{0,1\}\) 위에서 최소화하면, 최선은 \(x=0\)이고 \(p^\star=0.16\)입니다. 집합을 convex인 구간 \([0,1]\)로 relax하면 minimizer는 \(x=0.4\)이고 \(d^\star=0\)입니다. Bound \(0\le0.16\)은 성립하지만 gap이 있고, \(0.4\)는 feasible하지 않습니다. 이제 objective를 \((x+0.3)^2\)로 바꿉니다. Relaxation의 minimizer는 원래 점인 \(x=0\)이므로 \(p^\star=d^\star=0.09\)이고, relaxation이 어려운 문제를 푼 셈입니다. 이런 일이 일어나면 그 relaxation을 <strong>tight</strong> 또는 <strong>exact</strong>하다고 합니다.
+@@ 76
+Day 2에서는 문제의 한 부류 전체에 대해 그런 relaxation을 만들고, Day 3과 Day 4에서 이를 pose-graph optimization에 적용하며, Day 5에서 빠르게 풉니다.
+@@ 77
+<strong>"Solver가 수렴했으니 답이 맞다."</strong> 수렴은 gradient가 사라졌다는 뜻입니다. 이는 위젯의 꼬인 해를 포함해 모든 local minimum에서 일어납니다.
+@@ 78
+<strong>"NP-hard는 풀 수 없다는 뜻이다."</strong> 모든 instance를 다루는 효율적인 알고리즘이 없다는 뜻입니다. 실제 로봇에서 나오는 instance는 대부분 쉬운 쪽에 속합니다.
+@@ 79
+<strong>"Certifiable solver는 항상 global optimum을 돌려준다."</strong> 항상 추정값과 bound를 돌려줍니다. Bound는 gap이 0일 때만 최적성을 증명합니다.
+@@ 80
+Q1. 위의 cost를 쓰는, noise 없는 12개 heading의 고리가 있습니다. 한 번 꼬인 (k = 1) stationary point의 cost는 얼마입니까?
+@@ 81
+12개 edge 각각의 residual은 360°/12 = 30°이므로, cost는 4 × 12 × (1 − cos 30°) = 48 × 0.134 = 6.43입니다. 1이 12/4보다 작으므로 local minimum입니다.
+@@ 82
+Q2. Certifiable solver가 cost 10.2인 추정값과 lower bound 9.5를 돌려줍니다. 무엇을 알 수 있습니까?
+@@ 83
+추정값은 최적 cost보다 최대 0.7 높습니다. 최적일 수도 있고 아닐 수도 있습니다
+@@ 84
+추정값은 global이 아닌 local minimum입니다
+@@ 85
+최적 cost는 9.5입니다
+@@ 86
+Solver가 실패했고 추정값은 쓸모없습니다
+@@ 87
+최적 cost는 9.5와 10.2 사이에 있습니다. 이 gap은 suboptimality를 0.7로 bound하지만, 실제 gap이 0인지는 알려 주지 않습니다.
+@@ 88
+Q3. 다음 중 convex인 집합은 무엇입니까?
+@@ 89
+두 점 {0, 1}
+@@ 90
+평면의 단위원
+@@ 91
+2 × 2 회전 행렬
+@@ 92
+단위 원판, 즉 norm이 1 이하인 모든 점
+@@ 93
+원판의 두 점을 잇는 선분은 원판 안에 머뭅니다. 나머지 셋은 중점이 집합을 벗어납니다: 차례로 0.5, 원점, 영행렬.
+@@ 94
+Q4. Pose-graph optimization은 NP-hard인데도 이를 위한 certifiable solver가 존재합니다. 이것이 모순이 아닌 이유는 무엇입니까?
+@@ 95
+작은 graph에서만 작동합니다
+@@ 96
+어려운 instance에서는 최적성 증명 없이 bound만 돌려줄 수 있습니다
+@@ 97
+아주 좋은 initial guess가 필요합니다
+@@ 98
+NP-hardness는 3-D 문제에만 적용됩니다
+@@ 99
+모든 instance에서 효율적이지만, relaxation이 마침 tight할 때만 최적성을 인증합니다. 최악의 경우 출력은 추정값과 suboptimality bound입니다.
+@@ 100
+SLAM cost는 non-convex입니다. Local solver는 아무 local minimum에서나 멈추며, 그것을 global minimum과 구별하지 못합니다.
+@@ 101
+회전 측정값으로 된 loop 하나만으로도 꼬인 local minimum이 생기며, 깨끗한 고리에서 그 cost는 \(4n(1-\cos(2\pi k/n))\)입니다.
+@@ 102
+Certifiable solver는 추정값과 lower bound \(d^\star\le p^\star\)를 돌려줍니다. Gap \(f(\hat{\mathbf{x}})-d^\star\)는 suboptimality를 bound하고, gap이 0이면 최적성이 증명됩니다.
+@@ 103
+Convex problem에서는 모든 local minimum이 global입니다. 회전은 non-convex 집합을, positive semidefinite 행렬은 convex 집합을 이룹니다.
+@@ 104
+Relaxation은 feasible set을 넓혀 lower bound를 주고, 그 minimizer가 원래 문제에서 feasible하면 exact합니다.
+@@ 105
+<em>SLAM Handbook</em>, 6장 도입부와 §6.1 "Certifiably Optimal Solvers for SLAM", pp. 149–152, Figure 6.1 포함.
+@@ 106
+Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004: convex set과 convex function, 2계 조건(second-order condition), convex problem에서 local과 global이 같다는 사실.
+@@ 107
+꼬인 고리 계산은 식 (6.9)의 cost를 평면 회전으로 제한해 이 코스가 직접 풀어 본 예제입니다.

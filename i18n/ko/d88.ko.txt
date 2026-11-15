@@ -1,0 +1,190 @@
+@@ 1
+<span class="eyebrow">15주차 · Day 4</span>
+@@ 2
+back-end, 그리고 최적화 문제로서의 contrast maximization
+@@ 3
+오늘이 끝나면 contrast maximization을 최적화 문제로 쓰고, 분산이 왜 alignment를 재는지 설명하고, indirect와 direct event-based back-end가 무엇을 최적화하는지 말할 수 있습니다.
+@@ 4
+약 60분 · §10.5–10.6, pp. 293–295 읽기 (3쪽) · 15주차 Day 3 필요
+@@ 5
+먼저 읽기: §10.5–10.6, pp. 293–295
+@@ 6
+대부분의 event-based 시스템이 정제 단계 대신 무엇을 하는지, 그리고 그 이유(p. 293).
+@@ 7
+indirect back-end가 "부족하다"고 저자들이 보는 이유(p. 293).
+@@ 8
+event만 쓰는 direct back-end의 두 가지 objective와, 그것들이 개발된 대상 움직임(pp. 293–294).
+@@ 9
+Table 10.1(p. 295)의 "BA" 열과 "Motion" 열. 입력이 event뿐이면서 back-end가 있는 행을 찾아보세요.
+@@ 10
+event를 위한 bundle adjustment는 아직 젊은 분야입니다. indirect back-end는 고전적인 visual SLAM의 reprojection error를 재사용합니다. direct back-end는 event가 얼마나 잘 정렬되는지(contrast maximization), 또는 event마다의 밝기 오차를 최적화합니다. contrast maximization은 자세히 볼 가치가 있습니다. "그림이 선명해야 한다"는 막연한 목표를, optimizer가 올라갈 수 있는 움직임의 함수로 바꾸기 때문입니다.
+@@ 11
+1. 여기서 back-end가 드문 이유
+@@ 12
+back-end는 모든 미지수와 모든 데이터 사이의 일치를 높이고, 오차가 tracking과 mapping 사이를 오가는 것을 막습니다. frame-based visual SLAM에서는 <a href="#d69">12주차 · Day 3</a>에서 배운 bundle adjustment(BA)가 이 일을 합니다. <span class="src">§10.5 · p. 293</span>
+@@ 13
+대부분의 event-based 시스템에는 이런 단계가 없습니다. 이 시스템들은 <strong>parallel tracking and mapping</strong>을 씁니다. tracking 모듈은 map이 맞다고 가정하고 pose를 추정하고, mapping 모듈은 pose가 맞다고 가정하고 map을 갱신하며, 각자 상대의 최신 출력을 씁니다. 책의 판단은, 이 시스템들이 정확도와 robustness보다 단순함과 낮은 latency를 택했다는 것입니다. event에서 joint refinement가 어려운 이유는 세 가지입니다. 데이터에 noise가 많고 움직임에 의존하며, 미지수가 많고 서로 상관되어 있어 탐색 공간이 크고, 최적화 비용이 크고 local minimum이 있습니다. <span class="src">§10.5 · p. 293</span>
+@@ 14
+2. indirect back-end와 direct back-end
+@@ 15
+back-end는 자신에게 입력을 주는 front-end에 맞아야 하므로, 책은 back-end도 같은 방식으로 분류합니다. <span class="src">§10.5 · pp. 293–294</span>
+@@ 16
+=
+@@ 17
+=
+@@ 18
+event에서 검출한 corner, line, 기타 primitive. event를 이미지로 바꾼 뒤 검출하기도 함
+@@ 19
+센서 데이터 자체
+@@ 20
+=
+@@ 21
+reprojection error: 관측된 feature와 예측된 feature 사이의 이미지 평면상 거리
+@@ 22
+photometric error. grayscale frame이 있으면 frame-based direct 시스템에서 빌려 옴. event만 있으면 event alignment, 또는 각 event가 전하는 밝기 변화
+@@ 23
+성숙하고 robust한 기법을 재사용
+@@ 24
+모든 정보를 씀. event만 쓰는 버전은 frame의 motion blur와 낮은 dynamic range를 피함
+@@ 25
+event가 담은 정보 대부분을 버림. event corner는 이미지 corner보다 덜 정확하고 덜 안정적임
+@@ 26
+최근에 나옴. event만 쓰는 버전은 아직 평면 또는 회전 움직임용만 있고, event가 많이 필요해 계산, 전력, latency 비용이 듦
+@@ 27
+event가 corner보다 훨씬 많은 정보를 담고 있다는 책의 증거는 image reconstruction입니다. event만으로 intensity 이미지 전체를 복원할 수 있습니다. <span class="src">§10.5 · p. 293</span>
+@@ 28
+3. 단계별로 보는 contrast maximization
+@@ 29
+책은 contrast maximization을 한 문단(p. 292)으로 설명하고, event만 쓰는 back-end의 두 objective 중 하나로 꼽습니다(p. 294). 식은 주지 않습니다. 가장 단순한 경우에 대해 방법 전체를 정리합니다.
+@@ 30
+빈틈 채우기: warp, 누적, 점수
+@@ 31
+<strong>미지수.</strong> 움직임 parameter의 벡터 \(\boldsymbol{\theta}\). 가장 단순한 경우 이미지 전체가 일정한 속도 하나로 미끄러지고, \(\boldsymbol{\theta}\)는 밀리초당 픽셀 단위의 그 속도입니다.
+@@ 32
+<strong>1단계: warp.</strong> 기준 시각 \(t_\text{ref}\)를 고릅니다. 움직임이 \(\boldsymbol{\theta}\)라면 각 event \(e_k = (\mathbf{x}_k, t_k, p_k)\)의 장면 점이 \(t_\text{ref}\)에 있었을 위치로 그 event를 옮깁니다:
+@@ 33
+<strong>2단계: 누적.</strong> warp된 event가 각 픽셀 \(\mathbf{x}\)에 몇 개 떨어지는지 셉니다. 이것이 image of warped events입니다:
+@@ 34
+여기서 \(b_k = 1\)(event 개수 세기) 또는 \(b_k = p_k\)(polarity 더하기)이고, \(\delta\)는 인자가 0이면 1, 아니면 0입니다. \(\mathbf{x}'_k\)가 정수 픽셀 위치에 딱 떨어지는 경우는 드물므로, 실제로는 각 event를 가장 가까운 픽셀들에 가까운 정도에 비례해 나누어 주며, 그 덕분에 \(H\)도 \(\boldsymbol{\theta}\)에 따라 매끄럽게 변합니다.
+@@ 35
+<strong>3단계: 점수.</strong> \(H\)의 contrast를 \(N_p\)개 픽셀에 대한 분산으로 잽니다:
+@@ 36
+<strong>추정값</strong>은 \(\boldsymbol{\theta}^\star = \argmax_{\boldsymbol{\theta}} f(\boldsymbol{\theta})\)입니다.
+@@ 37
+<strong>실제 움직임이 이기는 이유.</strong> 속도 \(\mathbf{v}\)로 움직이는 장면 edge는 시공간의 한 직선을 따라 event를 냅니다. 시각 \(t\)에 edge는 \(\mathbf{x}_0 + (t - t_\text{ref})\mathbf{v}\)에 있습니다. \(\boldsymbol{\theta} = \mathbf{v}\)로 warp하면 이 event가 모두 \(\mathbf{x}_0\)에 떨어집니다. 다른 값으로 warp하면 길이가 \(|\mathbf{v} - \boldsymbol{\theta}|\) × 지속 시간인 선분 위에 퍼집니다.
+@@ 38
+<strong>분산이 그것을 보상하는 이유.</strong> 제곱을 전개하면 \(f = \frac{1}{N_p}\sum_i H_i^2 - \mu_H^2\)입니다. \(b_k = 1\)이고 이미지 밖으로 warp되는 event가 없는 한, 합 \(\sum_i H_i = N_e\)는 모든 \(\boldsymbol{\theta}\)에서 같으므로 \(\mu_H\)는 상수입니다. 그러면 분산을 최대화하는 것은 \(\sum_i H_i^2\)를 최대화하는 것과 같고, 합이 고정된 제곱합은 그 합이 몇 군데에 몰려 있을 때 가장 큽니다. event 12개를 픽셀 4개에 놓아 봅시다:
+@@ 39
+=
+@@ 40
+제곱합
+@@ 41
+분산 (평균 3)
+@@ 42
+<strong>손으로 계산하기.</strong> 한 edge가 \((x, t) = (10, 0),\ (12, 1),\ (14, 2),\ (16, 3)\)에서 event를 냅니다(\(x\)는 픽셀, \(t\)는 ms 단위). \(t_\text{ref} = 0\)과 8픽셀 이미지를 쓰면 \(\mu_H = 4/8 = 0.5\)입니다.
+@@ 43
+\(\theta = 0\): event는 10, 12, 14, 16에 그대로 있습니다. 네 픽셀이 1씩 가집니다. \(f = 4/8 - 0.25 = 0.25\).
+@@ 44
+\(\theta = 1\): 10, 11, 12, 13으로 옮겨 갑니다. 여전히 네 픽셀이 1씩 가집니다. \(f = 0.25\).
+@@ 45
+\(\theta = 2\): 10, 10, 10, 10으로 옮겨 갑니다. 한 픽셀이 4를 가집니다. \(f = 16/8 - 0.25 = 1.75\).
+@@ 46
+속도는 2 px/ms이며, 어떤 event가 어떤 edge에 속하는지 한 번도 정하지 않고 찾았습니다.
+@@ 47
+직접 해 보기: 움직이는 막대 두 개에서 나온 event와 무작위 noise를 합쳐 1110개입니다. 후보 속도를 끌어 본 다음, "θ를 0으로 초기화"와 "언덕 오르기"를 눌러 보세요.
+@@ 48
+눈여겨볼 점: θ = 0에서 image of warped events는 픽셀당 raw event 개수일 뿐이라 낮고 넓게 퍼져 있습니다(가장 높은 기둥 32 event, 분산 77). θ = 0.60에서는 기울어진 줄무늬가 똑바로 서고 두 막대의 edge 네 개가 드러나며(가장 높은 기둥 140), 분산은 열세 배 높은 1023에 이릅니다. 언덕 오르기는 θ = 0에서 출발해 분산을 25번 계산하고 그 정점을 찾습니다. noise를 100%로 올려도 정점은 0.60에 머뭅니다. noise event는 어떤 θ에서도 줄지어 정렬되지 않으므로 바닥만 올릴 뿐입니다.
+@@ 49
+밤에 오가는 차를 장노출로 찍으면 빛 줄무늬가 생겨요. 차 하나하나가 어떻게 움직였는지 정확히 안다면, 빛 한 조각 한 조각을 그 경로를 따라 되돌려 놓아서 줄무늬를 선명한 전조등으로 줄일 수 있어요. contrast maximization은 이걸 거꾸로 해요. 줄무늬가 점이 될 때까지 여러 움직임을 시도하고, 그렇게 만드는 움직임이 바로 답이에요.
+@@ 50
+4. 속도 하나에서 SLAM까지
+@@ 51
+이 방법은 \(\boldsymbol{\theta}\)가 warp를 정의하기만 하면 그것이 무엇이든 상관하지 않습니다. 세 걸음이면 back-end에 이릅니다.
+@@ 52
+<strong>회전.</strong> 회전만 하는 카메라에서 \(\boldsymbol{\theta}\)는 각속도(숫자 세 개)이고, warp는 각 event의 시선 방향을 기준 시각으로 되돌려 회전시킵니다. Table 10.1은 이를 회전 움직임용 "CMax-ω"로 싣고 있습니다. <span class="src">Table 10.1 · p. 295</span>
+@@ 53
+<strong>trajectory 전체.</strong> CMax-SLAM에서 미지수는 시간에 따른 카메라의 회전입니다. 모든 event를 파노라마 하나 위로 warp하고, 그 파노라마가 최대한 선명해질 때까지 trajectory를 다듬습니다. 이것은 contrast를 objective로 삼는 bundle adjustment이고, 선명한 파노라마는 장면의 edge map입니다(Figure 10.3에 예가 있습니다). <span class="src">§10.5 · p. 294; Table 10.1</span>
+@@ 54
+<strong>다른 objective.</strong> EMBA와 EPBA는 대신 식 (10.1)로부터 event마다 residual 하나를 씁니다. 현재 map과 trajectory가 그 픽셀에서 예측하는 밝기 변화에서 event가 보고한 \(p_k C\)를 뺀 값입니다. 이들은 움직임을 gradient map(EMBA) 또는 intensity map(EPBA)과 함께 다듬습니다. gradient map은 Poisson integration으로 intensity 이미지로 바꿀 수 있습니다(Figure 10.4). <span class="src">§10.5 · p. 294; Table 10.1; Figure 10.4 · p. 290</span>
+@@ 55
+셋 모두 회전 움직임용입니다. 책은 자연 장면에서 6-DoF 움직임을 다루는 효율적인 direct, event-only BA는 아직 풀리지 않은 문제라고 말합니다. <span class="src">§10.5 · p. 294</span>
+@@ 56
+더 깊이 (선택): 가장 선명한 이미지가 틀릴 때
+@@ 57
+책은 event를 몇 개의 픽셀이나 하나의 선 위로 warp할 수 있을 때 이런 방법들이 "원치 않는 global optimum에 빠질 수 있다"고 경고합니다. <span class="src">§10.4.3 · p. 292</span> 이유는 위 표에서 보입니다. 모든 event가 한 픽셀에 모일 때 분산이 가장 큽니다. 우리의 1-D warp는 event를 평행 이동할 뿐이라 그렇게 할 수 없습니다. 이미지를 축소할 수 있는 warp family, 예를 들어 zoom 같은 parameter가 있는 warp는 모든 event를 한 점으로 보내 실제 움직임과 아무 상관 없는 엄청난 contrast 점수를 얻을 수 있습니다. 실용 시스템은 warp를 제한하거나 penalty를 더해 이를 막습니다.
+@@ 58
+5. Table 10.1 읽기
+@@ 59
+Table 10.1은 event-based SLAM과 odometry 시스템을 시간 순서로 나열하며, 이제 익숙한 표시를 붙입니다. model-based(M) 또는 딥러닝(DL), direct(D) 또는 indirect(I), event representation, back-end 유무(BA), 다루는 움직임과 장면, 그리고 입력 센서(E는 event, F는 frame, D는 depth, I는 IMU, M은 주어진 map, "2E"는 stereo 쌍)입니다. <span class="src">Table 10.1 · p. 295</span> 책이 이끌어 내는 추세는 다음과 같습니다: <span class="src">§10.6 · p. 294</span>
+@@ 60
+<strong>model-based 시스템이 주류입니다.</strong> DL로 표시된 행은 DEVO와 DEIO 두 개뿐입니다. 저자들은 이것이 바뀔 수 있다고 봅니다.
+@@ 61
+<strong>난이도를 점진적으로 높여 왔습니다.</strong> 카메라 움직임, 장면의 종류, 문제를 단순하게 만들려고 쓰는 추가 센서나 정보라는 세 갈래를 따라서입니다. depth 센서는 event로 depth를 추정하는 부담을 없애 주고, IMU는 정확한 각속도를 제공합니다.
+@@ 62
+<strong>좋은 방법은 정해진 경로를 따라 확장됩니다.</strong> monocular는 stereo나 multi-camera로 바뀌고, event만 쓰는 방법은 IMU를 더해 더 robust해집니다(ESVO에서 ESVO2로, DEVO에서 DEIO로).
+@@ 63
+<strong>이 분야는 아직 탐색 중입니다.</strong> 각 행은 서로 다른 map representation, event representation, loss function을 쓰며, 어느 한 설계가 이긴 상태가 아닙니다.
+@@ 64
+표에서 직접 확인할 수 있는 것이 두 가지 있습니다. 처음 열한 개 시스템에는 back-end가 하나도 없고, back-end가 있는 direct, event-only 시스템(CMax-SLAM, EMBA, EPBA)은 모두 회전 움직임용입니다.
+@@ 65
+<strong>"contrast maximization은 먼저 어떤 event가 같은 edge에 속하는지 정해야 한다."</strong> 그런 결정은 전혀 하지 않습니다. event는 warp 후 같은 픽셀에 떨어짐으로써 암묵적으로 연관됩니다.
+@@ 66
+<strong>"가장 선명한 image of warped events는 언제나 올바른 움직임을 준다."</strong> warp가 event를 한곳으로 뭉칠 수 없을 때만 그렇습니다. 선택 노트를 보세요.
+@@ 67
+<strong>"모든 SLAM 시스템에는 back-end가 있다."</strong> Table 10.1에서 약 절반의 시스템에는 back-end가 없고, 초기 시스템에는 하나도 없습니다.
+@@ 68
+Q1. 한 edge가 (x, t) = (20, 0), (23, 2), (26, 4), (29, 6)에서 event 네 개를 냅니다(x는 픽셀, t는 ms 단위). 기준 시각이 0일 때, 네 event를 모두 한 픽셀로 warp하는 후보 속도는 무엇일까요?
+@@ 69
+=
+@@ 70
+=
+@@ 71
+=
+@@ 72
+=
+@@ 73
+edge는 2 ms마다 3픽셀씩 나아가므로 1.5 px/ms입니다. 확인: 23 − 2 × 1.5 = 20, 26 − 4 × 1.5 = 20, 29 − 6 × 1.5 = 20.
+@@ 74
+Q2. 5픽셀짜리 image of warped events가 (0, 5, 0, 5, 0)입니다. 분산은 얼마일까요?
+@@ 75
+평균은 10/5 = 2입니다. 편차의 제곱은 4, 9, 4, 9, 4이고 합은 30이므로 30/5 = 6입니다. 같은 event 10개로 된 평평한 이미지 (2, 2, 2, 2, 2)의 분산은 0입니다.
+@@ 76
+Q3. image of warped events의 분산이 높을수록 alignment가 더 좋다는 뜻인 이유는 무엇일까요?
+@@ 77
+분산이 event 개수를 세기 때문
+@@ 78
+noise event가 평균을 낮추기 때문
+@@ 79
+정렬된 event는 polarity가 같기 때문
+@@ 80
+전체 개수가 고정되어 있고, 고정된 합은 적은 픽셀에 몰릴 때 제곱합이 더 크기 때문
+@@ 81
+평균이 고정되면 분산은 개수 제곱의 합과 함께 커집니다. 한 edge의 event가 한 픽셀에 쌓이면 그 합이 커지고, 퍼지면 작아집니다.
+@@ 82
+Q4. event-based back-end에 대한 다음 설명 중 책과 일치하는 것은 무엇일까요?
+@@ 83
+대부분의 event-based SLAM 시스템은 bundle adjustment를 포함합니다
+@@ 84
+event만 쓰는 direct back-end는 지금까지 평면 또는 회전 움직임용으로 개발되었습니다
+@@ 85
+indirect back-end는 event의 모든 정보를 씁니다
+@@ 86
+direct back-end는 corner의 reprojection error를 최소화합니다
+@@ 87
+§10.5는 event만 쓰는 direct back-end가 최근의 것이고 제한된 움직임에 국한된다고 말합니다. 대부분의 시스템에는 정제 단계가 없고, indirect back-end는 event 정보 대부분을 버리며, reprojection error는 indirect 쪽의 objective입니다.
+@@ 88
+대부분의 event-based 시스템은 joint refinement 없이 tracking과 mapping을 병렬로 돌립니다. event-based BA는 최근의 일입니다.
+@@ 89
+indirect back-end는 event feature의 reprojection error를 최소화합니다. direct back-end는 photometric error를 최소화하거나 event alignment를 최대화합니다.
+@@ 90
+contrast maximization: 후보 움직임으로 event를 warp하고(\(\mathbf{x}'_k = \mathbf{x}_k - (t_k - t_\text{ref})\boldsymbol{\theta}\)), image of warped events \(H\)에 누적한 뒤, \(\boldsymbol{\theta}\)에 대해 그 분산을 최대화합니다.
+@@ 91
+분산이 통하는 이유는 event 수가 고정되면 분산이 \(\sum_i H_i^2\)와 함께 커지고, 이 값은 같은 edge의 event가 같은 픽셀에 떨어질 때 가장 크기 때문입니다.
+@@ 92
+event만 쓰는 direct BA(CMax-SLAM, EMBA, EPBA)는 회전 움직임용으로 있으며, 6-DoF 경우는 아직 열린 문제입니다.
+@@ 93
+<em>SLAM Handbook</em>, §10.5 "Back-end of an Event-based SLAM System"과 §10.6 "State-of-the-Art Systems", pp. 293–295 및 Table 10.1; §10.4.3, p. 292; Figure 10.4, p. 290.
+@@ 94
+warp, image of warped events, 분산 objective는 Gallego, Rebecq, Scaramuzza, <em>A Unifying Contrast Maximization Framework for Event Cameras, with Applications to Motion, Depth, and Optical Flow Estimation</em>, 2018을 따릅니다.
+@@ 95
+분산 = 제곱의 평균 − 평균의 제곱이라는 항등식은 기초 통계입니다. event 12개 표와 event 네 개 예제는 직접 계산한 것입니다.

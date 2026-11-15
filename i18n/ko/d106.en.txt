@@ -1,0 +1,208 @@
+@@ 1
+<span class="eyebrow">Week 18 · Day 4</span>
+@@ 2
+Contact estimation: which feet can be trusted
+@@ 3
+After today you can test a ground reaction force against the friction cone, explain why a threshold on the normal force is the usual contact detector, and recover the ground force from joint torques with equation (12.25).
+@@ 4
+About 60 min · Read §12.3, pp. 345–348 (3 pages) · Needs Week 18 Day 2 and Day 3
+@@ 5
+Read first: §12.3, pp. 345–348
+@@ 6
+What "in contact" means for leg odometry, as opposed to robot manipulation (the first paragraph of §12.3, p. 345).
+@@ 7
+The sentence on p. 346 that explains why almost everyone simply thresholds \(f_z\), after three inequalities have been set up.
+@@ 8
+The two pieces of information that are missing when the ground force is computed from joint torques (the bullets at the top of p. 348).
+@@ 9
+Yesterday's equations are only as good as the claim "this foot is not moving". For leg odometry a foot is <strong>in contact</strong> only when its contact point is stationary, which is a statement about friction: the ground reaction force must stay inside the <strong>friction cone</strong>. A large enough normal force guarantees that, so in practice contact estimation is a threshold on the normal force \(f_z\), and methods differ only in how they get \(f_z\).
+@@ 10
+1. Contact means "not slipping"
+@@ 11
+In manipulation, a hand is in contact as soon as it touches something. That is too weak here: yesterday's measurement equations need the contact point to be stationary. On a point foot, stationary means not slipping. <span class="src">§12.3 · p. 345</span>
+@@ 12
+Let \(\mathbf{f} = [f_x, f_y, f_z]\T\) be the <strong>ground reaction force</strong> (GRF), the force of the ground on the foot, with \(f_z\) normal to the contact surface and \(f_x, f_y\) tangential to it. The foot does not slip while <span class="src">§12.3 · p. 346</span>
+@@ 13
+where \(\mu_{x,y}\) is the friction coefficient of the foot on that ground.
+@@ 14
+Filling the gap: where the cone comes from
+@@ 15
+Inequality (12.22) is Coulomb's law of dry friction. Friction is the tangential part of the ground's force. It takes whatever value is needed to keep the foot from sliding, up to a ceiling proportional to how hard the surfaces are pressed together: \(\mu f_z\). Ask for more and the foot slides. Geometrically, the set of all forces that satisfy (12.22) is a cone standing on the contact point, with its axis along the surface normal and a half-angle of \(\arctan\mu\).
+@@ 16 attr
+Side view of a contact point on the ground with a wedge opening upward, the friction cone for a friction coefficient of 0.6. A force with tangential part 60 newtons and normal part 150 newtons lies inside the wedge and holds. A force with tangential part 130 newtons and the same normal part lies outside the wedge and slips.
+@@ 17
+normal force 150 N for both
+@@ 18
+holds: 60 N ≤ 90 N
+@@ 19
+slips: 130 N &gt; 90 N
+@@ 20
+friction cone for μ = 0.6: tangential force at most 0.6 × 150 = 90 N
+@@ 21
+ground
+@@ 22
+A slice through the friction cone. Both forces press on the ground equally hard; only the one that asks for less sideways grip stays put.
+@@ 23
+A 3-D example with \(\mu = 0.6\): \(\mathbf{f} = (80,\ 40,\ 150)\) N has a tangential part of \(\sqrt{80^2 + 40^2} = 89.4\) N, just under the ceiling \(0.6 \times 150 = 90\) N. It holds, barely.
+@@ 24
+2. Flat feet can also twist and tip
+@@ 25
+A humanoid's flat foot can apply a torque \(\boldsymbol{\tau}\) to the ground as well as a force, so two more conditions are needed for the foot not to rotate: <span class="src">§12.3 · p. 346</span>
+@@ 26
+(12.24) is friction again, this time against spinning about the vertical axis, with a rotational friction coefficient \(\mu_z\). (12.23) is about tipping.
+@@ 27
+Filling the gap: the center of pressure
+@@ 28
+The ground pushes on a flat sole over an area. Replace that spread-out push by one force \(f_z\) acting at one point \((x_c, y_c)\) of the sole, the <strong>center of pressure</strong> (CoP). A force \((0, 0, f_z)\) applied at \((x_c, y_c, 0)\) has a torque about the foot frame's origin of \(\mathbf{r} \times \mathbf{f} = (y_c f_z,\ -x_c f_z,\ 0)\). So if a sensor at the origin reads torques \(\tau_x, \tau_y\),
+@@ 29
+which is the left side of (12.23). The ground can only push, so the CoP must lie under the sole. If the measured torques put it at the edge, the foot is about to roll over that edge. The right side of (12.23) holds those edge limits, which depend on the shape of the sole. Example: \(f_z = 400\) N and \(\tau_y = -20\) N·m give \(x_c = 0.05\) m, 5 cm ahead of the sensor. A sole that extends 12 cm forward is safe; one that extends 4 cm is tipping.
+@@ 30
+3. Why a threshold on the normal force is enough
+@@ 31
+All three inequalities have \(f_z\) on the large side. Make \(f_z\) big enough and they hold whatever the other components of the contact wrench are doing. So the most common detector by far is: call the leg a stance leg when \(f_z\) exceeds a threshold. <span class="src">§12.3 · p. 346</span>
+@@ 32
+Try it: lower the threshold to 20 N, then raise it to 180 N. Then return it to 100 N and lower the friction coefficient to 0.2.
+@@ 33
+Notice the trade. At 100 N the detector agrees with the friction cone almost everywhere (2 wrong samples of 130). At 20 N it claims contact during 25 samples in which the foot is not actually holding. At 180 N it is never wrong but throws away 22% of the usable stance. With μ = 0.2 no threshold helps: at 100 N, 42% of the claimed contact is slipping, because the dashed "needed" curve now rises above the force the foot actually gets.
+@@ 34
+The widget also shows a third cost. With noise, the measured force crosses the threshold several times on its way up, so the detector reports 8 contact switches for 3 strides instead of 6. Real detectors require the condition to hold for some time before they believe it.
+@@ 35
+Press a finger lightly on a table and push sideways: it slides. Press hard and it sticks. A robot foot is the same, so "is this foot pressing hard?" is a good stand-in for "is this foot stuck?". It stops being good on ice, where even a hard press does not stick.
+@@ 36
+4. Four ways to get the normal force
+@@ 37
+Source
+@@ 38
+How it gives contact
+@@ 39
+Strengths
+@@ 40
+Weaknesses
+@@ 41
+Contact sensor in the sole
+@@ 42
+Thresholds \(f_z\) in hardware: the bit switches on when the force exceeds a tuned value
+@@ 43
+Simplest: leg odometry reads the bit
+@@ 44
+Slower response; cable to the foot; takes every impact
+@@ 45
+Force/torque sensor at the foot
+@@ 46
+Measures \(f_z\) over time, so patterns can be read, not just a bit
+@@ 47
+Can tell "striking but not yet in stance" (a small, rising force that persists) and "about to lift" (force below, say, half the expected load) from firm stance
+@@ 48
+Costly; cable to the foot; takes every impact
+@@ 49
+IMU on the leg or foot
+@@ 50
+A force on the foot changes its acceleration; touchdown shows up as an acceleration change
+@@ 51
+The sensor is not in the impact path, so it is less likely to break
+@@ 52
+Needs extra signal processing
+@@ 53
+Joint torques
+@@ 54
+The GRF is computed from the dynamics (12.5)
+@@ 55
+No sensor in the foot at all
+@@ 56
+Needs a good dynamic model; see below
+@@ 57
+<span class="src">§12.3.1–12.3.4 · pp. 346–347</span> When the force pattern says a leg is only striking or already leaving, its measurements are discarded, or kept with a larger uncertainty. <span class="src">§12.3.2 · p. 347</span>
+@@ 58
+5. The ground force from joint torques
+@@ 59
+For leg \(i\) of a quadruped the book gives <span class="src">§12.3.4 · p. 347</span>
+@@ 60
+with \(\boldsymbol{\tau}_i \in \R^3\) the leg's joint torques, \(\bar{\mathbf{J}}_{i,v}\) the non-zero \(3 \times 3\) block of the foot's linear Jacobian, \(\mathbf{h}_{q,i}\) the leg's Coriolis, centrifugal, and gravity torques, and \(\mathbf{F}\) a \(3 \times 3\) block of the mass matrix.
+@@ 61
+Filling the gap: where (12.25) comes from
+@@ 62
+Take the three rows of the dynamics (12.5) that belong to the joints of leg \(i\). Because each foot's Jacobian involves only its own leg's joints (<a href="#d104">Day 2</a>), only this leg's ground force appears in them:
+@@ 63
+Move \(\boldsymbol{\tau}_i\) to the left and multiply by the inverse of \(\bar{\mathbf{J}}_{i,v}\T\):
+@@ 64
+Equation (12.25) is this line with the inertia term written as \(\mathbf{F}\T\dot{\mathbf{v}}\), the part due to the base's linear acceleration. The inverse exists because a quadruped leg has 3 joints and a point foot has 3 force components, so the block is square. It fails at a singularity: for the planar leg \(\det \mathbf{J}_v = l_1 l_2 \sin q_2\), so a straight leg hides the force along it.
+@@ 65
+Check with the standing leg of Day 2, where accelerations are zero and we ignore \(\mathbf{h}\). The motors hold \(\boldsymbol{\tau} = (0,\ 20)\) N·m. Solve \(\mathbf{J}_v\T\mathbf{f} = -\boldsymbol{\tau}\):
+@@ 66
+If the knee torque falls to 4 N·m in the same pose, \(f_z = 20\) N: the leg is unloading and is about to leave the ground.
+@@ 67
+Two things are still missing before this force can be tested against the cone. <span class="src">§12.3.4 · pp. 347–348</span>
+@@ 68
+<strong>The slope of the ground.</strong> The estimate is in base coordinates, but "normal" and "tangential" are defined by the contact surface. A humanoid's ankle angles approximate the slope. A quadruped cannot know it without exteroceptive sensing, and falls back on heuristics such as fitting a plane through the other feet in contact.
+@@ 69
+<strong>The friction coefficient.</strong> It depends on the material underfoot. It must be known in advance or inferred from how much the robot is observed to slip.
+@@ 70
+The book calls contact estimation from joint sensing an open problem. Current answers are probabilistic detectors that combine kinematics with dynamics, and learned detectors (<a href="#d107">Day 5</a>). <span class="src">§12.3.4 · p. 348</span>
+@@ 71
+<strong>"In contact means touching."</strong> For leg odometry it means stationary. A foot that touches and slides must be treated as a swing foot.
+@@ 72
+<strong>"A higher threshold is always safer."</strong> It discards real stance time. With fewer legs counted as planted, there are more moments in which no leg supplies a measurement.
+@@ 73
+<strong>"Thresholding the normal force checks the friction cone."</strong> It assumes the friction coefficient is large enough. The detector never sees \(\mu\) or the tangential force.
+@@ 74
+Q1. A point foot feels a ground reaction force (60, 90, 200) N, with z normal to the ground, and μ = 0.5. Does it slip?
+@@ 75
+No: 108 N is less than 200 N
+@@ 76
+Yes: the tangential force is 108 N and the limit is 100 N
+@@ 77
+No: each tangential component is below 100 N
+@@ 78
+Yes: the normal force exceeds the tangential force
+@@ 79
+The tangential magnitude is √(60² + 90²) = 108.2 N. The cone allows μ f_z = 0.5 × 200 = 100 N. The components must be combined before comparing.
+@@ 80
+Q2. A flat foot's sensor reads f_z = 500 N, τ_x = 10 N·m, τ_y = −40 N·m. Where is the center of pressure, (x, y)?
+@@ 81
+x = −τ_y / f_z = 40 / 500 = 0.08 m and y = τ_x / f_z = 10 / 500 = 0.02 m.
+@@ 82
+Q3. On ice, μ = 0.2. During touchdown the gait needs 60 N of tangential force at the foot. How large must the normal force be for the foot to hold?
+@@ 83
+At least 300 N
+@@ 84
+At least 12 N
+@@ 85
+At least 60 N
+@@ 86
+At least 120 N
+@@ 87
+From (12.22), f_z ≥ 60 / 0.2 = 300 N. A leg that carries 200 N cannot supply that, so the foot slips whatever the detection threshold is.
+@@ 88
+Q4. The planar leg has J_vᵀ = [0.693, 0; 0.346, −0.2] and stands still. Its motors hold torques (0, 30) N·m. Ignoring h, what is the ground reaction force (f_x, f_z)?
+@@ 89
+Solve J_vᵀ f = −τ: the first row gives 0.693 f_x = 0, the second gives −0.2 f_z = −30, so f_z = 150 N, pushing up.
+@@ 90
+Q5. A quadruped computes the force at one foot from joint torques. Why can it still not be sure the foot is inside the friction cone?
+@@ 91
+Joint torques cannot be measured on quadrupeds
+@@ 92
+It knows neither the slope of the ground under the foot nor the friction coefficient
+@@ 93
+The Jacobian of a quadruped leg is never invertible
+@@ 94
+The force is only known in world coordinates
+@@ 95
+The force comes out in base coordinates. Splitting it into normal and tangential parts needs the local slope, and the cone's width needs μ. Neither is measured by the leg.
+@@ 96
+For leg odometry, contact means a stationary contact point: the GRF must satisfy \(\sqrt{f_x^2 + f_y^2} \le \mu f_z\).
+@@ 97
+Flat feet add a center-of-pressure condition against tipping and a torque condition against spinning.
+@@ 98
+A large normal force satisfies all of them, so contact detection is usually a threshold on \(f_z\), set as a trade between using a slipping foot and wasting good stance.
+@@ 99
+\(f_z\) comes from a contact sensor, a force/torque sensor, an IMU on the leg, or the joint torques through (12.25).
+@@ 100
+Torque-based estimates still lack the ground slope and the friction coefficient.
+@@ 101
+<em>SLAM Handbook</em>, §12.3 "Contact Estimation", pp. 345–348.
+@@ 102
+Lynch and Park, <em>Modern Robotics: Mechanics, Planning, and Control</em>, 2017 (Coulomb friction and friction cones; statics of open chains).
+@@ 103
+Siciliano, Sciavicco, Villani, Oriolo, <em>Robotics: Modelling, Planning and Control</em>, 2009 (force–torque duality through the Jacobian transpose).
+@@ 104
+The force profile in the widget is a simplified illustration, not data from a robot.

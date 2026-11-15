@@ -1,0 +1,220 @@
+@@ 1
+<span class="eyebrow">Week 16 · Day 1</span>
+@@ 2
+What an IMU measures: rotation rate, specific force, bias, and noise
+@@ 3
+After today you can write the IMU measurement model, explain why an accelerometer at rest reads 9.81 m/s² upward, and say what each error term in the model stands for.
+@@ 4
+About 60 min · Read §11.1 and §11.1.1, pp. 304–306 (3 pages) · Needs Week 4 Day 1
+@@ 5
+Read first: §11.1 opening and §11.1.1, pp. 304–306
+@@ 6
+The difference between a strapdown and a stabilized inertial navigation system, and which one robots use (p. 305).
+@@ 7
+The one sentence on p. 305 that says what an accelerometer physically measures. It is not "acceleration".
+@@ 8
+Equations (11.1) and (11.2) on p. 306, and the remark below them about what the superscripts on \(\mathbf{b}\) and \(\boldsymbol{\eta}\) mean.
+@@ 9
+The three matrices \(\mathbf{T}_a\), \(\mathbf{T}_g\), \(\mathbf{T}_s\) in the extended models (11.3)–(11.5).
+@@ 10
+An inertial measurement unit is two sensors in one package. The gyroscope reports how fast the body is rotating. The accelerometer reports the body's acceleration <em>minus gravity</em>. Both report in the body's own axes, and both are corrupted by a slowly wandering offset (the bias) and by fast random noise. The two lines of equations (11.1)–(11.2) say exactly this, and the rest of the week is built on them.
+@@ 11
+1. The sensor and its vocabulary
+@@ 12
+An <strong>inertial measurement unit (IMU)</strong> contains a 3-axis <strong>accelerometer</strong> and a 3-axis <strong>gyroscope</strong>, six numbers per sample. It needs nothing from the outside world: no light, no texture, no satellites. It is also fast, typically 200 to 1000 samples per second. <span class="src">§11.1 · p. 304; §11.2 · p. 308</span> IMUs range from large, accurate optical units in aircraft to the small, noisier micro-electromechanical (MEMS) chips in phones, which are the ones most robots carry. <span class="src">Ch. 11 · p. 304</span>
+@@ 13
+<strong>Inertial navigation system (INS)</strong>
+@@ 14
+Estimates the current state (pose, velocity) from an initial state and the history of IMU measurements.
+@@ 15
+<strong>Strapdown</strong> system
+@@ 16
+The IMU is bolted to the vehicle and turns with it. Nearly every robot is strapdown.
+@@ 17
+<strong>Stabilized</strong> system
+@@ 18
+The IMU sits on gimbals that keep its orientation fixed in space while the vehicle turns around it.
+@@ 19
+<strong>Inertial odometry</strong>
+@@ 20
+The robotics name for inertial navigation. "Odometry" is a reminder that the estimate drifts.
+@@ 21
+<strong>Aided INS (AINS)</strong>
+@@ 22
+An INS corrected by other sensors: GPS, cameras, LiDAR.
+@@ 23
+<strong>Visual-inertial odometry</strong> / <strong>visual-inertial SLAM</strong>
+@@ 24
+Cameras plus IMU for motion tracking; called SLAM once loop closures are added.
+@@ 25
+<span class="src">§11.1 · pp. 304–305</span> Many IMUs also carry a compass, but indoors and in cities it is disturbed by metal structures and electronics, so SLAM systems rarely rely on it. <span class="src">§11.1 · p. 304, footnote 2</span>
+@@ 26
+2. Two frames
+@@ 27
+The model uses two coordinate frames. The <strong>world frame</strong> \(\mathcal{F}^w\) is fixed to the ground. The <strong>body frame</strong> \(\mathcal{F}^b\) is fixed to the IMU and moves with the robot (the book assumes sensor and body frames coincide). A superscript tells you in which frame a vector's coordinates are written. The rotation \(\mathbf{R}^w_b\) converts body coordinates to world coordinates, and its transpose \(\mathbf{R}^b_w = (\mathbf{R}^w_b)\T\) goes the other way. The IMU's pose at time \(t\) is the pair \(\{\mathbf{R}^w_b(t), \mathbf{p}^w(t)\}\). <span class="src">§11.1.1 · pp. 305–306</span>
+@@ 28 attr
+A world frame with horizontal x axis and vertical z axis at the lower left. A tilted rectangular body at the right carries its own x and z axes, rotated with it. A dashed arrow from the world origin to the body centre is the position. A separate arrow pointing straight down is gravity.
+@@ 29
+x world
+@@ 30
+z world
+@@ 31
+x body
+@@ 32
+z body
+@@ 33
+position p (world coordinates)
+@@ 34
+gravity g
+@@ 35
+The rotation R (body to world) says how the body axes are turned relative to the world axes. The IMU reports everything along the body axes, so R is needed to make sense of any reading.
+@@ 36
+The physics of the sensors holds in an <strong>inertial frame</strong>, one that neither accelerates nor rotates. The ground rotates with the Earth, so strictly it is not inertial. For low-cost IMUs over small areas the Earth's rotation is far below the sensor noise, so the book treats the world frame as inertial. <span class="src">§11.1.1 · p. 305, footnote 3</span>
+@@ 37
+3. The gyroscope
+@@ 38
+The gyroscope measures the <strong>angular velocity</strong> of the body. The book's model is
+@@ 39
+The left side is the reading. On the right, \(\boldsymbol{\omega}^b_b\) is the true angular velocity of the body relative to the world, written in body coordinates: its direction is the axis of rotation and its length is the rate in rad/s. \(\mathbf{b}^g\) is the gyroscope <strong>bias</strong> and \(\boldsymbol{\eta}^g\) is zero-mean Gaussian <strong>noise</strong>. The superscript \(g\) is not a frame. It says "gyroscope", and \(a\) says "accelerometer". <span class="src">§11.1.1 · p. 306</span>
+@@ 40
+Example: a robot spins on the spot at 90° per second about its vertical body axis. The true rate is \(\boldsymbol{\omega}^b_b = (0, 0, 1.571)\) rad/s. With a bias of \((0.002, -0.001, 0.003)\) rad/s the gyroscope reports about \((0.002, -0.001, 1.574)\) rad/s, plus a little noise that is different in every sample.
+@@ 41
+From equation (11.12) on, the book marks measured values with a tilde, \(\tilde{\boldsymbol{\omega}}\) and \(\tilde{\mathbf{a}}\). We use the tilde from now on so that a reading is never confused with the true quantity.
+@@ 42
+4. The accelerometer measures specific force
+@@ 43
+Here \(\mathbf{a}^w\) is the true acceleration of the sensor in the world frame and \(\mathbf{g}^w\) is the gravity vector in the world frame. With \(z\) pointing up, \(\mathbf{g}^w = (0, 0, -9.81)\) m/s². The rotation \(\mathbf{R}^b_w\) in front converts the result into body coordinates. <span class="src">§11.1.1 · p. 306</span> The quantity \(\mathbf{a}^w - \mathbf{g}^w\) is called the <strong>specific force</strong>: acceleration with gravity taken out. The book describes it as the difference between the kinematic acceleration and the gravitational acceleration. <span class="src">§11.1.1 · p. 305</span>
+@@ 44
+Filling the gap: why "minus gravity"?
+@@ 45
+The book states the minus sign without deriving it. Picture the simplest accelerometer: a small <strong>proof mass</strong> \(m\) held inside a case by a spring. The sensor can only measure how far the spring is stretched, which is the spring force \(\mathbf{F}_s\). Two forces act on the mass, the spring and gravity, so Newton's second law reads
+@@ 46
+Gravity pulls on the case and on the mass equally, so it never stretches the spring by itself. The spring only responds to forces that reach the mass <em>through the case</em>: the floor pushing up, a motor, a collision. That is the specific force. Three cases with \(z\) up:
+@@ 47
+<strong>At rest on a table.</strong> \(\mathbf{a}^w = \mathbf{0}\), so the reading is \(-\mathbf{g}^w = (0,0,+9.81)\). The sensor reports the table pushing it up.
+@@ 48
+<strong>Free fall.</strong> \(\mathbf{a}^w = \mathbf{g}^w\), so the reading is \(\mathbf{0}\).
+@@ 49
+<strong>Lifting off at 2 m/s².</strong> \(\mathbf{a}^w = (0,0,2)\), so the reading is \((0,0,11.81)\).
+@@ 50 attr
+Three accelerometer cases, each a box containing a mass sitting on a spring. At rest on a table the spring is compressed and the sensor reads plus 9.81. In free fall the spring is relaxed and the sensor reads zero. Lifting off at 2 metres per second squared the spring is compressed more and the sensor reads plus 11.81.
+@@ 51
+At rest on a table
+@@ 52
+reads +9.81 m/s² (up)
+@@ 53
+Free fall
+@@ 54
+reads 0
+@@ 55
+Lifting off at 2 m/s²
+@@ 56
+reads +11.81 m/s²
+@@ 57
+The reading is the spring compression. Gravity alone never compresses the spring, because it accelerates the case and the mass together.
+@@ 58
+Try it: a body in the vertical plane with a two-axis accelerometer. Press "Free fall", then "At rest", then change the pitch.
+@@ 59
+Notice that at rest the reading always has length 9.81 and points straight up in the world. Tilting the body does not change that vector, it only changes how it splits between the two body axes: at 20° pitch the sensor reads (3.36, 9.22). In free fall the reading is zero at every pitch.
+@@ 60
+An accelerometer feels what you feel. Sitting still you feel the chair pushing up on you, and so does the sensor. Falling freely you feel nothing, and the sensor reads nothing. Gravity itself is never felt directly.
+@@ 61
+5. Bias and noise
+@@ 62
+Both readings carry the same two error terms. <span class="src">§11.1.1 · pp. 305–306</span>
+@@ 63
+How it behaves
+@@ 64
+What it does once you integrate
+@@ 65
+How the estimator deals with it
+@@ 66
+Noise \(\boldsymbol{\eta}^g, \boldsymbol{\eta}^a\)
+@@ 67
+Zero-mean Gaussian, independent from one sample to the next (white)
+@@ 68
+Partly averages out: the integrated error grows like \(\sqrt{t}\)
+@@ 69
+Modeled by a covariance (Day 4)
+@@ 70
+Bias \(\mathbf{b}^g, \mathbf{b}^a\)
+@@ 71
+An offset that changes slowly, modeled as a random walk
+@@ 72
+Does not average out: the integrated error grows like \(t\)
+@@ 73
+Estimated as an unknown, alongside pose and velocity (Day 5)
+@@ 74
+A worked number shows why the bias is the dangerous one. An accelerometer bias of 0.05 m/s² is about half a percent of gravity. Left uncorrected for 10 s it produces a velocity error of \(0.05 \times 10 = 0.5\) m/s and a position error of \(\tfrac12 \times 0.05 \times 10^2 = 2.5\) m. This is why the biases are part of the state that visual-inertial systems estimate. The book calls them "to-be-estimated". <span class="src">§11.1.1 · p. 306</span>
+@@ 75
+6. Extended models
+@@ 76
+Real chips are not perfectly built: the three sensing axes are not exactly perpendicular, and each has its own gain. The book collects both effects in a 3×3 <strong>shape matrix</strong> that multiplies the true quantity: <span class="src">§11.1.1 · p. 306</span>
+@@ 77
+(The text introduces (11.3) as an extension of "model (11.2)"; the equation it extends is the accelerometer model (11.1).) A perfect sensor has \(\mathbf{T}_a = \mathbf{T}_g = \mathbf{I}\). Diagonal entries away from 1 are scale errors and off-diagonal entries are axis misalignment. In (11.5) the extra matrix \(\mathbf{T}_s\) models <strong>g-sensitivity</strong>: in some MEMS gyroscopes the reading shifts a little when the chip is accelerated. Equation (11.4) is (11.5) without that term. All three matrices are found by calibration.
+@@ 78
+Example: a 1% scale error on the \(z\) axis is \(\mathbf{T}_a = \operatorname{diag}(1, 1, 0.99)\). At rest and level, the reading becomes \((0, 0, 0.99 \times 9.81) = (0, 0, 9.712)\). That is 0.098 m/s² short, the same error as a bias of 0.098 m/s², but it changes as soon as the sensor tilts. For everyday SLAM the simple model (11.1)–(11.2) is usually enough, and the extended models matter when calibrating. <span class="src">§11.1.1 · p. 306</span>
+@@ 79
+<strong>"An accelerometer at rest reads zero."</strong> It reads 9.81 m/s² pointing up, because the support force is a specific force. It reads zero in free fall.
+@@ 80
+<strong>"The accelerometer measures gravity."</strong> Gravity is the one thing it cannot feel. At rest it measures the support force, which happens to be equal and opposite to gravity.
+@@ 81
+<strong>"\(\mathbf{b}^a\) is the bias expressed in frame a."</strong> The superscripts on \(\mathbf{b}\) and \(\boldsymbol{\eta}\) name the sensor. Both vectors are in body coordinates.
+@@ 82
+<strong>"A bias is noise, so it averages away."</strong> Averaging removes the white noise and leaves the bias untouched.
+@@ 83
+Q1. A robot stands level and still, with z up. Ignoring bias and noise, what does its accelerometer read?
+@@ 84
+It depends on the robot's yaw
+@@ 85
+With zero acceleration, (11.1) gives R(0 − g) = −g in body coordinates. Gravity is (0, 0, −9.81), so the reading is (0, 0, +9.81): the floor pushing up. Yaw turns the body about the vertical and leaves this vector unchanged.
+@@ 86
+Q2. A drone cuts its motors and falls freely (ignore air drag). During the fall its accelerometer reads
+@@ 87
+zero on all axes
+@@ 88
+9.81 m/s² downward
+@@ 89
+9.81 m/s² upward
+@@ 90
+19.62 m/s² downward
+@@ 91
+In free fall the acceleration equals g, so a − g = 0. No force reaches the proof mass through the case.
+@@ 92
+Q3. In the planar widget, the body is at rest with pitch 30°. What are the (x, z) readings?
+@@ 93
+The specific force is 9.81 straight up. Seen from axes pitched up by 30° it has components 9.81·sin 30° = 4.90 along body x and 9.81·cos 30° = 8.50 along body z.
+@@ 94
+Q4. A gyroscope has an uncorrected bias of 0.02°/s about its vertical axis. If you integrate its readings for 5 minutes, the heading error from the bias is about
+@@ 95
+it averages out to zero
+@@ 96
+A constant bias integrates linearly: 0.02°/s × 300 s = 6°. Only the white noise partly averages out.
+@@ 97
+Q5. What does the matrix T_s in equation (11.5) model?
+@@ 98
+The gyroscope reading being disturbed by acceleration
+@@ 99
+The accelerometer axes not being perpendicular
+@@ 100
+The rotation from world to body
+@@ 101
+The slow drift of the gyroscope bias
+@@ 102
+T_s multiplies the specific force inside the gyroscope equation: it is the g-sensitivity. Misalignment and scale are T_a and T_g, and bias drift is a separate random-walk model.
+@@ 103
+An IMU is a 3-axis gyroscope plus a 3-axis accelerometer, rigidly attached to the robot (strapdown) and sampled at hundreds of hertz.
+@@ 104
+Gyroscope: reading = true body angular velocity + bias + noise, equation (11.2).
+@@ 105
+Accelerometer: reading = rotation into the body frame of (acceleration − gravity), + bias + noise, equation (11.1). At rest it reads 9.81 up, in free fall zero.
+@@ 106
+Noise is white and partly averages out. Bias is a slow random walk, does not average out, and must be estimated.
+@@ 107
+Shape matrices and a g-sensitivity matrix extend the model for calibration, equations (11.3)–(11.5).
+@@ 108
+<em>SLAM Handbook</em>, Chapter 11 opening, §11.1 and §11.1.1 "Sensing Principles and Measurement Models", pp. 304–306.
+@@ 109
+Titterton and Weston, <em>Strapdown Inertial Navigation Technology</em>, 2nd ed., 2004 (specific force and the proof-mass picture of an accelerometer).
+@@ 110
+Groves, <em>Principles of GNSS, Inertial, and Multisensor Integrated Navigation Systems</em>, 2nd ed., 2013 (inertial sensor error terms).

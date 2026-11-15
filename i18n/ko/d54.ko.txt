@@ -1,0 +1,180 @@
+@@ 1
+<span class="eyebrow">9주차 · 복습</span>
+@@ 2
+9주차 복습: local minimum에서 인증된 optimum까지
+@@ 3
+오늘이 끝나면 QCQP를 lift하고 Shor's relaxation으로 bound하고, pose-graph optimization을 회전만 남은 형태로 줄이고, certificate matrix로 해를 검사하고, SE-Sync가 relaxation을 어떻게 푸는지 설명할 수 있습니다.
+@@ 4
+SLAM cost는 non-convex이므로 local solver는 local minimum에서 그 사실을 모른 채 멈출 수 있습니다. Pose-graph optimization에는 그것을 알아낼 방법이 있습니다. Langevin 회전 noise와 Gaussian 이동 noise를 쓰면 maximum-likelihood cost는 이차식이 됩니다. 이동은 소거할 수 있어서 회전에 대한 \(\min\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\)이 남습니다. \(\mathbf{R}\T\mathbf{R}\)을 positive semidefinite 행렬 \(\mathbf{Z}\)로 lift하고 rank constraint를 버리면 convex한 semidefinite program이 되며, 그 최적값은 lower bound이고 noise가 작으면 exact합니다. SE-Sync는 Stiefel manifold 위의 low-rank factor \(\mathbf{Y}\)로 그 program을 풀며, 해가 rank-deficient해질 때까지 rank를 올린 다음 회전으로 rounding하고 cost를 비교합니다. Cost가 같으면 그것이 global optimality의 증명입니다.
+@@ 5
+깨끗한 \(n\)-heading 고리의 꼬인 local minimum
+@@ 6
+\(f_k=4n\bigl(1-\cos\tfrac{2\pi k}{n}\bigr)\), \(|k|\lt n/4\)이면 local minimum
+@@ 7
+Day 1 (이 코스의 예제)
+@@ 8
+Lift
+@@ 9
+=
+@@ 10
+=
+@@ 11
+=
+@@ 12
+Bound
+@@ 13
+\(d^\star\le p^\star\), 그리고 \(f(\hat{\mathbf{x}})-p^\star\le f(\hat{\mathbf{x}})-d^\star\)
+@@ 14
+=
+@@ 15
+=
+@@ 16
+\(\sum\kappa_{ij}\norm{\mathbf{R}_j-\mathbf{R}_i\tilde{\mathbf{R}}_{ij}}_F^2+\tau_{ij}\norm{\mathbf{t}_j-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{t}}_{ij}}^2\); 평면에서 회전 항은 \(4\kappa_{ij}(1-\cos r_{ij})\)
+@@ 17
+=
+@@ 18
+주어진 회전에 대한 최적 이동
+@@ 19
+=
+@@ 20
+회전만 남은 PGO
+@@ 21
+=
+@@ 22
+그 SDP relaxation
+@@ 23
+=
+@@ 24
+=
+@@ 25
+\(\mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda}\), \(\boldsymbol{\Lambda}_i=\operatorname{sym}\bigl((\tilde{\mathbf{Q}}\hat{\mathbf{R}}\T\hat{\mathbf{R}})_{ii}\bigr)\); \(\mathbf{S}\succeq0\Rightarrow\hat{\mathbf{R}}\) global 최적
+@@ 26
+Day 4 (SE-Sync 논문)
+@@ 27
+Stiefel manifold 위의 Burer-Monteiro, 그리고 최종 확인
+@@ 28
+\(\min_{\mathbf{Y}\in\operatorname{St}(d,r)^n}\tr(\tilde{\mathbf{Q}}\mathbf{Y}\T\mathbf{Y})\); \(\tr(\tilde{\mathbf{Q}}\hat{\mathbf{R}}\T\hat{\mathbf{R}})=p^\star_{\text{SDP}}\)이면 인증됨
+@@ 29
+=
+@@ 30
+Q1. 8개 heading의 깨끗한 고리 (κ = 1, noise 없음)를 무작위 시작점에서 풀었더니 solver가 한 번 꼬인 배치에서 멈춥니다. 보고되는 cost는 얼마입니까?
+@@ 31
+8개 edge 각각의 residual은 45°이므로 cost는 4 × 8 × (1 − cos 45°) = 32 × 0.293 = 9.37입니다. 1이 8/4보다 작으므로 local minimum입니다.
+@@ 32
+Q2. Tight하든 아니든, 최소화 문제의 모든 relaxation에 대해 성립하는 것은 무엇입니까?
+@@ 33
+그 minimizer는 원래 문제에서 feasible합니다
+@@ 34
+그 최적값은 원래 최적값과 같습니다
+@@ 35
+Convex입니다
+@@ 36
+그 최적값은 원래 최적값 이하입니다
+@@ 37
+Relaxation은 같은 objective를 더 큰 집합 위에서 최소화하므로, 그 optimum은 더 높을 수 없습니다. 나머지 세 성질은 특수한 경우에만 성립합니다.
+@@ 38
+Q3. M = [[1, 2], [2, 0]]이고 x = (1, 1)일 때 tr(M xxᵀ)는 얼마입니까?
+@@ 39
+tr(M xxᵀ) = xᵀMx = 1·1 + 2·(2·1·1) + 0·1 = 5. 직접 계산하면: xxᵀ는 모든 원소가 1인 행렬이고, M의 원소 합은 5입니다.
+@@ 40
+Q4. QCQP의 Shor relaxation이 eigenvalue 2, 1, 0과 값 d* = 7을 가진 X*를 돌려줍니다. 무엇이 따라 나옵니까?
+@@ 41
+QCQP의 optimum은 7이며, 가장 큰 eigenvalue의 eigenvector에서 도달합니다
+@@ 42
+QCQP는 infeasible합니다
+@@ 43
+QCQP의 optimum은 적어도 7입니다. 이 X*는 xxᵀ 꼴이 아닙니다
+@@ 44
+SDP solver가 오류를 냈습니다
+@@ 45
+0이 아닌 eigenvalue가 두 개이면 rank 2이므로 X*는 lift된 점이 아닙니다. 값 7은 여전히 p*의 유효한 lower bound입니다.
+@@ 46
+Q5. Pose graph가 측정값으로 이어지지 않은 두 조각으로 되어 있습니다. 그 Laplacian의 zero eigenvalue는 몇 개입니까?
+@@ 47
+Edge 개수만큼
+@@ 48
+Zero eigenvalue의 개수는 connected component의 개수와 같습니다 (Box 6.1). 책은 connected graph를 가정하며, 그 경우 정확히 하나입니다.
+@@ 49
+Q6. n개 pose의 3-D pose graph에서 이동을 소거한 뒤, Problem 6.2의 미지수는 무엇입니까?
+@@ 50
+SE(3)의 pose n개
+@@ 51
+이동 n개
+@@ 52
+3n × 3n 행렬
+@@ 53
+SO(3)의 회전 n개
+@@ 54
+이동은 (6.16)을 통해 회전의 함수가 되므로 R = (R_1 … R_n)만 남습니다. 3n × 3n 행렬 Z는 lift한 뒤에야 나타납니다.
+@@ 55
+Q7. Local solver의 출력 R̂에서 certificate matrix의 eigenvalue가 0, 0, 0.4, 0.4, 1.3, 1.3입니다 (평면, pose 3개). 무엇을 결론 내릴 수 있습니까?
+@@ 56
+R̂는 global optimum입니다
+@@ 57
+Zero eigenvalue 때문에 R̂는 saddle point입니다
+@@ 58
+아무것도 알 수 없습니다. 검사가 결론을 내지 못합니다
+@@ 59
+Relaxation이 tight하지 않습니다
+@@ 60
+음의 eigenvalue가 없으므로 S ⪰ 0이고 R̂는 인증됩니다. S R̂ᵀ = 0이기 때문에 d = 2개의 0은 항상 있습니다.
+@@ 61
+Q8. d = 3에서 staircase가 r = 5에 있고, singular value가 9.1, 9.1, 9.1, 0, 0인 second-order critical point Y*를 돌려줍니다. 어떤 상황입니까?
+@@ 62
+Full rank: r을 6으로 올립니다
+@@ 63
+Singular value 두 개가 0이므로 relaxation은 tight하지 않습니다
+@@ 64
+Y*는 rank-deficient하므로 SDP를 풉니다. Rank가 3 = d이므로 rounding은 정확히 최적인 회전을 돌려줍니다
+@@ 65
+Y*는 local minimum입니다. 다른 점에서 다시 시작합니다
+@@ 66
+Rank 3은 r = 5보다 작으므로 Theorem 6.2가 적용됩니다. Rank가 정확히 d라는 것은 exact relaxation의 표시입니다, 식 (6.25).
+@@ 67
+\(\mathbf{x}=(1,-2)\), \(\mathbf{C}=\begin{bmatrix}1 &amp; 2\\ 2 &amp; -1\end{bmatrix}\)라고 합시다. (a) \(\mathbf{x}\T\mathbf{C}\mathbf{x}\)를 계산하십시오. (b) \(\mathbf{X}=\mathbf{x}\mathbf{x}\T\)를 만들고 \(\tr(\mathbf{C}\mathbf{X})\)를 계산하십시오. (c) \(\mathbf{X}\)의 eigenvalue를 구하고, 그로부터 \(\mathbf{x}\)를 되찾으십시오.
+@@ 68
+(b) \(\mathbf{X}=\begin{bmatrix}1 &amp; -2\\ -2 &amp; 4\end{bmatrix}\). \(\tr(\mathbf{C}\mathbf{X})=\sum_{i,j}C_{ij}X_{ij}=1\cdot1+2\cdot(-2)+2\cdot(-2)+(-1)\cdot4=-11\). (6.1)이 말하듯 둘은 일치합니다.
+@@ 69
+(c) Trace는 5이고 행렬식은 \(4-4=0\)이므로 eigenvalue는 5와 0입니다: rank 1. 5에 대한 eigenvector는 \(\mathbf{u}=(1,-2)/\sqrt5\)이고, \(\sqrt5\,\mathbf{u}=(1,-2)\)입니다. 반대 부호 \((-1,2)\)도 같은 \(\mathbf{X}\)를 줍니다.
+@@ 70
+\(\mathbf{C}=\begin{bmatrix}2 &amp; 1\\ 1 &amp; 2\end{bmatrix}\)일 때 단위 벡터 \(\mathbf{x}\in\R^2\) 위에서 \(\mathbf{x}\T\mathbf{C}\mathbf{x}\)를 최소화하십시오. (a) Day 2의 원판 좌표 \(u=X_{11}-X_{22}\), \(v=2X_{12}\)를 써서 Shor's relaxation을 푸십시오. (b) Exact합니까? \(\mathbf{x}^\star\)를 구하십시오. (c) Dual을 쓰고 certificate를 확인하십시오.
+@@ 71
+(a) 원판 \(u^2+v^2\le1\) 위에서 \(\tr(\mathbf{C}\mathbf{X})=\tfrac12(C_{11}+C_{22})+\tfrac12(C_{11}-C_{22})u+C_{12}v=2+v\)입니다. 최솟값은 \((u,v)=(0,-1)\)에서 \(d^\star=1\)입니다.
+@@ 72
+(b) 그 점은 경계 위에 있으므로 rank는 1입니다. \(X_{11}=X_{22}=\tfrac12\), \(X_{12}=-\tfrac12\)이며, 이는 \(\mathbf{x}^\star=(1,-1)/\sqrt2\)에 대한 \(\mathbf{x}^\star\mathbf{x}^{\star\mathsf{T}}\)입니다. 확인: \(\mathbf{x}^{\star\mathsf{T}}\mathbf{C}\mathbf{x}^\star=\tfrac12(2-2+2)=1\). Exact이며, \(p^\star=d^\star=1\).
+@@ 73
+(c) Dual: \(\mathbf{C}-\lambda\mathbf{I}\succeq0\)을 만족하며 \(\lambda\)를 최대화합니다. \(\mathbf{C}\)의 eigenvalue는 1과 3이므로 \(\lambda=1\)이고 \(\mathbf{S}=\mathbf{C}-\mathbf{I}=\begin{bmatrix}1 &amp; 1\\ 1 &amp; 1\end{bmatrix}\)이며, eigenvalue는 0과 2로 positive semidefinite입니다. 그리고 \(\mathbf{S}\mathbf{x}^\star=\mathbf{0}\)입니다. 두 certificate 조건이 모두 성립하고, \(\mathbf{b}\T\boldsymbol{\lambda}=1\)은 cost와 같습니다.
+@@ 74
+평면 edge 하나 \(i\to j\)가 \(\kappa=8\), \(\tau=4\), 측정값 \(\tilde\theta_{ij}=60^\circ\), \(\tilde{\mathbf{t}}_{ij}=(1,0.5)\)를 가집니다. 현재 추정값은 \(\theta_i=0\), \(\mathbf{t}_i=(0,0)\), \(\theta_j=90^\circ\), \(\mathbf{t}_j=(1,1)\)입니다. (a) 이 edge는 cost (6.9)에 얼마를 기여합니까? (b) 각도 표준편차 5°에 해당하는 \(\kappa\)는 얼마입니까?
+@@ 75
+(a) 회전: residual은 \(r=90^\circ-0^\circ-60^\circ=30^\circ\)이므로 항은 \(4\kappa(1-\cos30^\circ)=32\times0.134=4.29\)입니다. 이동: \(\mathbf{R}_i=\mathbf{I}\)이므로 residual은 \((1,1)-(0,0)-(1,0.5)=(0,0.5)\)이고, norm 제곱은 0.25, 항은 \(4\times0.25=1\)입니다. 합계: 5.29.
+@@ 76
+(b) Noise가 작으면 각도는 분산이 \(1/(2\kappa)\)인 Gaussian에 가깝습니다. \(5^\circ=0.0873\) rad이므로 \(\kappa=1/(2\times0.0873^2)=1/0.01523\approx66\)입니다.
+@@ 77
+완벽한 측정값을 가진 \(n=8\)개 평면 heading의 깨끗한 고리 (\(\kappa=1\))와, 모든 edge의 residual이 45°인 한 번 꼬인 critical point \(\hat{\mathbf{R}}\)이 있습니다. (a) 그 cost와 multiplier \(\lambda_i\)를 계산하고, \(\tr(\boldsymbol{\Lambda})\)가 cost와 같은지 확인하십시오. (b) Eigenvalue를 하나도 계산하지 않고 \(\mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda}\)가 positive semidefinite가 아님을 보이십시오. (c) (b)는 어떤 일반적 사실을 증명합니까?
+@@ 78
+(a) Cost: \(4\times8\times(1-\cos45^\circ)=32\times0.2929=9.37\). 각 pose에는 edge가 두 개이므로 \(\lambda_i=2(1-\cos45^\circ)=0.586\)이고 \(\boldsymbol{\Lambda}_i=0.586\,\mathbf{I}_2\)입니다. 그러면 \(\tr(\boldsymbol{\Lambda})=8\times2\times0.586=9.37\)로, cost와 같습니다.
+@@ 79
+(b) \(\bar{\mathbf{R}}\)가 실제 회전을 담는다고 합시다. 실제 회전은 완벽한 측정값에 맞으므로 \(\tr(\tilde{\mathbf{Q}}\bar{\mathbf{R}}\T\bar{\mathbf{R}})=0\)입니다. \(\bar{\mathbf{R}}\T\bar{\mathbf{R}}\)의 대각 블록은 단위행렬이므로 \(\tr(\boldsymbol{\Lambda}\bar{\mathbf{R}}\T\bar{\mathbf{R}})=\tr(\boldsymbol{\Lambda})=9.37\)입니다. 따라서
+@@ 80
+왼쪽은 \(\bar{\mathbf{R}}\)의 두 행 \(\mathbf{v}\)에 대한 \(\mathbf{v}\T\mathbf{S}\mathbf{v}\)의 합입니다. 합이 음수이려면 음수인 항이 있어야 하므로, 어떤 \(\mathbf{v}\)는 \(\mathbf{v}\T\mathbf{S}\mathbf{v}\lt0\)을 만족합니다.
+@@ 81
+(c) 더 좋은 임의의 feasible \(\mathbf{R}\)로 같은 계산을 하면 \(\tr(\mathbf{R}\mathbf{S}\mathbf{R}\T)=f(\mathbf{R})-f(\hat{\mathbf{R}})\lt0\)입니다. 따라서 global 최적이 아닌 critical point는 결코 검사 \(\mathbf{S}\succeq0\)을 통과할 수 없습니다: certificate에는 false positive가 없습니다.
+@@ 82
+수렴한 local solver가 왜 틀릴 수 있는지, 그리고 lower bound가 무엇을 더해 주는지 설명하기.
+@@ 83
+작은 QCQP를 lift하고, 그 Shor relaxation을 쓰고, rank 1인 해와 rank가 더 높은 해를 해석하기.
+@@ 84
+작은 graph의 incidence matrix와 Laplacian을 쓰고, \(\mathbf{x}\T\mathbf{L}\mathbf{x}\)가 무엇을 측정하는지 말하기. 다음 주의 정확도 bound는 Laplacian 위에 세워집니다.
+@@ 85
+사슬 \(p^\star_{\text{MLE}}\ge p^\star_{\mathrm{O}}\ge p^\star_{\text{SDP}}\)를 말하고, 양 끝이 같을 때 무슨 뜻인지 설명하기.
+@@ 86
+평면 예제에 대해 \(\mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda}\)를 만들고, 그 최소 eigenvalue로 판정 읽기.
+@@ 87
+Riemannian staircase와 SE-Sync의 출력을 세 문장으로 설명하기.
+@@ 88
+<em>SLAM Handbook</em>, 6장 도입부와 §6.1–6.1.2, pp. 149–164.
+@@ 89
+Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004: convexity와 duality, semidefinite program.
+@@ 90
+Rosen, Carlone, Bandeira, Leonard, <em>SE-Sync: A certifiably correct algorithm for synchronization over the special Euclidean group</em>, 2019: 문제 2와 4에서 쓴 certificate matrix.

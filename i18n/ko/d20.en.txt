@@ -1,0 +1,184 @@
+@@ 1
+<span class="eyebrow">Week 4 · Day 2</span>
+@@ 2
+Matrix Lie groups: wedge, Exp, and Log
+@@ 3
+After today you can turn a tangent vector into a rotation or a pose with the exponential map, go back with the logarithm, and derive the closed forms for SO(2), SO(3), and SE(2) from the power series.
+@@ 4
+About 60 min · Read §2.1.2, pp. 55–56 (2 pages) · Needs Week 4 Day 1
+@@ 5
+Read first: §2.1.2, pp. 55–56
+@@ 6
+The closure property, and the two facts (i) and (ii) about the Lie algebra that the book calls the most important (p. 55).
+@@ 7
+Equations (2.4) and (2.5): an infinite series that turns the single number \(\theta\) into a rotation matrix.
+@@ 8
+Figure 2.2 on p. 56: three spaces and six arrows. Which two arrows are Exp and Log shortcuts for?
+@@ 9
+Equation (2.7b): the order of \(\boldsymbol{\rho}\) and \(\boldsymbol{\theta}\) inside \(\boldsymbol{\xi}\), and their sizes for \(d = 2\) and \(d = 3\).
+@@ 10
+Every rotation or pose can be reached from the identity by moving at a constant velocity for one unit of time. The velocity lives in a flat vector space, the <strong>Lie algebra</strong>, and the matrix exponential carries out the motion. So an ordinary vector with as many entries as there are degrees of freedom always produces a valid group member, with no constraints to enforce.
+@@ 11
+1. What makes these sets groups
+@@ 12
+The book singles out one property: <strong>closure</strong>. The product of two members is again a member, \(\mathbf{R}^c_a = \mathbf{R}^c_b\mathbf{R}^b_a \in \SO(d)\). <span class="src">§2.1.2 · p. 55</span> You can check it with yesterday's constraints: \((\mathbf{R}_1\mathbf{R}_2)\T(\mathbf{R}_1\mathbf{R}_2) = \mathbf{R}_2\T\mathbf{R}_1\T\mathbf{R}_1\mathbf{R}_2 = \mathbf{I}\) and \(\det(\mathbf{R}_1\mathbf{R}_2) = 1\cdot 1\). A <strong>group</strong> also needs an identity (\(\mathbf{I}\)), an inverse for every member (\(\mathbf{R}\T\), or \(\mathbf{T}^{-1}\) from Day 1), and associativity (true for all matrix products). A <strong>matrix Lie group</strong> is a group of matrices that is also a smooth manifold.
+@@ 13
+One thing a group does <em>not</em> promise is that order is irrelevant. Planar rotations commute, but 3D rotations and poses do not: \(\mathbf{T}_1\mathbf{T}_2 \ne \mathbf{T}_2\mathbf{T}_1\) in general. Drive one meter then turn left, or turn left then drive one meter: you end in different places. This will matter in section 5.
+@@ 14
+2. The Lie algebra and the wedge operator
+@@ 15
+The <strong>Lie algebra</strong> of a Lie group is its tangent space at the identity. It is a vector space whose dimension equals the group's degrees of freedom. <span class="src">§2.1.2 · p. 55</span> For rotations it is written \(\so(d)\), for poses \(\se(d)\).
+@@ 16
+Filling the gap: why the tangent space of SO(d) is the skew-symmetric matrices
+@@ 17
+Take any smooth path of rotations \(\mathbf{R}(s)\) that passes through the identity at \(s=0\). Every point on it satisfies \(\mathbf{R}(s)\T\mathbf{R}(s) = \mathbf{I}\). Differentiate with respect to \(s\) and set \(s = 0\), where \(\mathbf{R} = \mathbf{I}\):
+@@ 18
+So every velocity through the identity is a matrix \(\boldsymbol{\Omega}\) with \(\boldsymbol{\Omega}\T = -\boldsymbol{\Omega}\): a <strong>skew-symmetric</strong> matrix. Its diagonal is zero and the lower triangle is minus the upper, which leaves one free entry in a 2 × 2 matrix and three in a 3 × 3. Those counts are the degrees of freedom of \(\SO(2)\) and \(\SO(3)\).
+@@ 19
+The <strong>wedge</strong> operator \((\cdot)^\wedge\) fills a skew-symmetric matrix from a plain vector, and <strong>vee</strong> \((\cdot)^\vee\) reads the vector back out: <span class="src">§2.1.2 · pp. 55–56, eqs. (2.5), (2.6b)</span>
+@@ 20
+In 3D the wedge matrix carries out a cross product: \(\boldsymbol{\theta}^\wedge\mathbf{v} = \boldsymbol{\theta}\times\mathbf{v}\). <span class="src">Notation · p. xv</span> For example, \(\boldsymbol{\theta} = (0,0,1)\) and \(\mathbf{v} = (1,0,0)\) give \(\boldsymbol{\theta}^\wedge\mathbf{v} = (0,1,0)\): the velocity of the tip of the x-axis when the body spins about z.
+@@ 21
+Operator
+@@ 22
+From → to
+@@ 23
+wedge \((\cdot)^\wedge\)
+@@ 24
+\(\R^n\) → Lie algebra
+@@ 25
+Packs a vector into a matrix (linear)
+@@ 26
+vee \((\cdot)^\vee\)
+@@ 27
+Lie algebra → \(\R^n\)
+@@ 28
+Unpacks it, the inverse of wedge
+@@ 29
+Lie algebra → group
+@@ 30
+Matrix exponential
+@@ 31
+group → Lie algebra
+@@ 32
+Matrix logarithm
+@@ 33
+\(\R^n\) → group
+@@ 34
+Shortcut: vector straight to group
+@@ 35
+group → \(\R^n\)
+@@ 36
+Shortcut: group straight to vector
+@@ 37
+This table is Figure 2.2 in words. From tomorrow on the book uses almost only the capitalized shortcuts. <span class="src">§2.1.2 · p. 56, Fig. 2.2</span>
+@@ 38
+3. The exponential map, worked out for SO(2)
+@@ 39
+The map from the Lie algebra to the group is the <strong>matrix exponential</strong>, defined by the same series as the scalar one: <span class="src">§2.1.2 · p. 55, eq. (2.4)</span>
+@@ 40
+Why an exponential? A body spinning at constant angular velocity obeys \(\dot{\mathbf{R}}(t) = \boldsymbol{\omega}^\wedge\mathbf{R}(t)\) (the book writes this later as equation (2.32)). This is the matrix version of \(\dot{x} = a x\), whose solution is \(x(t) = e^{at}x(0)\). Starting at \(\mathbf{R}(0)=\mathbf{I}\), the solution is \(\mathbf{R}(t) = \exp(\boldsymbol{\omega}^\wedge t)\). \(\Exp(\boldsymbol{\theta})\) is where you are after one unit of time at angular velocity \(\boldsymbol{\theta}\).
+@@ 41
+Filling the gap: summing the series (2.4)
+@@ 42
+Write \(\theta^\wedge = \theta\,\mathbf{S}\) with \(\mathbf{S} = \begin{bmatrix} 0 & -1 \\ 1 & 0 \end{bmatrix}\). Multiply it out: \(\mathbf{S}^2 = -\mathbf{I}\). So \(\mathbf{S}\) behaves like the imaginary unit, and the powers cycle: \(\mathbf{S}^3 = -\mathbf{S}\), \(\mathbf{S}^4 = \mathbf{I}\), and so on. Split the series into even and odd powers:
+@@ 43
+The two brackets are the Taylor series of cosine and sine. This is Euler's formula \(e^{i\theta} = \cos\theta + i\sin\theta\) written with matrices. Going back is easy here: \(\theta = \Log(\mathbf{R}) = \operatorname{atan2}(R_{21}, R_{11})\).
+@@ 44
+4. Rodrigues' formula for SO(3)
+@@ 45
+For \(\SO(3)\) the book gives the series (2.6a) and says that closed forms exist, with a pointer to Barfoot's book. <span class="src">§2.1.2 · p. 56</span> The derivation is the same trick as in the plane.
+@@ 46
+Filling the gap: from the series to Rodrigues' formula
+@@ 47
+Split the vector into an angle and a unit axis: \(\boldsymbol{\theta} = \phi\,\mathbf{a}\) with \(\phi = \norm{\boldsymbol{\theta}}\) and \(\norm{\mathbf{a}} = 1\). Let \(\mathbf{A} = \mathbf{a}^\wedge\). Two facts about \(\mathbf{A}\):
+@@ 48
+(The first is the double cross product \(\mathbf{a}\times(\mathbf{a}\times\mathbf{v}) = \mathbf{a}(\mathbf{a}\T\mathbf{v}) - \mathbf{v}\) for a unit \(\mathbf{a}\).) Because \(\mathbf{A}^3 = -\mathbf{A}\), the powers cycle again: \(\mathbf{A}^4 = -\mathbf{A}^2\), \(\mathbf{A}^5 = \mathbf{A}\), and so on. Collect the series \(\sum \phi^n\mathbf{A}^n/n!\) into the three matrices that ever appear:
+@@ 49
+This is <strong>Rodrigues' formula</strong>. Example: a quarter turn about z, \(\mathbf{a} = (0,0,1)\), \(\phi = 90^\circ\). Then \(\mathbf{a}^\wedge\mathbf{a}^\wedge = \diag(-1,-1,0)\) and
+@@ 50
+the planar 90° rotation with an untouched z-axis. For the logarithm, take the trace and the skew part of the formula: \(\tr(\mathbf{R}) = 1 + 2\cos\phi\) gives the angle, and \(\mathbf{R} - \mathbf{R}\T = 2\sin\phi\;\mathbf{a}^\wedge\) gives the axis.
+@@ 51
+So \(\boldsymbol{\theta}\in\R^3\) is the rotation vector from yesterday's table: its direction is the axis, its length is the angle. Note that \(\phi\) and \(\phi + 2\pi\) give the same matrix. Exp reaches every rotation, but many vectors map to the same one, so Log has to choose (usually the angle in \([0, \pi]\)).
+@@ 52
+5. Poses: Exp on SE(d)
+@@ 53
+For poses the tangent vector stacks a translational part \(\boldsymbol{\rho}\) on top of a rotational part \(\boldsymbol{\theta}\): <span class="src">§2.1.2 · p. 56, eq. (2.7)</span>
+@@ 54
+In the plane \(\boldsymbol{\rho}\in\R^2\), \(\theta\in\R\), and \(\boldsymbol{\xi}\in\R^3\). In 3D both parts are in \(\R^3\) and \(\boldsymbol{\xi}\in\R^6\). The book's order is translation first. Some other texts put rotation first, so check before you copy a formula.
+@@ 55
+Filling the gap: the translation of Exp(ξ) is not ρ
+@@ 56
+Multiply \(\boldsymbol{\xi}^\wedge\) by itself. The zero bottom row makes the pattern simple:
+@@ 57
+The rotation block is the rotation exponential, as expected. The translation is \(\mathbf{V}\boldsymbol{\rho}\), not \(\boldsymbol{\rho}\). (The same series returns on Day 5 as the Jacobian \(\mathbf{J}(\boldsymbol{\theta})\) of equation (2.35).) In the plane, the \(\mathbf{S}^2 = -\mathbf{I}\) trick sums it:
+@@ 58
+Example: \(\boldsymbol{\xi} = (\rho_1,\rho_2,\theta) = (\tfrac{\pi}{2}, 0, \tfrac{\pi}{2})\). Both coefficients equal \(2/\pi\), so \(\mathbf{V}\boldsymbol{\rho} = \tfrac{2}{\pi}\cdot\tfrac{\pi}{2}\,(1,0) + \tfrac{2}{\pi}\cdot\tfrac{\pi}{2}\,(0,1) = (1,1)\). The pose is at \((1,1)\), turned by 90°.
+@@ 59
+The meaning: \(\boldsymbol{\rho}\) is a velocity in the robot's <em>own</em> frame, and the frame turns while the robot moves. Driving forward at speed \(\pi/2\) while turning at rate \(\pi/2\) for one unit of time traces a quarter circle of radius 1, which ends at \((1,1)\). The path length is \(\pi/2\), but the end point is only \(\sqrt{2}\) away.
+@@ 60
+Try it: the widget starts with this example. Move the sliders, then press "Show translate, then rotate".
+@@ 61
+Notice that the blue path is a circular arc around the amber centre (a straight line when θ = 0), and that Log returns the vector you put in. With the default ξ = (1.57, 0, 90°), Exp(ξ) is at (1.00, 1.00), while translating by ρ and then rotating by θ ends at (1.57, 0.00), a distance 1.15 away.
+@@ 62
+That last comparison is \(\Exp(\mathbf{a})\Exp(\mathbf{b})\) against \(\Exp(\mathbf{a}+\mathbf{b})\) with \(\mathbf{a} = (\boldsymbol{\rho}, 0)\) and \(\mathbf{b} = (\mathbf{0},\theta)\). For numbers, \(e^{a}e^{b} = e^{a+b}\). For matrices that rule needs \(\mathbf{a}^\wedge\mathbf{b}^\wedge = \mathbf{b}^\wedge\mathbf{a}^\wedge\), which fails for poses and for 3D rotations:
+@@ 63
+The two sides agree to first order when \(\mathbf{a}\) and \(\mathbf{b}\) are small, and Day 5 gives the correction terms.
+@@ 64
+A tangent vector is a steering command: "this much forward, this much sideways, this much turn, held steady for one second". Exp is what happens when you carry out the command. Log looks at where you ended up and tells you which steady command would have taken you there.
+@@ 65
+<strong>"The first entries of ξ are the position."</strong> They are \(\boldsymbol{\rho}\). The position is \(\mathbf{V}\boldsymbol{\rho}\), and the two agree only when there is no rotation.
+@@ 66
+<strong>"exp of a matrix means exponentiating each entry."</strong> It is the power series in the whole matrix.
+@@ 67
+<strong>"Exp(a) Exp(b) = Exp(a + b)."</strong> Only when the two wedge matrices commute, for example for two planar rotations, or two 3D rotations about the same axis.
+@@ 68
+<strong>"Log is unique."</strong> Angles that differ by a full turn give the same group member. Log returns one representative.
+@@ 69
+Q1. For \(\boldsymbol{\theta} = (1, 2, 3)\), what is the entry in row 1, column 3 of \(\boldsymbol{\theta}^\wedge\)?
+@@ 70
+The first row of \(\boldsymbol{\theta}^\wedge\) in (2.6b) is \((0, -\theta_3, \theta_2)\), so the entry is \(\theta_2 = 2\).
+@@ 71
+Q2. A planar robot starts at the identity and follows \(\boldsymbol{\xi} = (\rho_1,\rho_2,\theta) = (\pi, 0, \pi)\). Where is it at the end?
+@@ 72
+At (π, 0), facing backward
+@@ 73
+At (0, π), facing backward
+@@ 74
+At (2, 0), facing forward
+@@ 75
+At (0, 2), facing backward
+@@ 76
+With \(\theta=\pi\): \(\sin\theta/\theta = 0\) and \((1-\cos\theta)/\theta = 2/\pi\), so \(\mathbf{V}\boldsymbol{\rho} = \tfrac{2}{\pi}\mathbf{S}(\pi,0) = (0,2)\). The robot drives a half circle of radius 1 (length π) and ends two units to its left, turned by 180°. Set the widget to (3.14, 0, 180°) to see it.
+@@ 77
+Q3. A 3D rotation matrix has trace 2. What is its rotation angle?
+@@ 78
+From Rodrigues' formula \(\tr(\mathbf{R}) = 1 + 2\cos\phi\). So \(\cos\phi = 0.5\) and \(\phi = 60^\circ\).
+@@ 79
+Q4. When is \(\Exp(\mathbf{a})\Exp(\mathbf{b}) = \Exp(\mathbf{a}+\mathbf{b})\) exactly true?
+@@ 80
+Always, as for ordinary numbers
+@@ 81
+Never, for any Lie group
+@@ 82
+When the matrices \(\mathbf{a}^\wedge\) and \(\mathbf{b}^\wedge\) commute, as they always do in SO(2)
+@@ 83
+Whenever \(\mathbf{a}\) and \(\mathbf{b}\) have the same length
+@@ 84
+The scalar proof of \(e^ae^b = e^{a+b}\) reorders products, which is allowed only for commuting matrices. All of \(\so(2)\) is multiples of one matrix \(\mathbf{S}\), so planar rotation angles simply add. In \(\SO(3)\) and \(\SE(d)\) the rule holds only in special cases, such as a shared rotation axis.
+@@ 85
+\(\SO(d)\) and \(\SE(d)\) are matrix Lie groups: closed under products and inverses, and smooth manifolds.
+@@ 86
+The Lie algebra is the tangent space at the identity. For rotations it is the skew-symmetric matrices. Wedge and vee convert between it and \(\R^n\).
+@@ 87
+\(\Exp\) is the matrix exponential of the wedge. It sums to \(\cos\theta\,\mathbf{I}+\sin\theta\,\mathbf{S}\) in the plane and to Rodrigues' formula in 3D.
+@@ 88
+For poses \(\boldsymbol{\xi} = (\boldsymbol{\rho},\boldsymbol{\theta})\), and \(\Exp(\boldsymbol{\xi})\) has rotation \(\Exp(\boldsymbol{\theta})\) and translation \(\mathbf{V}\boldsymbol{\rho}\): motion along an arc.
+@@ 89
+\(\Exp(\mathbf{a})\Exp(\mathbf{b}) \ne \Exp(\mathbf{a}+\mathbf{b})\) unless the wedge matrices commute.
+@@ 90
+<em>SLAM Handbook</em>, §2.1.2 "Matrix Lie Groups", pp. 55–56, equations (2.4)–(2.7) and Figure 2.2; Notation table, p. xv.
+@@ 91
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (skew-symmetric tangent space, Rodrigues' formula from the series, the exponential map of SE(3) and the matrix that multiplies ρ).
+@@ 92
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (capitalized Exp and Log, closed forms for SO(2) and SE(2)).

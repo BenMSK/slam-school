@@ -1,0 +1,160 @@
+@@ 1
+<span class="eyebrow">3주차 · 복습</span>
+@@ 2
+3주차 복습: sparsity, elimination, 그리고 Bayes tree
+@@ 3
+오늘이 끝나면 factor graph에서 행렬 패턴을 얻고, 손으로 소거해 Bayes net과 Bayes tree를 만들고, Schur complement로 marginalize하고, incremental 업데이트가 무엇을 다시 계산해야 하는지 말할 수 있습니다.
+@@ 4
+SLAM의 least squares 문제는 factor 하나가 변수 몇 개에만 연결되므로 sparse합니다. factor는 \(\mathbf{A}\)의 블록 행, 변수는 블록 열이고, \(\boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A}\)는 factor를 공유하는 변수 사이에만 nonzero 블록을 가집니다. variable elimination은 변수를 하나씩 없애면서 conditional(\(\mathbf{R}\)의 한 행)과 그 이웃 위의 새 factor를 남깁니다. Gaussian factor라면 이것이 sparse QR 또는 Cholesky이고, 결과는 back-substitution으로 푸는 Bayes net입니다. 변수를 없애면 그 이웃이 이어지는데, 그래프에서는 이것이 fill-in이고 행렬에서는 Schur complement입니다. 그래서 ordering이 비용을 결정합니다. conditional을 clique로 묶으면 Bayes tree가 되고, 여기서 새 factor는 그 변수들에서 root까지의 경로에만 영향을 줍니다. iSAM2는 이를 이용해 해를 incremental하게 업데이트합니다.
+@@ 5
+information matrix의 블록
+@@ 6
+\(\boldsymbol{\Lambda}_{jk} = \sum_i \mathbf{A}_{ij}\T\mathbf{A}_{ik}\), \(j\)와 \(k\)를 모두 포함하는 factor가 있을 때만 nonzero
+@@ 7
+=
+@@ 8
+elimination 한 step
+@@ 9
+=
+@@ 10
+같은 step을 partial QR로
+@@ 11
+=
+@@ 12
+Gaussian으로 본 R의 한 행
+@@ 13
+평균 \(\boldsymbol{\mu}_j = \mathbf{R}_j^{-1}(\mathbf{d}_j - \mathbf{T}_j\mathbf{s}_j)\), covariance \(\boldsymbol{\Sigma}_j = (\mathbf{R}_j\T\mathbf{R}_j)^{-1}\)
+@@ 14
+=
+@@ 15
+=
+@@ 16
+\(\mathbf{x}_j^* = \mathbf{R}_j^{-1}(\mathbf{d}_j - \mathbf{T}_j\mathbf{s}_j^*)\), elimination의 역순으로
+@@ 17
+=
+@@ 18
+R의 크기
+@@ 19
+nonzero 개수 \(= \sum_j (1 + |\mathbf{s}_j|)\); fill-in = 이웃을 이을 때 추가되는 edge
+@@ 20
+=
+@@ 21
+Schur complement: information form에서 \(\mathbf{x}_b\)의 marginal
+@@ 22
+Day 3 (책에는 없음)
+@@ 23
+covariance form에서 \(\mathbf{x}_a\)가 주어졌을 때 \(\mathbf{x}_b\)의 conditional
+@@ 24
+=
+@@ 25
+\(p(\mathbf{x}) = \prod_k p(\mathbf{f}_k \mid \mathbf{s}_k)\), 여기서 \(\mathbf{s}_k = \mathbf{c}_k \cap \boldsymbol{\varpi}_k\), \(\mathbf{f}_k = \mathbf{c}_k \setminus \mathbf{s}_k\)
+@@ 26
+=
+@@ 27
+Q1. 어떤 factor가 pose 하나, landmark 하나, 카메라 calibration 변수 하나를 연결합니다. A에서 이 factor의 블록 행에는 nonzero 블록이 몇 개 있습니까?
+@@ 28
+변수 개수만큼
+@@ 29
+factor가 연결된 변수마다 블록이 하나씩 있습니다. G에서는 세 쌍을 모두 이어 크기 3의 clique를 이룹니다.
+@@ 30
+Q2. pose 네 개가 있고, 첫 pose에 prior, odometry factor 세 개, pose 1과 4 사이의 loop closure 하나가 있습니다. Λ의 대각 위에는 nonzero 블록이 몇 개 있습니까?
+@@ 31
+G의 edge마다 하나씩입니다: odometry edge 세 개와 loop closure edge 하나. prior는 대각에만 더해집니다.
+@@ 32
+Q3. 변수 x에는 factor ϕ(x, a)와 ϕ(x, b)가 있습니다. factor ϕ(a)와 factor ϕ(b, c)도 있습니다. x를 가장 먼저 소거하면 x의 separator는 무엇입니까?
+@@ 33
+a와 b
+@@ 34
+a, b, c
+@@ 35
+a만
+@@ 36
+비어 있음
+@@ 37
+x에 연결된 factor만 모읍니다. 그 factor들의 다른 변수는 a와 b입니다. factor ϕ(a)와 ϕ(b, c)는 손대지 않은 채 그래프에 남습니다.
+@@ 38
+Q4. 행 "x = 1"과 "x − y = 0"(분산 1의 noise)에서 x를 소거합니다. y가 주어졌을 때 x의 conditional 평균은 무엇입니까?
+@@ 39
+x 열이 (1, 1)이므로 R = √2이고, 첫 행은 √2·x − y/√2 = 1/√2입니다. √2로 나누면 x = (1 + y)/2로, x에 대해 말한 두 가지의 평균입니다.
+@@ 40
+Q5. G가 고리 a – b – c – d – a입니다. a를 가장 먼저 소거하면 fill-in edge가 몇 개 생깁니까?
+@@ 41
+a의 이웃은 b와 d이고, 둘은 이어져 있지 않습니다. a를 소거하면 edge b – d가 추가됩니다. 그 뒤 나머지는 삼각형이므로 더 필요한 것이 없습니다.
+@@ 42
+Q6. 두 스칼라의 covariance가 Σ = [[2, 1], [1, 2]]입니다. x₁을 알 때 x₂의 분산은 얼마입니까?
+@@ 43
+covariance form에서 conditioning은 Schur complement입니다: 2 − 1·(1/2)·1 = 1.5. marginal 분산 2는 바로 읽을 수 있습니다.
+@@ 44
+Q7. 어떤 Bayes tree는 root x₃, x₄ 아래에 자식 x₂ : x₃과 l₁ : x₄가 있고, x₂ : x₃ 아래에 x₁ : x₂가 있습니다. 새 pose x₅가 x₄로의 odometry factor와 함께 들어옵니다. 기존 clique 가운데 영향받는 것은 무엇입니까?
+@@ 45
+root만
+@@ 46
+root와 l₁ : x₄
+@@ 47
+x₄는 root에서 frontal이고, root에는 조상이 없습니다. l₁ : x₄에서 x₄는 separator일 뿐이므로 그 clique의 conditional은 바뀌지 않습니다.
+@@ 48
+Q8. 같은 트리에 이번에는 x₄와 x₁ 사이의 loop closure factor가 들어옵니다. 어떤 clique가 영향을 받습니까?
+@@ 49
+x₁ : x₂와 root
+@@ 50
+x₁ : x₂, x₂ : x₃, root
+@@ 51
+x₁이 frontal인 clique에서 root까지 가는 경로는 x₂ : x₃을 지납니다. 가지 l₁ : x₄는 그 경로에 없으므로 그대로 다시 붙입니다.
+@@ 52
+고리를 이루는 스칼라 pose 네 개: prior \(x_1 = 0\), odometry \(x_2 - x_1 = 1\), \(x_3 - x_2 = 1\), \(x_4 - x_3 = 1\), loop closure \(x_4 - x_1 = 3.3\)이 있고, 모두 분산 1의 noise입니다. (a) \(\mathbf{A}\)를 쓰고 \(\boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A}\)를 계산하십시오. (b) ordering \(x_1, x_2, x_3, x_4\)에 대해 각 separator, fill-in, \(\mathbf{R}\)의 nonzero 개수를 구하십시오. (c) 다른 ordering으로 fill-in을 피할 수 있습니까?
+@@ 53
+(a) factor마다 행 하나, 열은 \(x_1 \dots x_4\):
+@@ 54
+3은 prior, odometry factor 하나, loop closure에서 옵니다. 0은 factor를 공유하지 않는 쌍 \((x_1, x_3)\)과 \((x_2, x_4)\)입니다.
+@@ 55
+(b) \(x_1\)의 이웃은 \(x_2, x_4\)이므로 separator는 \(\{x_2, x_4\}\)이고, 둘은 이어져 있지 않았으므로 fill-in edge가 하나 생깁니다. 이제 \(x_2\)의 이웃은 이미 이어진 \(x_3, x_4\)이므로 separator는 \(\{x_3, x_4\}\)이고 fill-in은 없습니다. \(x_3\): separator \(\{x_4\}\). \(x_4\): 비어 있음. \(\mathbf{R}\)의 nonzero: \(4 + (2 + 2 + 1 + 0) = 9\)개로, \(\boldsymbol{\Lambda}\)의 위 삼각 부분에 있는 8개보다 하나 많습니다.
+@@ 56
+(c) 아니오. 네 개짜리 고리는 chordal이 아닌데, 소거된 그래프는 chordal이어야 합니다. 어느 변수를 먼저 소거하든 이어지지 않은 두 이웃이 있으므로, 여기서는 어떤 ordering이든 fill-in이 정확히 하나 생깁니다.
+@@ 57
+스칼라 두 개와 분산 1의 noise를 가진 factor 세 개: \(x = 0\), \(y - x = 1\), \(y = 1.6\). QR로 \(x\)를, 그다음 \(y\)를 소거하고 back-substitution을 하십시오. \(y\) 위의 새 factor가 무슨 뜻인지 말로 설명하십시오.
+@@ 58
+\(x\)에 연결된 factor는 처음 두 개입니다. 열을 \((x, y \mid b)\)로 두면 쌓은 행은 \((1, 0 \mid 0)\)과 \((-1, 1 \mid 1)\)입니다. \(x\) 열이 \((1, -1)\)이므로 \(\mathbf{q}_1 = (1, -1)/\sqrt2\)와 \(\mathbf{q}_2 = (1, 1)/\sqrt2\)를 씁니다:
+@@ 59
+첫 행은 conditional입니다: \(x = (y - 1)/2\), precision 2. 둘째 행은 새 factor \(\tau(y)\)입니다: 분산 2인 \(y = 1\). 말로 하면 "\(x\)의 prior에 odometry 한 step을 더하면 \(y\)는 1에 있다"이고, 두 단위 분산이 더해집니다.
+@@ 60
+이제 \(y\)에는 행 \((0.707 \mid 0.707)\)과 \((1 \mid 1.6)\)이 있습니다. \(R = \sqrt{0.5 + 1} = 1.225\)이고 \(d = (0.707 \times 0.707 + 1 \times 1.6)/1.225 = 1.714\)입니다.
+@@ 61
+back-substitution: \(y^* = 1.714/1.225 = 1.4\), 다음으로 \(x^* = (1.4 - 1)/2 = 0.2\). normal equations로 확인하면 \(\boldsymbol{\Lambda} = \begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix}\), \(\mathbf{A}\T\mathbf{b} = (-1, 2.6)\)이고, \(\boldsymbol{\Lambda}^{-1} = \tfrac13\begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}\)을 곱하면 \((0.2, 1.4)\)가 나옵니다.
+@@ 62
+스칼라 세 개의 information matrix가 \(\boldsymbol{\Lambda} = \begin{bmatrix} 2 & -1 & 0 \\ -1 & 2 & -1 \\ 0 & -1 & 1 \end{bmatrix}\)입니다. (a) \(x_2\)를 marginalize하고 \((x_1, x_3)\)의 information matrix를 구하십시오. (b) 대신 \(x_2\)에 대해 conditioning하십시오. (c) \(\boldsymbol{\Sigma} = \boldsymbol{\Lambda}^{-1} = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 2 \\ 1 & 2 & 3 \end{bmatrix}\)임을 이용해 (a)를 확인하고, (a)와 (b)에서 \(x_3\)의 분산을 비교하십시오.
+@@ 63
+(a) \(a = x_2\)로 Schur complement를 구합니다: \(\boldsymbol{\Lambda}_{aa} = 2\)이고, \(x_2\)는 \(x_1\), \(x_3\)과 각각 \(-1\)로 이어져 있으므로 네 자리 모두에서 \(\tfrac12\)를 뺍니다:
+@@ 64
+\(x_1\)과 \(x_3\) 사이의 0이 \(-0.5\)가 되었습니다: fill-in입니다.
+@@ 65
+(b) \(x_2\)의 행과 열을 지웁니다: \(\begin{bmatrix} 2 & 0 \\ 0 & 1 \end{bmatrix}\). \(x_2\)가 주어지면 나머지 둘은 독립입니다.
+@@ 66
+(c) marginal covariance는 블록 \(\begin{bmatrix} 1 & 1 \\ 1 & 3 \end{bmatrix}\)이고, 행렬식은 2, 역행렬은 \(\tfrac12\begin{bmatrix} 3 & -1 \\ -1 & 1 \end{bmatrix}\)로 (a)의 행렬과 같습니다. \(x_3\)의 분산은 marginal에서 3, conditional에서 \(1/1 = 1\)입니다. \(x_2\)를 알면 그 앞 사슬을 따라 쌓인 불확실성이 사라집니다.
+@@ 67
+로봇에 pose \(x_1, \dots, x_4\)가 있고, \(x_1\)에 prior, 연속된 pose 사이에 odometry가 있으며, landmark \(l\)을 \(x_1\)과 \(x_2\)에서 봅니다. (a) \(l, x_1, x_2, x_3, x_4\) 순서로 소거하고 separator를 구하십시오. (b) Bayes tree를 만드십시오. (c) \(x_4\)와 \(x_1\) 사이의 loop closure는 어떤 clique에 영향을 줍니까? (d) 이번에는 \(x_4\)에서 이어지는 odometry와 함께 새 pose \(x_5\)가 들어옵니다. 영향받는 변수를 \(x_3, x_4, x_5\) 순서로 소거하며 트리를 업데이트하십시오.
+@@ 68
+(a) \(l\): factor가 \(x_1\)과 \(x_2\)를 포함하므로 separator는 \(\{x_1, x_2\}\)입니다(odometry로 이미 이어져 있어 fill-in 없음). \(x_1\): prior, odometry, 새 factor가 있고 separator는 \(\{x_2\}\). \(x_2\): \(\{x_3\}\). \(x_3\): \(\{x_4\}\). \(x_4\): 비어 있음.
+@@ 69
+(b) 역순으로: \(x_4\)가 root를 시작합니다. \(x_3 \mid x_4\)가 root에 합류해 root는 \(x_3, x_4\)가 됩니다. \(x_2 \mid x_3\): root의 변수 \(\{x_3, x_4\}\)가 \(\{x_3\}\)과 다르므로 새 자식 \(x_2 : x_3\)이 생깁니다. \(x_1 \mid x_2\): \(x_2\)의 clique는 \(\{x_2, x_3\}\)으로 \(\{x_2\}\)와 다르므로 새 자식 \(x_1 : x_2\)가 생깁니다. \(l \mid x_1, x_2\): \(x_1\)의 clique가 정확히 \(\{x_1, x_2\}\)이므로 \(l\)이 그 clique에 합류합니다. 트리는 사슬입니다: root \(x_3, x_4\), 그 아래 \(x_2 : x_3\), 그 아래 \(l, x_1 : x_2\).
+@@ 70
+(c) \(x_1\)은 leaf에서, \(x_4\)는 root에서 frontal입니다. leaf에서 root까지의 경로가 트리 전체이므로, clique 세 개와 변수 다섯 개를 모두 다시 계산합니다.
+@@ 71
+(d) \(x_4\)는 root에서 frontal이므로 root만 떼어 냅니다. root는 \((x_3, x_4)\) 위의 factor가 되고, 여기에 \((x_4, x_5)\) 위의 새 factor를 더합니다. \(x_3\) 소거: separator \(\{x_4\}\). \(x_4\): separator \(\{x_5\}\). \(x_5\): 비어 있음. 트리: \(x_5\)가 root를 시작하고, \(x_4\)가 합류하며, \(\{x_4, x_5\} \neq \{x_4\}\)이므로 \(x_3 \mid x_4\)는 자식이 됩니다. 떨어져 나온 \(x_2 : x_3\)을 \(x_3\)이 frontal인 clique 아래에 다시 붙입니다. 결과: root \(x_4, x_5\), 그 아래 \(x_3 : x_4\), 그 아래 \(x_2 : x_3\), 그 아래 \(l, x_1 : x_2\). 변수 여섯 개 중 세 개만 다시 소거했고, 아래쪽 두 clique는 건드리지 않았습니다.
+@@ 72
+작은 factor graph의 \(\mathbf{A}\)와 \(\boldsymbol{\Lambda}\) 패턴을 아무것도 계산하지 않고 그리기.
+@@ 73
+두세 개의 행에서 스칼라 변수 하나를 QR로 소거하고, conditional과 새 factor가 무슨 뜻인지 말하기.
+@@ 74
+back-substitution으로 \(\mathbf{R}\mathbf{x} = \mathbf{d}\)를 풀고, 대각에서 conditional 분산을 읽어 내기.
+@@ 75
+그래프에서 어떤 ordering의 fill-in을 예측하고, 추정값이 ordering에 의존하지 않는 이유를 설명하기.
+@@ 76
+Schur complement를 계산하고, Gaussian의 각 형태에서 marginalization과 conditioning 중 어느 쪽이 쉬운지 말하기.
+@@ 77
+Bayes tree에서 새 factor가 영향을 주는 clique 찾기.
+@@ 78
+<em>SLAM Handbook</em>, 1장, §1.5–1.8, pp. 35–52.
+@@ 79
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (Gaussian의 marginal과 conditional, Schur complement).
+@@ 80
+Kaess, Johannsson, Roberts, Ila, Leonard, Dellaert, <em>iSAM2: Incremental smoothing and mapping using the Bayes tree</em>, 2012 (Bayes tree 만들기와 업데이트).

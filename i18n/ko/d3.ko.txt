@@ -1,0 +1,232 @@
+@@ 1
+<span class="eyebrow">1주차 · Day 3</span>
+@@ 2
+Kalman filter에서 factor graph로, 그리고 Gaussian의 융합
+@@ 3
+오늘이 끝나면 SLAM이 filter에서 factor-graph optimization으로 옮겨 간 이유를 말하고, 두 Gaussian 추정값을 information을 더해서 융합하고, 세 pose 예제로 information matrix는 sparse한데 covariance는 dense한 이유를 보일 수 있습니다.
+@@ 4
+약 60분 · §I.4–I.5, pp. 13–18 읽기 (6쪽) · 1주차 Day 2 필요
+@@ 5
+먼저 읽기: Prelude §I.4–I.5, pp. 13–18
+@@ 6
+EKF-SLAM의 세 가지 실제적인 문제 (p. 13 아래쪽과 p. 14).
+@@ 7
+particle filter가 해결한 것, 그리고 particle depletion이라는 실패 (p. 15).
+@@ 8
+covariance matrix는 dense한데 그 역행렬은 sparse하다는 p. 15의 문장. Prelude에서 가장 중요한 문장입니다.
+@@ 9
+Spatial AI가 SLAM에 더하는 것 (pp. 16–17, Figure I.7). §I.5 (pp. 17–18)는 훑어보세요. 목차를 산문으로 쓴 것입니다.
+@@ 10
+SLAM back-end는 세 가지 설계를 거쳤습니다. extended Kalman filter, particle filter, 그리고 factor graph 위의 최적화입니다. 세 번째가 이긴 것은 구조적 사실 하나 때문입니다. covariance matrix의 역행렬인 <strong>information matrix</strong>(정보 행렬)가 sparse하다는 것입니다. information은 단순하게 행동하는 양이기도 합니다. 독립적인 측정값을 결합하면 information이 더해집니다.
+@@ 11
+1. back-end의 세 세대
+@@ 12
+noise 섞인 측정값으로 map을 추정하는 일은 로보틱스보다 훨씬 오래되었습니다. Gauss는 1820년대에 Kingdom of Hannover를 삼각측량했고, Cholesky는 1차 세계대전 전에 측량을 하면서 자기 이름이 붙은 행렬 분해를 고안했습니다. <span class="src">§I.4.1 · p. 13</span> 이 분해는 <a href="#d5">Day 5</a>에서 쓰게 됩니다.
+@@ 13
+로보틱스에서 초기 연구는 두 가지 통찰에 이르렀습니다. 미지의 환경에서 drift를 피하려면 로봇 pose와 고정된 외부 물체(landmark)의 위치를 함께 추정해야 한다는 것. 그리고 기존 도구인 <strong>extended Kalman filter (EKF)</strong>가, 로봇 pose와 모든 landmark 위치를 하나의 긴 state로 쌓으면 이 일을 할 수 있다는 것입니다. EKF는 그 state에 대한 하나의 Gaussian belief, 즉 평균과 covariance matrix를 유지하며, motion model과 measurement model의 선형 근사를 이용해 측정값이 들어올 때마다 둘을 업데이트합니다. SLAM이라는 약어는 1995년에 생겼습니다. <span class="src">§I.4.1 · p. 13</span>
+@@ 14
+Belief 저장 방식
+@@ 15
+얻은 것
+@@ 16
+한계
+@@ 17
+=
+@@ 18
+Gaussian 하나: pose와 landmark에 대한 평균과 dense covariance
+@@ 19
+표준 추정 이론으로 하는 SLAM
+@@ 20
+outlier와 잘못된 data association으로 인한 큰 오류; drift하는 odometry 주변의 linearization (발산할 수 있음); state 변수 개수의 제곱으로 늘어나는 계산 비용
+@@ 21
+Particle filter (2000년대 초)
+@@ 22
+trajectory 가설의 집합, 즉 particle
+@@ 23
+많은 landmark, 2-D occupancy grid 같은 dense map, linearization 불필요, outlier에 덜 민감
+@@ 24
+정확도를 위해 수천 개의 particle이 필요; 실제 trajectory 근처에 particle이 하나도 없으면 filter가 발산하며 (particle depletion), 3-D에서는 더 심함
+@@ 25
+Factor-graph optimization (2005–2015, 현재 주류)
+@@ 26
+최적화로 찾은 trajectory와 map의 maximum likelihood 또는 MAP 추정값
+@@ 27
+sparsity 덕분에 거의 선형인 계산 비용, online 동작, 더 깊은 분석이 가능한 틀
+@@ 28
+이 책의 주제
+@@ 29
+<span class="src">§I.4.1 · pp. 13–15</span> <strong>Data association</strong>(데이터 연관)은 측정값이 어느 landmark나 장소를 가리키는지 정하는 일입니다. association 오류는 <a href="#d2">Day 2</a>의 닮은 장소 문제입니다. 본문에서 기억해 둘 지적이 두 가지 있습니다. 첫째, 최적화는 SLAM 초기에 제안되었지만 너무 느리다는 이유로 밀려났고, 이를 되살린 것이 sparsity입니다. 둘째, linearization point를 알맞게 고른 EKF는 비선형 최적화 solver의 한 iteration으로 이해할 수 있으므로, 최적화 관점은 filtering 관점을 포함합니다. <span class="src">§I.4.1 · p. 15</span> 책이 factor graph에 집중하는 것은 범위의 선택입니다. EKF 기반 방법은 visual-inertial odometry에서 여전히 인기가 있습니다. <span class="src">§I.4.1 · p. 16</span>
+@@ 30
+2. 이 분야가 향하는 곳, 그리고 책의 구성
+@@ 31
+SLAM은 기하를 추정합니다. "위치 (x, y, z)로 가라"에는 그것으로 충분하지만, "욕실에 있는 옷을 집어서 세탁실로 가져가라"에는 충분하지 않습니다. 로봇이 욕실이 무엇인지 알아야 하기 때문입니다. <strong>Spatial AI</strong>는 기하, semantics, 그리고 경우에 따라 물리까지 함께 추론하는 인지 시스템을 가리키며, SLAM은 그중 기하를 맡는 하위 모듈입니다. Spatial AI는 <a href="#d2">Day 2</a>의 두 loop 위에, 작업 계획을 다루는 더 느린 세 번째 loop를 닫습니다. <span class="src">§I.4.2 · pp. 16–17</span>
+@@ 32
+핸드북은 세 Part로 되어 있습니다. Part I (1–6장)은 기초입니다. factor graph와 최적화, manifold 위의 pose, outlier, differentiable optimization, map 표현, 고급 solver를 다룹니다. Part II (7–12장)는 실제 기술 현황으로, 한 장에 센서 하나씩 카메라, LiDAR, radar, event camera, 관성 센서, wheel odometry와 leg odometry를 다룹니다. Part III (13–18장)은 학습된 구성 요소와 새로운 map 표현부터 Spatial AI와 foundation model까지 최신 흐름을 다룹니다. <span class="src">§I.5 · pp. 17–18</span> 위의 역사는 back-end의 역사이며, 그래서 Part I이 먼저 나옵니다.
+@@ 33
+3. 두 Gaussian의 융합: information의 덧셈
+@@ 34
+어제 prior와 측정값에 대해 얻은 결과는 \(1/\hat{\sigma}^2 = 1/\check{\sigma}^2 + 1/\sigma_z^2\)였습니다. 더해지는 양은 분산이 아니라 그 역수입니다. 여기에 이름을 붙입시다. 스칼라 Gaussian의 <strong>information</strong>(또는 precision)은 \(\lambda = 1/\sigma^2\)입니다. 평균의 분자에도 이름을 붙입니다: \(\eta = \mu/\sigma^2 = \lambda\mu\). 그러면 같은 양에 대한 두 독립 추정값을 융합하는 일은 덧셈 두 번과 나눗셈 한 번이 됩니다.
+@@ 35
+예: 같은 벽까지의 range 측정 두 번, \(\sigma = 0.3\) m인 10.0 m와 \(\sigma = 0.4\) m인 10.4 m.
+@@ 36
+추정값
+@@ 37
+평균
+@@ 38
+표준편차
+@@ 39
+Information, 1/분산
+@@ 40
+Information × 평균
+@@ 41
+측정 1
+@@ 42
+측정 2
+@@ 43
+융합
+@@ 44
+융합값은 더 좋은 측정 쪽에 가깝고, σ 0.24 m는 둘 다보다 낫습니다.
+@@ 45
+벡터에서는 같은 규칙이 행렬로 성립합니다. <strong>information matrix</strong>는 \(\boldsymbol{\Lambda} = \boldsymbol{\Sigma}^{-1}\)이고 <strong>information vector</strong>(정보 벡터)는 \(\boldsymbol{\eta} = \boldsymbol{\Lambda}\boldsymbol{\mu}\)입니다. \((\boldsymbol{\mu},\boldsymbol{\Sigma})\) 쌍은 Gaussian의 <strong>covariance form</strong>이고 \((\boldsymbol{\eta},\boldsymbol{\Lambda})\)는 <strong>information form</strong>입니다. 둘은 같은 밀도를 나타냅니다.
+@@ 46
+작업
+@@ 47
+=
+@@ 48
+=
+@@ 49
+두 독립 추정값 융합
+@@ 50
+\(\boldsymbol{\Sigma} = (\boldsymbol{\Sigma}_1^{-1}+\boldsymbol{\Sigma}_2^{-1})^{-1}\), 그다음 \(\boldsymbol{\mu} = \boldsymbol{\Sigma}(\boldsymbol{\Sigma}_1^{-1}\boldsymbol{\mu}_1+\boldsymbol{\Sigma}_2^{-1}\boldsymbol{\mu}_2)\)
+@@ 51
+"이 방향은 전혀 모른다"를 표현
+@@ 52
+무한대 분산
+@@ 53
+0
+@@ 54
+변수 하나의 평균과 불확실성 읽기
+@@ 55
+바로: \(\boldsymbol{\mu}\)와 \(\boldsymbol{\Sigma}\)의 대각
+@@ 56
+선형 시스템 풀이 필요, \(\boldsymbol{\Lambda}\boldsymbol{\mu} = \boldsymbol{\eta}\)
+@@ 57
+빈틈 채우기: information이 더해지는 이유
+@@ 58
+같은 \(\mathbf{x}\)에 대한 두 추정값의 오차가 독립이어서, joint likelihood가 두 Gaussian 밀도의 곱이라고 합시다. 밀도를 곱하면 지수가 더해집니다. \(\boldsymbol{\Lambda}_1 = \boldsymbol{\Sigma}_1^{-1}\)과 \(\boldsymbol{\Lambda}_1\)의 대칭성을 이용해 지수 하나를 전개합니다.
+@@ 59
+따라서 information form에서 Gaussian은 상수배를 빼면 \(\exp(-\tfrac12\mathbf{x}\T\boldsymbol{\Lambda}\mathbf{x} + \boldsymbol{\eta}\T\mathbf{x})\)입니다. \(\boldsymbol{\Lambda}\)는 2차항의 계수이고 \(\boldsymbol{\eta}\)는 1차항의 계수입니다. 두 번째 지수를 더합니다.
+@@ 60
+이것도 \(\mathbf{x}\)에 대한 2차식이므로 곱은 Gaussian이고, 계수를 읽으면 \(\boldsymbol{\Lambda} = \boldsymbol{\Lambda}_1+\boldsymbol{\Lambda}_2\)와 \(\boldsymbol{\eta} = \boldsymbol{\eta}_1+\boldsymbol{\eta}_2\)를 얻습니다. 표의 covariance form 공식은 이 두 덧셈에서 모든 \(\boldsymbol{\Lambda}\)를 \(\boldsymbol{\Sigma}^{-1}\)로 쓴 것입니다.
+@@ 61
+4. 2차원에서 보기
+@@ 62
+먼저 예제를 풀어 봅시다. landmark의 추정값 A는 \(\boldsymbol{\mu}_A = (0, 0)\), \(\boldsymbol{\Sigma}_A = \diag(4,\ 0.25)\)입니다. \(x\) 방향으로는 흐릿하고 (σ = 2), \(y\) 방향으로는 날카롭습니다 (σ = 0.5). 추정값 B는 \(\boldsymbol{\mu}_B = (2, 1)\), \(\boldsymbol{\Sigma}_B = \diag(0.25,\ 4)\)로 그 반대입니다.
+@@ 63
+융합 추정값은 \(x\)를 거의 전부 B에서, \(y\)를 거의 전부 A에서 가져옵니다. 각 추정값은 자기가 날카로운 방향에서 신뢰받습니다.
+@@ 64
+직접 해 보기: 중심 A와 B를 드래그하고, 슬라이더로 두 타원을 돌려 보세요. 각 타원은 반축이 1.5와 0.4인 Gaussian의 1σ 등고선입니다.
+@@ 65
+눈여겨볼 점: 기본 설정에서 두 타원은 직각이고, 융합 타원은 반지름 0.39인 원입니다. 어느 입력의 짧은 축보다도 좁고, 넓이는 A의 4분의 1입니다. 융합 평균은 A와 B의 중간이 아니라 두 장축이 교차하는 점 근처에 있습니다. 두 슬라이더를 같은 각도로 맞추면 융합 타원은 길쭉하게 남습니다 (1.06 × 0.28). 어느 추정값도 그 방향을 모르기 때문입니다. A나 B를 드래그하면 융합 평균은 움직이지만, 융합 타원의 크기는 전혀 변하지 않습니다.
+@@ 66
+길쭉한 타원은 "landmark는 이 선 위 어딘가에 있다"고 말합니다. 서로 다른 선을 따르는 그런 진술 두 개가 있으면 점 하나가 정해집니다. 두 방위로 배의 위치를 정하는 것과 같습니다. 마지막으로 눈여겨본 점은 linear-Gaussian 융합의 일반적인 성질입니다. 융합 covariance는 측정값이 무엇을 읽었는지가 아니라 측정이 얼마나 좋은지에 따라 정해집니다.
+@@ 67
+5. information matrix가 sparse한 이유
+@@ 68
+책의 핵심 문장: EKF의 covariance matrix는 dense하지만, 그 역행렬인 information matrix는 과거의 로봇 pose를 state에 남겨 두는 한 예측 가능한 패턴으로 매우 sparse합니다. <span class="src">§I.4.1 · p. 15</span> 가장 작은 예제로 그 이유를 볼 수 있습니다. 로봇이 직선 위에서 pose \(x_0, x_1, x_2\)를 지나 움직입니다. \(x_0\)에 prior가 있고 odometry 측정값 \(u_1 = x_1 - x_0 + \text{noise}\)와 \(u_2 = x_2 - x_1 + \text{noise}\)가 있으며, 모두 \(\sigma = 1\)입니다.
+@@ 69
+각 측정값은 Gaussian factor이고, 3절에 따라 이들의 information은 더해집니다. odometry factor \(u_1\)의 지수는 \(-\tfrac12(x_1-x_0-u_1)^2\)입니다. 그 2차 부분은 다음과 같습니다.
+@@ 70
+따라서 이 factor는 \(x_0\)과 \(x_1\)의 행과 열에 블록 \(\begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}\)를 더하고, 다른 곳에는 아무것도 더하지 않습니다. prior는 \((x_0,x_0)\) 원소에 1을 더합니다. 세 factor를 합하면 다음과 같습니다.
+@@ 71
+곱해서 역행렬을 확인합니다. \(\boldsymbol{\Lambda}\)의 첫 행과 \(\boldsymbol{\Sigma}\)의 첫 열을 곱하면 \(2 - 1 + 0 = 1\)이고, 둘째 열과 곱하면 \(2 - 2 + 0 = 0\)이며, 나머지도 마찬가지입니다.
+@@ 72 attr
+왼쪽: 원소가 1 1 1, 1 2 2, 1 2 3인 3×3 covariance matrix로, 모든 칸이 칠해져 있습니다. 가운데: 세 pose 변수 x0, x1, x2가 odometry factor 두 개로 이어진 사슬과, x0에 걸린 prior factor. 오른쪽: 원소가 2 -1 0, -1 2 -1, 0 -1 1인 3×3 information matrix로, x0과 x2를 짝짓는 두 0 칸은 칠해져 있지 않습니다.
+@@ 73
+=
+@@ 74
+원소 9개가 모두 0이 아님
+@@ 75
+pose 3개, factor 3개
+@@ 76
+=
+@@ 77
+=
+@@ 78
+0: x₀과 x₂를 잇는 factor 없음
+@@ 79
+같은 belief를 두 형태로 나타낸 것입니다. information matrix는 factor가 두 변수를 잇는 곳에만 원소가 있습니다. covariance는 두 변수가 상관된 곳이면 어디에나 원소가 있고, 여기서는 모든 곳이 그렇습니다.
+@@ 80
+두 행렬을 읽어 봅시다. \(\boldsymbol{\Sigma}\)는 꽉 차 있습니다. \(x_0\)의 오차가 이후 모든 pose에 대물림되므로 모든 pose가 다른 모든 pose와 상관되어 있습니다. 대각 1, 2, 3은 <a href="#d1">Day 1</a>의 random-walk drift입니다. step마다 분산이 한 단위씩 늘어납니다. \(\boldsymbol{\Lambda}\)에서 \(x_0\)과 \(x_2\) 사이가 0인 것은 둘을 함께 포함하는 측정값이 없기 때문입니다. pose \(n\)개의 사슬에서 \(\boldsymbol{\Sigma}\)는 0이 아닌 원소가 \(n^2\)개이고 \(\boldsymbol{\Lambda}\)는 \(3n-2\)개입니다. \(n = 10{,}000\)이면 \(10^8\)개 대 약 30,000개입니다. EKF는 \(\boldsymbol{\Sigma}\)를 저장하고 업데이트하며, 이것이 1절 표에 있는 EKF의 세 번째 문제입니다. factor-graph solver는 \(\boldsymbol{\Lambda}\)로 작업합니다.
+@@ 81
+"과거 pose를 남겨 두는 한"이라는 조건이 중요합니다. filter는 오래된 pose를 state에서 제거하는데, Gaussian에서 변수를 제거하면 그 변수와 연결되어 있던 모든 변수가 서로 연결되므로 \(\boldsymbol{\Lambda}\)의 0이 채워집니다 (fill-in). trajectory 전체를 남겨 두면 state는 커지지만 \(\boldsymbol{\Lambda}\)는 sparse하게 유지됩니다.
+@@ 82
+<strong>"융합은 covariance를 평균하는 것이다."</strong> 같은 양에 대한 추정값을 융합할 때 covariance는 결코 더해지지 않습니다. 더해지는 것은 information matrix이고, 융합된 covariance는 어느 입력보다도 작습니다.
+@@ 83
+<strong>"Λ의 0은 두 변수가 상관이 없다는 뜻이다."</strong> \(x_0\)과 \(x_2\)는 \(\boldsymbol{\Lambda}\)에서 0이지만 \(\boldsymbol{\Sigma}\)에서 covariance는 1입니다. 0은 둘을 직접 잇는 factor가 없다는 뜻일 뿐입니다.
+@@ 84
+<strong>"filter는 한물갔다."</strong> 책의 범위는 factor graph이지만, EKF 기반 estimator가 visual-inertial odometry에서 여전히 인기가 있다고 분명히 말합니다. <span class="src">§I.4.1 · p. 16</span>
+@@ 85
+Q1. 다음 중 책에 나열된 EKF-SLAM의 세 가지 실제적인 문제가 아닌 것은 무엇입니까?
+@@ 86
+outlier와 잘못된 data association에 민감함
+@@ 87
+drift한 odometry 주변의 linearization
+@@ 88
+dense covariance matrix로 인한 제곱 비용
+@@ 89
+landmark 위치의 불확실성을 표현할 수 없음
+@@ 90
+EKF는 landmark 불확실성을 표현합니다. 그 covariance가 로봇 pose와 모든 landmark를 덮습니다. 그 dense covariance가 바로 비용 문제의 원인입니다.
+@@ 91
+Q2. 같은 길이에 대한 두 독립 측정값의 σ가 3 cm와 4 cm입니다. 둘을 융합한 σ는 얼마입니까?
+@@ 92
+=
+@@ 93
+=
+@@ 94
+=
+@@ 95
+=
+@@ 96
+information이 더해집니다: 1/9 + 1/16 = 25/144, 따라서 σ² = 144/25이고 σ = 12/5 = 2.4 cm입니다. 두 입력보다 작습니다.
+@@ 97
+Q3. 추정값 A의 covariance는 diag(4, 1), 추정값 B의 covariance는 diag(1, 4)입니다. 둘을 융합한 covariance는 무엇입니까?
+@@ 98
+=
+@@ 99
+=
+@@ 100
+=
+@@ 101
+=
+@@ 102
+Λ = diag(1/4, 1) + diag(1, 1/4) = diag(1.25, 1.25)이므로 Σ = diag(0.8, 0.8)입니다. 두 방향 모두에서 가장 좋은 입력(분산 1)보다 낫습니다.
+@@ 103
+Q4. 5절의 세 pose 사슬에서 로봇이 σ = 1인 x₂ − x₀의 loop-closure 측정값을 추가합니다. Λ는 어떻게 바뀝니까?
+@@ 104
+바뀌지 않는다. η만 바뀐다
+@@ 105
+(x₀, x₀)와 (x₂, x₂) 원소가 1씩 커지고 두 0이 −1이 된다
+@@ 106
+대각만 바뀐다
+@@ 107
+모든 원소가 바뀐다
+@@ 108
+새 factor는 x₀과 x₂의 행과 열에 블록 [1 −1; −1 1]을 더합니다. factor는 자기가 포함하는 변수들 사이에만 원소를 만들므로 0이 채워집니다.
+@@ 109
+EKF-SLAM은 outlier, drift하는 odometry 주변의 linearization, dense covariance로 고생했습니다. particle filter는 이를 완화했지만 particle이 많이 필요합니다.
+@@ 110
+trajectory 전체를 남겨 두면 information matrix가 sparse하기 때문에 factor-graph optimization이 주류가 되었습니다.
+@@ 111
+Information form: \(\boldsymbol{\Lambda} = \boldsymbol{\Sigma}^{-1}\), \(\boldsymbol{\eta} = \boldsymbol{\Lambda}\boldsymbol{\mu}\). 독립 추정값은 \(\boldsymbol{\Lambda}\)와 \(\boldsymbol{\eta}\)를 더해서 융합합니다.
+@@ 112
+각 factor는 자기가 닿는 변수들 사이에만 information을 더합니다. \(\boldsymbol{\Lambda}\)의 0은 거기서 나옵니다.
+@@ 113
+Spatial AI는 SLAM의 기하에 semantics를 더합니다. 책은 기초(Part I), 센서(Part II), 최신 흐름(Part III)을 다룹니다.
+@@ 114
+<em>SLAM Handbook</em>, Prelude to Part I, §I.4 "Past, Present, and Future of SLAM, and Scope of this Handbook"과 §I.5 "Handbook Structure", pp. 13–18.
+@@ 115
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005, 3장 (Gaussian의 information form과 information filter).
+@@ 116
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (Gaussian 추정값의 융합; pose 사슬에서 inverse covariance의 sparsity).

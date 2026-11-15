@@ -1,0 +1,226 @@
+@@ 1
+<span class="eyebrow">3주차 · Day 5</span>
+@@ 2
+iSAM과 iSAM2: incremental smoothing and mapping
+@@ 3
+오늘이 끝나면 iSAM1과 iSAM2가 incremental reordering, partial back-substitution, selective relinearization으로 SLAM 해를 어떻게 최신 상태로 유지하는지 설명하고, 업데이트가 언제 싸고 언제 비싼지 말할 수 있습니다.
+@@ 4
+약 60분 · §1.7.3, §1.8, pp. 50–52 읽기 (본문 2쪽) · 3주차 Day 4 필요
+@@ 5
+먼저 읽기: §1.7.3, §1.8, p. 50 아래쪽부터 p. 52까지
+@@ 6
+p. 50은 대부분 Figure 1.15이므로 읽을 양이 적습니다. 찾아볼 것:
+@@ 7
+p. 50: iSAM1이 linearization을 어떻게 다뤘는지, 그리고 iSAM2가 행렬 대신 무엇을 쓰는지.
+@@ 8
+p. 51 첫 문단: 어떤 변수를 ordering의 맨 끝으로 강제로 보내는지, 그리고 그 이유.
+@@ 9
+p. 51 둘째 문단: back-substitution을 언제 일찍 멈춰도 되는지.
+@@ 10
+p. 51 셋째 문단: 변수 하나를 relinearize하는 것이 factor 하나를 추가하는 것보다 더 많은 clique에 영향을 주는 이유.
+@@ 11
+incremental smoothing and mapping은 trajectory 전체를 추정에 남겨 두면서도, 새 측정이 요구하는 만큼만 일합니다. iSAM1은 행렬 \(\mathbf{R}\)을 직접 업데이트하고 가끔 처음부터 다시 시작합니다. iSAM2는 Bayes tree를 편집하며 세 군데에서 게으릅니다. 다시 소거하는 변수만 재정렬하고, 답이 움직인 곳만 다시 풀고, 변수가 움직인 factor만 relinearize합니다.
+@@ 12
+1. iSAM1: 다시 분해하지 않고 R에 행 추가하기
+@@ 13
+첫 번째 버전인 iSAM1은 Golub과 Van Loan의 incremental 행렬 분해 방법을 썼습니다. <span class="src">§1.7.3 · p. 50</span> 책은 이 방법을 보여 주지 않으므로, 여기서 기본적인 것 하나를 봅니다.
+@@ 14
+빈틈 채우기: Givens rotation으로 R 업데이트하기
+@@ 15
+\([\mathbf{R} \mid \mathbf{d}]\)가 있으므로 현재 cost는 \(\norm{\mathbf{R}\mathbf{x} - \mathbf{d}}^2\)에 상수를 더한 것입니다. 이미 whitening된 새 스칼라 측정 하나는 항 \((\mathbf{a}\T\mathbf{x} - \beta)^2\)를 더합니다. 새 문제는 다음 쌓은 행렬의 least squares 문제입니다.
+@@ 16
+이 행렬은 마지막 행을 빼면 상삼각입니다. <strong>Givens rotation</strong>은 두 행이 이루는 평면에서의 회전입니다. \(\mathbf{R}\)의 행 \(c\)를 이용해 새 행의 원소 \(a_c\)를 0으로 만들려면 \(r = \sqrt{R_{cc}^2 + a_c^2}\), \(\cos = R_{cc}/r\), \(\sin = a_c/r\)로 두고, 두 행을 다음으로 바꿉니다.
+@@ 17
+새 대각 원소는 \(r\)이고, 새 행의 열 \(c\) 원소는 \((-a_c R_{cc} + R_{cc} a_c)/r = 0\)입니다. 회전은 직교 변환이므로 <a href="#d14">Day 2</a>의 논증에 따라 cost function은 바뀌지 않습니다. \(\mathbf{a}\)의 첫 nonzero부터 마지막 열까지 각 열에 대해 반복합니다. 새 행에 남는 것은 우변 열의 숫자 하나뿐이며, 이것은 residual에 더해질 뿐입니다.
+@@ 18
+눈여겨볼 것이 두 가지 있습니다. \(\mathbf{a}\)의 첫 nonzero보다 위에 있는 \(\mathbf{R}\)의 행은 전혀 건드리지 않습니다. 그리고 행 \(c\)를 섞으면 처음에 0이던 새 행의 뒤쪽 원소에 nonzero가 생길 수 있으므로, 보통 회전 한 번으로는 부족합니다.
+@@ 19
+직접 해 보기: \(\mathbf{R}\)은 사슬로 이어진 pose 다섯 개의 것입니다. 첫 pose로의 loop closure를 회전으로 넣어 본 다음, 가장 새로운 pose에만 연결된 측정으로 바꿔 보십시오.
+@@ 20
+눈여겨볼 점: loop closure x₅ − x₁ = 4.6은 회전 5번이 필요하고 R의 모든 행을 바꾸며, 추정값은 (0, 1, 2.1, 3, 4)에서 (0, 1.12, 2.34, 3.36, 4.48)로 움직입니다. 측정 x₅ = 4.4는 회전 한 번이 필요하고 행 하나만 바꿉니다. 그런데도 모든 추정값이 움직입니다. back-substitution이 x₅의 변화를 나머지 모두에 전달하기 때문입니다.
+@@ 21
+이것은 어제 본 트리 규칙의 행렬 버전입니다. 사슬에서는 첫 nonzero부터 마지막까지의 행이 root까지의 경로입니다. 일반 그래프에서는 트리가 더 정확합니다. ordering에서 둘 사이에 있지만 관련 없는 가지도 건너뛰기 때문입니다.
+@@ 22
+iSAM1에는 약점이 두 가지 있었습니다. 열의 순서가 변수가 도착한 순서였으므로 loop closure가 생길 때마다 fill-in이 늘어났습니다. 그리고 \(\mathbf{R}\) 전체가 하나의 linearization point 위에 만들어졌습니다. 해결책은 주기적인 batch step이었습니다. 정해진 간격마다, 또는 fill-in이 감당하기 어려워지면 factor graph 전체를 다시 linearize했습니다. <span class="src">§1.7.3 · p. 50</span> 두 batch step 사이의 작업은 적었지만, batch step 자체는 map과 함께 커졌습니다.
+@@ 23
+2. iSAM2: 트리를 편집하고, 세 번 게으르기
+@@ 24
+iSAM2는 posterior를 Bayes tree로 저장하고, 새 측정마다 <a href="#d16">Day 4</a>의 업데이트를 적용합니다. <span class="src">§1.7.3 · p. 50</span> 실용적인 질문이 세 가지 남는데, 책은 p. 51에서 각각에 답합니다.
+@@ 25
+<strong>다시 소거하는 부분의 ordering은?</strong> 영향받은 clique의 변수만 다시 소거되므로, 그 변수들만 재정렬할 수 있습니다. 그 변수들에만 COLAMD를 돌리는 것도 한 방법입니다. iSAM2는 <strong>constrained COLAMD</strong>로 더 잘합니다. 가장 최근에 접근한 변수를 ordering의 맨 끝으로 강제로 보내 root clique에 넣고, 나머지는 잘 정렬합니다. 이유는 미래에 대한 내기입니다. 다음 factor는 거의 확실히 가장 새로운 pose를 포함할 것이고, 그 pose가 이미 root에 있으면 root까지의 경로는 가장 짧아집니다. 책은 이후의 업데이트가 "큰 loop closure를 제외하면 대부분의 경우" 효율적일 것이라고 봅니다. <span class="src">§1.7.3 · p. 51</span>
+@@ 26
+<strong>어떤 변수에 새 값이 필요한가?</strong> 트리에서 back-substitution은 root에서 시작해 leaf 쪽으로 내려가며, 각 clique는 separator의 값을 씁니다. clique의 해는 separator를 통해서만 바뀌므로, 내려온 값의 변화가 작은 임계값보다 작으면 더 내려갈 필요가 없습니다. <span class="src">§1.7.3 · p. 51</span> 위 위젯이 이것이 왜 중요한지 보여 줍니다. \(\mathbf{R}\)의 행 하나만 바꾸는 업데이트도 모든 추정값을 조금씩 움직일 수 있고, 그 움직임을 트리 아래로 얼마나 따라갈지는 임계값이 정합니다.
+@@ 27
+<strong>어떤 factor를 다시 linearize하는가?</strong> 추정값이 linearization point에서 임계값보다 많이 벗어난 변수를 포함하는 factor만입니다. <span class="src">§1.7.3 · p. 51</span> iSAM2 논문은 이를 fluid relinearization이라고 부릅니다. 더 이상 batch step은 없습니다.
+@@ 28
+빈틈 채우기: relinearization이 새 factor보다 더 멀리 미치는 이유
+@@ 29
+factor를 추가해도 기존 factor는 모두 그대로입니다. 영향받은 clique는 있는 그대로 factor로 되돌릴 수 있고, 새 factor의 변수가 <em>frontal</em>인 clique와 그 조상만 다시 계산합니다.
+@@ 30
+변수 \(v\)를 relinearize하는 것은 다릅니다. \(v\)에 연결된 모든 factor가 새 \(\mathbf{A}_i\)와 \(\mathbf{b}_i\)를 갖게 됩니다. 그런 factor는 자기 변수 중 가장 먼저 소거된 변수의 clique에서 트리에 들어갔고, 그곳에서 \(v\)는 <em>separator</em> 변수일 뿐일 수 있습니다. 따라서 \(v\)를 frontal로든 separator로든 조금이라도 포함하는 모든 clique는 낡은 숫자를 들고 있으므로, 모든 조상과 함께 다시 계산해야 합니다. clique를 그냥 재활용할 수도 없습니다. 원래의 비선형 factor로 돌아가야 하고, 손대지 않은 서브트리의 기여분은 elimination 때 캐시해 두었어야 합니다. 책의 결론은 이렇습니다: 이 방식은 트리의 더 넓은 부분에 영향을 주지만, 대부분의 경우 전부 다시 계산하는 것보다 여전히 훨씬 쌉니다. <span class="src">§1.7.3 · p. 51</span>
+@@ 31
+모두 합치면 iSAM2의 한 step은 다음과 같습니다(pp. 50–51의 요약이며, 논문의 알고리즘을 그대로 옮긴 것은 아닙니다):
+@@ 32
+=
+@@ 33
+=
+@@ 34
+factor의 저장 방식
+@@ 35
+sparse 행렬 R
+@@ 36
+Bayes tree
+@@ 37
+새 측정
+@@ 38
+incremental 행렬 분해 업데이트
+@@ 39
+영향받은 clique를 다시 소거
+@@ 40
+=
+@@ 41
+그래프 전체를 주기적으로, 또는 fill-in이 커질 때
+@@ 42
+변수별로, 임계값을 넘어 움직일 때
+@@ 43
+=
+@@ 44
+주기적 batch step에서만 개선
+@@ 45
+매 step 영향받은 변수에 대해 갱신, 최근 변수는 맨 뒤로
+@@ 46
+해 업데이트
+@@ 47
+=
+@@ 48
+root에서 시작하는 back-substitution, 임계값으로 일찍 멈춤
+@@ 49
+3. 업데이트가 싼 경우
+@@ 50
+오늘 배운 용어로 <a href="#d16">Day 4</a> 위젯을 다시 보십시오. 로봇이 탐색하는 동안 새 factor는 모두 가장 새로운 pose와 최근의 무언가를 포함합니다. 이 변수들은 root 안이나 그 옆에 있으므로, trajectory 길이와 상관없이 변수 3개나 4개만 다시 소거됩니다. 이것이 incremental smoothing이 step당 거의 일정한 비용으로 trajectory 전체의 추정값을 내는 영역입니다.
+@@ 51
+loop closure는 가장 새로운 pose를 트리 깊숙이 있는 오래된 pose와 묶습니다. 둘 사이의 경로 전체를 다시 계산해야 하고, 큰 loop라면 트리의 대부분이 될 수 있습니다. 새 측정이 loop 위의 모든 것에 대해 알려진 내용을 실제로 바꾸기 때문에, 어떤 ordering 기법으로도 이 비용을 없앨 수 없습니다. 그 뒤에는 오래된 변수가 root 근처에 있으므로 이어지는 step은 다시 쌉니다.
+@@ 52
+노트를 바인더에 넣되 가장 새로운 쪽이 맨 위에 오게 한다고 해 봐요. 오늘에 관한 새 관찰이 생기면 맨 위 몇 쪽만 고쳐 쓰면 돼요. 오늘 있는 곳이 첫 장에 나온 곳과 같다는 걸 알게 되면, 그 사이의 모든 쪽을 고쳐 써야 해요. 그 일이 끝나면 다시 맨 위 몇 쪽만 고쳐 쓰면 돼요.
+@@ 53
+두 알고리즘은 모두 GTSAM 라이브러리에 구현되어 있으며, 책에 따르면 수백만 규모에 이르는 여러 로보틱스 추정 문제에 적용되어 왔습니다. <span class="src">§1.7.3 · p. 51</span>
+@@ 54
+4. 이 장을 마치며
+@@ 55
+1.8절은 짧은 읽을거리 목록입니다. factor graph와 elimination을 더 자세히 알고 싶다면 책이 인용한 Dellaert와 공저자들의 긴 논문을, Bayes tree에 대해서는 Kaess와 공저자들의 iSAM2 논문을 추천합니다. <span class="src">§1.8 · p. 51</span> 이어서 이 장의 기본 버전이 빠뜨렸고 핸드북의 나머지가 채워 주는 것들을 꼽습니다: 회전처럼 manifold 위에 있는 state 변수(다음 주), 여러 종류의 센서, outlier 측정(6주차), 학습된 모델의 출력입니다. <span class="src">§1.8 · pp. 51–52</span>
+@@ 56
+1장이 걸어온 길, 한 줄씩:
+@@ 57
+대상
+@@ 58
+그래프로 보면
+@@ 59
+선형대수로 보면
+@@ 60
+문제
+@@ 61
+sparse Jacobian A와 우변 b
+@@ 62
+누가 누구와 관련되는지
+@@ 63
+그래프 G (Markov random field)
+@@ 64
+Λ = AᵀA의 패턴
+@@ 65
+풀기
+@@ 66
+=
+@@ 67
+sparse QR 또는 Cholesky
+@@ 68
+결과
+@@ 69
+=
+@@ 70
+상삼각 R과 d
+@@ 71
+추정값
+@@ 72
+Bayes net에서의 MAP inference
+@@ 73
+최신 상태 유지
+@@ 74
+Bayes tree 편집
+@@ 75
+incremental 분해
+@@ 76
+<strong>"incremental은 근사라는 뜻이다."</strong> 선형 문제라면 업데이트된 트리는 batch 분해가 내놓을 결과와 정확히 같습니다. 근사는 두 임계값에서 생기며, 정확도를 조금 내주고 속도를 얻습니다.
+@@ 77
+<strong>"iSAM은 filter다."</strong> iSAM은 smoother입니다. loop closure에서 보듯, 지난 pose가 모두 추정에 남아 있고 여전히 보정될 수 있습니다.
+@@ 78
+<strong>"loop closure는 factor 하나이므로 싸다."</strong> 비용은 factor의 개수가 아니라 그 변수들이 트리의 어디에 있는지에 달려 있습니다.
+@@ 79
+Q1. R의 한 행이 열 c에서 (3, …)이고, 새 행은 열 c에 4가 있습니다. Givens rotation 후 대각 원소 R_cc는 얼마입니까?
+@@ 80
+r = √(3² + 4²) = 5. 회전은 두 원소의 크기를 모두 R의 행으로 옮기고, 새 행에는 0을 남깁니다.
+@@ 81
+Q2. R에 도착 순서대로 열이 100개 있습니다. 새 측정 행의 첫 nonzero가 97번 열에 있습니다. R의 행은 몇 개까지 바뀔 수 있습니까?
+@@ 82
+많아야 4개: 97행부터 100행까지
+@@ 83
+100개 모두
+@@ 84
+정확히 1개
+@@ 85
+96개: 1행부터 96행까지
+@@ 86
+회전은 첫 nonzero에서 시작해 오른쪽으로 나아갑니다. 그보다 위의 행은 새 행과 섞이지 않습니다.
+@@ 87
+Q3. iSAM2는 왜 가장 최근에 쓴 변수를 elimination ordering의 맨 끝으로 강제로 보냅니까?
+@@ 88
+불확실성이 가장 크기 때문
+@@ 89
+모든 그래프에서 fill-in을 최소화하기 때문
+@@ 90
+오래된 변수는 절대 바뀌면 안 되기 때문
+@@ 91
+그 변수들이 root에 들어가고, 다음 측정이 그곳에 붙을 것으로 예상되기 때문
+@@ 92
+마지막에 소거된 변수가 root clique를 이룹니다. 새 factor는 대개 최근 변수를 포함하므로, 영향받는 root까지의 경로가 짧게 유지됩니다.
+@@ 93
+Q4. 변수 v는 clique C₁에서 frontal이고, 그 자식 C₂에서는 separator 변수입니다. v의 추정값이 relinearization 임계값을 넘어 움직였습니다. 어떤 clique를 다시 계산합니까?
+@@ 94
+C₁과 그 조상만
+@@ 95
+C₁, C₂, 그리고 C₁의 조상
+@@ 96
+C₂만
+@@ 97
+항상 트리 전체
+@@ 98
+relinearization은 v에 걸린 factor를 바꾸는데, 그중 일부는 v가 separator인 C₂에 흡수되어 있습니다. v를 포함하는 모든 clique와 그 위의 모든 것을 다시 계산합니다.
+@@ 99
+Q5. back-substitution 도중 어떤 clique가 받은 separator 값의 변화가 임계값보다 훨씬 작습니다. iSAM2는 어떻게 합니까?
+@@ 100
+그 clique를 다시 소거함
+@@ 101
+거기서 멈추고, 그 clique와 그 아래 모든 것의 이전 값을 유지함
+@@ 102
+그 clique의 factor를 relinearize함
+@@ 103
+그 변수들을 root로 옮김
+@@ 104
+clique의 해는 separator를 통해서만 트리의 나머지에 의존합니다. 그 입력이 거의 바뀌지 않았다면 더 아래의 출력도 거의 바뀌지 않습니다.
+@@ 105
+새 측정 행은 Givens rotation으로 \(\mathbf{R}\)에 회전해 넣을 수 있습니다. 첫 nonzero보다 위의 행은 건드리지 않습니다. 이것이 "root까지의 경로만"을 행렬로 본 모습입니다.
+@@ 106
+iSAM1은 이렇게 \(\mathbf{R}\)을 업데이트하고, 주기적인 batch step에서 그래프 전체를 relinearize합니다.
+@@ 107
+iSAM2는 Bayes tree를 편집합니다. 영향받은 clique를 다시 소거하되, 최근에 쓴 변수를 맨 뒤에 두어 root에 들어가게 합니다.
+@@ 108
+iSAM2는 해가 바뀌는 곳까지만 back-substitution을 하고, 임계값을 넘어 움직인 변수만 relinearize합니다. relinearization은 그런 변수를 포함하는 모든 clique를 다시 계산합니다.
+@@ 109
+탐색 중에는 step마다 변수 몇 개만큼의 비용이 듭니다. 큰 loop closure는 트리의 대부분만큼 비용이 들 수 있습니다.
+@@ 110
+=
+@@ 111
+Golub, Van Loan, <em>Matrix Computations</em>, 4판, 2013 (Givens rotation, 그리고 행이 추가될 때 QR 분해 업데이트하기).
+@@ 112
+Kaess, Ranganathan, Dellaert, <em>iSAM: Incremental smoothing and mapping</em>, 2008 (iSAM1: Givens 업데이트, 주기적인 reordering과 relinearization).
+@@ 113
+Kaess, Johannsson, Roberts, Ila, Leonard, Dellaert, <em>iSAM2: Incremental smoothing and mapping using the Bayes tree</em>, 2012 (fluid relinearization, constrained ordering, 부분적인 해 업데이트).

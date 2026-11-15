@@ -1,0 +1,424 @@
+@@ w07
+f:"input x"
+==
+f:"입력 x"
+@@ w07
+f:"input y"
+==
+f:"입력 y"
+@@ w07
+"Computation graph of the lower-level cost L with the value of every node and the derivative carried by the chosen autodiff mode"
+==
+"lower-level cost L의 computation graph: 각 node의 값과 선택한 autodiff mode가 전달하는 미분"
+@@ w07
+"Step 0: only the values are known (the ordinary evaluation of L). Move the Step slider."
+==
+"Step 0: 값만 알려져 있습니다 (L의 일반적인 계산). Step 슬라이더를 움직여 보세요."
+@@ w07
+" of 8, node "
+==
+" / 8, node "
+@@ w07
+stat("Slope in x from this pass",
+==
+stat("이 pass의 x 기울기",
+@@ w07
+"∂L/∂x, exact: "
+==
+"∂L/∂x, 정확한 값: "
+@@ w07
+stat("Slope in y from this pass",
+==
+stat("이 pass의 y 기울기",
+@@ w07
+"∂L/∂y, exact: "
+==
+"∂L/∂y, 정확한 값: "
+@@ w07
+stat("Passes for both partials",
+==
+stat("두 편미분에 필요한 pass",
+@@ w07
+"reverse: one per output"
+==
+"reverse: 출력당 1번"
+@@ w07
+"forward: one per input"
+==
+"forward: 입력당 1번"
+@@ w07
+"Forward, seed x"
+==
+"Forward, x에 seed"
+@@ w07
+"Forward, seed y"
+==
+"Forward, y에 seed"
+@@ w07
+h("div",{class:"vt"},"Forward and reverse mode on one graph")
+==
+h("div",{class:"vt"},"한 graph 위의 forward mode와 reverse mode")
+@@ w07
+"The lower-level cost L(x, y) = ½(x² − y)² + ½(x − 1)² split into elementary operations. Each node shows its value and, once the pass reaches it, the derivative that mode carries."
+==
+"lower-level cost L(x, y) = ½(x² − y)² + ½(x − 1)²를 기본 연산으로 나눈 것입니다. 각 node는 자기 값을 보여 주고, pass가 도달하면 그 mode가 전달하는 미분도 보여 줍니다."
+@@ w07
+label:"implicit at x_K, K = "
+==
+label:"implicit (x_K에서), K = "
+@@ w07
+"unrolled through all K steps"
+==
+"K step 전체를 unroll"
+@@ w07
+"truncated: last "+Mt+" step"+(Mt>1?"s":"")+" only"
+==
+"truncated: 마지막 "+Mt+" step"+(Mt>1?"":"")+"만"
+@@ w07
+"implicit formula evaluated at x_K"
+==
+"x_K에서 계산한 implicit 공식"
+@@ w07
+"finite-difference reference"
+==
+"finite-difference 기준값"
+@@ w07
+"Estimates of the upper-level gradient dU/dy against the number of inner steps K"
+==
+"inner step 수 K에 따른 upper-level gradient dU/dy 추정값"
+@@ w07
+label:"inner steps K"
+==
+label:"inner step 수 K"
+@@ w07
+"x_K; converged x* = "
+==
+"x_K; 수렴한 x* = "
+@@ w07
+"stores "+K+" iterate"+(K===1?"":"s")
+==
+"iterate "+K+"개 저장"+(K===1?"":"")
+@@ w07
+"stores "+Math.min(Mt,K)+" iterate"+(Math.min(Mt,K)===1?"":"s")
+==
+"iterate "+Math.min(Mt,K)+"개 저장"+(Math.min(Mt,K)===1?"":"")
+@@ w07
+stat("Implicit formula",
+==
+stat("Implicit 공식",
+@@ w07
+"evaluated at x_K; stores 1 iterate"
+==
+"x_K에서 계산; iterate 1개 저장"
+@@ w07
+"reference, at x*"
+==
+"기준값, x*에서"
+@@ w07
+h("div",{class:"vt"},"Four ways to get dU/dy")
+==
+h("div",{class:"vt"},"dU/dy를 구하는 네 가지 방법")
+@@ w07
+"Back-end: x*(y) = argmin ½(x² − y)² + ½(x − 1)², started at x₀ = 1. Training loss: U = ½(x* − 1.5)². Vertical axis: each estimate of dU/dy; horizontal axis: the number of inner steps K. Estimates far off the scale are not drawn; the tiles below always show them."
+==
+"Back-end: x*(y) = argmin ½(x² − y)² + ½(x − 1)², x₀ = 1에서 시작. Training loss: U = ½(x* − 1.5)². 세로축: dU/dy의 각 추정값, 가로축: inner step 수 K. 눈금에서 크게 벗어난 추정값은 그리지 않으며, 아래 타일에는 항상 표시됩니다."
+@@ w07
+range("Front-end output y",
+==
+range("Front-end 출력 y",
+@@ w07
+range("Inner steps K",
+==
+range("Inner step 수 K",
+@@ w07
+range("Backprop through last M",
+==
+range("마지막 M step만 backprop",
+@@ w07
+?"all":v
+==
+?"전체":v
+@@ w07
+"The back-end solution x-star as a function of the front-end output y, with the tangent line whose slope is given by implicit differentiation"
+==
+"front-end 출력 y의 함수로 본 back-end 해 x-star와, implicit differentiation으로 기울기를 구한 tangent line"
+@@ w07
+"front-end output y"
+==
+"front-end 출력 y"
+@@ w07
+"back-end solution x*(y)"
+==
+"back-end 해 x*(y)"
+@@ w07
+"    (exact v/H = "
+==
+"    (정확한 v/H = "
+@@ w07
+stat("Back-end solution",
+==
+stat("Back-end 해",
+@@ w07
+"x*(y) at y = "
+==
+"x*(y), y = "
+@@ w07
+stat("Slope of the curve",
+==
+stat("곡선의 기울기",
+@@ w07
+"dx*/dy = 2x*/H by (4.12), H = "
+==
+"(4.12)의 dx*/dy = 2x*/H, H = "
+@@ w07
+stat("Loss slope",
+==
+stat("Loss 기울기",
+@@ w07
+stat("Gradient via Algorithm 2",
+==
+stat("Algorithm 2로 구한 gradient",
+@@ w07
+"dU/dy = 2x*·q; exact: "
+==
+"dU/dy = 2x*·q; 정확한 값: "
+@@ w07
+taken+" upper-level step"+(taken===1?"":"s")+" taken"
+==
+"upper-level step "+taken+"번"+(taken===1?"":"")+" 진행"
+@@ w07
+h("div",{class:"vt"},"Implicit differentiation on the solution curve")
+==
+h("div",{class:"vt"},"해 곡선 위의 implicit differentiation")
+@@ w07
+"Blue: where the back-end ends up for each front-end output y. Pink: the tangent whose slope comes from (4.12), using only derivatives of L at the solution. Amber: the error the training loss U penalizes."
+==
+"파란색: 각 front-end 출력 y에 대해 back-end가 도달하는 곳. 분홍색: 해에서 계산한 L의 도함수만으로 (4.12)에서 기울기를 구한 tangent. 주황색: training loss U가 벌점을 주는 오차."
+@@ w07
+button("Reset",
+==
+button("초기화",
+@@ w07
+"solution curve x*(y)"
+==
+"해 곡선 x*(y)"
+@@ w07
+"tangent from implicit differentiation"
+==
+"implicit differentiation으로 구한 tangent"
+@@ w07
+"error x* − 1.5"
+==
+"오차 x* − 1.5"
+@@ w07
+"Planar frames before and after a small right perturbation, showing how the perturbation of the input moves the output of the chosen operation"
+==
+"작은 right perturbation 전후의 평면 frame: 입력의 perturbation이 선택한 연산의 출력을 어떻게 움직이는지 보여 줌"
+@@ w07
+"world origin"
+==
+"world 원점"
+@@ w07
+"actual",{
+==
+"실제",{
+@@ w07
+"perturbed",-10
+==
+"perturb 후",-10
+@@ w07
+[A,"before"]
+==
+[A,"perturb 전"]
+@@ w07
+"after perturbing χ by τ"
+==
+"χ를 τ로 perturb한 후"
+@@ w07
+"linear prediction J·τ"
+==
+"선형 예측 J·τ"
+@@ w07
+"after perturbing by τ"
+==
+"τ로 perturb한 후"
+@@ w07
+"Jacobian by finite differences of (4.23)"
+==
+"(4.23)의 finite difference로 구한 Jacobian"
+@@ w07
+?"identity":
+==
+?"항등 행렬":
+@@ w07
+stat("Largest entry difference",
+==
+stat("원소 차이의 최댓값",
+@@ w07
+"numeric vs closed form"
+==
+"수치 vs closed form"
+@@ w07
+stat("Linear prediction",
+==
+stat("선형 예측",
+@@ w07
+"J·τ, displacement of the point"
+==
+"J·τ, 점의 변위"
+@@ w07
+"J·τ as [ρ₁, ρ₂, θ] in the output frame"
+==
+"J·τ, 출력 frame의 [ρ₁, ρ₂, θ]"
+@@ w07
+stat("Actual change",
+==
+stat("실제 변화",
+@@ w07
+"f(χ ⊕ τ) ⊖ f(χ) for the τ you chose"
+==
+"선택한 τ에 대한 f(χ ⊕ τ) ⊖ f(χ)"
+@@ w07
+stat("Linearization error",
+==
+stat("Linearization 오차",
+@@ w07
+"grows like |τ|²"
+==
+"|τ|²처럼 커짐"
+@@ w07
+"rounding only: this map is exactly linear in τ"
+==
+"반올림 오차뿐: 이 map은 τ에 대해 정확히 선형"
+@@ w07
+h("div",{class:"vt"},"Jacobians of composition, inversion, and action on SE(2)")
+==
+h("div",{class:"vt"},"SE(2)에서 composition, inversion, action의 Jacobian")
+@@ w07
+"A planar arm: χ is the pose of the first joint, χ₁ the transform along the link, χ ∘ χ₁ the end-effector, and χ · p the position of the link tip p. The chosen input is perturbed on the right by τ = [ρ₁, 0, θ]."
+==
+"평면 arm: χ는 첫째 joint의 pose, χ₁은 link를 따라가는 transform, χ ∘ χ₁은 end-effector, χ · p는 link 끝점 p의 위치입니다. 선택한 입력을 오른쪽에서 τ = [ρ₁, 0, θ]로 perturb합니다."
+@@ w07
+select("Differentiate",
+==
+select("미분 대상",
+@@ w07
+"χ ∘ χ₁ with respect to χ"
+==
+"χ에 대한 χ ∘ χ₁"
+@@ w07
+"χ ∘ χ₁ with respect to χ₁"
+==
+"χ₁에 대한 χ ∘ χ₁"
+@@ w07
+"χ⁻¹ with respect to χ"
+==
+"χ에 대한 χ⁻¹"
+@@ w07
+"χ · p with respect to χ (group action)"
+==
+"χ에 대한 χ · p (group action)"
+@@ w07
+range("Link length (χ₁ translation)",
+==
+range("Link 길이 (χ₁ 이동)",
+@@ w07
+range("Link bend (χ₁ rotation)",
+==
+range("Link 굽힘 (χ₁ 회전)",
+@@ w07
+range("τ: rotation θ",
+==
+range("τ: 회전 θ",
+@@ w07
+range("τ: forward ρ₁",
+==
+range("τ: 전진 ρ₁",
+@@ w07
+label:"series, θ = 1e"
+==
+label:"급수, θ = 1e"
+@@ w07
+"relative error 1e"
+==
+"상대 오차 1e"
+@@ w07
+"Relative error of the derivative of gamma in 32-bit floats against the angle, for the naive formula and for the two-term series"
+==
+"32-bit float에서 각도에 따른 gamma 도함수의 상대 오차: naive 공식과 두 항짜리 급수"
+@@ w07
+label:"rotation angle θ (rad)"
+==
+label:"회전 각도 θ (rad)"
+@@ w07
+"naive formula (quotient rule), float32"
+==
+"naive 공식 (quotient rule), float32"
+@@ w07
+"series −θ/24 + θ³/960, float32"
+==
+"급수 −θ/24 + θ³/960, float32"
+@@ w07
+stat("Gamma, naive formula",
+==
+stat("Gamma, naive 공식",
+@@ w07
+"sin(θ/2)/θ in float32"
+==
+"float32로 계산한 sin(θ/2)/θ"
+@@ w07
+stat("Gamma, series",
+==
+stat("Gamma, 급수",
+@@ w07
+"γₒ of (4.41) in float32"
+==
+"(4.41)의 γₒ, float32"
+@@ w07
+stat("Gamma, exact",
+==
+stat("Gamma, 정확한 값",
+@@ w07
+"float64 reference"
+==
+"float64 기준값"
+@@ w07
+stat("Derivative, naive",
+==
+stat("도함수, naive",
+@@ w07
+"dγ/dθ by the quotient rule, float32"
+==
+"quotient rule로 구한 dγ/dθ, float32"
+@@ w07
+stat("Derivative, series",
+==
+stat("도함수, 급수",
+@@ w07
+stat("Derivative, exact",
+==
+stat("도함수, 정확한 값",
+@@ w07
+"At θ = 0 the naive formula computes 0/0. The value and the gradient are NaN, and one NaN poisons every parameter the gradient reaches."
+==
+"θ = 0에서 naive 공식은 0/0을 계산합니다. 값과 gradient가 NaN이 되고, NaN 하나가 gradient가 닿는 모든 parameter를 오염시킵니다."
+@@ w07
+button("Set θ = 0 exactly",
+==
+button("θ = 0으로 정확히 설정",
+@@ w07
+h("div",{class:"vt"},"Why the exponential map switches to a series near zero")
+==
+h("div",{class:"vt"},"exponential map이 0 근처에서 급수로 바뀌는 이유")
+@@ w07
+"γ(θ) = sin(θ/2)/θ is the factor that multiplies ν in the quaternion Exp. Every operation is rounded to 32-bit floats, as on a GPU. Vertical axis: the relative error of the derivative dγ/dθ (1e0 means 100% wrong; errors above 1e2 are clipped)."
+==
+"γ(θ) = sin(θ/2)/θ는 quaternion Exp에서 ν에 곱해지는 인자입니다. GPU에서처럼 모든 연산을 32-bit float로 반올림합니다. 세로축: 도함수 dγ/dθ의 상대 오차 (1e0은 100% 틀렸다는 뜻이며, 1e2를 넘는 오차는 잘라 냄)."
+@@ w07
+range("Angle θ",
+==
+range("각도 θ",
+@@ w07
+"not finite"
+==
+"유한값 아님"

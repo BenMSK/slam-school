@@ -1,0 +1,246 @@
+@@ 1
+<span class="eyebrow">Week 15 · Day 5</span>
+@@ 2
+Simulators, datasets, metrics, and open problems
+@@ 3
+After today you can explain how a simulator turns brightness samples into events and noise, choose a dataset for a task, and compute and interpret the absolute trajectory error and the relative pose error.
+@@ 4
+About 60 min · Read §10.7–10.8, pp. 294–303 (8 pages; skim the dataset descriptions) · Needs Week 15 Day 1
+@@ 5
+Read first: §10.7–10.8, pp. 294–303
+@@ 6
+This is a survey section. Read §10.7.1 and §10.7.3 with care and skim the dataset descriptions in §10.7.2. Look for:
+@@ 7
+How ESIM differs from "thresholding the difference between two successive frames", and the noise model for \(C\) (pp. 295–296).
+@@ 8
+What V2E adds, and which weakness of earlier simulators V2CE addresses (p. 297).
+@@ 9
+In Table 10.2 (p. 299), the resolution and sensor columns.
+@@ 10
+The one-sentence descriptions of ATE and RPE, and why depth errors are usually folded into trajectory errors (p. 301).
+@@ 11
+A young field moves at the speed of its data and its yardsticks. Simulators give unlimited events with perfect ground truth, provided their noise is realistic. Datasets give real events with measured ground truth. Metrics compress the comparison of two trajectories into a number: ATE asks how far the whole path is off, RPE asks how wrong each step is.
+@@ 12
+1. Simulators
+@@ 13
+Event cameras are new and event data is scarce, which hurts learning-based methods most. Simulators fill the gap. <span class="src">§10.7.1 · pp. 295–297</span>
+@@ 14
+Simulator
+@@ 15
+Starts from
+@@ 16
+Main idea
+@@ 17
+ESIM
+@@ 18
+A rendered virtual scene
+@@ 19
+Renderer and event generator are tightly coupled, so frames are rendered adaptively, following how fast the visual signal changes
+@@ 20
+CARLA's event sensor
+@@ 21
+A driving simulator
+@@ 22
+The ESIM principle in rich driving scenes
+@@ 23
+Vid2E
+@@ 24
+Any existing video
+@@ 25
+Interpolate extra frames (Super SloMo), then apply ESIM. Models an ideal sensor
+@@ 26
+Video
+@@ 27
+Models the DVS circuit: temporal noise, leak events, a bandwidth that depends on intensity, Gaussian thresholds
+@@ 28
+EventGAN
+@@ 29
+Pairs of images
+@@ 30
+A network trained with adversarial and cycle-consistency losses; outputs a voxel grid per polarity
+@@ 31
+VISTA 2.0
+@@ 32
+Real driving data, several sensor types
+@@ 33
+Built for learning control policies; events generated as in ESIM, with optical flow from a network
+@@ 34
+V2CE
+@@ 35
+A network predicts voxel grids, and a second stage recovers continuous event timestamps from them
+@@ 36
+The earliest attempts simply thresholded the difference of two consecutive frames. That gives edge-like pictures, but not the right number of events and not their times. <span class="src">§10.7.1 · p. 295</span>
+@@ 37
+Filling the gap: from brightness samples to event timestamps
+@@ 38
+The book says what simulators do but not how a sample of brightness becomes an event with a microsecond timestamp. The standard construction is short.
+@@ 39
+A simulator knows a pixel's log brightness only at sample times: \(L_a\) at \(t_a\) and \(L_b\) at \(t_b\). Let \(L_\text{ref}\) be the level the pixel memorized at its last event. Assume \(L\) changes linearly between the two samples. If it rises, it crosses the levels \(L_\text{ref} + jC\) for \(j = 1, 2, \dots\) as long as they do not exceed \(L_b\), and the crossing times follow from similar triangles:
+@@ 40
+Each crossing is one ON event. For a falling signal use \(L_\text{ref} - jC\) and emit OFF events. Afterwards \(L_\text{ref}\) is the last level crossed. This is equation (10.1) applied between samples, and it is what the simulator behind this week's widgets does every 0.05 ms.
+@@ 41
+<strong>Example.</strong> \(L_\text{ref} = L_a = -1.0\) at \(t_a = 0\), \(L_b = -0.2\) at \(t_b = 1\) ms, \(C = 0.3\). The levels \(-0.7\) and \(-0.4\) are crossed; \(-0.1\) is not reached. So two ON events fire, at
+@@ 42
+and the memory ends at \(-0.4\), with \(0.2\) of change carried over to the next interval. Thresholding the frame difference would report one event at \(t_b\).
+@@ 43
+<strong>Why the sampling must adapt.</strong> The linear assumption fails if too much happens between samples. A thin bright line that crosses a pixel entirely between \(t_a\) and \(t_b\) leaves \(L_a = L_b\), and the simulator emits nothing. A reasonable rule is to sample often enough that the image moves at most about one pixel between samples. An edge moving at 2000 px/s then needs a sample every 0.5 ms, while at 20 px/s one every 50 ms is enough. A renderer can produce frames at any time, so ESIM can adapt. A recorded 30 Hz video cannot: at 2000 px/s the image jumps 67 pixels between frames. That is why Vid2E and V2E first interpolate intermediate frames, and why the book says their number needs care: too few causes aliasing, too many costs computation. <span class="src">§10.7.1 · p. 296</span>
+@@ 44
+<strong>Noise.</strong> An algorithm tuned on perfect simulated events may fail on real ones; this is the <strong>simulation-to-real gap</strong>. ESIM and its descendants use a simple noise model taken from measurements: the contrast threshold is not fixed but drawn from a normal distribution \(\N(C, \sigma_C^2)\) at each simulation step, with separate thresholds \(C^+\) and \(C^-\) for the two polarities. <span class="src">§10.7.1 · p. 296</span> To see the effect, take the bar of Day 1, whose edge changes \(L\) by \(\ln 10 = 2.30\). With \(C = 0.30\) a pixel fires 7 events. If its threshold happens to be \(0.27\) it fires \(\lfloor 2.30/0.27 \rfloor = 8\), and with \(0.33\) it fires 6. Neighbouring pixels no longer agree, which is what real data looks like.
+@@ 45
+V2E goes further and models the pixel circuit, and V2CE targets the timestamps: earlier video-based simulators emit events at discrete times, which differs from real data enough to matter for methods that are sensitive to timing. <span class="src">§10.7.1 · p. 297</span>
+@@ 46
+2. Datasets
+@@ 47
+Table 10.2 lists sixteen datasets. A selection, with what makes each one useful: <span class="src">§10.7.2 · pp. 298–301, Table 10.2</span>
+@@ 48
+Platform
+@@ 49
+Event pixels
+@@ 50
+What it offers
+@@ 51
+ECDS
+@@ 52
+Hand-held
+@@ 53
+The first with synchronized events, IMU, and 6-DoF ground-truth poses from motion capture; 11 real scenes and 2 synthetic ones
+@@ 54
+MVSEC
+@@ 55
+Hand-held, drone, car, motorcycle
+@@ 56
+The first with ground-truth depth, from LiDAR; stereo events; long indoor and outdoor sequences
+@@ 57
+UZH-FPV
+@@ 58
+Racing drone
+@@ 59
+Fast indoor and outdoor flight, aimed at drone racing and visual-inertial odometry
+@@ 60
+EV-IMO, EV-IMO2
+@@ 61
+Independently moving objects with pixel-wise motion masks, plus ground-truth egomotion and depth
+@@ 62
+DSEC
+@@ 63
+Car
+@@ 64
+Stereo events (60 cm baseline) and stereo RGB, LiDAR, RTK GPS; day, night, and direct sun; ground-truth depth maps
+@@ 65
+TUM-VIE
+@@ 66
+Hand-held, head-mounted
+@@ 67
+One-megapixel stereo events with IMU at 200 Hz and grayscale frames at 20 Hz
+@@ 68
+EDS
+@@ 69
+A beamsplitter puts the event camera and an RGB camera on the same optical axis
+@@ 70
+M3ED
+@@ 71
+Drone, car, quadruped robot
+@@ 72
+High-speed motion on several platforms, with ground-truth pose, depth, and semantic labels
+@@ 73
+To choose, match three things to your task: the motion (a hand-held office sequence says little about a racing drone), the ground truth you need (poses are common, depth is rare), and the resolution (recall from Day 1 that megapixel sensors produce event rates that are hard to process).
+@@ 74
+3. Metrics
+@@ 75
+Ideally localization and mapping would be graded separately. In practice the two are intertwined, since depth errors cause pose errors and the reverse, and ground-truth poses are far easier to obtain than ground-truth depth. So the quality of the map is usually judged through the trajectory. Event-based SLAM inherits its two main metrics from classical SLAM (<a href="#d61">Week 11 · Day 1</a>). <span class="src">§10.7.3 · p. 301</span>
+@@ 76
+The <strong>absolute trajectory error (ATE)</strong> compares estimated and true poses in one fixed world frame. It grades long-term, global accuracy.
+@@ 77
+The <strong>relative pose error (RPE)</strong> compares the estimated and true motion between nearby time steps. It grades local consistency.
+@@ 78
+In both, the translational part is a Euclidean distance between positions and the rotational part is the geodesic distance in \(\SO(3)\). <span class="src">§10.7.3 · p. 301</span>
+@@ 79
+Filling the gap: the formulas
+@@ 80
+The book describes the metrics in words. Let \(\mathbf{T}^\text{gt}_i\) and \(\mathbf{T}^\text{est}_i\) in \(\SE(3)\) be the true and estimated poses at the same \(n\) timestamps, with positions \(\mathbf{t}^\text{gt}_i\) and \(\mathbf{t}^\text{est}_i\).
+@@ 81
+<strong>ATE.</strong> The two trajectories usually live in different world frames, so first find the rigid transform \(\mathbf{S}\) that best maps the estimate onto the ground truth in the least-squares sense (the closed-form alignment of <a href="#d74">Week 13 · Day 2</a>). Then take the root mean square of what remains:
+@@ 82
+<strong>RPE.</strong> Choose an interval of \(\Delta\) steps. Form the relative motions \(\Delta\mathbf{T}^\text{gt}_i = (\mathbf{T}^\text{gt}_i)^{-1}\mathbf{T}^\text{gt}_{i+\Delta}\) and \(\Delta\mathbf{T}^\text{est}_i = (\mathbf{T}^\text{est}_i)^{-1}\mathbf{T}^\text{est}_{i+\Delta}\), and the error
+@@ 83
+If the estimated step equals the true step, \(\mathbf{E}_i\) is the identity. The translational RPE is the root mean square of the lengths of the translation parts of the \(\mathbf{E}_i\); the rotational RPE uses the angles of their rotation parts. No alignment is needed, because relative motions do not depend on the world frame.
+@@ 84
+<strong>Geodesic distance in \(\SO(3)\).</strong> The distance between rotations \(\mathbf{R}_1\) and \(\mathbf{R}_2\) is the angle of the rotation that takes one to the other:
+@@ 85
+since a rotation by angle \(\theta\) about any axis has trace \(1 + 2\cos\theta\). Example: if \(\tr(\mathbf{R}_1\T\mathbf{R}_2) = 2.9696\), then \(\cos\theta = 0.9848\) and the two orientations are \(10^\circ\) apart.
+@@ 86
+Try it: the estimate below makes a single wrong turn. Move the step at which it happens.
+@@ 87
+Notice that the RPE is 0.028 steps wherever the wrong turn happens: one bad step in 40 is the same local error anywhere (its size is the chord \(2\sin 5^\circ = 0.174\), and \(0.174/\sqrt{40} = 0.028\)). The ATE is 0.29 at step 8, 0.69 at step 20, and 0.03 at step 39. A turn near either end rotates almost the whole path rigidly, and the alignment removes that; a turn in the middle bends the path, which no rigid alignment can undo. Without alignment the end point is off by 4.47 steps at step 8.
+@@ 88
+Some authors divide the position error by the mean scene depth or by the distance travelled, so that results from scenes of different size can be compared: an ATE of 0.20 m on a 50 m path is 0.4% of the distance. Further variants average the relative position and rotation errors, and for event cameras the errors in linear and angular velocity are also informative, since fast and abrupt motions are what the sensor is for. <span class="src">§10.7.3 · pp. 301–302</span>
+@@ 89
+When depth is graded separately, the usual measures are the average depth error up to several cutoff distances, the root mean square distance from each estimated 3D point to the closest ground-truth surface (the preferred one), the relative error, and completion, which is the number of points recovered. <span class="src">§10.7.3 · p. 302</span>
+@@ 90
+4. Open problems
+@@ 91
+The book closes with what is unsolved. <span class="src">§10.8 · p. 302</span>
+@@ 92
+<strong>The processor does not match the sensor.</strong> The camera is asynchronous, yet most systems run on ordinary serial processors. A fully <strong>neuromorphic</strong> system would pair the event camera with asynchronous, spike-based processors and controllers, and is expected to do better in power consumption and latency. Building one means designing sensor, processor, and algorithm together, which takes expertise from several disciplines.
+@@ 93
+<strong>New sensors.</strong> Hybrid sensors deliver events and intensity, aligned in space and time. Foveated sensors, like the eye, keep high resolution only in part of the image to save bandwidth.
+@@ 94
+<strong>Fusion.</strong> Combining event cameras with frame cameras, structured light, LiDAR, or radar leaves much to explore.
+@@ 95
+<strong>"A low RPE means the trajectory is globally accurate."</strong> Small errors at every step can add up to a large drift. RPE grades the steps, ATE grades the sum.
+@@ 96
+<strong>"ATE is the distance between the two trajectories as given."</strong> Without the alignment you would mostly measure the arbitrary choice of world frame.
+@@ 97
+<strong>"Simulated events are as good as real ones."</strong> Only as far as the noise and timing models are right. That is the reason V2E and V2CE exist.
+@@ 98
+Q1. A simulated pixel has just fired, so its memory equals its current level, L = 0 at t = 0. The next sample is L = 1.0 at t = 4 ms. With C = 0.4 and linear interpolation, which events does it emit?
+@@ 99
+One ON event at 4 ms
+@@ 100
+Two ON events, at 1.6 ms and 3.2 ms
+@@ 101
+Two ON events, at 2 ms and 4 ms
+@@ 102
+Three ON events, at 1.33, 2.67, and 4 ms
+@@ 103
+The levels 0.4 and 0.8 are crossed; 1.2 is not reached. On a line from 0 to 1.0 over 4 ms they are crossed at 0.4 × 4 = 1.6 ms and 0.8 × 4 = 3.2 ms.
+@@ 104
+Q2. An odometry system estimates every single step accurately but has no loop closure and runs for an hour. What do you expect?
+@@ 105
+High RPE and low ATE
+@@ 106
+High RPE and high ATE
+@@ 107
+Low RPE and low ATE, whatever the length of the run
+@@ 108
+Low RPE, and an ATE that grows with the length of the run
+@@ 109
+RPE looks at short intervals and stays small. The small step errors accumulate as drift, which the ATE measures in a fixed world frame.
+@@ 110
+Q3. The product of the transposed true rotation and the estimated rotation has trace 2.0. What is the rotational error?
+@@ 111
+cos θ = (2.0 − 1)/2 = 0.5, so θ = 60°.
+@@ 112
+Q4. You want to evaluate stereo depth from events on a car, at night, against ground-truth depth maps. Which dataset in the table fits best?
+@@ 113
+DSEC was recorded from a car with two event cameras, in day, night, and direct sunlight, and provides ground-truth depth maps. ECDS and EDS are hand-held with a single event camera, and UZH-FPV is a racing drone.
+@@ 114
+A simulator turns brightness samples into events by finding where the interpolated log brightness crosses levels spaced \(C\) apart. Sampling must be dense when the image moves fast.
+@@ 115
+Realism needs noise: at the least a randomized threshold \(\N(C, \sigma_C^2)\), and in V2E a model of the pixel circuit.
+@@ 116
+Datasets differ in platform, resolution, and ground truth. Poses are common; ground-truth depth is rarer.
+@@ 117
+ATE: align the estimate to the ground truth, then take the root mean square position error. RPE: compare relative motions over a short interval. ATE grades global accuracy, RPE local consistency.
+@@ 118
+Open problems: asynchronous (neuromorphic) processing to match the sensor, hybrid and foveated sensors, and fusion with other sensors.
+@@ 119
+<em>SLAM Handbook</em>, §10.7 "Datasets, Simulators, and Benchmarks" and §10.8 "Further Readings &amp; Recent Trends", pp. 294–303, with Table 10.2.
+@@ 120
+The ATE and RPE formulas follow Sturm, Engelhard, Endres, Burgard, Cremers, <em>A Benchmark for the Evaluation of RGB-D SLAM Systems</em>, 2012.
+@@ 121
+Least-squares rigid alignment: Umeyama, <em>Least-Squares Estimation of Transformation Parameters Between Two Point Patterns</em>, 1991.
+@@ 122
+Rotation angle from the trace, and \(\Log\) on \(\SO(3)\): Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018.
+@@ 123
+The level-crossing construction is equation (10.1) with linear interpolation between samples; the one-pixel sampling rule and the numerical examples are our own.

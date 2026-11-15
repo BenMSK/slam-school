@@ -1,0 +1,198 @@
+@@ 1
+<span class="eyebrow">Week 24 · Day 2</span>
+@@ 2
+Learning and estimation together, and the hardware that must run them
+@@ 3
+After today you can explain why the chapter expects hybrid systems of learned and designed parts, why single-core speed stopped growing, and why efficient Spatial AI means many simple processors and little data movement.
+@@ 4
+About 60 min · Read §18.3–18.4, pp. 526–532 (7 pages) · Needs Week 1 Day 3 and Week 19
+@@ 5
+Read first: §18.3 and §18.4, pp. 526–532
+@@ 6
+The three forms that learned components take inside the geometric loop (p. 527).
+@@ 7
+The question about a network that builds a scene from 100 images (p. 528).
+@@ 8
+The difference between Moore's law and Dennard scaling, and the clock speed where the "power wall" sits (pp. 528–529).
+@@ 9
+What is free about the cloud and what is not (p. 532).
+@@ 10
+Machine learning is taking over more of the pipeline, but a system that must keep and update a model over time still needs probabilistic fusion, so the future is hybrid. And processors no longer get faster by raising the clock, so performance per watt has to come from parallel, specialized hardware in which data stays close to where it is processed.
+@@ 11
+1. Where learning sits in SLAM today
+@@ 12
+SLAM is unusual within AI: machine learning has not taken it over. The best systems for localization and sparse mapping are still mostly hand-designed <strong>state estimation</strong>, meaning algorithms built on probability theory, while dense and semantic systems mix the two. <span class="src">§18.3 · pp. 526–527</span>
+@@ 13
+At first a network sat beside the estimator: SemanticFusion pasted CNN labels onto ElasticFusion's dense map. Then learned parts moved into the geometric loop, in three forms. <span class="src">§18.3 · p. 527</span>
+@@ 14
+Form
+@@ 15
+What the network outputs
+@@ 16
+Example in the book
+@@ 17
+Where you studied it
+@@ 18
+1. Single-image prediction
+@@ 19
+Depth, surface normals, or object masks from one image
+@@ 20
+Depth networks
+@@ 21
+<a href="#d110">Week 19 · Day 2</a>
+@@ 22
+2. Learned update steps
+@@ 23
+Matches, or an optimization step on poses and points
+@@ 24
+DROID-SLAM
+@@ 25
+<a href="#d112">Week 19 · Day 4</a>
+@@ 26
+3. Multi-image prediction
+@@ 27
+Geometry directly from several images
+@@ 28
+DUSt3R, VGGT
+@@ 29
+<a href="#d113">Week 19 · Day 5</a>
+@@ 30
+Form 1 has a known weakness: a depth map predicted from one image often carries large systematic errors, and its uncertainty is poorly understood, so it is hard to fuse. One answer is to predict something weaker than depth, such as a depth code (CodeSLAM) or a depth covariance, and let a small multi-view optimization produce consistent geometry. <span class="src">§18.3 · p. 527</span>
+@@ 31
+2. Why the chapter bets on hybrids
+@@ 32
+Learning has two attractions. Networks can do jobs nobody managed to design by hand, such as labeling a scene or guessing depth from one picture. And a network compresses an iterative computation into one feed-forward pass that runs fast on current processors. <span class="src">§18.3 · pp. 527–528</span>
+@@ 33
+Will one network do all of SLAM end to end? Work in that direction keeps improving, from DeepVO to VGGT. The chapter still expects hybrids to win for the foreseeable future, for two connected reasons: the uncertainty of a network's output is poorly understood, and a long-lived system must be able to <em>update</em> its model. Its example: a network builds a scene from 100 images, and then image 101 arrives. Running everything again on 101 images cannot be the answer. Accept that, and you need long-term representation and fusion, which is what probabilistic state estimation provides. <span class="src">§18.3 · p. 528</span>
+@@ 34
+Filling the gap: what "fuse one more" costs
+@@ 35
+The book asks the question and leaves the arithmetic to you. Take the simplest estimation problem: \(n\) measurements \(z_1,\dots,z_n\) of one quantity, each with noise variance \(\sigma^2\). In <strong>information form</strong> (<a href="#d3">Week 1 · Day 3</a>) the estimate is stored as an information value \(\Lambda\) and an information vector \(\eta\), and fusing a measurement is two additions:
+@@ 36
+After 100 measurements, \(\Lambda = 100/\sigma^2\) and \(\mu\) is their average. Measurement 101 changes the mean to
+@@ 37
+With \(\mu_{100} = 2.00\) and \(z_{101} = 3.01\), the new mean is \(2.00 + 1.01/101 = 2.01\). The cost did not depend on the 100 earlier measurements: the pair \((\eta, \Lambda)\) is a sufficient summary of them.
+@@ 38
+Now count work over a whole run of \(n\) images. Recursive fusion touches each image once: \(n\) units. A method that must reprocess everything whenever an image arrives does \(1 + 2 + \dots + n = n(n+1)/2\) units. For \(n = 1000\) that is 500 500 against 1000. A factor graph does the same at full scale: each measurement adds one factor (<a href="#d16">Week 3 · Day 4</a>).
+@@ 39
+The chapter's forecast is that learned and designed parts will become so interleaved that you cannot tell them apart, reached either by adding learned modules to a designed system or by adding structure to a learned one. What stays important either way is the storage and computational structure of the whole. <span class="src">§18.3 · p. 528</span>
+@@ 40
+3. Why processors stopped getting faster the easy way
+@@ 41
+For decades SLAM researchers could count on single-core speed doubling every one to two years. That ended, although <strong>Moore's law</strong> (the transistor count per chip keeps doubling) has continued. The rule that failed is <strong>Dennard scaling</strong>: as transistors shrink, their power density stays constant. At nanometre sizes transistors leak current and heat up, and the resulting <strong>power wall</strong> holds clock speeds near 4 GHz. <span class="src">§18.4.1 · pp. 528–529</span>
+@@ 42
+Filling the gap: where Dennard scaling comes from, and how it breaks
+@@ 43
+The power a transistor spends switching is \(P = C V^2 f\): its capacitance \(C\), the supply voltage \(V\) squared, and the switching frequency \(f\). Shrink every length by a factor \(k\) (so \(k = 2\) halves all dimensions) and, as Dennard proposed, shrink the voltage by \(k\) as well.
+@@ 44
+Capacitance is area over thickness, \((1/k^2)/(1/k)\), so \(C \to C/k\).
+@@ 45
+The transistor switches \(k\) times faster, so the clock can go to \(kf\).
+@@ 46
+Power per transistor becomes \(\dfrac{C}{k}\cdot\dfrac{V^2}{k^2}\cdot kf = \dfrac{CV^2f}{k^2}\).
+@@ 47
+Each transistor occupies \(1/k^2\) of the area, so \(k^2\) times as many fit per square millimetre.
+@@ 48
+The catch is the voltage. Below a certain voltage a transistor no longer turns off properly and leaks, which is the leakage the book mentions, so \(V\) stopped shrinking. Hold \(V\) fixed and repeat the sum: power per transistor is \((C/k)\,V^2\,(kf) = CV^2f\), unchanged, and power density grows as \(k^2\). Freeze the clock as well and it still grows as \(k\).
+@@ 49
+Try it: step through transistor generations under the three regimes.
+@@ 50
+Notice that under Dennard scaling six generations give 64 times the transistors and 8 times the clock at the same power per square millimetre. Switch the regime to "voltage stuck, clock still rising": the same six generations multiply the heat per square millimetre by 64. Freezing the clock reduces that to 8, which is still not flat.
+@@ 51
+4. What efficient processing looks like
+@@ 52
+If the clock cannot rise, performance must come from doing many things at once. The chapter's recipe: divide the computation among a large number of simple, low-clock-rate cores and <strong>minimize the movement of data</strong> between them. <span class="src">§18.4.1 · p. 529</span> A CPU does the reverse. It pulls small pieces of data one at a time from a separate main memory and pushes results back, with a cache as the only relief. That makes a CPU easy to program, but the piece-by-piece traffic has a large power cost. <span class="src">§18.4.1 · pp. 529–530</span>
+@@ 53
+Processor
+@@ 54
+How it computes
+@@ 55
+What the chapter says about it
+@@ 56
+CPU
+@@ 57
+Sequential steps on one central memory
+@@ 58
+Flexible and easy to program; heavy data traffic, limited by the power wall
+@@ 59
+GPU
+@@ 60
+<strong>SIMT</strong> (single instruction, multiple threads): one operation applied to every element of a regular array
+@@ 61
+Enabled dense SLAM and deep learning; built for graphics, and a full system still shuttles data between CPU and GPU
+@@ 62
+Custom vision chips
+@@ 63
+CPU-like, DSP-like, and custom blocks in one low-power package
+@@ 64
+Movidius Myriad, the HoloLens HPU, Apple's R1; details confidential
+@@ 65
+Graph processors
+@@ 66
+Thousands of independent cores, each with local memory, joined by a programmable interconnect
+@@ 67
+SpiNNaker (up to a million ARM cores), Graphcore's IPU; not yet ready for embedded vision, large long-term potential
+@@ 68
+<span class="src">§18.4.1 · pp. 529–531</span> The graph that matters is also larger than one chip: it includes cameras, actuators, other robots, and the cloud. <span class="src">§18.4.1 · p. 531</span>
+@@ 69
+5. Sensors, and the cloud
+@@ 70
+For this chapter a camera is any device that captures an array of light measurements, and each design trades information quality against size and power. <span class="src">§18.4.2 · p. 531</span> Two sensors point at the future:
+@@ 71
+The <strong>event camera</strong> (<a href="#d85">Week 15 · Day 1</a>) sends only intensity changes, so it carries the content of video at a much lower bit rate.
+@@ 72
+The <strong>SCAMP5</strong> vision chip puts a small analog processor at every pixel of a 256 × 256 array and runs at 1.2 W. Pixels can add, subtract, divide, square, and pass values to neighbours, so a useful amount of vision is computed on the sensor itself. <span class="src">§18.4.2 · p. 532</span>
+@@ 73
+The purpose of processing near the sensor is to cut the bit rate on the link to the main processor. To see what is at stake, a plain 640 × 480 camera at 8 bits and 30 frames per second produces \(640 \times 480 \times 8 \times 30 \approx 73.7\) million bits every second, most of them repeating what the previous frame already said.
+@@ 74
+The cloud changes the sums less than you might hope. From the device's side, cloud compute and memory are close to infinite and free. Communication is neither: sending video costs power, and the round trip adds a delay of a significant fraction of a second. Some places (space, undersea, underground) have no link at all. <span class="src">§18.4.2 · p. 532</span> A robot moving at 1 m/s travels 30 cm during a 0.3 s delay, so the tight loop has to stay on board.
+@@ 75
+<strong>"Moore's law ended, so chips stopped improving."</strong> Transistor density kept growing. What ended is Dennard scaling, the ability to switch those transistors faster without more heat per area.
+@@ 76
+Q1. An estimate is the average of 49 equally good measurements and equals 10.0. The 50th measurement is 12.5. What is the updated estimate?
+@@ 77
+μ ← μ + (z − μ)/n with n = 50: 10.0 + 2.5/50 = 10.05. Nothing about the first 49 is needed except their mean and count.
+@@ 78
+Q2. All lengths on a chip shrink by k = 2, the supply voltage stays fixed, and the clock is doubled. By what factor does power per square millimetre change, using P = C·V²·f?
+@@ 79
+It quadruples
+@@ 80
+Per transistor: C halves and f doubles, V is fixed, so power per transistor is unchanged. Four times as many transistors fit per mm², so power density is ×4.
+@@ 81
+Q3. A 320 × 240 sensor outputs 8-bit pixels at 100 frames per second. What is its raw bit rate?
+@@ 82
+About 61 Mbit/s
+@@ 83
+About 7.7 Mbit/s
+@@ 84
+About 614 kbit/s
+@@ 85
+About 6.1 Gbit/s
+@@ 86
+320 × 240 = 76 800 pixels, × 8 bits = 614 400 bits per frame, × 100 frames = 61.4 million bits per second.
+@@ 87
+Q4. Why does the chapter doubt that a single feed-forward network will replace the whole SLAM system soon?
+@@ 88
+Networks cannot predict geometry from images
+@@ 89
+Networks are too slow on current processors
+@@ 90
+Its output uncertainty is poorly understood, and it has no cheap way to fold in one more image
+@@ 91
+Training data for 3D scenes does not exist
+@@ 92
+Networks do predict geometry, and fast. The objections concern uncertainty and updating a long-term model.
+@@ 93
+The chapter expects hybrids: a long-lived system must fuse new data into a persistent model with known uncertainty, and fusion in information form costs the same however much came before.
+@@ 94
+Moore's law continued; Dennard scaling failed. With voltage stuck, power density rises as transistors shrink, and the clock stays near 4 GHz.
+@@ 95
+Efficient processing uses many simple cores and moves little data. CPUs, GPUs, custom vision chips, and graph processors are successive steps toward matching hardware to the algorithm.
+@@ 96
+Processing near the sensor cuts the bit rate. Cloud compute is nearly free, but the link costs power and a fraction of a second.
+@@ 97
+<em>SLAM Handbook</em>, Chapter 18, §18.3 "State Estimation and Machine Learning in Spatial AI" and §18.4 "The Future Landscape of Processor and Sensor Hardware", pp. 526–532.
+@@ 98
+Dennard, Gaensslen, Yu, Rideout, Bassous, LeBlanc, <em>Design of ion-implanted MOSFET's with very small physical dimensions</em>, 1974 (the scaling rules in "Filling the gap").
+@@ 99
+Hennessy and Patterson, <em>Computer Architecture: A Quantitative Approach</em>, 6th edition, 2017 (dynamic power \(CV^2f\), the end of Dennard scaling).

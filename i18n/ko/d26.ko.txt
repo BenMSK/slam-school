@@ -1,0 +1,190 @@
+@@ 1
+<span class="eyebrow">5주차 · Day 2</span>
+@@ 2
+spline에서 kernel로: nonparametric 관점
+@@ 3
+오늘이 끝나면 basis function의 개수를 정하기 어려운 이유를 설명하고, spline 형태의 normal equations에서 kernel 형태를 유도하고, kernel function으로 kernel matrix를 만들 수 있습니다.
+@@ 4
+약 60분 · §2.2.2, pp. 65–66 읽기 (2쪽) · 2주차 Day 3, 5주차 Day 1 필요
+@@ 5
+먼저 읽기: §2.2.2, pp. 65–66
+@@ 6
+"2.2.2 From Parametric to Nonparametric" 제목에서 "2.2.3" 제목까지 읽습니다. 읽으면서 찾아볼 것:
+@@ 7
+첫 문단에서 spline fit이 잘못되는 두 가지 방식 (p. 65).
+@@ 8
+식 (2.43)의 regularizer 항과, 그 항이 선호하는 것 (p. 65).
+@@ 9
+(2.44)와 (2.45) 사이의 "with a little bit of algebra"라는 표현 (pp. 65–66). 오늘 레슨이 바로 그 대수 계산입니다.
+@@ 10
+절의 마지막 문단이 비싸 보인다고 말하는 것 (p. 66).
+@@ 11
+regularization을 넣은 spline 문제는 basis function이 행렬 하나, \(\mathbf{K} = \boldsymbol{\Psi}\boldsymbol{\Psi}\T\)를 통해서만 나타나도록 다시 쓸 수 있습니다. 이 행렬의 \((i,j)\) 원소는 시각 \(t_i\)의 trajectory가 시각 \(t_j\)의 trajectory와 얼마나 강하게 묶여 있는지 나타냅니다. \(\mathbf{K}\)만 중요해지면 <strong>kernel function</strong>으로 이 행렬을 직접 채울 수 있고, basis function이나 계수는 한 번도 적을 필요가 없습니다.
+@@ 12
+1. basis function이 너무 많거나 너무 적을 때
+@@ 13
+parametric 방법에서는 데이터를 보기 전에 basis function의 종류와 개수를 골라야 합니다. 너무 많이 고르면 곡선이 noise를 따라갈 만큼 자유로워져 <strong>overfitting</strong>(과적합)이 일어납니다. 너무 적게 고르면 곡선이 실제 trajectory만큼 휘지 못해 지나치게 매끄러워집니다. <span class="src">§2.2.2 · p. 65</span>
+@@ 14
+직접 해 보기: 점들은 불규칙한 시각에 얻은, noise가 섞인 위치 측정값입니다 (noise 표준편차 0.25). 5.2 s와 7 s 사이에는 측정이 없습니다. 먼저 knot 간격을 0.4 s로 줄이고 λ를 0.001로 놓으세요. 그다음 간격을 3 s로 놓으세요. 그다음 0.4 s에서 λ = 0을 시도해 보세요.
+@@ 15
+눈여겨볼 점: 두 오차 수치. 처음 상태 (knot 1 s 간격, 측정 24개에 계수 12개)에서 residual은 noise 수준 정도인 0.21이고, 실제 곡선에 대한 오차는 0.16입니다. knot 간격 0.4 s, λ = 0.001에서는 residual이 noise보다 훨씬 낮은 0.06으로 떨어지지만, 실제 오차는 0.39로 오릅니다. 곡선이 noise를 맞추며 빈 구간에서 헤맵니다. knot 간격 3 s에서는 두 수치가 모두 0.4 근처입니다. 곡선이 너무 뻣뻣합니다. λ = 0이고 knot이 촘촘하면 문제의 해가 아예 유일하지 않습니다.
+@@ 16
+2. regularized least squares로 본 spline 문제
+@@ 17
+대수 계산을 짧게 하려고 책은 이 절에서 landmark를 빼고 trajectory만 남깁니다. <span class="src">§2.2.2 · p. 65</span> Gauss-Newton iteration 한 번이 푸는 선형 문제를 떠올려 봅시다 (<a href="#d9">2주차 · Day 3</a>). whitening한 Jacobian을 \(\mathbf{A}\)에, whitening한 residual을 \(\mathbf{b}\)에 쌓고, \(\norm{\mathbf{b} - \mathbf{A}\boldsymbol{\delta}}^2\)를 최소화하는 pose update \(\boldsymbol{\delta}\)를 찾습니다. 그 해는 normal equations \(\mathbf{A}\T\mathbf{A}\,\boldsymbol{\delta} = \mathbf{A}\T\mathbf{b}\), 식 (1.25)를 만족합니다.
+@@ 18
+spline에서는 측정 시각의 pose가 계수의 선형 함수이므로, 계수의 변화 \(\boldsymbol{\delta}_c\)는 측정 시각의 pose를 다음만큼 바꿉니다
+@@ 19
+여기서 \(\boldsymbol{\Psi}\)는 측정 시각마다 블록 행 하나, 계수마다 블록 열 하나를 가진 세로로 긴 행렬입니다. 행 \(i\)에는 \(t_i\)에서 계산한 basis function 값이 들어 있으므로, 몇 개의 활성 계수 자리를 빼면 0입니다. 측정 하나에 대해서는 책이 식 (2.41)로 쓰는 항이며, Jacobian은 \(\mathbf{H}_i\boldsymbol{\Psi}_i\)입니다. <a href="#d25">Day 1</a>에서 쓴 chain rule입니다. \(\boldsymbol{\delta} = \boldsymbol{\Psi}\boldsymbol{\delta}_c\)를 대입하고 큰 계수에 penalty를 더하면 다음을 얻습니다
+@@ 20
+두 번째 항이 <strong>regularizer</strong>(정규화 항)입니다. 이 항은 0에 가까운 계수를 선호하며, 위젯에서 본 overfitting을 막는 것이 바로 이 항입니다. <a href="#d8">2주차 · Day 2</a>의 말로 하면 이 항은 계수에 대한 Gaussian prior \(\N(\mathbf{0}, \mathbf{I})\)의 negative log이므로, (2.43)은 여전히 MAP 문제입니다.
+@@ 21
+이 문제를 풀려면 gradient를 0으로 놓습니다. 첫 항의 gradient는 \(-2\boldsymbol{\Psi}\T\mathbf{A}\T(\mathbf{b} - \mathbf{A}\boldsymbol{\Psi}\boldsymbol{\delta}_c)\)이고 둘째 항의 gradient는 \(2\boldsymbol{\delta}_c\)입니다. 합을 0으로 놓고 미지수를 왼쪽으로 옮기면:
+@@ 22
+이것은 \(\mathbf{A}\) 자리에 \(\mathbf{A}\boldsymbol{\Psi}\)가 들어가고 regularizer에서 온 \(\mathbf{I}\)가 더해진 normal equations입니다. 위젯은 바로 이 연립방정식을 풀며, regularizer에 배율 λ를 곱해 세기를 올리고 내릴 수 있게 했습니다.
+@@ 23
+3. 계수에서 pose로
+@@ 24
+계수는 수단일 뿐입니다. 원하는 것은 pose update \(\boldsymbol{\delta}^* = \boldsymbol{\Psi}\boldsymbol{\delta}_c^*\)입니다. 책은 이것이 만족하는 식만 제시하고 중간 단계는 생략합니다. <span class="src">§2.2.2 · pp. 65–66</span>
+@@ 25
+빈틈 채우기: (2.44)에서 (2.45)로 가는 "little bit of algebra"
+@@ 26
+<strong>1단계.</strong> (2.44)의 첫 항을 오른쪽으로 옮기고 묶습니다:
+@@ 27
+<strong>2단계.</strong> 양변의 왼쪽에 \(\boldsymbol{\Psi}\)를 곱합니다. \(\boldsymbol{\Psi}\boldsymbol{\delta}_c^*\)가 나오는 곳마다 \(\boldsymbol{\delta}^*\)로 쓰고, 곱 \(\mathbf{K} = \boldsymbol{\Psi}\boldsymbol{\Psi}\T\)에 이름을 붙입니다:
+@@ 28
+<strong>3단계.</strong> \(\boldsymbol{\delta}^*\)가 있는 항을 왼쪽으로 모읍니다:
+@@ 29
+<strong>4단계.</strong> 왼쪽에 \(\mathbf{K}^{-1}\)를 곱합니다:
+@@ 30
+계수가 사라졌습니다. 보통의 normal equations (1.25)와 비교하면 새로 생긴 것은 왼쪽에 더해진 \(\mathbf{K}^{-1}\) 하나뿐입니다.
+@@ 31
+<strong>숫자로 확인.</strong> 측정 시각 두 개, basis function 두 개를 쓰고, 간단히 \(\mathbf{A} = \mathbf{I}\)로 둡니다:
+@@ 32
+계수 경로 (2.44): \(\boldsymbol{\Psi}\T\boldsymbol{\Psi} + \mathbf{I} = \begin{bmatrix} 3 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\)이고 \(\boldsymbol{\Psi}\T\mathbf{b} = (3, 2)\)이므로 \(\boldsymbol{\delta}_c^* = (0.8, 0.6)\), \(\boldsymbol{\delta}^* = \boldsymbol{\Psi}\boldsymbol{\delta}_c^* = (0.8, 1.4)\)입니다. pose 경로 (2.45): \(\mathbf{I} + \mathbf{K}^{-1} = \begin{bmatrix} 3 &amp; -1 \\ -1 &amp; 2 \end{bmatrix}\)이고 우변은 \((1, 2)\)이므로 \(\boldsymbol{\delta}^* = \tfrac15(2\cdot1 + 1\cdot2,\ 1\cdot1 + 3\cdot2) = (0.8, 1.4)\)입니다. 두 경로의 답이 같습니다.
+@@ 33
+더 깊이 (선택): K의 역행렬이 존재하는 조건
+@@ 34
+\(\mathbf{K} = \boldsymbol{\Psi}\boldsymbol{\Psi}\T\)의 행 수는 측정 시각의 수와 같지만, rank는 계수의 수를 넘지 못합니다. 책이 보통의 경우라고 말하듯 시각이 계수보다 많으면 이 \(\mathbf{K}\)는 singular이고, 4단계를 글자 그대로 밟을 수 없습니다. 3단계는 언제나 성립합니다. 이 문제는 다음 절에서 사라집니다. 거기서는 \(\mathbf{K}\)를 kernel function으로 만들며, 실제로 쓰는 kernel과 서로 다른 시각에 대해서는 positive definite입니다.
+@@ 35
+4. kernel trick
+@@ 36
+\(\mathbf{K}\)에 무엇이 들어 있는지 봅시다. \((i,j)\) 원소는 \(\boldsymbol{\Psi}\)의 행 \(i\)와 행 \(j\)의 곱입니다:
+@@ 37
+즉 두 시각에서 계산한 basis function 값들의 내적입니다. 두 시각에서 같은 basis function이 활성이면 크고, 두 시각을 함께 덮는 basis function이 없으면 0입니다. 행렬 \(\mathbf{K}\)를 <strong>kernel matrix</strong>라고 부릅니다. <span class="src">§2.2.2 · p. 66</span>
+@@ 38
+빈틈 채우기: K는 prior covariance
+@@ 39
+regularizer는 계수의 prior가 \(\mathbf{c} \sim \N(\mathbf{0}, \mathbf{I})\)라고 말했습니다. 측정 시각의 trajectory 값 \(\mathbf{p} = \boldsymbol{\Psi}\mathbf{c}\)는 Gaussian의 선형 함수이므로, 평균이 0이고 covariance가 다음과 같은 Gaussian입니다
+@@ 40
+따라서 \(K_{ij}\)는 측정하기 전, \(t_i\)의 trajectory와 \(t_j\)의 trajectory 사이의 covariance입니다. 그 역행렬 \(\mathbf{K}^{-1}\)는 이 prior의 information matrix이고 (<a href="#d3">1주차 · Day 3</a>), (2.45)는 측정에서 온 정보 \(\mathbf{A}\T\mathbf{A}\)에 prior에서 온 정보 \(\mathbf{K}^{-1}\)를 더한다는 뜻입니다. 계수에 대한 penalty가 trajectory에 직접 거는 prior로 바뀌었습니다.
+@@ 41
+식 (2.45)는 basis function을 이 내적을 통해서만 필요로 합니다. <strong>kernel trick</strong>은 basis function을 건너뛰고, 내적을 바로 돌려주는 두 시각의 함수, 곧 <strong>kernel function</strong> \(\mathcal{K}(t,t')\)를 고르는 것입니다. 그러면 kernel matrix는 모든 측정 시각 쌍에서 이 함수를 계산해 채웁니다: <span class="src">§2.2.2 · p. 66</span>
+@@ 42
+이제 이 방법은 <strong>nonparametric</strong>(비모수적)입니다. 추정할 spline 계수가 없습니다. 남은 선택은 kernel의 <strong>hyperparameter</strong>입니다. 책의 예는 squared-exponential kernel이며, 보통 다음 형태로 씁니다
+@@ 43
+여기서 <strong>length scale</strong>(길이 척도) \(\ell\)은 두 pose가 시간상 얼마나 떨어져 있어도 여전히 강하게 묶이는지를 정하고, \(\sigma_f^2\)는 크기입니다. \(\sigma_f = 1\), \(\ell = 1\) s, 시각 \(0, 1, 3\) s에 대해:
+@@ 44 attr
+length scale 단위로 잰 시간 차에 대한 squared-exponential kernel의 그래프. 시간 차 0에서 1로 시작해 매끄럽게 줄어듦: length scale 1배에서 0.607, 2배에서 0.135, 3배에서 0.011.
+@@ 45
+시간 차 |t − t′| / length scale
+@@ 46
+p(t)와 p(t′)의 prior covariance (크기 1일 때)
+@@ 47
+squared-exponential kernel. 시간상 length scale 하나보다 가까운 pose끼리는 강하게 묶이므로 trajectory가 빠르게 변할 수 없습니다. length scale이 길수록 trajectory가 매끄러워집니다.
+@@ 48
+=
+@@ 49
+=
+@@ 50
+추정하는 것
+@@ 51
+K개의 계수
+@@ 52
+M개 측정 시각에서의 trajectory
+@@ 53
+직접 고르는 것
+@@ 54
+basis function의 종류, 개수, 간격
+@@ 55
+kernel function과 그 hyperparameter
+@@ 56
+선형 연립방정식
+@@ 57
+(2.44), 크기는 K가 결정
+@@ 58
+(2.45), 크기는 M이 결정
+@@ 59
+매끄러움을 정하는 것
+@@ 60
+basis function의 개수
+@@ 61
+kernel (예: length scale)
+@@ 62
+spline은 "trajectory는 이 조각들로 만들 수 있는 모양 중 하나다"라고 말합니다. kernel은 "어떤 모양이든 되지만, 가까운 시각의 값끼리는 맞아야 한다"라고 말합니다. 두 번째 진술은 trajectory가 얼마나 세밀할 수 있는지를 제한하지 않습니다. 그래서 책은 nonparametric 방법의 표현력이 더 높다고 말합니다.
+@@ 63
+5. 치러야 할 대가
+@@ 64
+(2.45)에는 더 나빠 보이는 점이 두 가지 있습니다. 첫째, 보통 측정 시각이 계수보다 많으므로 연립방정식이 더 큽니다. 책은 §2.2.3 끝에서 이 문제로 돌아오며, 이 코스도 <a href="#d28">Day 4</a>에서 다룹니다. 둘째, \(\mathbf{K}^{-1}\)가 필요합니다. squared exponential 같은 kernel에서는 모든 시각 쌍이 \(\mathbf{K}\)에서 0이 아닌 원소를 가지며, 일반적으로 그 역행렬도 dense합니다. dense한 \(\mathbf{K}^{-1}\)는 모든 pose를 다른 모든 pose와 묶는 factor이므로, 3주차에 SLAM을 풀 만한 문제로 만들어 준 sparsity를 무너뜨립니다. <span class="src">§2.2.2 · p. 66</span>
+@@ 65
+그래서 내일의 질문은 이것입니다. \(\mathbf{K}^{-1}\)가 구조상 sparse한 kernel 계열이 있을까요? 힌트는 이미 보았습니다. 위의 숫자 확인에서 \(\mathbf{K} = \begin{bmatrix} 1 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\)는 꽉 차 있지만, 그 역행렬은 사슬 모양의 패턴을 가집니다.
+@@ 66
+<strong>"nonparametric이면 조정할 것이 없다."</strong> 고정된 유한 개의 basis function 계수가 없다는 뜻입니다. kernel의 hyperparameter는 여전히 골라야 하며, 그것이 결과가 얼마나 매끄러운지를 정합니다.
+@@ 67
+<strong>"basis function이 많을수록 항상 더 잘 맞는다."</strong> 측정에는 더 잘 맞습니다. 하지만 noise를 따라가기 시작하면, 위젯에서 보듯 실제 trajectory에는 더 못 맞습니다.
+@@ 68
+<strong>"K와 그 역행렬은 sparsity가 같다."</strong> 일반적으로 다릅니다. 꽉 찬 \(\mathbf{K}\)도 sparse한 역행렬을 가질 수 있으며, 다음 절이 바로 이 점을 이용합니다.
+@@ 69
+Q1. noise가 있는 데이터에 knot을 매우 촘촘하게 두고 regularizer 없이 spline을 맞췄습니다. 측정에서의 residual이 센서 noise보다 훨씬 작습니다. 무슨 일이 일어났을 가능성이 가장 큽니까?
+@@ 70
+spline이 너무 뻣뻣하다
+@@ 71
+spline이 noise를 따라가고 있으며, 실제 trajectory에 대한 오차가 필요 이상으로 클 것이다
+@@ 72
+센서가 사양보다 정확하다
+@@ 73
+basis function이 local support를 잃었다
+@@ 74
+residual이 noise 수준보다 낮다는 것은 곡선이 개별 noise 값을 재현하고 있다는 뜻입니다. 이것이 overfitting이며, 측정 사이에서는 곡선이 대개 더 나쁩니다.
+@@ 75
+Q2. 시각 t₁에서 활성 basis function 값이 (0.5, 0.5, 0)이고 시각 t₂에서는 (0, 0.5, 0.5)입니다. kernel matrix 원소 K₁₂는 얼마입니까?
+@@ 76
+K₁₂는 두 행의 내적입니다: 0.5·0 + 0.5·0.5 + 0·0.5 = 0.25. 공유하는 basis function만 기여합니다.
+@@ 77
+Q3. squared-exponential kernel의 크기가 1, length scale이 2 s입니다. 2 s 떨어진 두 시각에서 kernel 값은 얼마입니까?
+@@ 78
+지수는 −(2²)/(2·2²) = −0.5이고, e^−0.5 ≈ 0.607입니다.
+@@ 79
+Q4. 식 (2.45)에서 (2.43)의 계수 regularizer 역할을 하는 항은 무엇입니까?
+@@ 80
+없다. regularizer는 빠졌다
+@@ 81
+(2.44)의 단위행렬은 regularizer에서 왔습니다. 변수를 바꾸고 나면 이것이 trajectory prior의 information matrix인 K⁻¹가 됩니다.
+@@ 82
+Q5. 측정 시각이 500개인 trajectory를 스칼라 계수 40개짜리 spline으로 모델링합니다. 연립방정식 (2.44)와 (2.45)의 크기는 대략 얼마입니까?
+@@ 83
+둘 다 40 × 40
+@@ 84
+40 × 40과 500 × 500
+@@ 85
+500 × 500과 40 × 40
+@@ 86
+둘 다 500 × 500
+@@ 87
+(2.44)는 계수를, (2.45)는 모든 측정 시각의 trajectory를 미지수로 풉니다. 책은 두 번째가 더 크다고 지적하고 나중에 이 문제를 다룹니다.
+@@ 88
+basis function이 너무 많으면 overfitting, 너무 적으면 지나치게 매끄러워집니다. regularizer \(\norm{\boldsymbol{\delta}_c}^2\)가 도움이 되며, 이는 계수에 대한 Gaussian prior입니다.
+@@ 89
+regularization을 넣은 spline normal equations: \((\boldsymbol{\Psi}\T\mathbf{A}\T\mathbf{A}\boldsymbol{\Psi} + \mathbf{I})\,\boldsymbol{\delta}_c^* = \boldsymbol{\Psi}\T\mathbf{A}\T\mathbf{b}\), 식 (2.44).
+@@ 90
+pose \(\boldsymbol{\delta}^* = \boldsymbol{\Psi}\boldsymbol{\delta}_c^*\)로 쓰면: \((\mathbf{A}\T\mathbf{A} + \mathbf{K}^{-1})\,\boldsymbol{\delta}^* = \mathbf{A}\T\mathbf{b}\), 여기서 \(\mathbf{K} = \boldsymbol{\Psi}\boldsymbol{\Psi}\T\), 식 (2.45).
+@@ 91
+\(\mathbf{K}\)는 측정 시각에서 trajectory의 prior covariance입니다. kernel trick은 basis function 없이 kernel function \(\mathcal{K}(t,t')\)로 이를 채웁니다.
+@@ 92
+남은 문제는 \(\mathbf{K}^{-1}\)입니다. 일반적인 kernel에서는 dense합니다.
+@@ 93
+<em>SLAM Handbook</em>, §2.2.2 "From Parametric to Nonparametric", pp. 65–66, 식 (2.41)–(2.45).
+@@ 94
+(2.45)의 단계별 유도, 숫자 확인, 역행렬 존재 조건에 대한 설명은 이 코스가 (2.44)에서 직접 유도한 것입니다.
+@@ 95
+kernel matrix를 prior covariance로 읽는 관점 (weight-space 관점과 function-space 관점)과 squared-exponential kernel 공식은 Rasmussen과 Williams, <em>Gaussian Processes for Machine Learning</em>, 2006을 따릅니다.

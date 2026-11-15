@@ -1,0 +1,232 @@
+@@ 1
+<span class="eyebrow">Week 1 · Day 3</span>
+@@ 2
+From Kalman filters to factor graphs, and how Gaussians fuse
+@@ 3
+After today you can say why SLAM moved from filters to factor-graph optimization, fuse two Gaussian estimates by adding their information, and show on a three-pose example why the information matrix is sparse while the covariance is dense.
+@@ 4
+About 60 min · Read §I.4–I.5, pp. 13–18 (6 pages) · Needs Week 1 Day 2
+@@ 5
+Read first: Prelude §I.4–I.5, pp. 13–18
+@@ 6
+The three practical problems of EKF-SLAM (bottom of p. 13 and p. 14).
+@@ 7
+What particle filters fixed, and the failure called particle depletion (p. 15).
+@@ 8
+The sentence on p. 15 about the covariance matrix being dense while its inverse is sparse. It is the most important sentence of the Prelude.
+@@ 9
+What Spatial AI adds to SLAM (pp. 16–17, Figure I.7). Skim §I.5 (pp. 17–18): it is the table of contents in prose.
+@@ 10
+SLAM back-ends went through three designs: the extended Kalman filter, particle filters, and optimization over a factor graph. The third won because of one structural fact: the inverse of the covariance matrix, the <strong>information matrix</strong>, is sparse. Information is also the quantity that behaves simply: when independent measurements are combined, their information adds.
+@@ 11
+1. Three generations of back-ends
+@@ 12
+Estimating a map from noisy measurements is much older than robotics. Gauss triangulated the Kingdom of Hannover in the 1820s, and Cholesky invented the matrix factorization that carries his name while surveying, before the First World War. <span class="src">§I.4.1 · p. 13</span> You will use that factorization on <a href="#d5">Day 5</a>.
+@@ 13
+In robotics, the early work reached two insights. To avoid drift in an unknown environment you must estimate the robot poses and the positions of fixed external things (landmarks) together. And an existing tool, the <strong>extended Kalman filter (EKF)</strong>, can do it if you stack the robot pose and all landmark positions into one long state. An EKF keeps a single Gaussian belief over that state, a mean and a covariance matrix, and updates both after every measurement, using a linear approximation of the motion and measurement models. The acronym SLAM dates from 1995. <span class="src">§I.4.1 · p. 13</span>
+@@ 14
+Belief is stored as
+@@ 15
+What it gave
+@@ 16
+What limited it
+@@ 17
+EKF-SLAM
+@@ 18
+One Gaussian: mean and dense covariance over pose and landmarks
+@@ 19
+SLAM with standard estimation theory
+@@ 20
+Gross errors from outliers and wrong data association; linearization around drifting odometry, which can make it diverge; cost growing quadratically with the number of state variables
+@@ 21
+Particle filters (early 2000s)
+@@ 22
+A set of trajectory hypotheses, the particles
+@@ 23
+Many landmarks, dense maps such as 2-D occupancy grids, no linearization, less sensitivity to outliers
+@@ 24
+Accuracy needs thousands of particles; if none is near the true trajectory the filter diverges (particle depletion), and 3-D makes this worse
+@@ 25
+Factor-graph optimization (2005–2015, dominant today)
+@@ 26
+The maximum likelihood or MAP estimate of the trajectory and map, found by optimization
+@@ 27
+Near-linear cost thanks to sparsity, online operation, and a setting that allows deeper analysis
+@@ 28
+The topic of this book
+@@ 29
+<span class="src">§I.4.1 · pp. 13–15</span> <strong>Data association</strong> means deciding which landmark or place a measurement refers to; an association error is the look-alike problem from <a href="#d2">Day 2</a>. Two remarks in the text are worth keeping. First, optimization was proposed in the early days of SLAM and set aside as too slow; sparsity is what brought it back. Second, an EKF with suitable linearization points can be understood as a single iteration of a nonlinear optimization solver, so the optimization view contains the filtering view. <span class="src">§I.4.1 · p. 15</span> The book's focus on factor graphs is a choice of scope: EKF-based methods remain popular for visual-inertial odometry. <span class="src">§I.4.1 · p. 16</span>
+@@ 30
+2. Where the field is heading, and how the book is laid out
+@@ 31
+SLAM estimates geometry. That is enough for "go to position (x, y, z)" and not enough for "pick up the clothes in the bathroom and take them to the laundry room", which needs the robot to know what a bathroom is. <strong>Spatial AI</strong> is the name for a perception system that reasons about geometry, semantics, and possibly physics together, with SLAM as the submodule that handles geometry. It closes a third, slower loop over task planning, on top of the two loops from <a href="#d2">Day 2</a>. <span class="src">§I.4.2 · pp. 16–17</span>
+@@ 32
+The handbook has three parts. Part I (Chapters 1–6) is foundations: factor graphs and optimization, poses on manifolds, outliers, differentiable optimization, map representations, and advanced solvers. Part II (Chapters 7–12) is the state of practice, one sensor per chapter: cameras, LiDAR, radar, event cameras, inertial sensors, and wheel and legged odometry. Part III (Chapters 13–18) covers trends, from learned components and new map representations to Spatial AI and foundation models. <span class="src">§I.5 · pp. 17–18</span> The history above is the history of the back-end, which is why Part I comes first.
+@@ 33
+3. Fusing two Gaussians: information adds
+@@ 34
+Yesterday's result for a prior and a measurement was \(1/\hat{\sigma}^2 = 1/\check{\sigma}^2 + 1/\sigma_z^2\). The quantity that adds is not the variance but its inverse. Give it a name: the <strong>information</strong> (or precision) of a scalar Gaussian is \(\lambda = 1/\sigma^2\). Give the numerator of the mean a name too: \(\eta = \mu/\sigma^2 = \lambda\mu\). Then fusing two independent estimates of the same quantity is two additions and one division:
+@@ 35
+Example: two range readings of the same wall, 10.0 m with \(\sigma = 0.3\) m and 10.4 m with \(\sigma = 0.4\) m.
+@@ 36
+Estimate
+@@ 37
+Mean
+@@ 38
+Std. dev.
+@@ 39
+Information, 1/variance
+@@ 40
+Information × mean
+@@ 41
+Reading 1
+@@ 42
+Reading 2
+@@ 43
+Fused
+@@ 44
+The fused value sits closer to the better reading, and its σ of 0.24 m beats both.
+@@ 45
+For vectors the same rule holds with matrices. The <strong>information matrix</strong> is \(\boldsymbol{\Lambda} = \boldsymbol{\Sigma}^{-1}\) and the <strong>information vector</strong> is \(\boldsymbol{\eta} = \boldsymbol{\Lambda}\boldsymbol{\mu}\). The pair \((\boldsymbol{\mu},\boldsymbol{\Sigma})\) is the <strong>covariance form</strong> of a Gaussian and \((\boldsymbol{\eta},\boldsymbol{\Lambda})\) is its <strong>information form</strong>. They describe the same density.
+@@ 46
+Task
+@@ 47
+Covariance form
+@@ 48
+Information form
+@@ 49
+Fuse two independent estimates
+@@ 50
+\(\boldsymbol{\Sigma} = (\boldsymbol{\Sigma}_1^{-1}+\boldsymbol{\Sigma}_2^{-1})^{-1}\), then \(\boldsymbol{\mu} = \boldsymbol{\Sigma}(\boldsymbol{\Sigma}_1^{-1}\boldsymbol{\mu}_1+\boldsymbol{\Sigma}_2^{-1}\boldsymbol{\mu}_2)\)
+@@ 51
+Say "I know nothing about this direction"
+@@ 52
+An infinite variance
+@@ 53
+A zero
+@@ 54
+Read off the mean and the uncertainty of one variable
+@@ 55
+Directly: \(\boldsymbol{\mu}\) and the diagonal of \(\boldsymbol{\Sigma}\)
+@@ 56
+Needs a linear solve, \(\boldsymbol{\Lambda}\boldsymbol{\mu} = \boldsymbol{\eta}\)
+@@ 57
+Filling the gap: why information adds
+@@ 58
+Let two estimates of the same \(\mathbf{x}\) have independent errors, so that the joint likelihood is the product of the two Gaussian densities. Multiplying densities adds exponents. Expand one exponent, using \(\boldsymbol{\Lambda}_1 = \boldsymbol{\Sigma}_1^{-1}\) and the symmetry of \(\boldsymbol{\Lambda}_1\):
+@@ 59
+So in information form a Gaussian is \(\exp(-\tfrac12\mathbf{x}\T\boldsymbol{\Lambda}\mathbf{x} + \boldsymbol{\eta}\T\mathbf{x})\) up to a constant factor: \(\boldsymbol{\Lambda}\) is the quadratic coefficient and \(\boldsymbol{\eta}\) the linear one. Add the second exponent:
+@@ 60
+This is again a quadratic in \(\mathbf{x}\), so the product is a Gaussian, and reading off its coefficients gives \(\boldsymbol{\Lambda} = \boldsymbol{\Lambda}_1+\boldsymbol{\Lambda}_2\) and \(\boldsymbol{\eta} = \boldsymbol{\eta}_1+\boldsymbol{\eta}_2\). The covariance-form formulas in the table are these two additions with every \(\boldsymbol{\Lambda}\) written as \(\boldsymbol{\Sigma}^{-1}\).
+@@ 61
+4. See it in two dimensions
+@@ 62
+A worked example first. Estimate A of a landmark is \(\boldsymbol{\mu}_A = (0, 0)\) with \(\boldsymbol{\Sigma}_A = \diag(4,\ 0.25)\): vague in \(x\) (σ = 2), sharp in \(y\) (σ = 0.5). Estimate B is \(\boldsymbol{\mu}_B = (2, 1)\) with \(\boldsymbol{\Sigma}_B = \diag(0.25,\ 4)\): the other way round.
+@@ 63
+The fused estimate takes its \(x\) almost entirely from B and its \(y\) almost entirely from A: each is trusted where it is sharp.
+@@ 64
+Try it: drag the centres A and B, and turn the two ellipses with the sliders. Each ellipse is the 1σ contour of a Gaussian with half-axes 1.5 and 0.4.
+@@ 65
+Notice: at the default settings the two ellipses are at right angles and the fused ellipse is a circle of radius 0.39, tighter than the short axis of either input and a quarter of A's area. The fused mean is not midway between A and B; it sits near the point where the two long axes cross. Set both sliders to the same angle and the fused ellipse stays long (1.06 × 0.28), because neither estimate knows that direction. Drag A or B: the fused mean moves, but the fused ellipse never changes size.
+@@ 66
+An elongated ellipse says "the landmark is somewhere along this line". Two such statements along different lines pin down a point, the way two bearings fix a ship's position. The last thing you noticed is a general property of linear-Gaussian fusion: the fused covariance depends on how good the measurements are, not on what they read.
+@@ 67
+5. Why the information matrix is sparse
+@@ 68
+The book's key sentence: the EKF's covariance matrix is dense, but its inverse, the information matrix, is very sparse with a predictable pattern, as long as past robot poses are kept in the state. <span class="src">§I.4.1 · p. 15</span> The smallest example shows why. A robot moves along a line through poses \(x_0, x_1, x_2\). There is a prior on \(x_0\) and two odometry measurements, \(u_1 = x_1 - x_0 + \text{noise}\) and \(u_2 = x_2 - x_1 + \text{noise}\), all with \(\sigma = 1\).
+@@ 69
+Each measurement is a Gaussian factor, and by Section 3 their information adds. The odometry factor \(u_1\) has exponent \(-\tfrac12(x_1-x_0-u_1)^2\). Its quadratic part is
+@@ 70
+so it adds the block \(\begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}\) to the rows and columns of \(x_0\) and \(x_1\), and nothing anywhere else. The prior adds 1 to the \((x_0,x_0)\) entry. Summing the three factors:
+@@ 71
+Check the inverse by multiplying: the first row of \(\boldsymbol{\Lambda}\) times the first column of \(\boldsymbol{\Sigma}\) is \(2 - 1 + 0 = 1\), times the second column is \(2 - 2 + 0 = 0\), and so on.
+@@ 72 attr
+Left: the 3 by 3 covariance matrix with entries 1 1 1, 1 2 2, 1 2 3, every cell shaded. Middle: a chain of three pose variables x0, x1, x2 joined by two odometry factors, with a prior factor on x0. Right: the 3 by 3 information matrix with entries 2 -1 0, -1 2 -1, 0 -1 1; the two zero cells, which pair x0 with x2, are unshaded.
+@@ 73
+Covariance Σ = Λ⁻¹
+@@ 74
+all 9 entries are non-zero
+@@ 75
+3 poses, 3 factors
+@@ 76
+odometry u₁, u₂
+@@ 77
+Information Λ
+@@ 78
+zero: no factor joins x₀ and x₂
+@@ 79
+The same belief in two forms. The information matrix has an entry only where a factor connects two variables. The covariance has an entry wherever two variables are correlated, which is everywhere.
+@@ 80
+Read the two matrices. \(\boldsymbol{\Sigma}\) is full: every pose is correlated with every other, because an error in \(x_0\) is inherited by all later poses. Its diagonal, 1, 2, 3, is the random-walk drift from <a href="#d1">Day 1</a>: one unit of variance per step. \(\boldsymbol{\Lambda}\) has a zero between \(x_0\) and \(x_2\) because no measurement involves both. For a chain of \(n\) poses, \(\boldsymbol{\Sigma}\) has \(n^2\) non-zero entries and \(\boldsymbol{\Lambda}\) has \(3n-2\). With \(n = 10{,}000\) that is \(10^8\) numbers against about 30,000. An EKF stores and updates \(\boldsymbol{\Sigma}\), which is the third EKF problem in the table of Section 1; a factor-graph solver works with \(\boldsymbol{\Lambda}\).
+@@ 81
+The condition "as long as past poses are kept" matters. A filter removes old poses from the state, and removing a variable from a Gaussian connects all the variables it was connected to, so the zeros of \(\boldsymbol{\Lambda}\) fill in. Keeping the whole trajectory makes the state larger but keeps \(\boldsymbol{\Lambda}\) sparse.
+@@ 82
+<strong>"Fusing means averaging the covariances."</strong> Covariances never add when fusing estimates of the same quantity. Information matrices add; the fused covariance is smaller than either input.
+@@ 83
+<strong>"A zero in Λ means the two variables are uncorrelated."</strong> \(x_0\) and \(x_2\) have a zero in \(\boldsymbol{\Lambda}\) and covariance 1 in \(\boldsymbol{\Sigma}\). The zero means only that no factor links them directly.
+@@ 84
+<strong>"Filters are obsolete."</strong> The book's scope is factor graphs, but it says plainly that EKF-based estimators are still popular in visual-inertial odometry. <span class="src">§I.4.1 · p. 16</span>
+@@ 85
+Q1. Which of these is NOT one of the three practical problems of EKF-SLAM listed in the book?
+@@ 86
+Sensitivity to outliers and wrong data association
+@@ 87
+Linearization around odometry that has drifted
+@@ 88
+Quadratic cost from a dense covariance matrix
+@@ 89
+It cannot represent uncertainty in the landmark positions
+@@ 90
+The EKF does represent landmark uncertainty: its covariance covers the robot pose and every landmark. That dense covariance is the source of the cost problem.
+@@ 91
+Q2. Two independent measurements of the same length have σ = 3 cm and σ = 4 cm. What is the σ of their fusion?
+@@ 92
+2.4 cm
+@@ 93
+3.5 cm
+@@ 94
+5 cm
+@@ 95
+7 cm
+@@ 96
+Information adds: 1/9 + 1/16 = 25/144, so σ² = 144/25 and σ = 12/5 = 2.4 cm. It is smaller than both inputs.
+@@ 97
+Q3. Estimate A has covariance diag(4, 1) and estimate B has covariance diag(1, 4). What is the covariance of their fusion?
+@@ 98
+diag(5, 5)
+@@ 99
+diag(2.5, 2.5)
+@@ 100
+diag(0.8, 0.8)
+@@ 101
+diag(1, 1)
+@@ 102
+Λ = diag(1/4, 1) + diag(1, 1/4) = diag(1.25, 1.25), so Σ = diag(0.8, 0.8). Better than the best input (variance 1) in both directions.
+@@ 103
+Q4. In the three-pose chain of Section 5, the robot adds a loop-closure measurement of x₂ − x₀ with σ = 1. How does Λ change?
+@@ 104
+It does not change; only η changes
+@@ 105
+The (x₀, x₀) and (x₂, x₂) entries grow by 1 and the two zeros become −1
+@@ 106
+Only the diagonal changes
+@@ 107
+Every entry changes
+@@ 108
+The new factor adds the block [1 −1; −1 1] to the rows and columns of x₀ and x₂. A factor creates entries exactly between the variables it involves, so the zero fills in.
+@@ 109
+EKF-SLAM suffered from outliers, from linearizing around drifting odometry, and from a dense covariance. Particle filters eased these but need many particles.
+@@ 110
+Factor-graph optimization became dominant because the information matrix is sparse when the whole trajectory is kept.
+@@ 111
+Information form: \(\boldsymbol{\Lambda} = \boldsymbol{\Sigma}^{-1}\), \(\boldsymbol{\eta} = \boldsymbol{\Lambda}\boldsymbol{\mu}\). Independent estimates fuse by adding \(\boldsymbol{\Lambda}\) and \(\boldsymbol{\eta}\).
+@@ 112
+Each factor adds information only between the variables it touches. That is where the zeros of \(\boldsymbol{\Lambda}\) come from.
+@@ 113
+Spatial AI extends SLAM's geometry with semantics. The book covers foundations (Part I), sensors (Part II), and trends (Part III).
+@@ 114
+<em>SLAM Handbook</em>, Prelude to Part I, §I.4 "Past, Present, and Future of SLAM, and Scope of this Handbook" and §I.5 "Handbook Structure", pp. 13–18.
+@@ 115
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005, Chapter 3 (the information form of a Gaussian and the information filter).
+@@ 116
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (fusing Gaussian estimates; sparsity of the inverse covariance for a chain of poses).

@@ -1,0 +1,166 @@
+@@ 1
+<span class="eyebrow">16주차 · Day 4</span>
+@@ 2
+IMU preintegration: 시작점에 의존하지 않는 increment
+@@ 3
+오늘이 끝나면 적분 식에서 preintegrated increment를 유도하고, 이 increment가 keyframe i의 state에도 gravity에도 의존하지 않음을 보이고, 그 noise covariance를 어떻게 구하는지 설명할 수 있습니다.
+@@ 4
+약 60분 · §11.2.2–§11.2.2.2, pp. 311–314 읽기 (4쪽) · 16주차 Day 3, 4주차 Day 5 필요
+@@ 5
+먼저 읽기: §11.2.2, §11.2.2.1, §11.2.2.2, pp. 311–314
+@@ 6
+이번 주에서 가장 밀도가 높은 쪽들입니다. 읽으면서 찾아볼 것:
+@@ 7
+p. 311 첫 문단의 "key insight". 두 부분으로 되어 있습니다.
+@@ 8
+식 (11.14): 우변 어디에도 \(\mathbf{R}_i\), \(\mathbf{v}_i\), \(\mathbf{p}_i\), \(\mathbf{g}\)가 없는지 확인하고, \(\Delta\mathbf{v}_{ij}\)와 \(\Delta\mathbf{p}_{ij}\)가 물리적 변화량이 아니라고 경고하는 문장을 찾아보세요.
+@@ 9
+p. 312: (11.18)에서 "noise를 끝으로 옮기기" 위해 (11.16)과 (11.17)을 어떻게 쓰는지.
+@@ 10
+p. 313의 최종 measurement model인 식 (11.23), 그리고 p. 314에서 noise를 raw IMU noise의 합으로 쓴 (11.28)–(11.29).
+@@ 11
+어제의 적분을 재배열해서, keyframe \(i\)의 state에 의존하는 것과 gravity에 의존하는 것을 모두 식의 한쪽으로 모읍니다. 다른 쪽에 남는 것은 IMU 샘플만으로 계산되는 회전 하나와 벡터 두 개입니다. 이것들은 한 번 적분해 저장해 두고, optimizer가 state에 대한 생각을 몇 번 바꾸든 다시 씁니다. 이것이 <strong>preintegrated IMU measurements</strong>(사전 적분된 IMU 측정값)입니다.
+@@ 12
+1. 회전 increment
+@@ 13
+(11.13)의 첫 줄 \(\mathbf{R}_j = \mathbf{R}_i\prod_{k=i}^{j-1}\Exp(\cdot)\)에서 시작합니다. 미지수 \(\mathbf{R}_i\)는 왼쪽에서 곱해질 뿐이므로 반대편으로 옮깁니다. <span class="src">§11.2.2 · p. 311</span>
+@@ 14
+좌변은 두 keyframe 사이의 몸체 회전을 시각 \(i\)의 몸체에서 본 것입니다. 우변에는 gyroscope 샘플만 있습니다. 중간의 모든 샘플에서도 마찬가지로 \(\mathbf{R}_k = \mathbf{R}_i\,\Delta\mathbf{R}_{ik}\)입니다. 이것이 책이 말하는 통찰의 첫 번째 부분입니다. 움직임을 <em>local</em> frame, 즉 \(i\)의 body frame으로 표현하면 global 추정값이 바뀌어도 변하지 않습니다. <span class="src">§11.2.2 · p. 311</span>
+@@ 15
+2. 속도와 위치 increment
+@@ 16
+빈틈 채우기: (11.14)의 마지막 두 줄 유도
+@@ 17
+<strong>속도.</strong> (11.13)의 둘째 줄에 \(\mathbf{R}_k = \mathbf{R}_i\Delta\mathbf{R}_{ik}\)를 넣고, \(\mathbf{v}_i\)와 \(\mathbf{g}\)가 있는 항을 왼쪽으로 옮깁니다.
+@@ 18
+양변에 \(\mathbf{R}_i\T\)를 곱합니다. 좌변은 \(\Delta\mathbf{v}_{ij}\)의 정의가 됩니다.
+@@ 19
+<strong>위치.</strong> (11.13)의 셋째 줄에는 \(\mathbf{v}_i\)에 의존하는 \(\mathbf{v}_k\)가 있습니다. 더 짧은 구간 \(i\)에서 \(k\)까지에 대한 속도 결과 \(\mathbf{v}_k = \mathbf{v}_i + \mathbf{g}\Delta t_{ik} + \mathbf{R}_i\Delta\mathbf{v}_{ik}\)로 이를 바꿉니다. 그러면
+@@ 20
+gravity 합은 알려진 숫자입니다. 샘플 수 \(N = j-i\), \(\Delta t_{ik} = (k-i)\Delta t\)이면
+@@ 21
+\(\mathbf{v}_i\Delta t_{ij}\)와 \(\tfrac12\mathbf{g}\Delta t_{ij}^2\)을 왼쪽으로 옮기고 \(\mathbf{R}_i\T\)를 곱합니다.
+@@ 22
+결과가 이 장의 핵심 정의입니다. <span class="src">§11.2.2 · p. 311</span>
+@@ 23
+각 줄을 "state로 쓴 정의 = IMU 샘플로 쓴 계산식"으로 읽으세요. 가운데 식에 미지수가 모두 들어 있습니다. 오른쪽 계산식에는 미지수가 없습니다. bias만 예외인데, 이는 Day 5에서 다룹니다. gravity도 왼쪽으로 옮겨졌습니다. 이것이 통찰의 두 번째 부분입니다. gravity는 world frame에 관한 사실이므로 state와 같은 쪽에 있어야 합니다.
+@@ 24
+<strong>increment는 물리적 변위가 아닙니다.</strong> \(\mathbf{R}_i = \mathbf{I}\), \(\mathbf{g} = (0,0,-9.81)\)인 수평한 IMU가 1초 동안 가만히 있다고 합시다. 아무것도 움직이지 않는데도
+@@ 25
+계산식 쪽도 같은 답을 줍니다. \(\Delta t = 0.01\)에서 \((0,0,9.81)\) 측정값 100개를 더하면 \(9.81\) m/s입니다. increment는 specific force의 적분이고, gravity는 state를 increment와 비교할 때 다시 들어갑니다. 진짜 물리적 변화량은 \(\Delta\mathbf{R}_{ij}\)뿐입니다. <span class="src">§11.2.2 · p. 311</span>
+@@ 26
+3. 눈으로 보기: 적분 한 번, 어떤 시작 state든
+@@ 27
+직접 해 보기: 슬라이더는 optimizer가 keyframe \(i\)의 state를 수정하는 것을 나타냅니다. 휘어진 분홍색 경로는 naive integration (11.13)으로, 값이 바뀔 때마다 처음부터 다시 계산됩니다. 세 화살표는 (11.14)의 가운데 열을 \(\mathbf{p}_j\)에 대해 푼 것입니다: \(\mathbf{p}_j = \mathbf{p}_i + \mathbf{v}_i\Delta t_{ij} + \tfrac12\mathbf{g}\Delta t_{ij}^2 + \mathbf{R}_i\Delta\mathbf{p}_{ij}\).
+@@ 28
+눈여겨볼 점: 저장된 increment(Δθ = 19.90°, Δv = (2.036, 10.787) m/s, Δp = (1.008, 5.402) m)는 절대 바뀌지 않고, 화살표 사슬은 항상 적분한 경로가 끝나는 바로 그 점에서 끝납니다. 두 예측의 차이는 약 10⁻¹⁵ m입니다. 속도를 바꾸면 파란 화살표만 바뀝니다(나머지 두 화살표는 그대로 따라 움직입니다). orientation을 바꾸면 초록 화살표만 돌아갑니다. 그동안 naive 방법이 읽은 IMU 샘플 수는 값이 바뀔 때마다 100개씩 늘어납니다.
+@@ 29
+naive integration은 고정된 주소를 기준으로 길을 알려 주는 것과 같아요. "역에서 북쪽으로 200 m, 그다음 동쪽으로 50 m." 출발점이 틀린 것으로 밝혀지면 모든 안내를 다시 써야 해요. preintegration은 걷는 사람을 기준으로 길을 적어요. "앞으로 200 m, 그다음 오른쪽으로 50 m." 어디서 출발하든, 처음에 어느 쪽을 보고 있었든 이 안내는 그대로 맞아요. gravity가 당기는 힘만은 바깥 세계에 달려 있으니, 안내에서 빼 두었다가 나중에 다시 더해요.
+@@ 30
+4. noise를 측정값에서 분리하기
+@@ 31
+(11.14)를 factor로 쓰려면 <a href="#d8">2주차 · Day 2</a>의 표준형 "측정값 = state의 함수 + 평균 0인 Gaussian noise"로 만들어야 합니다. (11.14)에서는 noise가 exponential들의 곱 안에 묻혀 있습니다. 일단 bias를 알고 있고 keyframe 사이에서 일정하며 \(i\)에서의 값 \(\mathbf{b}_i\)와 같다고 가정합니다(식 (11.15)). 그러면 책은 \(\SO(3)\)의 exponential map이 가진 두 가지 성질을 씁니다. <span class="src">§11.2.2.1 · p. 312</span>
+@@ 32
+첫째 성질은 조금 perturbation된 회전을 깨끗한 회전과 그 뒤의 작은 회전으로 나눕니다. \(\mathbf{J}_r\)은 <a href="#d23">4주차 · Day 5</a>에서 본 \(\SO(3)\)의 right Jacobian입니다. 둘째 성질은 작은 회전이 큰 회전을 건너뛰게 해 주는 대신, 그 축을 다시 표현해야 합니다.
+@@ 33
+빈틈 채우기: 샘플 두 개로 noise를 끝으로 옮기기
+@@ 34
+샘플 \(k\)의 깨끗한 회전을 \(\mathbf{A}_k = \Exp((\tilde{\boldsymbol{\omega}}_k - \mathbf{b}^g_i)\Delta t)\), 작은 noise 회전을 \(\boldsymbol{\epsilon}_k = \mathbf{J}^k_r\,\boldsymbol{\eta}^{gd}_k\Delta t\)로 씁니다. \(\delta\boldsymbol{\phi} = -\boldsymbol{\eta}^{gd}_k\Delta t\)로 (11.16)을 쓰면 곱의 각 인수는 \(\mathbf{A}_k\Exp(-\boldsymbol{\epsilon}_k)\)입니다. 샘플이 두 개이면:
+@@ 35
+샘플이 더 많으면 샘플 \(k\)의 noise는 그 뒤의 모든 깨끗한 회전 \(\mathbf{A}_{k+1}\cdots\mathbf{A}_{j-1} = \Delta\tilde{\mathbf{R}}_{k+1\,j}\)를 건너뛰어야 하며, 그래서 (11.18)에 이 행렬이 전치되어 나타납니다. 식 (11.17) 자체는 4주차 · Day 5의 adjoint 항등식 \(\mathbf{R}\,\Exp(\boldsymbol{\phi})\,\mathbf{R}\T = \Exp(\mathbf{R}\boldsymbol{\phi})\)에서 \(\mathbf{R}\)을 \(\mathbf{R}\T\)로 바꾸고 양변의 왼쪽에 \(\mathbf{R}\)을 곱한 것입니다.
+@@ 36
+결과는 깨끗한 곱에 작은 회전 하나를 곱한 꼴입니다. <span class="src">§11.2.2.1 · p. 312</span>
+@@ 37
+\(\Delta\tilde{\mathbf{R}}_{ij}\)는 <strong>preintegrated rotation measurement</strong>입니다. 계산할 수 있고, 형태상 noise가 없습니다. \(\delta\boldsymbol{\phi}_{ij}\)는 그 noise입니다. 속도는 \(\Exp(-\delta\boldsymbol{\phi}) \approx \mathbf{I} - \delta\boldsymbol{\phi}^\wedge\) (11.19)를 써서 \(\Delta\mathbf{R}_{ik} \simeq \Delta\tilde{\mathbf{R}}_{ik}(\mathbf{I} - \delta\boldsymbol{\phi}_{ik}^\wedge)\)를 (11.14)에 대입하고, noise 항 두 개의 곱을 버리고, \(\mathbf{a}^\wedge\mathbf{b} = -\mathbf{b}^\wedge\mathbf{a}\) (11.20)로 외적의 순서를 뒤집습니다.
+@@ 38
+위치도 같은 방식입니다(11.22). 세 결과를 정의에 다시 넣으면 <strong>preintegrated measurement model</strong>이 나옵니다. <span class="src">§11.2.2.1 · p. 313</span>
+@@ 39
+왼쪽: IMU 데이터로 계산한 세 양. 오른쪽: \(i\)와 \(j\)의 state의 함수 "더하기" noise(회전에서 "더하기"는 4주차에서처럼 오른쪽에 작은 회전을 곱하는 것입니다). 이것이 바로 factor graph가 원하는 종류의 상대 운동 측정입니다.
+@@ 40
+5. increment에는 noise가 얼마나 있는가?
+@@ 41
+factor에는 9-벡터 \(\boldsymbol{\eta}^\Delta_{ij} = [\delta\boldsymbol{\phi}_{ij}\T, \delta\mathbf{v}_{ij}\T, \delta\mathbf{p}_{ij}\T]\T\) (11.24)의 covariance \(\boldsymbol{\Sigma}_{ij}\)가 필요합니다. 1차 근사로 회전 noise는 raw gyroscope noise들의 가중합입니다. <span class="src">§11.2.2.2 · p. 314</span>
+@@ 42
+(11.21)에 나온 \(\delta\mathbf{v}_{ij}\)와 \(\delta\mathbf{p}_{ij}\)는 다시 accelerometer noise들과 회전 noise의 합입니다(11.29). 서로 독립인 평균 0 Gaussian들의 선형 결합은 평균 0인 Gaussian이고, 그 covariance는 \(\operatorname{Cov}(\mathbf{C}\boldsymbol{\eta}) = \mathbf{C}\operatorname{Cov}(\boldsymbol{\eta})\mathbf{C}\T\) 규칙으로 구합니다. 책은 covariance를 샘플 하나씩 점진적으로 쌓아 갈 수도 있다고 말합니다. <span class="src">§11.2.2.2 · p. 314</span>
+@@ 43
+빈틈 채우기: 평면에서의 점진적 형태
+@@ 44
+위젯의 평면 세계에서 회전은 각도 하나이고 \(\mathbf{J}_r = 1\)이며 회전끼리 교환 가능하므로, (11.28)은 그냥 \(\delta\theta_{ij} = \sum_k\eta^{gd}_k\Delta t\)입니다. 외적 항 \(-\mathbf{f}^\wedge\delta\boldsymbol{\phi}\)는 \(\mathbf{J}\mathbf{f}\,\delta\theta\)가 되며, 여기서 \(\mathbf{J}\)는 90° 회전 행렬이고 \(\mathbf{f}_k = \tilde{\mathbf{a}}_k - \mathbf{b}^a_i\)입니다. 새 샘플이 들어올 때마다 noise state는 다음과 같이 갱신됩니다.
+@@ 45
+이는 \(\boldsymbol{\eta}^\Delta_{i,k+1} = \mathbf{A}_k\boldsymbol{\eta}^\Delta_{ik} + \mathbf{B}_k\boldsymbol{\eta}^d_k\) 꼴이므로, covariance는 \(\boldsymbol{\Sigma}_{ii} = \mathbf{0}\)에서 시작해 \(\boldsymbol{\Sigma}_{i,k+1} = \mathbf{A}_k\boldsymbol{\Sigma}_{ik}\mathbf{A}_k\T + \mathbf{B}_k\operatorname{Cov}(\boldsymbol{\eta}^d_k)\mathbf{B}_k\T\)를 따릅니다. 적분과 나란히 돌리는 <a href="#d22">4주차 · Day 4</a>의 covariance propagation입니다. 위젯이 정확히 이렇게 합니다. 각도에 대해 손으로 확인해 봅시다. 샘플 \(N\)개가 각각 분산 \((\sigma_g^2/\Delta t)\Delta t^2\)을 보태므로 \(\operatorname{var}(\delta\theta_{ij}) = \sigma_g^2\Delta t_{ij}\)입니다. 위젯의 \(\sigma_g = 0.002\) rad/s/√Hz와 \(\Delta t_{ij} = 1\) s를 넣으면 표준편차는 0.002 rad = 0.115°로, 위젯에 표시되는 값입니다.
+@@ 46
+\(\boldsymbol{\Sigma}_{ij}\)에 대해 기억할 두 가지. keyframe 사이의 시간이 길수록 커지므로, keyframe 간격이 넓으면 IMU factor가 약해집니다. 그리고 대각 행렬이 아닙니다. 적분된 회전의 오차는 그 뒤의 모든 accelerometer 샘플을 잘못 회전시키므로, 속도와 위치의 noise는 회전 noise와 상관되어 있습니다.
+@@ 47
+<strong>"\(\Delta\mathbf{p}_{ij}\)는 로봇이 움직인 거리다."</strong> 이것은 keyframe \(i\)의 frame에서 specific force를 두 번 적분한 것입니다. 1 s 동안 정지한 로봇은 \(\Delta\mathbf{p}_{ij} = 4.9\) m입니다.
+@@ 48
+<strong>"preintegration은 더 싸고 근사적인 적분이다."</strong> increment는 위젯의 10⁻¹⁵ m가 보여 주듯 (11.13)을 정확히 재배열한 것입니다. 근사가 들어오는 곳은 noise의 1차 처리, 그리고 내일 볼 bias 보정뿐입니다.
+@@ 49
+<strong>"increment는 IMU 데이터에만 의존한다."</strong> 적분할 때 쓴 bias 추정값에도 여전히 의존합니다.
+@@ 50
+Q1. 수평한 IMU(R_i = I, z가 위)가 2 s 동안 완전히 정지해 있습니다. 위치 increment Δp_ij는 무엇입니까?
+@@ 51
+p_j = p_i, v_i = 0이면 정의에서 −½·g·Δt² = −½·(0,0,−9.81)·4 = (0,0,19.62) m입니다. increment는 specific force를 적분한 것이고, 정지 상태에서 specific force는 위를 향합니다.
+@@ 52
+Q2. (11.14)의 우변(계산식)에 나타나지 않는 것은 무엇입니까?
+@@ 53
+gyroscope 샘플
+@@ 54
+accelerometer 샘플
+@@ 55
+bias
+@@ 56
+keyframe i의 속도
+@@ 57
+계산식은 IMU 샘플과 bias만 씁니다. i의 state와 gravity는 정의 쪽으로 옮겨졌고, 그것이 핵심입니다.
+@@ 58
+Q3. 최적화 중에 R_i의 추정값이 5° 바뀝니다. preintegrated factor를 쓰면 무엇을 다시 해야 합니까?
+@@ 59
+새 state로 (11.23)을 평가하는 것뿐: 행렬 곱 몇 번
+@@ 60
+모든 gyroscope 샘플에 걸친 곱
+@@ 61
+모든 accelerometer 샘플에 걸친 합
+@@ 62
+preintegration 전체와 그 covariance
+@@ 63
+(11.23)의 좌변은 저장된 숫자입니다. state에 의존하는 우변만 다시 평가하며, IMU 샘플을 다시 훑을 필요가 없습니다.
+@@ 64
+Q4. 평면의 경우: gyroscope noise density가 0.001 rad/s/√Hz이고 keyframe 사이가 4 s입니다. preintegrated 각도 noise의 표준편차는 무엇입니까?
+@@ 65
+=
+@@ 66
+=
+@@ 67
+=
+@@ 68
+=
+@@ 69
+var = σ²·Δt_ij이므로 표준편차는 0.001 × √4 = 0.002 rad입니다. IMU rate와는 무관합니다.
+@@ 70
+Q5. 항등식 (11.17) Exp(φ)R = R·Exp(Rᵀφ)는 유도에서 무엇에 쓰입니까?
+@@ 71
+increment에서 gravity를 없애기 위해
+@@ 72
+각 샘플의 작은 noise 회전을 그 뒤의 모든 회전 너머로 옮겨, noise를 오른쪽 끝에 모으기 위해
+@@ 73
+increment를 bias와 무관하게 만들기 위해
+@@ 74
+body-frame 가속도를 world frame으로 바꾸기 위해
+@@ 75
+(11.16)을 적용하면 곱이 깨끗한 회전과 noise 회전을 번갈아 갖게 됩니다. (11.17)은 noise 회전을 그 뒤의 깨끗한 회전과 자리를 바꾸므로, 결국 모든 noise가 인수 하나 Exp(−δφ)에 모입니다.
+@@ 76
+(11.13)에서 \(\mathbf{R}_i\), \(\mathbf{v}_i\), \(\mathbf{p}_i\), \(\mathbf{g}\)를 한쪽으로 옮기면 \(\Delta\mathbf{R}_{ij}\), \(\Delta\mathbf{v}_{ij}\), \(\Delta\mathbf{p}_{ij}\)가 정의됩니다. 식 (11.14).
+@@ 77
+그 계산식은 IMU 샘플(과 bias)만 쓰므로 한 번 적분하면 되고, state가 바뀌어도 다시 적분하지 않습니다.
+@@ 78
+\(\Delta\mathbf{v}\)와 \(\Delta\mathbf{p}\)는 keyframe \(i\)의 frame에서 specific force를 적분한 것이며, 물리적 변화량이 아닙니다.
+@@ 79
+noise를 끝으로 밀어내면 measurement model (11.23)이 나옵니다. 계산된 increment = state의 함수 "더하기" noise.
+@@ 80
+noise는 raw IMU noise의 선형 함수이므로 1차 근사로 Gaussian이며, 그 covariance \(\boldsymbol{\Sigma}_{ij}\)는 샘플 하나씩 propagation됩니다.
+@@ 81
+=
+@@ 82
+Forster, Carlone, Dellaert, Scaramuzza, <em>On-Manifold Preintegration for Real-Time Visual-Inertial Odometry</em>, IEEE Transactions on Robotics, 2017 (책이 따르는 설명 방식, 전체 유도와 점진적 covariance).
+@@ 83
+Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (adjoint 항등식과 SO(3)의 right Jacobian).

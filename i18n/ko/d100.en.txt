@@ -1,0 +1,242 @@
+@@ 1
+<span class="eyebrow">Week 17 · Day 4</span>
+@@ 2
+Degenerate motions: when the nullspace grows
+@@ 3
+After today you can name the four degenerate motions of an aided inertial system, derive why each one hides orientation or scale, and predict the number of unobservable directions for a given motion and sensor.
+@@ 4
+About 60 min · Read §11.3.3 and the opening of §11.4, pp. 325–326 (2 pages) · Needs Week 17 Day 3
+@@ 5
+Read first: §11.3.3 and the first paragraph of §11.4, pp. 325–326
+@@ 6
+Table 11.1 on p. 326: four motions, the sensor each applies to, and what is lost.
+@@ 7
+The one-sentence intuition for why pure translation loses roll and pitch (p. 325).
+@@ 8
+The difference between losing the <em>system</em> scale and losing the <em>feature</em> scale (pp. 325–326).
+@@ 9
+In the opening of §11.4, what the camera gives the IMU and what the IMU gives the camera (p. 326).
+@@ 10
+The four directions of Day 3 are always unobservable and never matter. For some motions the nullspace gets larger, and the new directions do matter: they are the tilt of the robot or the metric scale of the map. Each case has the same mechanism. Either the accelerometer bias can absorb the change, or the camera sees no parallax.
+@@ 11
+1. The table
+@@ 12
+A motion is <strong>degenerate</strong> when it adds unobservable directions to the four expected ones. Table 11.1 lists four. <span class="src">§11.3.3 · pp. 325–326</span> Here it is with the mechanism added; the next three sections derive the last column.
+@@ 13
+Motion
+@@ 14
+Lost in addition
+@@ 15
+Mechanism
+@@ 16
+1. Pure translation (no rotation)
+@@ 17
+any
+@@ 18
+global orientation: roll and pitch join yaw
+@@ 19
+a constant tilt looks like a constant accelerometer bias
+@@ 20
+2. Constant acceleration (includes constant velocity)
+@@ 21
+monocular camera
+@@ 22
+system scale
+@@ 23
+a rescaled acceleration differs by a constant, which the bias absorbs
+@@ 24
+3. Pure rotation (no translation)
+@@ 25
+feature scale
+@@ 26
+no parallax
+@@ 27
+4. Moving straight toward the point feature
+@@ 28
+no parallax for that point
+@@ 29
+"Monocular camera" means bearing-only measurements, \(\lambda_r = 0\) in the notation of <a href="#d98">Day 2</a>. Rows 2 to 4 do not apply to a sensor that measures range.
+@@ 30
+2. Pure translation: tilt hides in the accelerometer bias
+@@ 31
+The book's intuition is one sentence: if the system does not rotate, gravity can be confused with accelerometer bias. <span class="src">§11.3.3 · p. 325</span> Here is the algebra behind it.
+@@ 32
+Filling the gap: which rotations of the solution can the bias absorb?
+@@ 33
+The accelerometer model (11.1), without noise, is \(\mathbf{a}_m(t) = \mathbf{R}(t)\T\big(\mathbf{a}^w(t) - \mathbf{g}\big) + \mathbf{b}^a\). Rotate the whole solution by a fixed rotation \(\mathbf{Q}\): orientation \(\mathbf{Q}\mathbf{R}(t)\), acceleration \(\mathbf{Q}\mathbf{a}^w(t)\), landmarks \(\mathbf{Q}\mathbf{p}_f\). The camera cannot tell, as on Day 3. The rotated solution predicts the accelerometer reading
+@@ 34
+This equals the actual reading for all \(t\) if and only if
+@@ 35
+A bias cannot change from one instant to the next, so the right-hand side has to be constant in time. There are two ways.
+@@ 36
+\(\mathbf{Q}\mathbf{g} = \mathbf{g}\): the second term vanishes. This is yaw, unobservable for every motion.
+@@ 37
+\(\mathbf{R}(t)\) is constant: the body never rotates. Then <em>any</em> \(\mathbf{Q}\) works, with a suitably shifted bias. All three rotations are unobservable.
+@@ 38
+As soon as the body rotates, \(\mathbf{R}(t)\T(\mathbf{Q}\T - \mathbf{I})\mathbf{g}\) turns with it, a real bias does not, and the two separate.
+@@ 39
+<strong>In numbers.</strong> For a tilt of 1° the vector \((\mathbf{Q}\T - \mathbf{I})\mathbf{g}\) has length \(9.81 \times 0.01745 \approx 0.171\ \text{m/s}^2\). So a robot that only translates cannot tell "I am tilted by 1°" from "my accelerometer bias is off by 0.17 m/s²". The two explanations fit the past equally well, but they predict different futures: once the robot does turn, a wrong choice shows up as a wrong acceleration, and \(\tfrac12 \times 0.171 \times 10^2 \approx 8.6\) m of position error after 10 s without visual correction.
+@@ 40
+3. Constant acceleration: scale hides in the accelerometer bias
+@@ 41
+A monocular camera alone never knows the scale of the scene (<a href="#d65">Week 11 · Day 5</a>). The figure shows why with numbers.
+@@ 42 attr
+Two panels. Left: a camera moves right at 1 metre per second past a landmark at 4 metres across and 2 metres up; the bearings at 0, 1 and 2 seconds are 26.6, 33.7 and 45 degrees. Right: everything is 1.5 times larger, speed 1.5 metres per second and landmark at 6 and 3 metres; the three bearings are the same.
+@@ 43
+1 m/s, landmark at (4, 2) m
+@@ 44
+1.5 m/s, landmark at (6, 3) m
+@@ 45
+Camera positions at t = 0, 1, 2 s and the rays to one landmark, drawn at 40 pixels per metre. A world 1.5 times larger, crossed 1.5 times faster, gives the same three bearings: atan2(2, 4), atan2(2, 3), atan2(2, 2). At constant velocity the accelerometer reads the same in both worlds, so the IMU does not help.
+@@ 46
+An accelerometer measures in m/s², so it should settle the scale. It does, unless the bias gets in the way.
+@@ 47
+Filling the gap: when can the bias absorb a change of scale?
+@@ 48
+Scale the whole solution by \(s\): positions, velocities, and landmarks are multiplied by \(s\), so the acceleration is \(s\,\mathbf{a}^w(t)\). Orientations do not change, and neither do bearings. The scaled solution predicts the accelerometer reading \(\mathbf{R}\T(s\,\mathbf{a}^w - \mathbf{g}) + \mathbf{b}'\). It equals the actual reading \(\mathbf{R}\T(\mathbf{a}^w - \mathbf{g}) + \mathbf{b}^a\) if and only if
+@@ 49
+Again the right-hand side must be constant. So scale is unobservable exactly when \(\mathbf{R}(t)\T\mathbf{a}^w(t)\), the acceleration expressed in the body frame, is constant. Zero acceleration (constant velocity) is the simplest case. Differentiating the scaled solution with respect to \(s\) at \(s = 1\) gives the extra null vector, in the state order of (11.37):
+@@ 50
+These are the four blocks the book names when it says the scale of "position, velocity, acceleration bias, and features" is lost. <span class="src">§11.3.3 · p. 325</span>
+@@ 51
+The book's table says "constant acceleration" without naming a frame. This derivation says the frame is the body frame. If the body does not rotate, the two readings agree. If it does, the lab below lets you check that it is the body-frame acceleration that counts.
+@@ 52
+<strong>How the scale is recovered when it can be.</strong> Suppose the camera gives the path as \(\mathbf{q}(t)\) in unknown units, so \(\mathbf{p}(t) = s\,\mathbf{q}(t)\). For a body that is not rotating, the accelerometer reads \(s\,\ddot{\mathbf{q}}(t)\) plus a constant (gravity and bias). The constant cancels in a difference between two instants. If \(\ddot{\mathbf{q}}\) changes by 0.5 units/s² while the accelerometer reading changes by 1.0 m/s², then \(s = 1.0/0.5 = 2\) metres per unit. With constant acceleration the difference is \(0 = s \cdot 0\), which holds for every \(s\).
+@@ 53
+4. No parallax: pure rotation, and driving at a feature
+@@ 54
+A moving camera measures depth through <strong>parallax</strong>: the change in a point's bearing caused by the camera's sideways displacement. For a displacement \(b_\perp\) perpendicular to the ray and a depth \(\rho\), the bearing changes by about
+@@ 55
+If the camera only rotates, \(b_\perp = 0\) for every point. If it drives straight at a point, \(b_\perp = 0\) for that point. In both cases \(\Delta\beta = 0\) whatever \(\rho\) is, so the depth is unconstrained. This is \(\mathbf{H}_b\mathbf{p}^c_f = \mathbf{0}\) from Day 2, with no second viewpoint to break the tie.
+@@ 56
+The book distinguishes two kinds of loss. <span class="src">§11.3.3 · pp. 325–326</span>
+@@ 57
+<strong>System scale</strong> (row 2): one number rescales the trajectory, the velocity, the accelerometer bias, and all features together.
+@@ 58
+<strong>Feature scale</strong> (rows 3 and 4): only the depths of the features are free. With three landmarks and no translation, that is three separate free depths.
+@@ 59
+One condition is attached to rows 2 to 4: the features must be much farther away than the offset between camera and IMU, \(\norm{\mathbf{p}^c_f} \gg \norm{\mathbf{p}^c_b}\). <span class="src">§11.3.3 · p. 326</span> The reason is that a camera mounted away from the IMU swings on a small arc when the body rotates, which creates a little parallax. With a 5 cm offset and features 5 m away the effect is of order 1%, too small to be useful.
+@@ 60
+5. Check all of it in the lab
+@@ 61
+This is the lab of Day 3, started with a monocular camera, a constant body-frame acceleration, and a scale change of × 1.25 applied to the pink copy.
+@@ 62
+Notice: four eigenvalues are zero, and the table marks scale as unobservable. The pink copy is 25% larger and faster, and the camera readings change by 0°. Switch the motion to "varying acceleration": the fourth zero disappears, scale has information 0.688, and the same pink copy now changes the bearings by about 8°.
+@@ 63
+Predict each row before you set it. All counts are out of 14 unknowns.
+@@ 64
+View
+@@ 65
+Body rotates
+@@ 66
+Zero eigenvalues
+@@ 67
+They are
+@@ 68
+top
+@@ 69
+varying acceleration
+@@ 70
+bearing only
+@@ 71
+either
+@@ 72
+x, y, yaw
+@@ 73
+constant acceleration or constant velocity
+@@ 74
+x, y, yaw, scale
+@@ 75
+constant acceleration
+@@ 76
+range and bearing
+@@ 77
+x, y, yaw: range fixes the scale
+@@ 78
+pure rotation
+@@ 79
+x, y, yaw, and the depth of each of the 3 landmarks
+@@ 80
+side
+@@ 81
+no
+@@ 82
+x, z, tilt
+@@ 83
+x, z, tilt, scale
+@@ 84
+Row 2 with "Body rotates" on is the check promised in section 3. The lab sets accelerations in the body frame, so the acceleration is constant there while the path curves, and scale is still unobservable.
+@@ 85
+A bias is a constant that the estimator is allowed to choose. Anything that would change the accelerometer reading by a constant can therefore be explained away. A tilt changes it by a constant if the body never turns. A change of scale changes it by a constant if the acceleration never changes. Give the estimator something that varies, a turn or a change of acceleration, and the bias can no longer cover for it.
+@@ 86
+6. Why this matters in practice
+@@ 87
+The book notes that degenerate motions "might lead to large errors in some directions of the state space" and to navigation failures, and that they should be avoided or flagged. <span class="src">§11.3.3 · p. 325; §11.3 · p. 320</span> Real motion is rarely exactly degenerate, but it is often close: a vehicle cruising in a straight line has nearly constant velocity and nearly no rotation. Close to degenerate means an eigenvalue that is small instead of zero, and the variance along that direction is proportional to one over the eigenvalue. The estimate of scale or tilt is then formally defined and practically useless.
+@@ 88
+The opening of §11.4 states the positive side. Camera and IMU are complementary: the IMU captures fast accelerations and rotations, the camera observes the surroundings and removes most of the inertial drift, and the IMU in turn makes the scale of a monocular system observable, provided the motion is not degenerate. A system built from cameras and an IMU is called <strong>visual-inertial odometry (VIO)</strong>, and a visual-inertial SLAM system once loop closures are added. <span class="src">§11.4 · p. 326</span>
+@@ 89
+<strong>"An IMU always gives a monocular system its scale."</strong> Only when the acceleration changes. At constant velocity the accelerometer reads gravity plus bias and nothing else.
+@@ 90
+<strong>"Constant velocity is safe because nothing is accelerating."</strong> It is the special case \(\mathbf{a} = \mathbf{0}\) of row 2, and without rotation it is also row 1.
+@@ 91
+<strong>"Pure rotation loses the scale of the trajectory."</strong> There is no trajectory to scale: the position does not change. What is lost is the depth of each feature.
+@@ 92
+<strong>"A degenerate motion ruins the whole estimate."</strong> It adds specific directions to the nullspace. Bearings, relative orientation, and the shape of the path are still determined.
+@@ 93
+Q1. A car with a monocular camera and an IMU drives in a straight line at constant speed, without turning. Beyond global position and yaw, what is unobservable?
+@@ 94
+Nothing more
+@@ 95
+Only the scale
+@@ 96
+The scale, and roll and pitch
+@@ 97
+Only roll and pitch
+@@ 98
+Constant velocity is constant (zero) acceleration, which loses the system scale for a monocular camera. No rotation is pure translation, which loses the full global orientation.
+@@ 99
+Q2. A robot that never rotates has a tilt error of 2°. Roughly what accelerometer bias error explains the same data?
+@@ 100
+\(9.81 \times \sin 2^\circ = 9.81 \times 0.0349 \approx 0.34\ \text{m/s}^2\): gravity rotated by 2° differs from gravity by that much.
+@@ 101
+Q3. A camera moves at (1, 0) m/s from the origin and sees a landmark at (4, 2) m. In a world scaled by 3, what is the bearing at t = 2 s, compared with 45° in the original?
+@@ 102
+Scaled: speed 3 m/s, landmark at (12, 6). At 2 s the camera is at (6, 0), so the bearing is atan2(6, 6) = 45°, the same as atan2(2, 2).
+@@ 103
+Q4. A drone with a monocular camera and an IMU hovers in place and slowly yaws. What is lost?
+@@ 104
+The system scale: trajectory, velocity, and features together
+@@ 105
+The feature scale: the depth of each landmark
+@@ 106
+Roll and pitch
+@@ 107
+The gyroscope bias
+@@ 108
+This is pure rotation. There is no parallax, so each depth is free. Roll and pitch stay observable because the body rotates, and there is no translation whose scale could be in doubt.
+@@ 109
+Q5. A monocular visual-inertial system moves at constant velocity. Which change makes its scale observable?
+@@ 110
+Tracking more landmarks
+@@ 111
+A higher camera frame rate
+@@ 112
+Speeding up and slowing down
+@@ 113
+A less noisy gyroscope
+@@ 114
+Scale becomes observable when the body-frame acceleration varies, because the accelerometer bias can only absorb a constant. More landmarks or more frames add rows to \(\mathbf{M}\) that the same null vector still satisfies.
+@@ 115
+Degenerate motions add unobservable directions to the four gauge directions, and these extra ones matter.
+@@ 116
+Pure translation: a tilt changes the accelerometer reading by a constant, which the bias absorbs. Global orientation is lost. About 0.17 m/s² per degree.
+@@ 117
+Constant body-frame acceleration with a monocular camera: a change of scale changes the reading by a constant. System scale is lost, with null vector \((\mathbf{0}, \mathbf{0}, \mathbf{v}, -\mathbf{R}\T\mathbf{a}, \mathbf{p}, \mathbf{p}_f)\).
+@@ 118
+Pure rotation, or motion straight toward a point: no parallax, so feature depth is lost.
+@@ 119
+Near-degenerate motion gives small eigenvalues and large uncertainty. With enough rotation and changing acceleration, an IMU gives a monocular camera roll, pitch, and scale.
+@@ 120
+<em>SLAM Handbook</em>, §11.3.3 "Degenerate Motions", pp. 325–326, Table 11.1; §11.4 opening, p. 326.
+@@ 121
+The two bias-absorption derivations are this course's own, from the accelerometer model (11.1); the parallax relation follows Hartley and Zisserman, <em>Multiple View Geometry</em>, 2004.

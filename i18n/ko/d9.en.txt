@@ -1,0 +1,166 @@
+@@ 1
+<span class="eyebrow">Week 2 · Day 3</span>
+@@ 2
+Linearize, whiten, solve: linear least squares
+@@ 3
+After today you can linearize a nonlinear least-squares problem around an estimate, whiten it into the standard form, and solve it through the normal equations with Cholesky or with QR factorization.
+@@ 4
+About 60 min · Read §1.3, pp. 29–32 (4 pages) · Needs Week 2 Day 2
+@@ 5
+Read first: §1.3, pp. 29–32
+@@ 6
+The Taylor expansion (1.19) and the definition of the measurement Jacobian (1.20) on p. 30.
+@@ 7
+How the covariances disappear in (1.22) and (1.23) on p. 30. The book calls this whitening.
+@@ 8
+The normal equations (1.25) and the two triangular solves (1.27) and (1.28) on p. 31.
+@@ 9
+Equation (1.31) on p. 32: why QR gives the same solution without ever forming \(\mathbf{A}\T\mathbf{A}\).
+@@ 10
+Near a current estimate, every measurement function is almost a straight line. Replacing each one by its straight-line approximation turns the nonlinear cost into \(\norm{\mathbf{A}\boldsymbol{\delta}-\mathbf{b}}^2\), a problem that linear algebra solves exactly. The whole solve is: build \(\mathbf{A}\) and \(\mathbf{b}\), factor a matrix into a triangle, substitute.
+@@ 11
+1. Linearization
+@@ 12
+Pick a <strong>linearization point</strong> \(\mathbf{x}^0\), the current estimate, and write the state as \(\mathbf{x}=\mathbf{x}^0+\boldsymbol{\delta}\). The unknown is now the <strong>state update vector</strong> \(\boldsymbol{\delta}\). A first-order Taylor expansion of each measurement function gives equation (1.19): <span class="src">§1.3.1 · p. 30</span>
+@@ 13
+\(\mathbf{H}_i\) is the <strong>measurement Jacobian</strong>: a matrix with one row per measured number and one column per unknown that the factor touches. Entry \((r,c)\) says how much prediction \(r\) changes per unit change of unknown \(c\). Adding \(\boldsymbol{\delta}\) to \(\mathbf{x}^0\) assumes the state is a vector, which is not true for 3D rotations. Chapter 2 repairs that. <span class="src">§1.3.1 · p. 30</span>
+@@ 14
+Filling the gap: the Jacobian of a bearing, with numbers
+@@ 15
+Take the bearing model (1.13), \(h=\operatorname{atan2}(a,b)\) with \(a=\ell_y-p_y\) and \(b=\ell_x-p_x\). From \(\frac{d}{du}\arctan u = \frac{1}{1+u^2}\) with \(u=a/b\):
+@@ 16
+The landmark coordinates enter \(a\) and \(b\) with a plus sign and the pose coordinates with a minus sign. With \(q=a^2+b^2\) and the unknowns ordered \((p_x,p_y,\ell_x,\ell_y)\), the chain rule gives the \(1\times4\) Jacobian
+@@ 17
+Yesterday's example had the pose at \((1,1)\) and the landmark at \((4,5)\), so \(a=4\), \(b=3\), \(q=25\) and \(\mathbf{H}=[\,0.16\;\; -0.12\;\; -0.16\;\; 0.12\,]\) rad per unit length. Check it: move the landmark by \(0.1\) in \(x\). The linear prediction is \(0.9273+(-0.16)(0.1)=0.9113\). The exact value is \(\operatorname{atan2}(4,\,3.1)=0.9115\). The straight line is off by \(0.0002\) rad for this small step. For a large step it would be far off, which is the whole difficulty of tomorrow's lesson.
+@@ 18
+Substituting (1.19) into the cost (1.18) gives a least-squares problem that is <em>linear</em> in \(\boldsymbol{\delta}\), equation (1.21): <span class="src">§1.3.1 · p. 30</span>
+@@ 19
+The bracket \(\mathbf{z}_i-\mathbf{h}_i(\mathbf{x}_i^0)\) is the <strong>prediction error</strong>: actual measurement minus the measurement predicted at the current estimate. It is a known vector.
+@@ 20
+2. Whitening
+@@ 21
+The covariances can be folded into the Jacobian and the prediction error, equation (1.22): <span class="src">§1.3.1 · p. 30</span>
+@@ 22
+Here \(\boldsymbol{\Sigma}^{1/2}\) is the <strong>matrix square root</strong>, the symmetric matrix whose product with itself is \(\boldsymbol{\Sigma}\), and \(\boldsymbol{\Sigma}^{-1/2}\) is its inverse. For a diagonal covariance \(\diag(\sigma_1^2,\dots,\sigma_n^2)\) it is simply \(\diag(1/\sigma_1,\dots,1/\sigma_n)\). So define, equation (1.23),
+@@ 23
+and each term of (1.21b) becomes an ordinary squared length \(\norm{\mathbf{A}_i\boldsymbol{\delta}_i-\mathbf{b}_i}_2^2\). This is called <strong>whitening</strong>. For a scalar measurement it means dividing the row by \(\sigma_i\).
+@@ 24
+<em>Example.</em> The bearing above had \(\sigma=0.05\) rad and prediction error \(0.950-0.9273=0.0227\) rad. Whitened: \(\mathbf{A}_i=\mathbf{H}/0.05=[\,3.2\;\; -2.4\;\; -3.2\;\; 2.4\,]\) and \(b_i=0.0227/0.05=0.454\).
+@@ 25
+Whitening does two jobs. It removes units: after dividing by a standard deviation, radians and meters are both pure numbers and can be added in one cost. And it sets how much each row is trusted: a small \(\sigma\) makes a large row. <span class="src">§1.3.1 · p. 30</span>
+@@ 26
+3. One big matrix
+@@ 27
+Stack the blocks \(\mathbf{A}_i\) on top of each other, each placed in the columns of the variables its factor touches, and stack the \(\mathbf{b}_i\) in the same order. The result is the standard least-squares problem, equation (1.24): <span class="src">§1.3.2 · p. 31</span>
+@@ 28
+\(\mathbf{A}\) has \(m\) rows (one per measured number) and \(n\) columns (one per unknown number). It is large and sparse, and its pattern of non-zero blocks is the factor graph written as a table: a row block is non-zero only in the columns of the variables that factor touches.
+@@ 29
+Here is an example small enough to do by hand. A robot moves on a line and its three positions \(x_1,x_2,x_3\) are unknown. There are four factors: a prior \(x_1=0\) with \(\sigma=0.1\), two odometry steps \(x_2-x_1=1\) and \(x_3-x_2=1\) with \(\sigma=0.2\) each, and one measurement \(x_3-x_1=2.3\) with \(\sigma=0.1\). Everything is already linear, so take \(\mathbf{x}^0=\mathbf{0}\); then the prediction errors are the measurements themselves and \(\boldsymbol{\delta}\) is the state.
+@@ 30 attr
+Left: factor graph of the example. Three variables x1, x2, x3 in a row. A prior factor on x1, an odometry factor between x1 and x2, another between x2 and x3, and a fourth factor joining x1 and x3. Right: the four-by-three whitened Jacobian A. Row prior is 10, 0, 0. Row odometry 1 is minus 5, 5, 0. Row odometry 2 is 0, minus 5, 5. Row x3 minus x1 is minus 10, 0, 10. Non-zero cells are shaded.
+@@ 31
+odometry 1
+@@ 32
+odometry 2
+@@ 33
+Whitened Jacobian A
+@@ 34
+Each factor is one row, and the row is non-zero only under the variables its dot is joined to. The entries are ±1/σ: 1/0.1 = 10 and 1/0.2 = 5. The right-hand side is each measurement divided by its σ.
+@@ 35
+4. The normal equations and Cholesky
+@@ 36
+For a full-rank \(m\times n\) matrix with \(m\ge n\), the unique minimizer of (1.24) solves the <strong>normal equations</strong>, equation (1.25): <span class="src">§1.3.3 · p. 31</span>
+@@ 37
+Filling the gap: deriving the normal equations
+@@ 38
+Expand the squared length:
+@@ 39
+Using \(\nabla_{\boldsymbol{\delta}}(\boldsymbol{\delta}\T\mathbf{M}\boldsymbol{\delta})=2\mathbf{M}\boldsymbol{\delta}\) for symmetric \(\mathbf{M}\) and \(\nabla_{\boldsymbol{\delta}}(\mathbf{c}\T\boldsymbol{\delta})=\mathbf{c}\), the gradient is \(2\mathbf{A}\T\mathbf{A}\boldsymbol{\delta}-2\mathbf{A}\T\mathbf{b}\). Setting it to zero gives (1.25). The stationary point is a minimum, and the only one, because for any \(\mathbf{v}\neq\mathbf{0}\) we have \(\mathbf{v}\T\mathbf{A}\T\mathbf{A}\mathbf{v}=\norm{\mathbf{A}\mathbf{v}}^2\gt 0\) when \(\mathbf{A}\) has full column rank: the cost curves upward in every direction.
+@@ 40
+Rewritten as \(\mathbf{A}\T(\mathbf{A}\boldsymbol{\delta}^*-\mathbf{b})=\mathbf{0}\), the equations say that the leftover error is perpendicular to every column of \(\mathbf{A}\). "Normal" means perpendicular.
+@@ 41
+The matrix \(\boldsymbol{\Lambda}\triangleq\mathbf{A}\T\mathbf{A}\) is the <strong>information matrix</strong>, which the book also calls the Hessian. It is symmetric and positive definite, so it has a <strong>Cholesky factorization</strong> \(\boldsymbol{\Lambda}=\mathbf{R}\T\mathbf{R}\) with \(\mathbf{R}\) upper triangular, equation (1.26). Then \(\mathbf{R}\T\mathbf{R}\,\boldsymbol{\delta}^*=\mathbf{A}\T\mathbf{b}\) is solved in two easy steps: first \(\mathbf{R}\T\mathbf{y}=\mathbf{A}\T\mathbf{b}\) for \(\mathbf{y}\) by forward substitution (1.27), then \(\mathbf{R}\,\boldsymbol{\delta}^*=\mathbf{y}\) by back substitution (1.28). No matrix is ever inverted. <span class="src">§1.3.3 · p. 31</span>
+@@ 42
+Filling the gap: Cholesky by hand on the example
+@@ 43
+From the figure, \(\boldsymbol{\Lambda}=\mathbf{A}\T\mathbf{A}\) and \(\mathbf{A}\T\mathbf{b}\) are
+@@ 44
+Matching \(\boldsymbol{\Lambda}=\mathbf{R}\T\mathbf{R}\) entry by entry gives \(\mathbf{R}\) one row at a time: \(r_{ii}=\sqrt{\Lambda_{ii}-\sum_{k\lt i}r_{ki}^2}\) and, for \(j\gt i\), \(r_{ij}=\bigl(\Lambda_{ij}-\sum_{k\lt i}r_{ki}r_{kj}\bigr)/r_{ii}\).
+@@ 45
+Forward substitution in \(\mathbf{R}\T\mathbf{y}=\mathbf{A}\T\mathbf{b}\), top row first: \(y_1=-255/15=-17\), \(y_2=(0-(-1.667)(-17))/6.872=-4.123\), \(y_3=(255-(-6.667)(-17)-(-5.255)(-4.123))/7.276=16.492\).
+@@ 46
+Back substitution in \(\mathbf{R}\boldsymbol{\delta}^*=\mathbf{y}\), bottom row first: \(\delta_3=16.492/7.276=2.267\), \(\delta_2=(-4.123+5.255\cdot2.267)/6.872=1.133\), \(\delta_1=(-17+1.667\cdot1.133+6.667\cdot2.267)/15=0\).
+@@ 47
+So \(x_3=2.267\). Odometry alone says \(2.0\) and the fourth factor says \(2.3\). The answer is closer to \(2.3\) because that factor has the smaller \(\sigma\), and \(x_2\) has moved to \(1.133\) to share the correction.
+@@ 48
+Try it: the widget solves this same problem and shows every matrix. Raise the σ of the x₃ − x₁ measurement to 0.50.
+@@ 49
+Notice that at the start the numbers match the hand calculation, and the leftover cost is 1.000. With σ = 0.50 on the fourth factor its row of A shrinks from ±10 to ±2 and x₃ moves back from 2.267 to 2.073, toward odometry. The last matrix shows the same triangle R coming out of QR with the sign of each row flipped.
+@@ 50
+5. QR factorization: the same triangle without forming the information matrix
+@@ 51
+The alternative factors \(\mathbf{A}\) itself, equation (1.29): <span class="src">§1.3.3 · pp. 31–32</span>
+@@ 52
+where \(\mathbf{Q}\) is an \(m\times m\) <strong>orthogonal</strong> matrix (\(\mathbf{Q}\T\mathbf{Q}=\mathbf{I}\)), \(\mathbf{d}\in\R^n\), and \(\mathbf{e}\in\R^{m-n}\). In practice \(\mathbf{Q}\T\) is applied as a sequence of <strong>Householder reflections</strong>, one per column, each of which zeroes everything below the diagonal in that column. \(\mathbf{Q}\) itself is never built: \(\mathbf{b}\) is carried along as an extra column and comes out as \(\mathbf{Q}\T\mathbf{b}\).
+@@ 53
+Multiplying a vector by an orthogonal matrix does not change its length, since \(\norm{\mathbf{Q}\T\mathbf{v}}^2=\mathbf{v}\T\mathbf{Q}\mathbf{Q}\T\mathbf{v}=\norm{\mathbf{v}}^2\). Apply that to the cost, equation (1.31):
+@@ 54
+The second term does not contain \(\boldsymbol{\delta}\). The first can be made exactly zero by solving the triangular system \(\mathbf{R}\boldsymbol{\delta}^*=\mathbf{d}\), equation (1.32). So \(\norm{\mathbf{e}}^2\) is the smallest value the cost can take. And this \(\mathbf{R}\) is the Cholesky factor again, up to the sign of each row, because \(\mathbf{A}\T\mathbf{A}=\begin{bmatrix}\mathbf{R}\T & \mathbf{0}\end{bmatrix}\mathbf{Q}\T\mathbf{Q}\begin{bmatrix}\mathbf{R}\\ \mathbf{0}\end{bmatrix}=\mathbf{R}\T\mathbf{R}\), equation (1.33). <span class="src">§1.3.3 · p. 32</span>
+@@ 55
+For dense matrices the Cholesky route costs \((m+n/3)\,n^2\) floating-point operations, \(n^3/3\) of them for the factorization itself, and the QR route costs \(2\,(m-n/3)\,n^2\). Both are \(O(mn^2)\) when \(m\gg n\), and QR is slower by a factor of about 2, but more accurate and more stable. <span class="src">§1.3.3 · pp. 31–32</span> The book states that QR is more accurate without saying why. The standard reason is that forming \(\mathbf{A}\T\mathbf{A}\) squares the condition number of the problem, so twice as many digits are lost to rounding. QR works on \(\mathbf{A}\) directly and avoids that.
+@@ 56
+Either way, the linear problem is solved by turning the information matrix or the Jacobian into a triangular "square root" \(\mathbf{R}\). The book calls this family of methods <strong>square-root SAM</strong>. <span class="src">§1.3.3 · p. 32</span>
+@@ 57
+<strong>"Solving the normal equations means computing the inverse of AᵀA."</strong> It is factored and then solved by substitution. Inverting is slower, less accurate, and destroys sparsity.
+@@ 58
+<strong>"δ* is the new estimate."</strong> It is the correction. The new estimate is \(\mathbf{x}^0+\boldsymbol{\delta}^*\). In today's example they coincide only because \(\mathbf{x}^0=\mathbf{0}\).
+@@ 59
+<strong>"Whitening is cosmetic."</strong> Without it, a row in millimeters would outvote a row in radians purely because of its units.
+@@ 60
+Q1. A scalar measurement has σ = 0.2, Jacobian H = [1, −1], and prediction error 0.1. What are its whitened row A and right-hand side b?
+@@ 61
+Whitening a scalar row divides both H and the prediction error by σ: 1/0.2 = 5 and 0.1/0.2 = 0.5. Dividing by σ² (25) would be the mistake of weighting twice.
+@@ 62
+Q2. One unknown is measured three times, already whitened: A is the column (1, 1, 1) and b = (2, 3, 7). What does the normal equation give for δ*?
+@@ 63
+AᵀA = 3 and Aᵀb = 12, so δ* = 12/3 = 4, the average of the three measurements.
+@@ 64
+Q3. Λ has rows (4, 2) and (2, 5). What is its upper-triangular Cholesky factor R, with Λ = RᵀR?
+@@ 65
+Rows (2, 1) and (0, 2)
+@@ 66
+Rows (2, 2) and (0, 1)
+@@ 67
+Rows (4, 2) and (0, 4)
+@@ 68
+Rows (2, 0.5) and (0, 2.18)
+@@ 69
+r11 = √4 = 2, r12 = 2/2 = 1, r22 = √(5 − 1²) = 2. Check: RᵀR has rows (4, 2) and (2, 1 + 4 = 5).
+@@ 70
+Q4. After QR, Qᵀb is split into d (the first n entries) and e (the rest). What is ‖e‖²?
+@@ 71
+The length of the update δ*
+@@ 72
+The value of the cost at the solution: the sum of squared whitened residuals that cannot be removed
+@@ 73
+Zero, always
+@@ 74
+The determinant of R
+@@ 75
+By (1.31) the cost is ‖Rδ − d‖² + ‖e‖². The first term is zero at δ*, so ‖e‖² is what remains. In the widget it is 1.000.
+@@ 76
+Linearize each measurement function at the current estimate: h(x⁰ + δ) ≈ h(x⁰) + Hδ.
+@@ 77
+Whiten: multiply each Jacobian block and prediction error by Σ<sup>−1/2</sup>. For scalars, divide by σ.
+@@ 78
+Stack the blocks into A and b. The update minimizes ‖Aδ − b‖², and A has the sparsity pattern of the factor graph.
+@@ 79
+Normal equations: AᵀA δ* = Aᵀb. Factor Λ = AᵀA = RᵀR, then forward and back substitution.
+@@ 80
+QR factors A directly and gives the same R. It costs about twice as much and loses fewer digits.
+@@ 81
+<em>SLAM Handbook</em>, §1.3 "Solving Linear Least Squares", pp. 29–32.
+@@ 82
+The derivation of the normal equations, the row-by-row Cholesky recurrence, and the condition-number argument for QR follow Golub and Van Loan, <em>Matrix Computations</em>, 2013.
+@@ 83
+The bearing Jacobian is ordinary calculus; the same derivative appears in Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005.

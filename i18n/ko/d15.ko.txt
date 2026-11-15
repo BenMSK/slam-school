@@ -1,0 +1,142 @@
+@@ 1
+<span class="eyebrow">3주차 · Day 3</span>
+@@ 2
+Cholesky factor는 곧 Bayes net: back-substitution, fill-in, 그리고 Schur complement
+@@ 3
+오늘이 끝나면 R의 각 행을 Gaussian conditional로 읽고, back-substitution으로 MAP 추정값을 구하고, 주어진 ordering에 대해 그래프에서 fill-in을 예측하고, Schur complement로 Gaussian 변수를 marginalize할 수 있습니다.
+@@ 4
+약 60분 · §1.6.3, pp. 45–46 읽기 (2쪽), p. 38 다시 읽기 · 3주차 Day 2 필요
+@@ 5
+먼저 읽기: §1.6.3, p. 45부터 p. 46 위쪽까지, 그다음 p. 38의 두 번째 문단을 다시
+@@ 6
+p. 45에서 "directed acyclic graph"(방향성 비순환 그래프)와 "upper-triangular"(상삼각)를 잇는 문장.
+@@ 7
+식 (1.51)–(1.52): \(\mathbf{R}_j\), \(\mathbf{T}_j\), \(\mathbf{d}_j\)로 쓴 conditional 하나의 평균과 covariance.
+@@ 8
+식 (1.53)과 그 앞 문단: back-substitution이 변수를 어떤 순서로 방문하는지, 그리고 그 순서가 왜 항상 통하는지.
+@@ 9
+p. 38: fill-in의 정의. 오늘은 fill-in이 어디서 오는지 설명합니다.
+@@ 10
+삼각 factor \(\mathbf{R}\)과 Bayes net은 같은 대상입니다. \(\mathbf{R}\)의 행 \(j\)는 separator가 주어졌을 때 변수 \(j\)의 Gaussian conditional이므로, \(\mathbf{R}\mathbf{x} = \mathbf{d}\)를 아래에서부터 푸는 것이 곧 Bayes net에서의 MAP inference입니다. 변수를 소거하면 그 이웃들이 서로 묶입니다. 행렬로 보면 이 묶음이 Schur complement이고, Gaussian 변수를 marginalize하는 방법도 바로 이것입니다.
+@@ 11
+1. R을 Bayes net으로 읽기
+@@ 12
+어제는 elimination step마다 완성된 행 \([\mathbf{R}_j \;\, \mathbf{T}_j \mid \mathbf{d}_j]\)가 하나씩 나왔습니다. 이것을 elimination 순서대로 쌓으면 상삼각 행렬이 됩니다. 직선 위 toy 문제를 책의 ordering으로 풀면 다음과 같습니다(Day 2 위젯을 끝까지 돌리면 볼 수 있습니다):
+@@ 13
+행 \(j\)의 비대각 nonzero는 그 separator의 열에 있습니다. 이것이 \(\mathbf{x}_j\)로 들어오는 화살표입니다. Bayes net은 cycle이 없는 방향 그래프이고, "cycle이 없다"는 것은 모든 화살표가 뒤의 변수에서 앞의 변수를 가리키도록 변수를 정렬할 수 있다는 뜻입니다. 행렬로 말하면 대각 아래에는 아무것도 없습니다. 책의 한 줄 요약은 이렇습니다: factor graph는 sparse Jacobian의 그림이고, Bayes net은 Cholesky factor의 그림입니다. <span class="src">§1.6.3 · p. 45</span>
+@@ 14
+이것이 Day 1의 \(\boldsymbol{\Lambda}\)의 Cholesky factor임을 확인할 수 있습니다. 예를 들어 \(\mathbf{R}\T\mathbf{R}\)의 원소 \((3,3)\)은 \(0.577^2 + 1.915^2 = 4.00\)이고, 원소 \((3,4)\)는 \((-0.577)(-0.577) + (1.915)(-0.696) = -1.00\)입니다.
+@@ 15
+2. 각 행은 Gaussian, back-substitution은 MAP inference
+@@ 16
+식 (1.51)은 conditional을 \(p(\mathbf{x}_j \mid \mathbf{s}_j) = k \exp\!\left(-\tfrac12 \norm{\mathbf{R}_j\mathbf{x}_j + \mathbf{T}_j\mathbf{s}_j - \mathbf{d}_j}_2^2\right)\)로 쓰고, (1.52)는 이것이 \(\mathbf{x}_j\)의 Gaussian이라고 말합니다. 이런 conditional로 이루어진 Bayes net을 <strong>Gaussian Bayes net</strong>이라고 합니다. <span class="src">§1.6.3 · p. 45</span>
+@@ 17
+빈틈 채우기: (1.51)에서 평균과 covariance로
+@@ 18
+norm 안의 식에서 \(\mathbf{R}_j\)를 묶어 냅니다. 이 행렬은 정사각이고 역행렬이 있습니다:
+@@ 19
+그러면 \(\norm{\mathbf{R}_j(\mathbf{x}_j - \boldsymbol{\mu}_j)}^2 = (\mathbf{x}_j - \boldsymbol{\mu}_j)\T \mathbf{R}_j\T\mathbf{R}_j (\mathbf{x}_j - \boldsymbol{\mu}_j)\)입니다. Gaussian의 지수 \((\mathbf{x} - \boldsymbol{\mu})\T\boldsymbol{\Sigma}^{-1}(\mathbf{x} - \boldsymbol{\mu})\)와 비교하면 information matrix는 \(\mathbf{R}_j\T\mathbf{R}_j\)이고, 따라서 \(\boldsymbol{\Sigma}_j = (\mathbf{R}_j\T\mathbf{R}_j)^{-1}\)입니다. 평균은 separator에 따라 선형으로 움직이지만, covariance는 separator와 전혀 무관합니다. 상수는 보통의 Gaussian 정규화 상수인 \(k = |2\pi\boldsymbol{\Sigma}_j|^{-1/2}\)입니다.
+@@ 20
+<strong>conditional을 하나씩 최대화하면 joint 최댓값이 나오는 이유.</strong> joint density는 conditional들의 곱입니다. 각 conditional은 부모가 무엇이든 \(\mathbf{x}_j = \boldsymbol{\mu}_j\)로 두면 최댓값 \(k\)에 도달하고, \(k\)는 부모에 의존하지 않습니다. 따라서 어떤 변수도 타협할 필요가 없습니다. elimination의 역순으로 변수를 돌면서, 이미 정한 값이 주어졌을 때의 conditional 평균으로 각 변수를 정하면 곱의 모든 항이 동시에 최대가 됩니다.
+@@ 21
+이 절차가 식 (1.53) \(\mathbf{x}_j^* = \mathbf{R}_j^{-1}(\mathbf{d}_j - \mathbf{T}_j\mathbf{s}_j^*)\)이며, \(\mathbf{R}\mathbf{x} = \mathbf{d}\)에 대한 평범한 back-substitution입니다. 마지막 변수는 separator가 비어 있으므로 가장 먼저 풉니다. toy 문제에서 위에 적은 것보다 자릿수를 더 유지하며 계산하면:
+@@ 22
+대각에는 불확실성도 담겨 있습니다. 마지막 conditional은 부모가 없으므로 \(p_3\)의 marginal이고, 그 분산은 \(1/1.021^2 = 0.96\)입니다. 다른 변수에서 \(1/R_j^2\)는 separator가 주어졌을 때의 분산이며, marginal 분산보다 작습니다.
+@@ 23
+3. 그래프로 보는 fill-in
+@@ 24
+새 factor \(\tau(\mathbf{s}_j)\)는 separator의 모든 변수에 연결됩니다. <a href="#d13">Day 1</a>의 그래프 \(G\)에서 이것은 <strong>변수를 소거하면 그 변수의 현재 이웃이 모두 서로 이어진다</strong>는 뜻입니다. 새로 추가해야 했던 edge가 fill-in이며, 이는 \(\boldsymbol{\Lambda}\)에서 0이던 자리에 생긴 \(\mathbf{R}\)의 nonzero가 됩니다. \(\mathbf{R}\)의 행 \(j\)에는 대각 원소 하나와 separator 변수마다 원소 하나가 있으므로, \(\mathbf{R}\)의 크기는 모든 변수에 대한 \(1 + |\mathbf{s}_j|\)의 합입니다.
+@@ 25
+직접 해 보기: "pose 먼저"를 고르고 한 step씩 진행하십시오. p₂를 소거한 뒤와 p₃을 소거한 뒤의 분홍색 factor를 지켜보십시오.
+@@ 26
+눈여겨볼 점: p₂를 소거하면 p₃과 ℓ₁ 사이에 factor가 생기고, 이어서 p₃을 소거하면 어떤 측정도 연결한 적 없는 두 landmark ℓ₁과 ℓ₂가 묶입니다. R은 10개와 0개 대신 nonzero 12개, fill-in 2개로 끝나며, 추정값은 마지막 자릿수까지 같습니다. "역순" ordering은 더 나빠서 nonzero가 13개입니다.
+@@ 27
+여기서 곧바로 <strong>minimum-degree</strong> 아이디어가 나옵니다. 매 step마다 이웃이 가장 적은 변수를 소거합니다. 그 변수의 separator가, 따라서 그 변수의 \(\mathbf{R}\) 행과 남기는 factor가 가장 작기 때문입니다. greedy 방법이라 최적은 아니지만, 싸고 대개 좋은 결과를 냅니다. Figure 1.9의 4168을 만든 휴리스틱인 COLAMD는 \(\mathbf{A}\)의 열에서 바로 작동하는 근사 minimum-degree ordering입니다. <span class="src">§1.5.3 · p. 38</span> landmark SLAM에서는 landmark를 일찍 소거하는 경향이 있습니다. 두 pose에서 본 landmark는 이웃이 둘뿐이지만, trajectory 중간의 pose는 이웃이 많기 때문입니다.
+@@ 28
+4. Schur complement: information form에서의 elimination
+@@ 29
+같은 step을 normal equations \(\boldsymbol{\Lambda}\mathbf{x} = \mathbf{g}\)(여기서 \(\mathbf{g} = \mathbf{A}\T\mathbf{b}\))에서도 할 수 있습니다. 변수를 소거할 블록 \(a\)와 나머지 \(b\)로 나눕니다:
+@@ 30
+빈틈 채우기: 블록 elimination
+@@ 31
+첫 블록 행을 \(\mathbf{x}_a\)에 대해 풀면 \(\mathbf{x}_a = \boldsymbol{\Lambda}_{aa}^{-1}(\mathbf{g}_a - \boldsymbol{\Lambda}_{ab}\mathbf{x}_b)\)입니다. 이것은 \(\mathbf{x}_b\)가 주어졌을 때 \(\mathbf{x}_a\)의 conditional 평균으로, (1.53)의 information form 쌍둥이입니다. 이를 둘째 블록 행에 대입하고 \(\mathbf{x}_b\)로 묶으면:
+@@ 32
+이 작아진 시스템에는 더 이상 \(\mathbf{x}_a\)가 없습니다. 이는 남은 factor와 새 factor \(\tau\)를 모두 더한 것입니다. 보정항 \(\boldsymbol{\Lambda}_{ba}\boldsymbol{\Lambda}_{aa}^{-1}\boldsymbol{\Lambda}_{ab}\)는 \(j\)와 \(k\)가 모두 \(a\)의 이웃일 때 위치 \((j,k)\)에서 nonzero입니다. 다시 "이웃을 모두 잇는다"는 규칙입니다.
+@@ 33
+숫자로 해 봅니다. Day 1의 \(\boldsymbol{\Lambda}\)에서 \(\ell_1\)을 소거합니다. 여기서 \(\boldsymbol{\Lambda}_{aa} = 3\)이고, \(\ell_1\)은 \(p_1\), \(p_2\)와 각각 \(-1\)로 이어져 있으므로, \((p_1, p_2)\) 블록의 네 자리 모두에서 보정값은 \(\tfrac13\)입니다:
+@@ 34
+다음 pivot은 \(\sqrt{3.667} = 1.915\)이고 그 옆 원소는 \(-1.333/1.915 = -0.696\)입니다. 위에서 본 \(\mathbf{R}\)의 3행입니다. Cholesky 분해는 매번 제곱근을 취하면서 이 step을 반복하는 것입니다.
+@@ 35
+Gaussian에서는 Schur complement에 두 번째 의미가 있습니다. \(\mathbf{x}_a\)를 적분해 없앴을 때 \(\mathbf{x}_b\)의 분포인 <strong>marginal</strong>(주변 분포) \(p(\mathbf{x}_b)\)의 information matrix입니다. \(\mathbf{x}_a\)의 알려진 값에 대해 <strong>conditioning</strong>(조건화)하는 것이 이 변수를 없애는 또 다른 방법입니다. 두 연산은 Gaussian의 두 형태 사이에서 역할이 서로 바뀝니다:
+@@ 36
+구하려는 것
+@@ 37
+=
+@@ 38
+=
+@@ 39
+marginal p(x_b): x_a를 잊음
+@@ 40
+블록 Σ_bb만 남기고 나머지는 지움
+@@ 41
+=
+@@ 42
+conditional p(x_b | x_a): x_a를 앎
+@@ 43
+=
+@@ 44
+블록 Λ_bb만 남기고 나머지는 지움
+@@ 45
+marginal 행은 위의 블록 elimination에서 나옵니다. \(\boldsymbol{\Lambda}[\mathbf{u}; \mathbf{v}] = [\mathbf{0}; \mathbf{w}]\)를 풀면, 작아진 시스템에서 \(\mathbf{v} = \mathbf{S}^{-1}\mathbf{w}\)를 얻습니다. 여기서 \(\mathbf{S}\)는 Schur complement입니다. 그런데 \([\mathbf{u}; \mathbf{v}] = \boldsymbol{\Sigma}[\mathbf{0}; \mathbf{w}]\)이므로 \(\mathbf{v} = \boldsymbol{\Sigma}_{bb}\mathbf{w}\)입니다. 따라서 \(\boldsymbol{\Sigma}_{bb} = \mathbf{S}^{-1}\)입니다. 즉 marginal의 covariance는 Schur complement의 역행렬입니다.
+@@ 46
+직접 해 보기: 사슬로 이어진 숫자 세 개이므로 \(x_1\)과 \(x_3\)은 factor를 공유하지 않습니다. 가운데 변수를 두 방법으로 없애 본 다음, 이번에는 끝 변수를 없애 보십시오.
+@@ 47
+눈여겨볼 점: Λ에서 x₁과 x₃ 사이는 0인데, x₂를 marginalize하면 그 자리에 −0.50이 들어갑니다. 바로 fill-in입니다. x₂에 대해 conditioning하면 0이 그대로이고 타원도 기울지 않습니다. x₂를 알면 양 끝은 독립이기 때문입니다. x₁이나 x₃을 없애면 새 원소가 생기지 않습니다. 끝 변수는 이웃이 하나뿐이기 때문입니다.
+@@ 48
+더 깊이 (선택): smoothing은 sparse하게 유지되고 filtering은 그렇지 않은 이유
+@@ 49
+filter는 현재 pose만 유지하고, 로봇이 움직이면 지난 pose를 곧바로 marginalize합니다. 위 규칙에 따라 이런 step마다 그 pose에서 본 모든 landmark가 서로, 그리고 다음 pose와 이어집니다. 얼마 지나지 않아 landmark들에 대한 information matrix는 꽉 찹니다. 이 장처럼 trajectory 전체를 문제에 남겨 두면 어떤 pose도 marginalize되지 않으므로, \(\boldsymbol{\Lambda}\)는 factor graph의 sparse 패턴을 유지합니다. 변수는 많아지지만 nonzero는 훨씬 적습니다.
+@@ 50
+<strong>"변수를 marginalize하려면 Λ에서 그 행과 열을 지우면 된다."</strong> 그것은 conditioning입니다. 행과 열을 지워서 marginalize가 되는 것은 covariance form에서뿐입니다.
+@@ 51
+<strong>"fill-in은 반올림 오차다."</strong> fill-in은 구조적인 것입니다. 이웃을 이어 주던 변수를 없애면서 생긴 실제 의존 관계입니다.
+@@ 52
+<strong>"back-substitution에는 R의 역행렬이 필요하다."</strong> 스칼라 변수라면 각 step은 나눗셈 한 번입니다. 블록 변수라면 작은 삼각 시스템을 푸는 것입니다.
+@@ 53
+Q1. 스칼라 변수에 대한 [R | d]의 한 행이 2·x₁ − 1·x₂ = 3이고, back-substitution으로 이미 x₂ = 1을 구했습니다. x₁은 얼마입니까?
+@@ 54
+Q2. 같은 행에서 x₂가 주어졌을 때 x₁의 분산은 얼마입니까?
+@@ 55
+Σ = (RᵀR)⁻¹ = 1/2² = 0.25. x₂의 값에는 의존하지 않습니다.
+@@ 56
+Q3. G가 경로 a – b – c – d입니다. 어느 변수를 가장 먼저 소거하면 fill-in이 생깁니까?
+@@ 57
+어느 것도 만들지 않음
+@@ 58
+b에는 서로 이어지지 않은 두 이웃 a와 c가 있습니다. b를 소거하면 edge a – c가 추가됩니다. 양 끝인 a와 d는 이웃이 하나씩이므로 이을 것이 없습니다.
+@@ 59
+Q4. 두 스칼라의 Λ = [[2, −1], [−1, 2]]입니다. x₂의 marginal의 information(분산의 역수)은 얼마입니까?
+@@ 60
+Schur complement: 2 − (−1)(1/2)(−1) = 1.5. covariance로 확인하면 Σ = Λ⁻¹ = (1/3)[[2, 1], [1, 2]]이므로 x₂의 분산은 2/3 = 1/1.5입니다.
+@@ 61
+Q5. 같은 Λ에서, x₁을 알 때 x₂의 information은 얼마입니까?
+@@ 62
+information form에서 conditioning은 블록을 그대로 남깁니다: Λ₂₂ = 2. x₁을 알면 도움이 될 뿐이며, 실제로 분산 1/2은 marginal 분산 2/3보다 작습니다.
+@@ 63
+\([\mathbf{R} \mid \mathbf{d}]\)의 행 \(j\)는 conditional \(p(\mathbf{x}_j \mid \mathbf{s}_j)\)입니다. 평균은 \(\mathbf{R}_j^{-1}(\mathbf{d}_j - \mathbf{T}_j\mathbf{s}_j)\), covariance는 \((\mathbf{R}_j\T\mathbf{R}_j)^{-1}\)입니다. 상삼각이라는 것은 cycle이 없다는 뜻입니다.
+@@ 64
+elimination의 역순으로 하는 back-substitution은 각 변수를 conditional 평균으로 정합니다. 그것이 MAP 추정값입니다.
+@@ 65
+변수를 소거하면 현재 이웃이 모두 이어집니다. 새 edge가 fill-in입니다. minimum-degree ordering은 separator를 작게 유지합니다.
+@@ 66
+information form에서 elimination은 Schur complement \(\boldsymbol{\Lambda}_{bb} - \boldsymbol{\Lambda}_{ba}\boldsymbol{\Lambda}_{aa}^{-1}\boldsymbol{\Lambda}_{ab}\)이며, 이것이 marginal의 information matrix입니다.
+@@ 67
+marginalization은 covariance form에서는 쉽고, information form에서는 Schur complement 계산이 필요합니다. conditioning은 그 반대입니다.
+@@ 68
+<em>SLAM Handbook</em>, §1.6.3 "Sparse Cholesky Factor as a Bayes Net", pp. 45–46, 식 (1.50)–(1.53); fill-in과 COLAMD는 §1.5.3, p. 38.
+@@ 69
+Barfoot, <em>State Estimation for Robotics</em>, 2017 (joint Gaussian의 marginal과 conditional, Schur complement).
+@@ 70
+=
+@@ 71
+Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (information form filter, 그리고 pose를 marginalize하면 sparsity가 어떻게 되는지).

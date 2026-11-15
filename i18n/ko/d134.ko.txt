@@ -1,0 +1,172 @@
+@@ 1
+<span class="eyebrow">23주차 · Day 2</span>
+@@ 2
+Feature, generator, mask: map을 만들 때 쓰는 세 가지 모델 계열
+@@ 3
+오늘이 끝나면 cosine similarity를 계산하고, 텍스트 prompt로 zero-shot classifier를 만들고, feature model, generative model, class-agnostic segmenter가 각각 무엇을 돌려주는지 말할 수 있습니다.
+@@ 4
+약 60분 · §17.2, pp. 495–499 읽기 (5쪽) · 23주차 Day 1 필요
+@@ 5
+먼저 읽기: §17.2, pp. 495–499
+@@ 6
+encoder의 출력으로서 feature의 정의, \(\mathbf{f}_x = f_{\mathcal{X}}(x) \in \R^d\) (p. 496).
+@@ 7
+zero-shot classifier인 식 (17.1)과, 그 뒤에 나오는 class 집합을 다시 정의하는 것에 관한 문장 (p. 497).
+@@ 8
+§17.2.1 끝에 있는 patch-level CLIP feature에 관한 주의 (p. 497).
+@@ 9
+함수 \(\texttt{Seg}(\cdot)\)가 무엇을 돌려주는지, 그리고 그 mask가 왜 class-agnostic이어야 하는지 (p. 499).
+@@ 10
+open-world mapping은 세 종류의 pretrained 모델을 씁니다. <strong>feature-based</strong> 모델은 이미지나 텍스트를 vector로 바꾸고, 모든 일을 vector 비교로 처리합니다. <strong>generative</strong> 모델은 prompt로부터 새 텍스트를 만듭니다. <strong>class-agnostic segmenter</strong>는 이미지를 이름 없이 물체 모양의 영역으로 자릅니다. 내일의 map은 이 셋을 조합해서 만듭니다.
+@@ 11
+1. feature는 vector, 유사도는 각도
+@@ 12
+<strong>feature</strong>(특징)는 deep network가 입력 하나에 대해 출력하는 실수 vector입니다. embedding, representation, code라고도 부릅니다. 책은 network를 함수 뒤에 감춥니다. modality \(\mathcal{X}\)(텍스트, 이미지, 소리)의 입력을 받는 <strong>encoder</strong> \(f_{\mathcal{X}}\)는 입력 \(x\)를 \(d\)차원 feature \(\mathbf{f}_x = f_{\mathcal{X}}(x) \in \R^d\)로 보냅니다. 중요한 성질은 feature space의 거리가 의미 있는 유사도를 잰다는 것입니다. 그래서 "이 caption이 이 이미지와 얼마나 비슷한가?"가 계산 문제가 됩니다. <span class="src">§17.2.1 · p. 496</span>
+@@ 13
+표준 척도는 <strong>cosine similarity</strong>(코사인 유사도)로, 원점에서 화살표로 그린 두 feature 사이 각도의 cosine입니다: <span class="src">§17.2.1 · p. 496</span>
+@@ 14
+<strong>숫자로 보기.</strong> \(\mathbf{a} = (3, 4)\), \(\mathbf{b} = (4, 3)\): \(\langle \mathbf{a}, \mathbf{b} \rangle = 12 + 12 = 24\)이고 두 norm은 모두 5이므로 \(\cos\theta = 24/25 = 0.96\), 각도로는 약 16°입니다. 값은 1(같은 방향)에서 0(수직, 무관)을 거쳐 −1(반대 방향)까지이며, 길이는 무시합니다.
+@@ 15 attr
+단위원의 일부와 그 중심에서 나온 단위 벡터 세 개. 개 사진의 image feature와 개 사진이라는 텍스트의 text feature는 16도 떨어져 있고 cosine은 0.96입니다. 자동차 사진이라는 텍스트의 text feature는 image feature에서 70도 떨어져 있고 cosine은 0.34입니다.
+@@ 16
+텍스트
+@@ 17
+이미지
+@@ 18
+image feature: 개 사진
+@@ 19
+“개 사진”: 16°, cos 0.96
+@@ 20
+“자동차 사진”: 70°, cos 0.34
+@@ 21
+단위원: 모든 feature의 길이는 1
+@@ 22
+2차원으로 그린 aligned feature space. 짝이 맞는 이미지와 텍스트는 거의 같은 방향을 가리킵니다. 실제 공간은 수백 차원이지만, 비교는 똑같이 각도로 합니다.
+@@ 23
+빈틈 채우기: 단위 벡터, 내적, 거리
+@@ 24
+CLIP은 <strong>unit-norm</strong> feature, 즉 \(\norm{\mathbf{f}} = 1\)인 feature를 출력합니다. <span class="src">§17.2.1 · p. 497</span> 그러면 위 식의 분모는 1이고 cosine similarity는 그냥 내적 \(\langle \mathbf{a}, \mathbf{b} \rangle\)입니다. 이 장의 모든 식이 \(\langle \cdot, \cdot \rangle\)로 쓰인 이유입니다.
+@@ 25
+단위 벡터에서는 "각도가 가깝다"와 "거리가 가깝다"가 같은 말입니다. 제곱 거리를 전개하면:
+@@ 26
+예로 확인해 봅시다. \(\mathbf{a}/5 = (0.6, 0.8)\), \(\mathbf{b}/5 = (0.8, 0.6)\), 차이는 \((-0.2, 0.2)\), 제곱 길이는 \(0.08 = 2 - 2 \times 0.96\)입니다. 따라서 cosine이 큰 순서와 Euclidean 거리가 작은 순서는 같습니다. 단위 길이가 아닌 vector(내일처럼 평균한 뒤의 vector)는 먼저 norm으로 나눠야 합니다.
+@@ 27
+2. 세 가지 feature extractor
+@@ 28
+모델 (책의 설명 기준)
+@@ 29
+입력
+@@ 30
+학습 방법
+@@ 31
+얻는 것
+@@ 32
+=
+@@ 33
+텍스트
+@@ 34
+가려진 단어 예측. SentenceBERT는 pooling과 fine-tuning을 더함
+@@ 35
+BERT: token마다 feature 하나. SentenceBERT: 문장마다 하나, cosine similarity로 비교
+@@ 36
+=
+@@ 37
+이미지
+@@ 38
+student network가 teacher의 예측을 맞춤. teacher는 global crop(이미지의 50% 초과)을 보고, student는 local crop(50% 미만)도 봄. DINOv2는 선별한 이미지 142M 장을 더함
+@@ 39
+이미지 단위 feature 하나, 그리고 작은 patch(예: 8×8 픽셀)마다 patch 단위 feature
+@@ 40
+=
+@@ 41
+이미지와 텍스트
+@@ 42
+인터넷에서 모은 이미지–caption 쌍 400M 개에 대한 contrastive loss
+@@ 43
+하나의 aligned space 안에 놓인 unit feature \(\mathbf{f}_I = f_{\text{image}}(\mathbf{I})\)와 \(\mathbf{f}_T = f_{\text{text}}(T)\)
+@@ 44
+<span class="src">§17.2.1 · pp. 496–497</span> DINO의 feature는 vision task에 바로 쓰입니다. feature space의 nearest neighbour로 이미지를 분류하거나 검색합니다. 하지만 DINO에는 text encoder가 없어서 단어를 입력할 수 없습니다. CLIP을 규정하는 성질은 <strong>aligned feature space</strong>(정렬된 feature 공간)입니다. 이미지와 그 caption이 가까이 놓이도록 학습한 encoder 두 개입니다 (어제의 loss).
+@@ 45
+patch feature는 몇 개일까요? 224×224 이미지와 8×8 patch(이 예의 크기)라면 한 변에 \(224/8 = 28\)개 patch이므로, vector 하나 대신 \(28 \times 28 = 784\)개가 나옵니다. 책이 주는 경고가 하나 있습니다. CLIP의 image encoder에서도 patch-level feature를 꺼낼 수는 있지만, 그것이 language-aligned일 거라고 기대해서는 안 되며, 연구들에 따르면 vision과 3D task에서 DINO의 feature보다 약합니다. <span class="src">§17.2.1 · p. 497</span>
+@@ 46
+3. 문장으로 만든 classifier
+@@ 47
+aligned feature가 있으면 classifier에는 학습이 필요 없습니다. 각 class를 텍스트로, 필요하면 template에 넣어 쓰고 ("개 그림", "고양이 그림"), 각 prompt를 encode해서 \(\mathbf{f}_c\)를 얻은 다음 이렇게 예측합니다
+@@ 48
+이것이 <strong>zero-shot classifier</strong>입니다. 이 class들의 label이 붙은 예를 한 번도 본 적이 없습니다. 문제를 바꾸려면 목록 \(\mathsf{C}\)를 바꾸면 됩니다. <span class="src">§17.2.1 · p. 497</span>
+@@ 49
+직접 해 보기: 이미지는 안락의자이고 class 집합에는 "의자"가 없습니다. "의자"를 추가하세요. 그다음 소다 캔을 고르고, "음료"를 추가하기 전과 후에 classifier가 무엇이라고 하는지 보세요.
+@@ 50
+눈여겨볼 점: {소파, 텔레비전, 식물}에서는 안락의자가 소파(0.95)로 불리고, "의자"(0.99)를 추가하면 재학습 없이 답이 바뀝니다. 소다 캔은 처음 세 class 모두와 0.00점이지만 arg max는 여전히 그중 하나를 돌려줍니다. classifier를 어떻게 얻었든 class 집합은 닫힌 집합입니다.
+@@ 51
+4. Generative model: 한 번에 token 하나씩
+@@ 52
+<strong>large language model (LLM)</strong>은 텍스트를 생성하도록 학습한 transformer입니다. 텍스트는 먼저 <strong>token</strong>(고정된 vocabulary에 있는 단어, sub-word, 문자, byte)으로 잘리고, token마다 학습 가능한 embedding이 있습니다. 학습 목표는 <strong>next-token prediction</strong>입니다. 처음 \(T-1\)개 token이 주어지면 다음 token의 확률 \(p(w_T \mid w_{1:T-1})\)을 출력합니다. <span class="src">§17.2.2 · p. 498</span>
+@@ 53
+빈틈 채우기: token 하나를 예측하는 것만으로 문단을 쓸 수 있는 이유
+@@ 54
+확률의 chain rule은 어떤 joint distribution이든 다음 항목의 conditional들로 분해합니다:
+@@ 55
+따라서 다음 token의 모델은 곧 텍스트 전체의 모델입니다. 생성은 이 분해를 앞에서부터 차례로 실행하는 것이며, 책은 이를 <strong>autoregressive</strong>(자기회귀)라고 부릅니다:
+@@ 56
+새 token 하나마다 매우 큰 network를 한 번 통과해야 합니다. CLIP과 비교해 보세요. 이미지당 한 번 통과한 뒤 내적만 하면 됩니다. 책이 generative inference는 "feature를 추출하는 것보다 계산량이 많은 경향이 있다"고 말하는 이유입니다. <span class="src">§17.2 · p. 495</span>
+@@ 57
+LLM은 지시, 입력, 출력을 텍스트에 담을 수 있는 어떤 task에도 적용할 수 있으며, prompt의 문구가 중요합니다. 책은 두 가지 prompt 기법을 꼽습니다. <strong>chain-of-thought</strong>(모델에게 단계별로 추론하라고 요청하기)와 <strong>in-context learning</strong>(prompt에 입력–출력 예를 넣기)입니다. <span class="src">§17.2.2 · p. 498</span> <strong>vision language model (VLM)</strong>은 image token도 받는 LLM입니다. 책의 예인 LLaVA는 CLIP vision encoder를 LLM에 연결하고 vision-and-language 데이터로 학습합니다. 알맞은 prompt를 주면 VLM은 이미지를 분류하거나, caption을 달거나, 이미지에 관한 질문에 답할 수 있습니다. <span class="src">§17.2.2 · p. 499</span> 책의 2026년 4월 판은 LLaMa 계열과 GPT 모델을 널리 쓰이는 것으로 꼽으며, 새 모델이 자주 나온다고 덧붙입니다.
+@@ 58
+5. 이름 없는 mask
+@@ 59
+세 번째 도구는 "어떤 픽셀들이 함께 묶이는가?"에 답합니다. 너비 \(W\), 높이 \(H\)인 RGB 이미지 \(\mathbf{I}\)에 대해 segmenter는 그럴듯한 물체마다 하나씩, binary mask \(\mathbf{Z}_i \in \{0,1\}^{H \times W}\)의 집합을 돌려줍니다. 픽셀 \((u,v)\)가 영역 \(i\)에 속하면 \(\mathbf{Z}_i[u,v] = 1\)입니다. 책은 이 함수를 \(\texttt{Seg}(\cdot)\)로 씁니다. mask는 <strong>class-agnostic</strong>이어야 합니다. 즉 class 목록 없이 제안되어야 하며, 그렇지 않으면 segmenter가 closed set을 다시 들여옵니다. <span class="src">§17.2.3 · p. 499</span>
+@@ 60
+주요 도구는 Segment Anything Model (SAM)입니다. SAM은 <strong>promptable</strong>합니다. 픽셀 좌표, bounding box, 또는 다른 mask를 주면 mask를 예측합니다. 이미지 전체를 처리해서 그 안의 instance마다 mask를 돌려줄 수도 있습니다. 위의 모델들과 달리 SAM은 대규모 <em>supervised</em> learning으로 학습합니다. open-vocabulary detector의 box를 다듬는 데도 쓸 수 있으며, 그러면 물체 윤곽이 더 좋아지고 inference 시간이 짧아집니다. <span class="src">§17.2.3 · p. 499</span>
+@@ 61
+<strong>"CLIP은 모든 픽셀에 language-aligned feature를 준다."</strong> CLIP의 aligned feature는 이미지 전체를 기술합니다. patch feature를 꺼낼 수는 있지만, 책은 그것이 language-aligned일 거라고 기대하지 말라고 경고합니다.
+@@ 62
+<strong>"내적이 크면 언제나 더 비슷하다."</strong> 단위 벡터일 때만 그렇습니다. 정규화하지 않으면 긴 vector가 길이만으로 이깁니다.
+@@ 63
+Q1. a = (1, 2, 2)와 b = (2, 1, 2)의 cosine similarity는 얼마입니까?
+@@ 64
+내적은 2 + 2 + 4 = 8이고 두 norm은 모두 √9 = 3이므로, cosine은 8/9 = 0.89입니다.
+@@ 65
+Q2. 한 이미지의 unit feature가 (0.6, 0.8)입니다. class prompt를 encode하면 개 (1, 0), 고양이 (0, 1), 여우 (0.8, 0.6)입니다. 식 (17.1)은 무엇을 예측합니까?
+@@ 66
+개, 점수 0.6
+@@ 67
+고양이, 점수 0.8
+@@ 68
+없음. 1에 도달한 점수가 없기 때문
+@@ 69
+여우, 점수 0.96
+@@ 70
+점수: 개 0.6, 고양이 0.8, 여우 0.48 + 0.48 = 0.96. arg max는 크기와 상관없이 가장 큰 것을 고릅니다.
+@@ 71
+Q3. 두 unit feature 사이의 제곱 Euclidean 거리가 0.5입니다. 두 feature의 cosine similarity는 얼마입니까?
+@@ 72
+단위 벡터에서는 제곱 거리가 2 − 2·cos이므로 cos = (2 − 0.5)/2 = 0.75입니다.
+@@ 73
+Q4. 책은 왜 segmentation mask가 class-agnostic이어야 한다고 요구합니까?
+@@ 74
+class-agnostic mask는 binary이고 다른 mask는 그렇지 않기 때문
+@@ 75
+SAM은 supervision으로 학습할 수 없기 때문
+@@ 76
+class 목록에 묶인 segmenter는 목록 밖의 물체를 놓쳐서 feature의 open vocabulary를 무너뜨리기 때문
+@@ 77
+class 이름이 붙은 mask는 bounding box로 바꿀 수 없기 때문
+@@ 78
+어떤 영역이 feature를 얻을지는 mask가 정합니다. 목록에 있는 class만 mask를 얻으면 나머지는 map에 아예 들어오지 못합니다.
+@@ 79
+encoder는 입력을 feature vector로 보냅니다. cosine similarity(unit feature에서는 내적)는 두 입력이 얼마나 관련 있는지 잽니다.
+@@ 80
+DINO는 patch 단위를 포함해 강력한 vision 전용 feature를 줍니다. CLIP은 이미지와 텍스트를 한 공간에 정렬합니다.
+@@ 81
+식 (17.1)은 텍스트 prompt로 classifier를 만듭니다. class 이름을 encode하고 유사도의 arg max를 취합니다.
+@@ 82
+LLM은 next-token prediction을 반복해서 텍스트를 생성하고, VLM은 이미지도 받습니다. 둘 다 feature 추출보다 능력이 크고 비용도 큽니다.
+@@ 83
+\(\texttt{Seg}(\cdot)\)(보통 SAM)는 class-agnostic binary mask를 돌려줍니다.
+@@ 84
+<em>SLAM Handbook</em>, §17.2 "Foundation Models for Spatial AI" (§17.2.1–17.2.3), pp. 495–499, 식 (17.1)과 Figure 17.4 포함.
+@@ 85
+cosine similarity, 단위 벡터의 거리 항등식, 확률의 chain rule은 표준적인 내용입니다. Goodfellow, Bengio, Courville, <em>Deep Learning</em>, 2016을 보세요.
+@@ 86
+위젯의 8차원 feature는 이 레슨을 위해 손으로 만든 것이며 CLIP의 출력이 아닙니다.

@@ -1,0 +1,174 @@
+@@ 1
+<span class="eyebrow">Week 7 · Review</span>
+@@ 2
+Week 7 review: gradients through an optimizer
+@@ 3
+After today you can set up a bilevel problem, compute its upper-level gradient by unrolling and by implicit differentiation on paper, differentiate simple expressions on Lie groups, and say what a differentiable optimizer library has to provide.
+@@ 4
+A learned front-end with parameters \(\mathbf{y}\) feeds a back-end that solves a nonlinear least squares problem for \(\mathbf{x}^*\). Training the front-end on the final estimate is a bilevel problem, and its gradient needs \(\partial\mathbf{x}^*/\partial\mathbf{y}\). Unrolled differentiation gets it by backpropagating through the solver's iterations: exact for the iterations that ran, with memory that grows with their number unless the backward pass is truncated. Implicit differentiation gets it from the optimality condition: one linear solve with the Hessian at the solution, no stored iterates, valid only at convergence. Both rely on AutoDiff, which on SLAM variables needs Jacobians defined with ⊕ and ⊖ on Lie groups, numerically safe \(\Exp\) and \(\Log\), and second-order robust optimizers built from differentiable parts.
+@@ 5
+Lower level: nonlinear least squares
+@@ 6
+(4.1), §4.1, p. 102 · Day 1
+@@ 7
+Bilevel problem
+@@ 8
+(4.2), §4.2, p. 103 · Day 1
+@@ 9
+Upper-level gradient
+@@ 10
+(4.3), p. 104 · Day 1
+@@ 11
+Unrolled solver and its sensitivity
+@@ 12
+(4.4), p. 104 · Day 2
+@@ 13
+Gradient-descent step: its two partials
+@@ 14
+from (4.5), (4.9), pp. 105–106 · Day 2
+@@ 15
+Truncation to the last M steps (scalar, near convergence)
+@@ 16
+fraction missing \(\approx A^M\)
+@@ 17
+§4.2.2, p. 106 · Day 2
+@@ 18
+Implicit derivative
+@@ 19
+(4.12), p. 107 · Day 3
+@@ 20
+Adjoint form
+@@ 21
+(4.13), (4.17), pp. 107–108 · Day 3
+@@ 22
+Hessian-vector product; iteration for q
+@@ 23
+(4.15), (4.16), p. 108 · Day 3
+@@ 24
+Jacobian on a Lie group
+@@ 25
+(4.23), p. 110 · Day 4
+@@ 26
+Inversion and composition
+@@ 27
+(4.32)–(4.34), p. 112 · Day 4
+@@ 28
+LM step; robust correction
+@@ 29
+(4.43), (4.46), pp. 115–116 · Day 5
+@@ 30
+Here \(\mathbf{H} = \partial^2\mathcal{L}/\partial\mathbf{x}\partial\mathbf{x}\), \(\mathbf{H}_{xy} = \partial^2\mathcal{L}/\partial\mathbf{x}\partial\mathbf{y}\), and \(\mathbf{v} = (\partial\mathcal{U}/\partial\mathbf{x}^*)\T\).
+@@ 31
+One experiment before the quiz. Predict first, then check: with Gauss-Newton as the inner solver, how many inner steps does the unrolled gradient need to match the reference to four decimals? And what happens to the truncated gradient at M = 1?
+@@ 32
+Notice that with Gauss-Newton two steps are enough (−0.0447), and that backpropagating through only the last step (M = 1, with K = 5) gives −0.0432, within about 3% of the full gradient. With gradient descent at η = 0.1 the same truncation loses 18%. Fast inner solvers make both unrolling and truncation cheap.
+@@ 33
+Q1. A function has 3 inputs and 500 outputs. Which AutoDiff mode computes its full Jacobian with the fewest passes, and how many?
+@@ 34
+Reverse mode, 3 passes
+@@ 35
+Forward mode, 3 passes
+@@ 36
+Reverse mode, 1 pass
+@@ 37
+Forward mode, 500 passes
+@@ 38
+Forward mode needs one pass per input (3); reverse mode one per output (500).
+@@ 39
+Q2. With n back-end variables and m network parameters, which factor of the upper-level gradient (4.3) is an n × m matrix?
+@@ 40
+The gradient of U itself
+@@ 41
+∂U/∂y is 1 × m, ∂U/∂x* is 1 × n, and ∂x*/∂y is n × m. It is never formed in practice; only its product with ∂U/∂x* is needed.
+@@ 42
+Q3. An unrolled scalar solver has constant A = 0.5 and B = 0.3, and the initial guess does not depend on y. What is the sensitivity S₂ after two steps?
+@@ 43
+S₁ = 0.5·0 + 0.3 = 0.3 and S₂ = 0.5·0.3 + 0.3 = 0.45. The limit B/(1 − A) = 0.6 is the converged value.
+@@ 44
+Q4. Near the solution an inner solver multiplies the adjoint by A = 0.9 per backward step. About how many backward steps M keep the truncation loss below 1%?
+@@ 45
+The missing fraction is 0.9^M. 0.9^M ≤ 0.01 needs M ≥ ln(0.01)/ln(0.9) = 43.7. A slowly converging solver needs a long backward pass.
+@@ 46
+Q5. Let L(x, y) = ½(2x − y)² + ½x². What is dx*/dy by implicit differentiation?
+@@ 47
+∂L/∂x = 2(2x − y) + x = 5x − 2y, so H = 5 and ∂²L/∂x∂y = −2. dx*/dy = −(−2)/5 = 0.4. Check: x* = 2y/5.
+@@ 48
+Q6. The inner solver contains an accept-or-reject test for each step, which is not differentiable, but it does converge. Which method still gives a valid gradient?
+@@ 49
+Forward-mode unrolling
+@@ 50
+Reverse-mode unrolling
+@@ 51
+Truncated unrolling
+@@ 52
+Implicit differentiation
+@@ 53
+Implicit differentiation uses only derivatives of the cost L at the solution. How the solver reached it is irrelevant.
+@@ 54
+Q7. What is the right Jacobian of f(χ) = χ⁻¹ ∘ χ₁ with respect to χ?
+@@ 55
+−Ad of (χ₁⁻¹ ∘ χ)
+@@ 56
+−Ad of χ
+@@ 57
+Ad of χ₁⁻¹
+@@ 58
+Chain rule: inversion gives −Ad of χ, then composition with respect to the first factor gives Ad of χ₁⁻¹. Their product is −Ad of χ₁⁻¹ times Ad of χ = −Ad of (χ₁⁻¹ ∘ χ).
+@@ 59
+Q8. With the Cauchy kernel ρ(c) = log(1 + c) and Σ = 1, a residual r = 1 enters the corrected least-squares problem (4.46) as which value?
+@@ 60
+c = 1, ρ′ = 1/2, and √(1/2) × 1 = 0.707.
+@@ 61
+Let \(f(a, b) = (ab + a)^2\). Split it into elementary operations and run reverse-mode AutoDiff by hand at \(a = 2\), \(b = 3\). Check both partial derivatives against the formula.
+@@ 62
+Forward evaluation: \(v_1 = ab = 6\), \(v_2 = v_1 + a = 8\), \(f = v_2^2 = 64\).
+@@ 63
+Backward: \(\bar f = 1\); \(\bar v_2 = 2v_2\cdot\bar f = 16\); \(\bar v_1 = \bar v_2 = 16\). The input \(a\) is used twice, so its adjoint is a sum: \(\bar a = \bar v_1\cdot b + \bar v_2\cdot 1 = 48 + 16 = 64\). \(\bar b = \bar v_1\cdot a = 32\).
+@@ 64
+Check: \(f = a^2(b+1)^2\), so \(\partial f/\partial a = 2a(b+1)^2 = 64\) and \(\partial f/\partial b = 2a^2(b+1) = 32\).
+@@ 65
+Lower level \(\mathcal{L}(x, y) = \tfrac12(x-y)^2 + \tfrac12x^2\), upper level \(\mathcal{U} = \tfrac12(x-1)^2\). Run two steps of gradient descent with \(\eta = 0.25\) from \(x_0 = 0\) at \(y = 4\). Compute \(x_1, x_2\), the sensitivities \(S_1, S_2\), and the unrolled gradient \(d\,\mathcal{U}(x_2)/dy\). Compare with the gradient at the true solution, and give \(S_T\) for general \(T\).
+@@ 66
+\(\partial\mathcal{L}/\partial x = 2x - y\), \(H = 2\), \(H_{xy} = -1\). So \(A = 1 - 2\eta = 0.5\) and \(B = \eta = 0.25\) at every step.
+@@ 67
+Unrolled gradient: \((x_2 - 1)\,S_2 = 0.5\times 0.375 = 0.1875\).
+@@ 68
+True solution: \(x^* = y/2 = 2\), \(dx^*/dy = -H^{-1}H_{xy} = 0.5\), gradient \((2-1)\times0.5 = 0.5\). Two steps give less than half of it, both because \(x_2\) is short of \(x^*\) and because \(S_2\) is short of 0.5.
+@@ 69
+General \(T\): \(S_T = B(1 + A + \dots + A^{T-1}) = 0.5\,(1 - 0.5^T)\), which tends to 0.5.
+@@ 70
+The week's toy problem at \(y = 1\): \(\mathcal{L} = \tfrac12(x^2-y)^2 + \tfrac12(x-1)^2\), \(\mathcal{U} = \tfrac12(x^*-1.5)^2\). (a) Verify that \(x^* = 1\). (b) Compute \(H\), \(H_{xy}\), \(v\), the adjoint \(q\), and \(\nabla_y\,\mathcal{U}\). (c) Run three iterations of Algorithm 2 with \(\eta = 0.1\) from \(q_0 = 0\) and state the factor by which the error shrinks. (d) Take one upper-level step with step size 2.
+@@ 71
+(a) \(\partial\mathcal{L}/\partial x = 2x(x^2 - y) + (x-1) = 2(0) + 0 = 0\) at \(x = 1, y = 1\).
+@@ 72
+(c) \(q_k = q_{k-1} - 0.1(5q_{k-1} + 0.5)\): \(q_1 = -0.05\), \(q_2 = -0.075\), \(q_3 = -0.0875\). The error \(q_k - (-0.1)\) is \(0.05, 0.025, 0.0125\): it halves each step, the factor \(1 - \eta H = 0.5\).
+@@ 73
+(d) \(y \leftarrow 1 - 2(-0.2) = 1.4\). The measurement is raised, which moves \(x^*\) up toward the target 1.5.
+@@ 74
+A pose-graph factor between poses \(\boldsymbol{\chi}_a\) and \(\boldsymbol{\chi}_b\) with measurement \(\mathbf{Z}\) has the error element \(\mathbf{E} = \mathbf{Z}^{-1}\circ\boldsymbol{\chi}_a^{-1}\circ\boldsymbol{\chi}_b\). Using the blocks of Day 4 and the chain rule, find the right Jacobians of \(\mathbf{E}\) with respect to \(\boldsymbol{\chi}_b\) and \(\boldsymbol{\chi}_a\). Verify the second one directly from the definition, and check both on SO(2).
+@@ 75
+With respect to \(\boldsymbol{\chi}_b\): it is the last factor of the product, so the Jacobian is \(\mathbf{I}\) (4.34).
+@@ 76
+With respect to \(\boldsymbol{\chi}_a\), in three stages. Inversion: \(-\Ad_{\boldsymbol{\chi}_a}\) (4.32). Then \(\boldsymbol{\chi}_a^{-1}\circ\boldsymbol{\chi}_b\) with respect to its first factor: \(\Ad_{\boldsymbol{\chi}_b^{-1}}\) (4.33). Then composing with \(\mathbf{Z}^{-1}\) on the left, where our quantity is the second factor: \(\mathbf{I}\). Product:
+@@ 77
+Directly: \(\mathbf{Z}^{-1}(\boldsymbol{\chi}_a\Exp(\boldsymbol{\tau}))^{-1}\boldsymbol{\chi}_b = \mathbf{Z}^{-1}\Exp(-\boldsymbol{\tau})\,\boldsymbol{\chi}_a^{-1}\boldsymbol{\chi}_b\). Write \(\mathbf{D} = \boldsymbol{\chi}_a^{-1}\boldsymbol{\chi}_b\). Then \(\Exp(-\boldsymbol{\tau})\,\mathbf{D} = \mathbf{D}\,\big(\mathbf{D}^{-1}\Exp(-\boldsymbol{\tau})\mathbf{D}\big) = \mathbf{D}\,\Exp(-\Ad_{\mathbf{D}^{-1}}\boldsymbol{\tau})\), so the output is \(\mathbf{E}\circ\Exp(-\Ad_{\mathbf{D}^{-1}}\boldsymbol{\tau})\) and the Jacobian is \(-\Ad_{\mathbf{D}^{-1}} = -\Ad_{\boldsymbol{\chi}_b^{-1}\boldsymbol{\chi}_a}\), as before.
+@@ 78
+SO(2): angles add, \(E = \theta_b - \theta_a - z\), with derivatives \(+1\) and \(-1\). The adjoint on SO(2) is 1, so the formulas give \(1\) and \(-1\).
+@@ 79
+The residual used in the cost is \(\Log(\mathbf{E})\); its Jacobians are these times the Jacobian of \(\Log\), which is close to \(\mathbf{I}\) when the error is small.
+@@ 80
+Say which variables and which cost belong to the upper and the lower level of a learned-front-end SLAM system.
+@@ 81
+Run forward and reverse AutoDiff on a five-node graph and state what one pass of each delivers.
+@@ 82
+Compute an unrolled sensitivity with \(\mathbf{S}_t = \mathbf{A}_t\mathbf{S}_{t-1} + \mathbf{B}_t\) and estimate the bias of truncation.
+@@ 83
+Derive \(\partial\mathbf{x}^*/\partial\mathbf{y} = -\mathbf{H}^{-1}\mathbf{H}_{xy}\) from the optimality condition and turn it into one adjoint solve.
+@@ 84
+Write the right Jacobians of inversion and composition and chain them.
+@@ 85
+Explain why Lie group code uses a Taylor branch near zero and how a robust kernel changes the LM system.
+@@ 86
+<em>SLAM Handbook</em>, Chapter 4 "Differentiable Optimization", pp. 101–118.
+@@ 87
+Griewank and Walther, <em>Evaluating Derivatives</em>, 2nd ed., 2008; Nocedal and Wright, <em>Numerical Optimization</em>, 2006; Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (for the methods used in the problems).

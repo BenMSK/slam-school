@@ -1,0 +1,344 @@
+@@ w11
+"aria-label":"Top view of a ground-truth path with two left turns, the estimated path as integrated, and the estimated path after rigid alignment to the ground truth, with error segments between matching poses"
+==
+"aria-label":"왼쪽으로 두 번 도는 ground-truth 경로, 적분한 그대로의 추정 경로, ground truth에 강체 정렬한 추정 경로를 위에서 본 그림. 대응하는 pose 사이에 오차 선분이 그려져 있습니다."
+@@ w11
+"start",{"text-anchor":"end"
+==
+"시작",{"text-anchor":"end"
+@@ w11
+"after rigid alignment"
+==
+"강체 정렬 후"
+@@ w11
+stat("RPE translation (RMSE)"
+==
+stat("RPE 이동 (RMSE)"
+@@ w11
+stat("RPE rotation (RMSE)"
+==
+stat("RPE 회전 (RMSE)"
+@@ w11
+"per "+dl+" m travelled"
+==
+"이동 "+dl+" m당"
+@@ w11
+"estimate, as integrated"
+==
+"추정 (적분 그대로)"
+@@ w11
+"estimate, aligned"
+==
+"추정 (정렬 후)"
+@@ w11
+"position error (every 4th pose)"
+==
+"위치 오차 (4번째 pose마다)"
+@@ w11
+h("div",{class:"vt"},"Two ways to score a trajectory")
+==
+h("div",{class:"vt"},"trajectory를 평가하는 두 방법")
+@@ w11
+"60 odometry steps of 1 m. The estimate integrates noisy steps (distance noise fixed at 1%), plus one sudden heading error at step 10."
+==
+"1 m짜리 odometry step 60개. 추정값은 noise가 낀 step(거리 noise는 1%로 고정)과, step 10에서 갑자기 생기는 heading 오차 하나를 적분합니다."
+@@ w11
+range("Heading noise per step"
+==
+range("step당 heading noise"
+@@ w11
+range("One-off heading error at step 10"
+==
+range("step 10의 일회성 heading 오차"
+@@ w11
+range("RPE interval Δ"
+==
+range("RPE 구간 Δ"
+@@ w11
+v=>v+" steps"
+==
+v=>v+" step"
+@@ w11
+button("New noise"
+==
+button("새 noise"
+@@ w11
+"aria-label":"Top view of two cameras side by side observing one point. A cloud of triangulated positions from noisy pixel measurements is stretched along the depth direction."
+==
+"aria-label":"나란히 놓인 두 카메라가 점 하나를 관측하는 모습을 위에서 본 그림. noise가 있는 픽셀 측정값으로 triangulation한 위치들의 구름이 depth 방향으로 길게 늘어나 있습니다."
+@@ w11
+"±1σ predicted"
+==
+"예측 ±1σ"
+@@ w11
+stat("Predicted depth σ"
+==
+stat("예측 depth σ"
+@@ w11
+stat("Measured depth spread"
+==
+stat("측정 depth 퍼짐"
+@@ w11
+"middle 68% of "+zs.length+" valid samples"
+==
+"유효 샘플 "+zs.length+"개 중 가운데 68%"
+@@ w11
+stat("Parallax angle"
+==
+stat("Parallax 각"
+@@ w11
+"between the two rays"
+==
+"두 ray 사이"
+@@ w11
+"cameras and viewing rays"
+==
+"카메라와 시선 ray"
+@@ w11
+"true point"
+==
+"실제 점"
+@@ w11
+"300 triangulations with pixel noise"
+==
+"픽셀 noise가 있는 triangulation 300개"
+@@ w11
+"predicted ±1σ in depth"
+==
+"예측 depth ±1σ"
+@@ w11
+h("div",{class:"vt"},"Depth from two views")
+==
+h("div",{class:"vt"},"두 view로 구하는 depth")
+@@ w11
+"Each camera measures the point's pixel column with Gaussian noise. Every pair of noisy measurements is triangulated; the dots are the results. The sideways axis is stretched about 7 times so that the baseline is visible."
+==
+"각 카메라는 점의 픽셀 열을 Gaussian noise와 함께 측정합니다. noise가 낀 측정값 쌍마다 triangulation하며, 점들이 그 결과입니다. baseline이 보이도록 옆 방향 축을 약 7배 늘렸습니다."
+@@ w11
+range("True depth z"
+==
+range("실제 depth z"
+@@ w11
+range("Pixel noise σ"
+==
+range("픽셀 noise σ"
+@@ w11
+"aria-label":"A 640 by 480 pixel image of a square grid on a wall. The dashed grid is the ideal pinhole image; the solid grid is the image after radial lens distortion."
+==
+"aria-label":"벽에 그린 정사각형 격자를 찍은 640 × 480 픽셀 이미지. 점선 격자는 이상적인 pinhole 이미지이고, 실선 격자는 radial 렌즈 distortion을 거친 이미지입니다."
+@@ w11
+stat("Horizontal field of view"
+==
+stat("가로 field of view"
+@@ w11
+stat("Shift of grid corner"
+==
+stat("격자 모서리 이동"
+@@ w11
+"no distortion"
+==
+"distortion 없음"
+@@ w11
+"inward: barrel"
+==
+"안쪽: barrel"
+@@ w11
+"outward: pincushion"
+==
+"바깥쪽: pincushion"
+@@ w11
+stat("Undistortion iterations"
+==
+stat("Undistortion iteration 수"
+@@ w11
+"no convergence"
+==
+"수렴 안 함"
+@@ w11
+"for that corner, to 10⁻⁶"
+==
+"그 모서리, 10⁻⁶까지"
+@@ w11
+"ideal pinhole image of the grid"
+==
+"격자의 이상적 pinhole 이미지"
+@@ w11
+"with radial distortion"
+==
+"radial distortion 적용"
+@@ w11
+"grid corner x′ = 0.8, y′ = 0.6"
+==
+"격자 모서리 x′ = 0.8, y′ = 0.6"
+@@ w11
+h("div",{class:"vt"},"Pinhole plus radial distortion")
+==
+h("div",{class:"vt"},"Pinhole + radial distortion")
+@@ w11
+"A grid with lines every 0.2 in normalized coordinates x′ = x/z, y′ = y/z, projected into a 640 × 480 image with principal point (320, 240)."
+==
+"normalized 좌표 x′ = x/z, y′ = y/z에서 0.2 간격으로 선을 그은 격자를, principal point가 (320, 240)인 640 × 480 이미지에 투영했습니다."
+@@ w11
+"aria-label":"Left: a small grey-level image of a rotated rectangle with a movable 5 by 5 probe window. Right: the smaller eigenvalue of the second-moment matrix at every pixel, which is large only at the four corners."
+==
+"aria-label":"왼쪽: 회전한 직사각형이 담긴 작은 회색조 이미지와, 움직일 수 있는 5 × 5 probe window. 오른쪽: 픽셀마다 계산한 second-moment matrix의 작은 eigenvalue로, 네 corner에서만 큽니다."
+@@ w11
+" ]   at pixel ("
+==
+" ]   픽셀 ("
+@@ w11
+stat("Larger eigenvalue λ₁"
+==
+stat("큰 eigenvalue λ₁"
+@@ w11
+stat("Smaller eigenvalue λ₂"
+==
+stat("작은 eigenvalue λ₂"
+@@ w11
+stat("Verdict"
+==
+stat("판정"
+@@ w11
+"image I(u, v)"
+==
+"이미지 I(u, v)"
+@@ w11
+"smaller eigenvalue λ₂ at each pixel"
+==
+"픽셀별 작은 eigenvalue λ₂"
+@@ w11
+h("div",{class:"vt"},"Flat, edge, or corner?")
+==
+h("div",{class:"vt"},"Flat, edge, corner 중 무엇일까?")
+@@ w11
+"The amber window is a 5 × 5 patch. Its second-moment matrix M sums the products of image gradients over the patch. Drag the window, or jump to a preset."
+==
+"주황색 window는 5 × 5 patch입니다. second-moment matrix M은 patch 전체에서 이미지 gradient의 곱을 더한 것입니다. window를 드래그하거나 preset으로 바로 이동해 보십시오."
+@@ w11
+range("Rotate the shape"
+==
+range("도형 회전"
+@@ w11
+range("Contrast"
+==
+range("대비"
+@@ w11
+"5 × 5 probe window (drag it)"
+==
+"5 × 5 probe window (드래그)"
+@@ w11
+"detected: local maximum of λ₂ above τ"
+==
+"검출: τ를 넘는 λ₂의 local maximum"
+@@ w11
+"size of λ₂"
+==
+"λ₂의 크기"
+@@ w11
+"aria-label":"Top: top view of two cameras and eight 3-D points, with the viewing ray of the selected point. Bottom: the two images. The epipolar line of the selected point is drawn in image 2, together with observed and predicted pixel positions."
+==
+"aria-label":"위: 두 카메라와 3D 점 여덟 개를 위에서 본 그림, 선택한 점의 시선 ray 포함. 아래: 두 이미지. 이미지 2에 선택한 점의 epipolar line과 관측 및 예측 픽셀 위치가 그려져 있습니다."
+@@ w11
+"top view: x to the right, z forward"
+==
+"위에서 본 그림: x는 오른쪽, z는 앞"
+@@ w11
+"camera 1"
+==
+"카메라 1"
+@@ w11
+"camera 2 (drag)"
+==
+"카메라 2 (드래그)"
+@@ w11
+"image 1"
+==
+"이미지 1"
+@@ w11
+"image 2"
+==
+"이미지 2"
+@@ w11
+stat("Selected point to its line"
+==
+stat("선택한 점과 그 line"
+@@ w11
+"no baseline"
+==
+"baseline 없음"
+@@ w11
+"|p₂ᵀ F p₁| as a distance"
+==
+"|p₂ᵀ F p₁|를 거리로"
+@@ w11
+stat("Other points to that line"
+==
+stat("다른 점과 그 line"
+@@ w11
+lo.toFixed(0)+" to "+hi.toFixed(0)
+==
+lo.toFixed(0)+" ~ "+hi.toFixed(0)
+@@ w11
+"nearest to farthest"
+==
+"최소 ~ 최대"
+@@ w11
+stat("Residual of selected point"
+==
+stat("선택한 점의 residual"
+@@ w11
+"‖z − π(·)‖ in image 2"
+==
+"이미지 2에서 ‖z − π(·)‖"
+@@ w11
+stat("E_reproj, image 2"
+==
+stat("E_reproj, 이미지 2"
+@@ w11
+"½ Σ ‖e‖², σ = 1 px, "+n+" points"
+==
+"½ Σ ‖e‖², σ = 1 px, 점 "+n+"개"
+@@ w11
+"selected point, its ray and epipolar line"
+==
+"선택한 점, 그 ray와 epipolar line"
+@@ w11
+"observed pixels"
+==
+"관측 픽셀"
+@@ w11
+"predicted pixels and residuals"
+==
+"예측 픽셀과 residual"
+@@ w11
+"+ epipole (camera 1 seen from camera 2)"
+==
+"+ epipole (카메라 2에서 본 카메라 1)"
+@@ w11
+range("Camera 2 yaw"
+==
+range("카메라 2 yaw"
+@@ w11
+range("Depth error of selected point"
+==
+range("선택한 점의 depth 오차"
+@@ w11
+range("Yaw error in camera 2's estimated pose"
+==
+range("카메라 2 추정 pose의 yaw 오차"
+@@ w11
+h("div",{class:"vt"},"Two views of the same points")
+==
+h("div",{class:"vt"},"같은 점들의 두 view")
+@@ w11
+"Both cameras have f = 300 px. Tap a point in image 1 (or press Next point) to select it. Image 2 shows where each point is observed and where the current estimate predicts it."
+==
+"두 카메라 모두 f = 300 px입니다. 이미지 1에서 점을 탭하면(또는 다음 점 버튼을 누르면) 선택됩니다. 이미지 2는 각 점이 관측된 위치와 현재 추정이 예측하는 위치를 보여 줍니다."
+@@ w11
+button("Next point"
+==
+button("다음 점"
+@@ w11
+button("Reset"
+==
+button("초기화"

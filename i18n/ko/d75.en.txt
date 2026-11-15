@@ -1,0 +1,240 @@
+@@ 1
+<span class="eyebrow">Week 13 · Day 3</span>
+@@ 2
+From registration to odometry: motion compensation, features, local maps
+@@ 3
+After today you can name the stages of a LiDAR odometry pipeline, undo motion distortion with a constant-velocity model, classify points as edge or plane from eigenvalues, and explain why scan-to-map registration drifts less than scan-to-scan.
+@@ 4
+About 60 min · Read §8.2.2–8.2.3, pp. 231–236 (5 pages) · Needs Week 13 Day 2
+@@ 5
+Read first: §8.2.2 and §8.2.3, pp. 231–236
+@@ 6
+The three numbered stages of Figure 8.4 and the arrow that feeds back (p. 231).
+@@ 7
+Four ways to deal with motion distortion, and the weakness of each (p. 232).
+@@ 8
+The eigenvalue rule that separates edge points from planar points (pp. 233–234).
+@@ 9
+Three drawbacks of feature-based odometry, and what made direct methods practical (pp. 234–235).
+@@ 10
+The drift rate quoted in the summary (p. 236).
+@@ 11
+<strong>LiDAR odometry</strong> is yesterday's ICP surrounded by three practical decisions: correct each point for the motion of the sensor during the sweep, decide which points to match and how to find their partners quickly, and register against a <strong>local map</strong> built from many recent scans instead of the previous scan alone. Done well, this drifts by about one metre per kilometre.
+@@ 12
+1. The pipeline
+@@ 13
+The goal of LiDAR odometry is the incremental motion of the sensor, in real time, from the current scan and past observations. <span class="src">§8.2 · p. 227</span> Figure 8.4 splits it into motion compensation, correspondence search, and relative pose estimation, with the last two iterating. <span class="src">§8.2.2 · p. 231</span> The diagram below adds the local map that the later sections introduce.
+@@ 14 attr
+A new scan passes through three stages: deskew (motion compensation), match (correspondence search), and align (pose estimation). Align feeds back to match until convergence, outputs the pose, and adds the aligned scan to a local map, which in turn supplies the points that match searches.
+@@ 15
+New scan
+@@ 16
+1 · Deskew
+@@ 17
+motion compensation
+@@ 18
+2 · Match
+@@ 19
+correspondence search
+@@ 20
+3 · Align
+@@ 21
+pose estimation
+@@ 22
+repeat until converged
+@@ 23
+pose
+@@ 24
+Local map
+@@ 25
+recent scans, aligned
+@@ 26
+add the
+@@ 27
+aligned scan
+@@ 28
+LiDAR odometry as a loop around ICP. Stages 2 and 3 are the two half-steps from Day 2.
+@@ 29
+2. Motion compensation
+@@ 30
+A scan is gathered over a sweep of about 0.1 s while the sensor moves, so its points are measured from slightly different positions. Left alone, this gives a distorted cloud; the same effect in cameras is called rolling shutter. <span class="src">§8.2.2.1 · pp. 231–232</span> The fix is called <strong>motion compensation</strong>, undistortion, or <strong>deskewing</strong>.
+@@ 31
+Filling the gap: the deskewing formula
+@@ 32
+Let point \(k\) of the sweep be measured at time \(\tau_k \in [0, T]\) after the sweep started, with sensor-frame coordinates \(\mathbf{p}_k\). Let \(\mathbf{T}(\tau)\) be the sensor pose at that time. The point's world position is \(\mathbf{T}(\tau_k)\mathbf{p}_k\). To express every point in one frame, say the frame at the start of the sweep, apply
+@@ 33
+Everything now depends on knowing the motion inside the sweep, \(\mathbf{T}(0)^{-1}\mathbf{T}(\tau)\). The <strong>constant-velocity model</strong> assumes the sensor keeps the velocity it had over the previous scan. If the last two estimated poses are \(\mathbf{T}_{j-1}\) and \(\mathbf{T}_j\), one scan period \(T\) apart, the body velocity (a twist, in the notation of <a href="#d20">Week 4</a>) is
+@@ 34
+<strong>Numbers, in 2D.</strong> The sensor drives forward at \(v = 6\) m/s while turning at \(\omega = 90^\circ\)/s, and \(T = 0.1\) s. Take the point measured half-way, \(\tau_k = 0.05\) s, at range 5 m straight ahead: \(\mathbf{p}_k = (5, 0)\). By then the sensor has turned \(\theta = 4.5^\circ\) and moved along an arc of radius \(v/\omega = 3.82\) m to \(\big(3.82\sin\theta,\ 3.82(1-\cos\theta)\big) = (0.300, 0.012)\) m. Rotating \((5,0)\) by 4.5° gives \((4.985, 0.392)\); adding the position gives \(\mathbf{p}_k^{\text{start}} = (5.284, 0.404)\). Without compensation the point would sit at \((5, 0)\), wrong by 0.49 m.
+@@ 35
+Try it: the sensor of Day 1 now drives and turns. Press "Motion compensation", then make the velocity estimate wrong.
+@@ 36
+Notice that at 6 m/s and 90°/s the sensor moves 0.60 m and turns 9° during one sweep, and the raw points are 24 cm (RMS) away from the walls. With the correct velocity, compensation brings them back to under 1 cm, which is the range noise. With a velocity estimate that is 20% off, about 5 cm of distortion remains.
+@@ 37
+The book lists four ways to obtain the motion inside the sweep. <span class="src">§8.2.2.1 · p. 232</span>
+@@ 38
+Where the in-sweep motion comes from
+@@ 39
+Constant-velocity model
+@@ 40
+The velocity estimated at the previous step
+@@ 41
+Needs no extra sensor
+@@ 42
+Inaccurate when the motion has high-frequency content
+@@ 43
+Continuous-time trajectory
+@@ 44
+A spline or Gaussian-process trajectory that gives a pose at any instant (<a href="#d25">Week 5</a>)
+@@ 45
+Corrects every point individually, without linear interpolation
+@@ 46
+Slow in its conventional form, often run offline
+@@ 47
+IMU-based
+@@ 48
+Gyroscope and accelerometer readings (for example at 200 Hz) integrated over the sweep
+@@ 49
+Handles jerky motion; the de-facto standard on most robots
+@@ 50
+Suffers from IMU noise, bias, and poor clock synchronization
+@@ 51
+Point-wise registration
+@@ 52
+Not needed: the state is updated as each point arrives
+@@ 53
+No distortion inside a scan to begin with
+@@ 54
+A different framework from scan-based odometry
+@@ 55
+3. Features: keep the edges and the planes
+@@ 56
+A feature-based system does not match every point. It extracts a small number of informative ones and computes correspondences and residuals only for those, which cuts the cost. <span class="src">§8.2.2.2 · pp. 232–233</span> The usual features are points on <strong>edges</strong> and on <strong>planes</strong>. LOAM finds them from a curvature score computed from the differences between a point and its neighbours: high curvature marks an edge, low curvature a plane. <span class="src">§8.2.2.2 · p. 233</span> The second standard tool is principal component analysis of a point's neighbourhood. <span class="src">§8.2.2.2 · pp. 233–234</span>
+@@ 57
+Filling the gap: what the eigenvalues say
+@@ 58
+Take the \(K\) points \(\mathbf{x}_j\) around a point, with mean \(\bar{\mathbf{x}}\), and form their covariance
+@@ 59
+\(\mathbf{C}\) is symmetric, so it has orthogonal eigenvectors, and the eigenvalue \(\lambda\) of a unit eigenvector \(\mathbf{v}\) is the variance of the points along \(\mathbf{v}\), because \(\mathbf{v}\T\mathbf{C}\mathbf{v} = \frac1K\sum_j (\mathbf{v}\T(\mathbf{x}_j-\bar{\mathbf{x}}))^2\). Sort \(\lambda_1 \ge \lambda_2 \ge \lambda_3\) and read off the shape:
+@@ 60 attr
+Three point neighbourhoods. Points along a line have one large eigenvalue. Points spread over a flat patch have two large eigenvalues and a normal direction with a small one. Points scattered in all directions have three similar eigenvalues.
+@@ 61
+edge
+@@ 62
+normal
+@@ 63
+plane
+@@ 64
+scatter
+@@ 65
+The eigenvalues of the neighbourhood covariance are the squared extents of the point set along its three principal axes.
+@@ 66
+For a plane, the eigenvector of the smallest eigenvalue \(\lambda_3\) is the surface <strong>normal</strong>: the direction in which the points vary least. That is where yesterday's \(\mathbf{n}_i\) comes from. The same ellipsoid, flattened into a disk, is a <strong>surfel</strong>. <span class="src">§8.2.2.2 · p. 234</span>
+@@ 67
+<strong>Example in 2D.</strong> Five points on a wall: \((0, 0),\ (1, 0.02),\ (2, -0.02),\ (3, 0.01),\ (4, -0.01)\). The mean is \((2, 0)\). The variances are \(\tfrac15(4+1+0+1+4) = 2\) along \(x\) and \(\tfrac15(0 + 0.0004 + 0.0004 + 0.0001 + 0.0001) = 0.0002\) along \(y\), with covariance \(\tfrac15(-0.02 + 0.01 - 0.02) = -0.006\). The eigenvalues are close to 2 and 0.0002, a ratio of ten thousand: a clear line (a wall, in 2D), with normal almost exactly along \(y\).
+@@ 68
+The book also lists higher-level features: <strong>semantic</strong> labels that separate static from moving objects, <strong>surfels</strong> for point-to-plane distances, and <strong>intensity</strong>, which helps where the geometry has no structure. <span class="src">§8.2.2.2 · p. 234</span>
+@@ 69
+4. Direct methods and fast search
+@@ 70
+Features have costs. They discard isolated points that are neither edge nor plane, which hurts among bushes and branches. Their detectors need retuning for each sensor. And the processing load still grows with the size of the scan, which becomes a problem for 64- or 128-beam sensors. <span class="src">§8.2.2.3 · p. 234</span> A <strong>direct</strong> method aligns the points themselves, ICP-style, as direct visual methods align pixels (<a href="#d68">Week 12</a>). What held it back was the cost of the correspondence search. <span class="src">§8.2.2.3 · p. 235</span>
+@@ 71
+Filling the gap: what the search costs
+@@ 72
+Equation (8.3) needs, for each of \(N\) scan points, the nearest of \(M\) map points. Checking all of them takes \(N \times M\) distance computations per ICP iteration: for \(N = 10^5\) and \(M = 10^6\) that is \(10^{11}\), far too many at 10 Hz. Two data structures fix this (see <a href="#d45">Week 8 · Day 3</a>):
+@@ 73
+A <strong>k-d tree</strong> splits space recursively, so a query descends about \(\log_2 M \approx 20\) levels: roughly \(N\log_2 M = 2\times10^{6}\) steps instead of \(10^{11}\). The <strong>incremental k-d tree</strong> of Fast-LIO2 can add and remove points and rebalance itself, so the tree is not rebuilt for every scan. <span class="src">§8.2.2.3 · p. 235</span>
+@@ 74
+A <strong>voxel grid</strong> stores points in a hash table keyed by the integer cell \(\lfloor \mathbf{x}/s \rfloor\) for voxel size \(s\). A query looks only in the cell of the point and its neighbours, a constant amount of work. It may miss the exact nearest neighbour, which the book accepts as an approximation. <span class="src">§8.2.1.2 · p. 230</span>
+@@ 75
+5. Scan-to-scan or scan-to-map
+@@ 76
+The first systems registered each scan to the one before it. A single scan is sparse, so many points have no good partner in the previous scan, the registration errors add up, and the map becomes inconsistent. The modern alternative keeps a <strong>local map</strong> around the sensor and registers each scan to it. <span class="src">§8.2.2.4 · p. 235</span>
+@@ 77
+Scan-to-scan
+@@ 78
+Scan-to-map
+@@ 79
+Reference
+@@ 80
+The previous scan only
+@@ 81
+A local map accumulated from many scans
+@@ 82
+Correspondences
+@@ 83
+Many points lack a suitable partner
+@@ 84
+The map is much denser, so more pairs are true inliers
+@@ 85
+Error growth
+@@ 86
+Every registration adds its own error
+@@ 87
+Each scan is tied to a map that many scans agree on; lower drift
+@@ 88
+The starting guess for the fine registration is a motion prediction from scan-to-scan odometry or IMU pre-integration. LOAM interleaved fast scan-to-scan odometry with slower scan-to-map registration; newer systems use a single scan-to-map stage with direct point-wise correspondences in a voxelized local map. Learned LiDAR odometry exists too, with open questions about generalization. <span class="src">§8.2.2.4 · pp. 235–236</span>
+@@ 89
+Put together, these systems reach drift rates on the order of 1 m per 1000 m travelled, that is 0.1%, depending on the environment and on how dynamic the scene and the sensor motion are. <span class="src">§8.2.3 · p. 236</span> After a 5 km drive that is still about 5 m of error, and it only grows. Removing it is the job of place recognition, tomorrow.
+@@ 90
+<strong>"Deskewing needs the motion, and the motion is what we are estimating, so it is circular."</strong> It only needs a prediction of the motion inside one sweep, from the previous step or an IMU. The registration then refines the pose between sweeps.
+@@ 91
+<strong>"More points always give better odometry."</strong> Points that match badly, on moving objects or with no partner in the reference, hurt. Features, down-sampling, and a dense local map all aim at good pairs, not many pairs.
+@@ 92
+Q1. A vehicle drives straight at 10 m/s without turning. A point is measured 0.08 s after the sweep began. If the scan is not compensated, by how much is that point misplaced in the start-of-sweep frame?
+@@ 93
+8 cm
+@@ 94
+The sensor has moved 10 × 0.08 = 0.8 m by then. With no rotation, the correction is exactly that translation.
+@@ 95
+Q2. The covariance of a point's neighbourhood has eigenvalues 0.50, 0.46, and 0.001 (in m²). What is the point, and what does the eigenvector of 0.001 give you?
+@@ 96
+An edge point; the direction of the edge
+@@ 97
+A scatter point; nothing useful
+@@ 98
+A planar point; the surface normal
+@@ 99
+A planar point; a direction inside the plane
+@@ 100
+Two similar large eigenvalues and one tiny one mean the points spread over a flat patch. They vary least along the normal, which is the eigenvector of the smallest eigenvalue.
+@@ 101
+Q3. Why does registering to a local map drift less than registering to the previous scan?
+@@ 102
+The map is denser, so more correspondences are correct, and each scan is tied to a reference that many scans agree on
+@@ 103
+The map removes the need for an initial guess
+@@ 104
+The map makes motion compensation unnecessary
+@@ 105
+The map contains loop closures
+@@ 106
+A single scan is sparse, so scan-to-scan pairs are often poor and each step's error accumulates. A local map supplies better inlier associations. It contains no loop closures and still needs an initial guess and deskewed input.
+@@ 107
+Q4. A handheld scanner is shaken while walking. Which motion-compensation method does the book recommend for such jerky motion, and what must be watched?
+@@ 108
+Constant velocity; nothing
+@@ 109
+No compensation; the scan rate is high enough
+@@ 110
+Constant velocity; the scan rate
+@@ 111
+IMU-based; noise, bias, and clock synchronization
+@@ 112
+The constant-velocity assumption breaks for high-frequency motion. An IMU measures it directly at a high rate, but its noise, bias, and timing errors can make it worse than simpler methods if handled carelessly.
+@@ 113
+A LiDAR odometry pipeline deskews the scan, searches correspondences, and estimates the pose, repeating the last two until convergence.
+@@ 114
+Deskewing moves each point by the sensor motion at its own time stamp: p(start) = T(0)⁻¹ T(τ) p, with the in-sweep motion from a constant-velocity model, a continuous-time trajectory, or an IMU.
+@@ 115
+Edges and planes are found from curvature or from the eigenvalues of the neighbourhood covariance; for a plane, the eigenvector of the smallest eigenvalue is the normal.
+@@ 116
+Direct methods match all points and depend on fast search structures: k-d trees, incremental k-d trees, voxel grids.
+@@ 117
+Scan-to-map registration against a dense local map gives drift of about 0.1% of distance travelled, which still grows without bound.
+@@ 118
+<em>SLAM Handbook</em>, §8.2.2 "Common Components for LiDAR Odometry" and §8.2.3 "Summary of LiDAR Odometry", pp. 231–236; Figure 8.4.
+@@ 119
+The deskewing formula is rigid-body kinematics with the exponential map; notation follows Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018.
+@@ 120
+Friedman, Bentley, Finkel, <em>An algorithm for finding best matches in logarithmic expected time</em>, 1977 (k-d tree search cost).

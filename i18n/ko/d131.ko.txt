@@ -1,0 +1,142 @@
+@@ 1
+<span class="eyebrow">22주차 · Day 5</span>
+@@ 2
+휘어지는 mesh, hierarchy, 그리고 3D scene graph
+@@ 3
+오늘이 끝나면 loop closure 뒤에 deformation graph를 최적화해서 mesh를 어떻게 바로잡는지 설명하고, hierarchical map이 아끼는 메모리를 세고, 3D scene graph를 정의하고 그 위의 inference가 왜 싼지 말할 수 있습니다.
+@@ 4
+약 60분 · §16.3.3, §16.4, §16.5, pp. 479–489 읽기 (11쪽, 그중 약 3쪽은 그림, 3쪽은 문헌 조사) · 13주차 Day 5 필요
+@@ 5
+먼저 읽기: §16.3.3, §16.4, §16.5, pp. 479–489
+@@ 6
+§16.3.3 첫머리에 나오는 voxel map의 두 가지 단점 (p. 479).
+@@ 7
+p. 481의 (16.27)에 있는 세 합, 그리고 각 합이 어떤 graph edge에 걸쳐 있는지.
+@@ 8
+(16.34)에서 (16.35)로 가면서 인자 \(L\)이 어디로 가는지, p. 484.
+@@ 9
+Definition 16.2의 세 성질과 bound (16.37), p. 485.
+@@ 10
+loop closure는 trajectory를 움직이고, dense map은 그것을 따라가야 합니다. mesh는 따라갈 수 있습니다. vertex 몇 개를 pose graph에 묶고, 둘을 하나의 pose graph로 최적화하고, 나머지는 끌고 가면 됩니다. 같은 graph가 위쪽으로 object, place, room까지 자라면 3D scene graph가 됩니다. 여기서는 각 symbol이 한 번만 저장되고, query는 필요한 branch만 건드립니다.
+@@ 11
+1. Pose graph에 묶인 mesh
+@@ 12
+voxel map은 정보를 잘 fusion하지만 저장 비용이 크고 수정하기 어렵습니다. loop closure 뒤에는 과거 관측을 빼내고 바로잡힌 pose에서 다시 통합해야 합니다. mesh는 보통 로봇 주위의 window 안에 유지하는 voxel map에서 추출하며, 표면만 저장하고 제자리에서 변형할 수 있습니다. 이 방법이 <strong>pose-graph and mesh optimization (PGMO)</strong>입니다. <span class="src">§16.3.3 · p. 479</span>
+@@ 13
+PGMO는 node마다 rigid transformation을 하나씩 가진 <strong>deformation graph</strong>를 만듭니다. <span class="src">§16.3.3 · pp. 479–480</span>
+@@ 14
+<strong>Pose vertex</strong> \(\mathbf{X}_i = [\mathbf{R}^X_i, \mathbf{t}^X_i]\): 로봇 pose graph의 node이며, odometry edge와 loop-closure edge로 이어집니다.
+@@ 15
+<strong>Mesh vertex</strong> \(\mathbf{M}_k = [\mathbf{R}^M_k, \mathbf{t}^M_k]\): downsampling한 mesh의 vertex이며, mesh의 edge로 이어집니다. 변형 전에는 \(\mathbf{R}^M_k = \mathbf{I}_3\)이고 \(\mathbf{t}^M_k = \mathbf{g}_k\), 즉 vertex의 원래 위치입니다.
+@@ 16
+mesh vertex \(k\)가 pose \(i\)에서 보였다면 둘 사이의 edge.
+@@ 17 attr
+deformation graph. 아래쪽에 pose vertex 다섯 개(원)가 사슬로 이어지고, 점선 호가 loop closure로서 마지막 pose를 첫 pose에 잇습니다. 위쪽에는 mesh control node 네 개(사각형)가 사슬로 이어집니다. 각 pose는 자신이 본 mesh node 한두 개와 이어집니다.
+@@ 18
+=
+@@ 19
+pose Xᵢ
+@@ 20
+=
+@@ 21
+원: pose vertex. 사각형: mesh control node. 가는 선: visibility edge. loop closure가 pose를 당기면 visibility edge가 mesh도 함께 당깁니다.
+@@ 22
+2. Cost, 그리고 그것이 pose graph인 이유
+@@ 23
+loop closure가 들어오면 다음을 최소화해서 모든 변환을 다시 추정합니다. <span class="src">§16.3.3 · p. 481</span>
+@@ 24
+첫 번째 합은 relative-pose 측정값 \(\mathbf{Z}_{ij}\)에 대한 보통의 pose-graph optimization입니다. 두 번째 합은 mesh를 국소적으로 rigid하게 유지합니다. node \(k\) 주변 patch가 rigid body로 움직였다면 이웃 \(l\)은 \(\mathbf{R}^M_k(\mathbf{g}_l - \mathbf{g}_k) + \mathbf{t}^M_k\)에 있을 것이고, 이 항은 그 위치와 \(l\)의 실제 위치 사이의 거리에 penalty를 줍니다. 세 번째 합은 pose와 그 pose가 본 mesh node 사이에서 같은 일을 하며, \(\tilde{\mathbf{g}}_{il} = \tilde{\mathbf{R}}_i\T(\mathbf{g}_l - \mathbf{g}_i)\)는 pose \(i\)의 frame에서 본 node \(l\)의 원래 위치입니다. 변형 전에는 모든 rigidity 항이 0입니다.
+@@ 25
+빈틈 채우기: (16.27)에서 pose-graph 형태 (16.30)으로
+@@ 26
+책은 \(\mathbf{G}_{kl} = \begin{bmatrix}\mathbf{I}_3 & \mathbf{g}_l - \mathbf{g}_k\\ \mathbf{0} & 1\end{bmatrix}\)로 정의하고 두 번째 합이 \(\sum \norm{\mathbf{M}_k\mathbf{G}_{kl} - \mathbf{M}_l}^2_{\boldsymbol{\Omega}}\)와 같다고 말합니다. \(\mathbf{M}_k\)를 \(4\times4\) 행렬로 쓰고 곱을 풀어 봅시다.
+@@ 27
+마지막 열이 정확히 rigidity residual입니다. (16.28)의 weighted Frobenius norm \(\norm{\mathbf{A}}^2_{\boldsymbol{\Omega}} = \tr(\mathbf{A}\boldsymbol{\Omega}\mathbf{A}\T)\)(단, \(\boldsymbol{\Omega} = \diag(\omega_R\mathbf{I}_3, \omega_t)\))은 처음 세 열 원소의 제곱에 \(\omega_R\)을, 마지막 열 원소의 제곱에 \(\omega_t\)를 곱합니다. mesh edge에서 \(\omega_R = 0\)으로 두면 rigidity residual 제곱의 \(\omega_t\)배만 남고, 세 번째 합도 같은 방식으로 됩니다. 따라서 모든 항은 식 (16.31)의 형태 \(\norm{\mathbf{T}_i\mathbf{E}_{ij} - \mathbf{T}_j}^2_{\boldsymbol{\Omega}_{ij}}\)를 가집니다. node \(n + m\)개 위의 pose graph 하나이므로, <a href="#d77">13주차 · Day 5</a>의 solver로 풀 수 있습니다.
+@@ 28
+3. 나머지 vertex 옮기기
+@@ 29
+최적화는 control node만 옮겼습니다. 그다음 전체 mesh의 각 vertex \(\mathbf{v}_i\)는 가장 가까운 control node \(m\)개에 실려 옮겨집니다. <span class="src">§16.3.3 · p. 482</span>
+@@ 30
+각 대괄호는 "\(\mathbf{v}_i\)가 node \(j\)에 붙어 있다면 갈 위치"이고, \(d_{\max}\)는 \(m\)개 node 가운데 가장 먼 것까지의 거리입니다. 거리 1, 2, 4 m에 있는 node \(m = 3\)개를 생각합시다. 그러면 \(\bar{w} = (0.75^2, 0.5^2, 0) = (0.5625, 0.25, 0)\)이고 \(w = (0.69, 0.31, 0)\)입니다. node들이 각각 \((0.4, 0)\), \((0.1, 0)\), \((-2, 0)\) m만큼 이동만 했다면, vertex는 \(x\) 방향으로 \(0.69 \times 0.4 + 0.31 \times 0.1 = 0.31\) m 움직입니다. 가장 먼 node의 weight는 0입니다.
+@@ 31
+4. Symbol, 그리고 hierarchy가 아끼는 것
+@@ 32
+<strong>Symbol grounding</strong>은 "chair"나 "kitchen"처럼 사람에게 뜻이 있는 symbol을 map 속 위치에 묶는 것입니다. 원본 이미지는 symbol을 grounding하기에 너무 크므로, symbol은 voxel이나 mesh 같은 압축된 <strong>sub-symbolic</strong> 표현에 붙입니다. <span class="src">§16.4.1 · p. 483</span>
+@@ 33
+단순한 방법은 voxel마다 \(L\)개 symbol 중 어떤 것이 해당되는지 저장하는 것입니다 (voxel 하나가 의자에도 부엌에도 속할 수 있습니다). 부피 \(V\)와 해상도 \(\delta\)에 대해 다음과 같습니다. <span class="src">§16.4.1 · p. 484</span>
+@@ 34
+symbol을 포함 관계로 정리하면 대신 다음이 됩니다.
+@@ 35
+이제 각 symbol은 edge가 "포함한다"를 뜻하는 graph의 node로 한 번만 저장됩니다. 잃는 것은 없습니다. voxel별 label은 다시 만들어 낼 수 있습니다. 150 m³ 아파트를 \(\delta = 0.1\) m, symbol 15개로 저장하면 (16.34)는 \(15 \times 150{,}000 = 2{,}250{,}000\)개 항목이고 (16.35)는 \(150{,}000 + 14 + 4 + 1\)입니다. voxel grid를 octree나 place graph로 바꾸면 첫 항이 \(N_{\text{sub-sym}}\)로 줄어들지만 (16.36), 이번에는 정보가 조금 손실됩니다. <span class="src">§16.4.1 · p. 484</span>
+@@ 36
+5. Hierarchical graph와 3D scene graph
+@@ 37
+graph의 node가 layer \(1, \dots, l\)로 나뉘고, (1) node는 바로 위 layer에 부모가 많아야 하나이며, (2) layer 사이의 edge는 이웃한 layer끼리만 잇고, (3) 부모가 다른 자식끼리는 절대 이어지지 않는다면, 그 graph는 <strong>hierarchical</strong>(계층적)입니다. 그러면 같은 layer에 있는 두 node의 자손들은 결코 섞이지 않고, 전체 graph의 treewidth는 다음으로 bound됩니다. <span class="src">Definition 16.2, §16.4.1 · p. 485</span>
+@@ 38
+여기서 \(\mathcal{G}[\mathcal{C}(v)]\)는 \(v\)의 자식들이 이루는 subgraph입니다.
+@@ 39
+빈틈 채우기: treewidth가 주는 것
+@@ 40
+<strong>Treewidth</strong>(트리 너비)는 graph가 tree에서 얼마나 먼지를 잽니다. tree의 treewidth는 1이고, node \(n\)개의 완전 연결 graph는 \(n - 1\)입니다. 최선의 elimination order(<a href="#d15">3주차 · Day 3</a>)를 쓰면 생기는 가장 큰 clique의 변수 개수는 treewidth \(+\,1\)이며, 이산 변수에 대한 exact inference 비용은 이 숫자에 대해서는 지수적이지만 node 수에 대해서는 선형일 뿐입니다. 따라서 (16.37)은 비용을 정하는 것이 건물의 크기가 아니라 가장 복잡하게 얽힌 형제 그룹, 예를 들어 어수선한 방 하나의 물체들이라는 뜻입니다.
+@@ 41
+<strong>3D scene graph</strong>는 node가 언제나 위치를 포함하는 feature를 가지고, edge도 feature를 가지는 graph \(\mathcal{G} = (\mathcal{V}, \mathcal{E})\)입니다. layer는 보통 object, place(free space의 sparse 모델), room, building입니다. layer 사이의 edge는 포함 관계를 뜻합니다. layer 안의 edge는 "위에 놓임"이나 "근처" 같은 관계를 뜻하며, 그중 일부는 방향이 있습니다. 2D scene graph에서 흔한 "왼쪽에" 같은 관계는 시점에 따라 달라지므로 3D에서는 별 의미가 없습니다. <span class="src">§16.4.2 · pp. 486–487</span>
+@@ 42
+직접 해 보기: 네 query를 하나씩 실행하고 처음 두 카운터를 비교해 보세요.
+@@ 43
+눈여겨볼 점: "kitchen의 mug 가져오기"는 node 19개 중 9개를 살펴보며, 자기만의 mug가 있는 living room은 열어 보지도 않습니다. "living room으로 가기"는 5개를 살펴보고 object는 하나도 보지 않습니다. 마지막 두 query는 19개 전부를 살펴보며, 이는 평평한 object 목록의 항목 14개보다 많습니다. hierarchy는 query가 답보다 위 level을 지목할 때 이득입니다.
+@@ 44
+더 깊이 (선택): loop closure, 그리고 §16.5가 가리키는 방향
+@@ 45
+scene graph를 consistent하게 유지하기 위해, 한 방법은 (16.27)의 deformation graph에 place layer를 추가하고 나머지 layer는 다시 interpolation합니다. 다른 방법은 모든 layer 사이에 factor를 두는데, 이는 더 이상 평범한 pose graph가 아닙니다. <span class="src">§16.4.2 · p. 487</span> 최근 경향은 이렇습니다. 고정된 label 집합 대신 language-aligned feature를 저장하는 map(다음 주), task에 따라 layer를 정하는 실외 scene graph, 이산 변수와 연속 변수가 섞인 경우의 불확실성, 그리고 multi-robot semantic mapping입니다. <span class="src">§16.5 · pp. 487–489</span>
+@@ 46
+Q1. pose-graph 형태 (16.30)에서 mesh edge의 회전 weight ω_R을 0으로 두는 이유는 무엇입니까?
+@@ 47
+mesh control node에는 회전이 없어서
+@@ 48
+문제를 convex로 만들기 위해
+@@ 49
+M_k G_kl − M_l에서 이동 열만 (16.27)의 rigidity residual이고, 회전 block R_k − R_l은 cost에 들어 있지 않아서
+@@ 50
+mesh가 변형되지 않는다고 가정해서
+@@ 51
+rigidity 항은 행렬 차이의 마지막 열과 같은 3차원 벡터이므로, 나머지 세 열은 weight 0을 받아야 합니다.
+@@ 52
+Q2. mesh vertex 하나의 가장 가까운 control node m = 3개가 거리 1, 3, 4 m에 있습니다. (16.33)에서 가장 가까운 node의 정규화된 weight는 얼마입니까?
+@@ 53
+d_max = 4. 정규화 전 weight: (1 − 1/4)² = 0.5625, (1 − 3/4)² = 0.0625, 그리고 0. 정규화하면 0.5625/0.625 = 0.90.
+@@ 54
+Q3. 200 m³인 층 하나를 δ = 0.1 m로 저장합니다. symbol은 L = 50개, 물체는 300개, 방은 건물 1개 안에 12개입니다. hierarchical 개수 (16.35)는 flat 개수 (16.34)보다 대략 몇 배 작습니까?
+@@ 55
+약 2배
+@@ 56
+약 50배
+@@ 57
+약 300배
+@@ 58
+같음
+@@ 59
+V/δ³ = voxel 200,000개. flat: 50 × 200,000 = 10,000,000. hierarchical: 200,000 + 313. 비율은 약 50으로, symbol 개수와 같습니다.
+@@ 60
+Q4. 다음 중 Definition 16.2를 어기는 것은 무엇입니까?
+@@ 61
+같은 방에 있는 두 물체를 잇는 "위에 놓임" edge
+@@ 62
+물체 마흔 개를 포함하는 방
+@@ 63
+방이 하나뿐인 건물
+@@ 64
+서로 다른 두 방으로 포함 edge가 이어진 object node
+@@ 65
+부모가 둘이면 부모가 하나라는 성질을 어깁니다. 형제 사이의 edge는 허용되며, 그 그룹의 treewidth를 올릴 뿐입니다.
+@@ 66
+PGMO는 pose graph와 downsampling한 mesh를 deformation graph 하나로 합치고, pose-graph 항과 local rigidity 항으로 된 (16.27)을 최적화합니다. mesh edge에서 \(\omega_R = 0\)이면 표준 pose graph입니다.
+@@ 67
+전체 mesh는 각 vertex에서 가장 가까운 control node들의 움직임을 섞어서 따라갑니다 (16.32).
+@@ 68
+각 symbol을 hierarchy에 한 번만 저장하면 메모리가 손실 없이 \(L \cdot V/\delta^3\)에서 \(V/\delta^3 + N\)으로 줄어듭니다.
+@@ 69
+3D scene graph는 위치를 가진 node들로 된 layer 구조의 graph입니다. 부모는 하나, locality, 서로 섞이지 않는 자식이라는 성질 덕분에 treewidth는 형제 그룹 하나의 treewidth 더하기 1로 bound됩니다.
+@@ 70
+=
+@@ 71
+Sumner, Schmid, Pauly, <em>Embedded Deformation for Shape Manipulation</em>, 2007 (deformation graph와 그 blending weight); Koller와 Friedman, <em>Probabilistic Graphical Models</em>, 2009 (treewidth와 exact inference의 비용).

@@ -1,0 +1,190 @@
+@@ 1
+<span class="eyebrow">6주차 · Day 2</span>
+@@ 2
+RANSAC: 서로 맞아떨어지는 가장 큰 측정값 집합 찾기
+@@ 3
+오늘이 끝나면 consensus maximization 문제를 정식화하고, 작은 예제에서 RANSAC을 손으로 돌리고, 주어진 inlier 비율과 minimal set 크기에 필요한 iteration 수를 계산할 수 있습니다.
+@@ 4
+약 60분 · §3.2 도입부와 §3.2.1, pp. 78–81 읽기 (4쪽) · 6주차 Day 1 필요
+@@ 5
+먼저 읽기: §3.2 도입부와 §3.2.1, pp. 78–81
+@@ 6
+pp. 79–80의 두 가지 "key insight": inlier는 기하학적 제약을 따른다는 것, 그리고 inlier는 하나의 공통 \(\mathbf{x}\)에 대해 그 제약을 따르는 가장 큰 집합이라는 것.
+@@ 7
+p. 80의 문제 (3.4), 그리고 이 문제가 SLAM state의 작은 일부만 다룬다는 언급.
+@@ 8
+pp. 80–81의 RANSAC 세 단계, 그리고 <em>minimal set</em>과 <em>minimal solver</em>라는 용어.
+@@ 9
+p. 81의 두 수치 예: \(n = 5,\ \omega = 0.7\)과 \(n = 10,\ \omega = 0.1\).
+@@ 10
+inlier는 하나의 물리적 상황을 잰 측정값이므로 모두 하나의 model에 들어맞습니다. outlier끼리는 서로 맞아떨어질 이유가 없습니다. RANSAC은 가능한 한 작은 무작위 샘플로 model을 추측하고, 그 추측에 동의하는 측정값이 몇 개인지 센 다음, 지지를 가장 많이 받은 추측을 남깁니다.
+@@ 11
+1. inlier는 기하를 따른다
+@@ 12
+SLAM front-end는 먼저 outlier가 많이 섞였을 수 있는 후보 측정값 집합을 만든 다음 이를 걸러냅니다. <span class="src">§3.2 · p. 78</span> 책이 계속 쓰는 예(Example 3.1)는 feature-based visual SLAM입니다. front-end는 시간 \(k-1\)의 이미지와 시간 \(k\)의 이미지 사이에서 2D feature 점을 match합니다. match된 쌍 하나하나가 <strong>2D-2D correspondence</strong>(대응)이고, 그중 일부는 잘못된 match입니다. <span class="src">§3.2.1 · p. 79</span>
+@@ 13
+걸러낼 수 있는 까닭은 올바른 match가 아무렇게나 될 수 없기 때문입니다. 장면이 static이면 두 이미지 사이에서 픽셀이 움직이는 방식은 카메라의 운동이 정합니다. calibration된 카메라에서 대응점 \(\mathbf{z}_i(k-1)\)과 \(\mathbf{z}_i(k)\)는 다음 <strong>epipolar constraint</strong>를 만족합니다
+@@ 14
+여기서 \(\mathbf{R}^{k-1}_k\)와 \(\mathbf{t}^{k-1}_k\)는 두 시각 사이 카메라의 알 수 없는 회전과 이동입니다. <span class="src">§3.2.1 · p. 79</span> \([\mathbf{t}]_\times\)는 외적을 수행하는 3×3 skew-symmetric 행렬입니다: \([\mathbf{t}]_\times \mathbf{v} = \mathbf{t} \times \mathbf{v}\).
+@@ 15
+빈틈 채우기: epipolar constraint는 어디서 오는가
+@@ 16
+책은 (3.2)를 증명 없이 제시합니다. 네 줄이면 됩니다. calibration된 카메라에서 \(\mathbf{z}\)는 viewing ray의 방향, 곧 정규화 이미지 좌표의 픽셀을 3차원 벡터 \([u, v, 1]\T\)로 쓴 것입니다. 3D 점은 그 ray 위 어딘가, 알 수 없는 depth \(d \gt 0\)에 있습니다.
+@@ 17 attr
+땅 위의 두 카메라 중심과 그 위의 3D 점 하나가 삼각형을 이룹니다. 한 변은 시간 k 빼기 1의 카메라에서 점으로 가는 ray로, 방향 z(k 빼기 1)을 따라 길이 d1입니다. 다른 변은 시간 k의 카메라에서 점으로 가는 ray로, d2 곱하기 R 곱하기 z(k)입니다. 세 번째 변은 두 카메라 사이의 이동 t입니다.
+@@ 18
+static 3D 점
+@@ 19
+k−1의 카메라
+@@ 20
+k의 카메라
+@@ 21
+세 벡터 모두 k−1 카메라의 frame에서 씁니다. 세 벡터가 삼각형을 닫으므로 한 평면 위에 있습니다.
+@@ 22
+<strong>1단계.</strong> 점의 좌표를 두 카메라 frame에서 씁니다: \(\mathbf{p}^{k-1} = d_1\,\mathbf{z}_i(k-1)\), \(\mathbf{p}^{k} = d_2\,\mathbf{z}_i(k)\). 상대 pose가 한쪽을 다른 쪽으로 옮깁니다: \(\mathbf{p}^{k-1} = \mathbf{R}\,\mathbf{p}^{k} + \mathbf{t}\) (\(\mathbf{R}^{k-1}_k, \mathbf{t}^{k-1}_k\)의 첨자는 생략). 따라서
+@@ 23
+<strong>2단계.</strong> 양변에 \(\mathbf{t}\)를 외적합니다. \(\mathbf{t}\times\mathbf{t} = \mathbf{0}\)이므로 마지막 항이 사라집니다:
+@@ 24
+<strong>3단계.</strong> 양변에 \(\mathbf{z}_i(k-1)\)을 내적합니다. 좌변은 \(d_1\,\mathbf{z}_i(k-1)\T(\mathbf{t}\times\mathbf{z}_i(k-1))\)인데, 외적은 두 인자 모두에 수직이므로 0입니다.
+@@ 25
+<strong>4단계.</strong> \(d_2 \gt 0\)으로 나눕니다. 이것이 (3.2)입니다. 알 수 없는 depth가 사라졌다는 것이 핵심입니다. 이 제약은 두 픽셀과 카메라 운동만 연결하고, 다른 것은 끼어들지 않습니다.
+@@ 26
+<strong>왜 correspondence 다섯 개인가.</strong> 식 (3.2)는 \(\mathbf{t}\)에 0이 아닌 어떤 수를 곱해도 변하지 않으므로, \(\mathbf{t}\)는 방향만 복원할 수 있습니다: 미지수 2개. 회전은 3개입니다. 합쳐서 미지수 5개이고 correspondence 하나가 스칼라 방정식 하나를 주므로, correspondence가 최소 5개 필요합니다. 그래서 p. 80의 각주 4는 minimal set의 크기가 5이고 pose는 "scale을 제외하고(up to scale)" 구해진다고 말합니다.
+@@ 27
+픽셀에 noise가 있으면 (3.2)의 좌변은 작지만 0은 아니므로, 실제로는 \(\left|\mathbf{z}_i(k-1)\T([\mathbf{t}]_\times\mathbf{R})\,\mathbf{z}_i(k)\right| \le \gamma\)를 요구합니다. 일반적으로 측정값의 종류마다 다음 형태의 제약이 따라옵니다
+@@ 28
+여기서 \(\mathbf{x}\)는 제약이 의존하는 미지수(여기서는 상대 pose)이고, \(\gamma\)는 noise 수준에 맞춘 임계값입니다. <span class="src">§3.2.1 · p. 79</span>
+@@ 29
+=
+@@ 30
+correspondence 하나만 보면 어떤 \(\mathbf{x}\)에 대해서는 (3.3)을 만족할 수 있습니다. 이 검사가 효력을 갖는 것은 많은 correspondence가 <em>같은</em> \(\mathbf{x}\)에 대해 만족해야 할 때입니다. \(\mathsf{M}\)을 후보(<strong>putative</strong>) correspondence의 집합이라고 합시다. inlier 집합은 하나의 \(\mathbf{x}\)로 설명할 수 있는 가장 큰 부분집합으로 추정합니다:
+@@ 31
+이것이 <strong>consensus maximization</strong>(합의 최대화)입니다. \(|\mathsf{S}|\)는 \(\mathsf{S}\)의 원소 개수입니다. <span class="src">§3.2.1 · p. 80</span> 중요한 성질이 두 가지 있습니다:
+@@ 32
+작습니다. \(\mathbf{x}\)는 두 frame 사이의 상대 pose 하나이지, trajectory와 map 전체가 아닙니다.
+@@ 33
+그래도 어렵습니다. \(\mathsf{M}\)의 부분집합은 \(2^{|\mathsf{M}|}\)개라서 모두 시도하는 것은 가망이 없습니다. correspondence 100개면 부분집합이 약 \(1.3\times10^{30}\)개입니다. front-end는 몇 밀리초 안에 답을 내야 하므로 빠른 휴리스틱을 씁니다.
+@@ 34
+오늘의 위젯은 가장 단순한 경우를 씁니다. 측정값은 점 \((x_i, y_i)\), 미지수는 직선 \(y = ax + b\), 제약은 \(C = |y_i - a x_i - b| \le \gamma\)입니다. 즉 점이 직선에서 수직 거리 \(\gamma\) 이내에 있어야 합니다.
+@@ 35
+3. RANSAC 루프
+@@ 36
+<strong>RANdom SAmple Consensus (RANSAC)</strong>은 한 가지 가정에 기댑니다. \(\mathbf{x}\)는 저차원이고 측정값 몇 개만으로 계산할 수 있다는 것입니다. \(\mathbf{x}\)를 결정하는 최소 측정값 개수가 <strong>minimal set</strong>(최소 집합)의 크기 \(n\)이고, 정확히 \(n\)개의 측정값으로 \(\mathbf{x}\)를 계산하는 빠른 루틴이 <strong>minimal solver</strong>입니다. <span class="src">§3.2.1 · p. 80</span>
+@@ 37
+미지수
+@@ 38
+=
+@@ 39
+=
+@@ 40
+점을 지나는 직선 (위젯)
+@@ 41
+기울기와 절편
+@@ 42
+두 점을 지나는 직선
+@@ 43
+3D-3D correspondence로 운동 추정
+@@ 44
+상대 pose
+@@ 45
+Horn's method (각주 7, p. 82)
+@@ 46
+2D-2D correspondence로 운동 추정, calibration됨
+@@ 47
+상대 pose (scale 제외)
+@@ 48
+=
+@@ 49
+마지막에 남는 집합이 <strong>consensus set</strong>(합의 집합)입니다. <span class="src">§3.2.1 · pp. 80–81</span> 논리는 이렇습니다. 샘플링한 \(n\)개 측정값이 마침 모두 inlier라면 \(\hat{\mathbf{x}}\)는 참값에 가깝고 다른 inlier도 모두 이에 동의합니다. 샘플에 outlier가 섞여 있으면 \(\hat{\mathbf{x}}\)는 틀리고 동의하는 측정값이 거의 없습니다. 그래서 어떤 측정값이 inlier인지 몰라도 consensus set의 크기만으로 좋은 샘플과 나쁜 샘플을 가릴 수 있습니다.
+@@ 50
+직접 해 보기: 한 step을 몇 번 누른 다음 재생을 누르세요. 속이 빈 점이 실제 outlier인데, 알고리즘은 이를 모릅니다.
+@@ 51
+눈여겨볼 점: 기본 설정에서 첫 샘플에는 outlier가 섞여 있어 그 직선에 동의하는 점이 9개뿐입니다. 두 번째 샘플은 inlier 두 개이고, 그 consensus set은 inlier 24개 전부이며 다른 점은 없습니다. 이 집합에 least squares로 맞추면 y = 0.51x + 0.94가 되고, 전체에 대한 least squares는 점선 y = 0.12x + 2.81입니다. 이제 Outlier 비율을 70%로 놓고 재생을 누르세요. 서로 동의하는 가장 큰 무리는 두 번째 "벽"이고, RANSAC은 이 무리를 돌려줍니다(점 20개, 모두 outlier).
+@@ 52
+마지막 실험은 경고입니다. RANSAC은 서로 동의하는 가장 큰 무리를 찾을 뿐이고, 그 무리가 inlier가 되는 것은 outlier가 자기들끼리 더 큰 무리를 이루지 않을 때뿐입니다.
+@@ 53
+4. iteration은 몇 번 필요한가?
+@@ 54
+\(\omega\)를 무작위로 뽑은 측정값이 inlier일 확률이라고 합시다. 균등하게 샘플링한다면 inlier 비율과 같습니다. 책은 모두 inlier인 샘플을 뽑을 때까지 필요한 iteration 수의 기댓값이 \(1/\omega^n\)이라고 말합니다. <span class="src">§3.2.1 · p. 81</span>
+@@ 55
+빈틈 채우기: iteration 수 유도
+@@ 56
+<strong>샘플 하나.</strong> \(n\)번의 추출을 독립으로 봅니다(집합이 \(n\)보다 훨씬 크면 정확합니다). 샘플이 모두 inlier일 확률은 \(q = \omega^n\)입니다.
+@@ 57
+<strong>샘플 수의 기댓값.</strong> 각 iteration은 독립적으로 확률 \(q\)로 성공합니다. \(E\)를 첫 성공까지(첫 성공 포함) 필요한 iteration 수의 기댓값이라고 합시다. 첫 시도가 성공하거나(확률 \(q\), 1회), 실패해서 iteration 하나를 쓰고 처음으로 돌아갑니다:
+@@ 58
+\(n = 5,\ \omega = 0.7\)이면 \(\omega^n = 0.7^5 = 0.168\), \(E = 5.95\)로 책의 "10 미만"과 맞습니다. \(n = 10,\ \omega = 0.1\)이면 \(E = 10^{10}\)입니다.
+@@ 59
+<strong>주어진 신뢰도에 필요한 iteration 수.</strong> 평균은 보장이 아닙니다. \(k\)개의 샘플이 연달아 모두 오염되어 있을 확률은 \((1-\omega^n)^k\)입니다. 이 값을 \(1 - p\) 이하로, 즉 깨끗한 샘플을 적어도 하나 뽑았을 확률을 \(p\) 이상으로 만들려면 \(k\)에 대해 풀면 됩니다:
+@@ 60
+\(\log(1-\omega^n)\)이 음수이므로 부등호 방향이 바뀝니다. 이 공식은 책에 없습니다. 원래 RANSAC 논문의 표준 정지 규칙입니다. \(n = 5,\ \omega = 0.7,\ p = 0.99\)이면 \(k \ge \log(0.01)/\log(0.832) = 25.03\)이므로 26번입니다.
+@@ 61
+기댓값 1.2, 99%에는 3
+@@ 62
+각 칸은 iteration 수의 기댓값 \(1/\omega^n\)과 99% 신뢰도에 필요한 횟수를 차례로 보여 줍니다. 한 행을 가로로 읽으면 inlier가 드물어질수록 횟수가 폭발합니다. 한 열을 세로로 읽으면 minimal set이 커질수록 폭발합니다. 지수 \(n\) 때문에 가능한 한 작은 샘플을 쓰는 solver에 그토록 많은 연구가 쏟아집니다.
+@@ 63
+5. RANSAC이 맞는 도구일 때와 아닐 때
+@@ 64
+RANSAC이 landmark 기반 front-end에서 outlier 제거의 기본 도구인 이유는 두 가지입니다. minimal solver가 빠르고(몇 밀리초에 iteration 수백 번), 추정값 \(\hat{\mathbf{x}}\)(예를 들어 카메라 운동)를 돌려주어 back-end의 initial guess로 쓸 수 있기 때문입니다. <span class="src">§3.2.1 · p. 81</span>
+@@ 65
+두 가지 상황에서는 실용적이지 않습니다. <span class="src">§3.2.1–3.2.2 · p. 81</span>
+@@ 66
+<strong>inlier가 적을 때.</strong> 책의 경험칙은 outlier가 약 70% 미만일 때 RANSAC이 잘 작동한다는 것입니다. perceptual aliasing이 심하면 outlier 비율이 그보다 훨씬 높아질 수 있습니다.
+@@ 67
+<strong>minimal set이 클 때.</strong> pose가 \(N\)개인 pose graph에서 모든 pose를 결정하려면 상대 pose 측정값이 적어도 \(N-1\)개(spanning tree) 필요하고, \(N\)은 수천입니다. 뽑을 작은 샘플이 없습니다.
+@@ 68
+이런 경우 RANSAC을 일찍 멈추면 조금 나쁜 답이 나오는 것이 아닙니다. 틀린 \(\hat{\mathbf{x}}\)와 틀린 correspondence 집합이 나옵니다. 내일의 방법은 샘플링 자체를 하지 않습니다.
+@@ 69
+<strong>"RANSAC은 consensus maximization을 푼다."</strong> RANSAC은 (3.4)에 대한 휴리스틱입니다. 우연히 시도한 샘플 중 가장 좋은 집합을 돌려줄 뿐, 그것이 가장 큰 집합이라는 보장은 없습니다.
+@@ 70
+<strong>"샘플이 크면 model이 더 좋으니 최소보다 많이 뽑자."</strong> 점을 하나 더할 때마다 깨끗한 샘플일 확률에 \(\omega\)가 곱해집니다. 정확도는 나중에 consensus set 전체로 다시 맞춰서 얻습니다.
+@@ 71
+<strong>"임계값 γ는 사소하다."</strong> 너무 작으면 noise가 낀 inlier가 걸러져 좋은 샘플도 점수가 낮게 나옵니다. 너무 크면 model 근처의 outlier가 받아들여집니다. 위젯에서 γ를 0.10과 1.50으로 옮겨 consensus set을 지켜보세요.
+@@ 72
+Q1. 점의 절반이 inlier이고 직선을 맞춥니다(n = 2). 샘플이 inlier만 담을 때까지 필요한 RANSAC iteration 수의 기댓값은 얼마입니까?
+@@ 73
+샘플 하나가 깨끗할 확률은 0.5² = 0.25이고, 첫 성공까지 시도 횟수의 기댓값은 1/0.25 = 4입니다.
+@@ 74
+Q2. 같은 설정(ω = 0.5, n = 2)에서 inlier로만 된 샘플이 적어도 하나 나올 확률을 99%로 만들려면 iteration이 몇 번 필요합니까?
+@@ 75
+k ≥ log(0.01)/log(1 − 0.25) = (−4.605)/(−0.2877) = 16.01이므로 17번입니다. 기댓값 4는 보장과 거리가 멉니다. iteration 4번 뒤에도 실패 확률은 여전히 0.75⁴ = 0.32입니다.
+@@ 76
+Q3. calibration된 두 카메라의 상대 pose를 correspondence 5개로 추정할 수 있고 그보다 적게는 안 되는 이유는 무엇입니까?
+@@ 77
+epipolar constraint는 correspondence 하나당 방정식 하나를 주고, 미지수는 회전 3개와 이동 방향 2개로 모두 5개입니다
+@@ 78
+pose는 자유도가 6이고 그중 하나는 calibration으로 고정됩니다
+@@ 79
+correspondence 하나가 방정식 두 개를 주고 미지수는 10개입니다
+@@ 80
+평면을 강건하게 정의하는 데 필요한 점의 수가 5개입니다
+@@ 81
+식 (3.2)는 correspondence 하나당 스칼라 방정식 하나입니다. t의 크기를 바꿔도 변하지 않으므로 t의 길이는 구할 수 없고, 미지수는 3 + 2 = 5개가 남습니다.
+@@ 82
+Q4. RANSAC의 3단계에서 outlier가 하나 섞인 샘플은 보통 consensus set이 작게 나옵니다. 왜 그렇습니까?
+@@ 83
+minimal solver가 outlier가 섞인 샘플을 거부합니다
+@@ 84
+나쁜 샘플에는 임계값 γ를 더 엄격하게 적용합니다
+@@ 85
+그 샘플로 계산한 model이 틀려서, inlier들이 그 model에 대한 제약을 만족하지 않습니다
+@@ 86
+iteration마다 outlier를 M에서 제거합니다
+@@ 87
+solver는 샘플이 오염되었는지 알 수 없습니다. 샘플링한 n개 점에는 정확히 맞고 참값과는 거리가 먼 model을 돌려주므로, 대부분의 inlier가 C(z, x̂) ≤ γ를 통과하지 못합니다. 나쁜 샘플을 드러내는 것은 바로 이 개수입니다.
+@@ 88
+inlier는 하나의 공통 \(\mathbf{x}\)에 대해 기하학적 제약 \(C(\mathbf{z}_i, \mathbf{x}) \le \gamma\)를 만족합니다. calibration된 두 view에서는 epipolar constraint입니다.
+@@ 89
+Consensus maximization (3.4)는 하나의 \(\mathbf{x}\)로 설명되는 가장 큰 부분집합을 찾습니다. 조합적인 문제입니다.
+@@ 90
+RANSAC은 minimal set을 샘플링하고, \(\hat{\mathbf{x}}\)를 풀고, 동의하는 측정값을 세고, 가장 좋은 것을 남깁니다.
+@@ 91
+iteration 수의 기댓값: \(1/\omega^n\). 신뢰도 \(p\)를 위해서는: \(k \ge \log(1-p)/\log(1-\omega^n)\).
+@@ 92
+pose-graph optimization처럼 inlier가 드물거나 minimal set이 크면 실패합니다.
+@@ 93
+<em>SLAM Handbook</em>, §3.2 도입부와 §3.2.1 "RANdom SAmple Consensus (RANSAC)", pp. 78–81, 식 (3.2)–(3.4), Example 3.1.
+@@ 94
+Fischler and Bolles, <em>Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and Automated Cartography</em>, 1981 (알고리즘, 그리고 주어진 신뢰도에 필요한 iteration 수).
+@@ 95
+Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (epipolar constraint 유도; RANSAC 샘플 수).
