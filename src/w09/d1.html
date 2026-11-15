@@ -1,0 +1,139 @@
+<section class="day" data-day="49" id="d49" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 9 · Day 1</span>
+  <h2>Local minima, certificates, and why convex problems are easy</h2>
+  <p class="lead">After today you can explain why a local SLAM solver can return a wrong answer without noticing, say what a certifiably optimal solver promises, and test whether a set or a function is convex.</p>
+  <p class="meta">About 60 min · Read the Chapter 6 opening and the start of §6.1, pp. 149–152 (3 pages) · Needs Week 2 Day 4</p>
+</header>
+
+<div class="box read"><h4>Read first: Chapter 6 opening and §6.1 up to the heading of §6.1.1, pp. 149–152</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The two questions the chapter sets out to answer (p. 149). This week is about the first one.</li>
+<li>The three SLAM problems the book names as NP-hard (p. 150).</li>
+<li>Figure 6.1 (p. 151): which panel is the global optimum, and how the other two were produced.</li>
+<li>The sentence on p. 151 that says why a certifiable algorithm does not contradict NP-hardness.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>The solvers of Weeks 2 and 3 walk downhill from an initial guess. SLAM costs are not convex, so downhill can end in a valley that is not the lowest one, and the solver has no way to tell. A <strong>certifiably optimal</strong> solver returns an estimate together with a number that bounds how far that estimate can be from the best possible one, and often proves the gap is zero.</p></div>
+
+<h3>1. Two questions about the SLAM optimization problem</h3>
+<p>Chapters 1 to 3 turned SLAM into an optimization problem and solved it with iterative local methods: Gauss-Newton, Levenberg-Marquardt, gradient descent (<a href="#d10">Week 2 · Day 4</a>). Chapter 6 steps back and asks two things about that problem. <span class="src">Ch. 6 · p. 149</span></p>
+<div class="tbl"><table>
+  <tr><th>Question</th><th>What it is about</th><th>Where</th></tr>
+  <tr><td>Can we compute the <em>globally</em> best solution, possibly with no initial guess, and know that we did?</td><td>Computation and reliability</td><td>§6.1, this week and the first half of next week</td></tr>
+  <tr><td>How close is that best solution to the truth, and what controls the error?</td><td>Fundamental limits of accuracy</td><td>§6.2, next week</td></tr>
+</table></div>
+
+<h3>2. Local solvers can be confidently wrong</h3>
+<p>A point is a <strong>local minimum</strong> of a cost \(f\) if no nearby point has a lower cost, and a <strong>global minimum</strong> if no point at all has a lower cost. A local solver stops when the gradient is zero and the cost stops decreasing, which is true at both. Figure 6.1 shows what that means on real data: one parking-garage dataset, one cost function, and three trajectories that are all local minima. Only one is the global minimum; the other two came from random starting points. <span class="src">Figure 6.1 · p. 151</span></p>
+<p>The book adds that this is not bad luck. Several special cases of SLAM, among them angular synchronization, rotation averaging, and pose-graph optimization (PGO), are <strong>NP-hard</strong>: unless P = NP, no algorithm solves every instance efficiently. <span class="src">§6.1 · p. 150</span> In practice SLAM often works anyway: odometry gives a good initial guess, and several optimization methods reach near-optimal solutions even from poor ones. But off-the-shelf local methods can also produce badly wrong estimates on well-posed problems. <span class="src">§6.1 · p. 150</span></p>
+<p>You can reproduce Figure 6.1 in miniature. Ten robot poses sit on a ring and only their headings \(\theta_1,\dots,\theta_{10}\) are unknown. Each edge \((i,j)\) is a noisy measurement \(\tilde\theta_{ij}\) of the heading difference \(\theta_j-\theta_i\): ten around the ring, and one chord from pose 1 to pose 5. The cost is</p>
+\[ f(\theta_1,\dots,\theta_{10}) = \sum_{(i,j)} 4\,\bigl(1-\cos r_{ij}\bigr), \qquad r_{ij} = \theta_j-\theta_i-\tilde\theta_{ij}. \]
+<p>Each edge pays for its <strong>residual</strong> \(r_{ij}\). The payment is zero when the residual is zero, it is about \(2r_{ij}^2\) when the residual is small (because \(1-\cos r \approx r^2/2\)), and it does not change when \(r_{ij}\) grows by a full turn, as it must for angles. Day 3 shows this is exactly the rotation part of the book's PGO cost in the plane. This problem is the angular synchronization the book lists as NP-hard.</p>
+<p>Try it: the widget starts gradient descent from random headings. Look at the cost, press "New start" a few times, then press "Run 20 starts".</p>
+<div class="viz" data-viz="w09_local"></div>
+<p class="cap">Notice that the first run stops at cost 11.595 with a gradient of zero and edge residuals of up to 55°, while the next start reaches 0.091. Of the 20 starts, 16 reach 0.091 and 4 stop at 10.257 or 11.595. Nothing inside a stuck run says it is stuck.</p>
+
+<div class="box note"><h4>Filling the gap: why a loop creates local minima</h4>
+<p>Take the simplest case: a ring of \(n\) headings with perfect measurements and no chord. Going once around the ring, the heading differences \(\theta_{i+1}-\theta_i\) add up to zero, and the perfect measurements add up to a whole number of turns. So the residuals \(r_1,\dots,r_n\) of any guess must add up to a whole number of turns:</p>
+\[ r_1+r_2+\dots+r_n = 2\pi k, \qquad k \in \{0,\pm1,\pm2,\dots\}. \]
+<p>Heading \(\theta_i\) enters two residuals, with a plus sign in the edge that arrives and a minus sign in the edge that leaves. So \(\partial f/\partial\theta_i = 4\sin r_{\text{in}} - 4\sin r_{\text{out}}\), and the gradient is zero when all edges have the same \(\sin r\). One way to do that is to share the total evenly, \(r_i = 2\pi k/n\) on every edge, which costs</p>
+\[ f_k = 4n\left(1-\cos\frac{2\pi k}{n}\right). \]
+<p>For \(k=0\) this is the true solution with cost 0. For \(k=\pm1\) the estimate makes one extra full turn spread around the ring. The second derivative of \(4(1-\cos r)\) is \(4\cos r\), so each edge still curves upward as long as \(\cos(2\pi k/n) \gt 0\), that is \(|k| \lt n/4\). For \(n=10\) that gives genuine local minima at \(k=\pm1\) with cost \(40(1-\cos 36^\circ) = 7.64\) and at \(k=\pm2\) with cost \(40(1-\cos 72^\circ) = 27.64\).</p>
+<p>To get from \(k=1\) to \(k=0\), some edge has to pass through a residual of 180°, where its cost is highest. Gradient descent never goes uphill, so it stays. The widget's graph has a chord and noise, which changes the numbers (10.257 and 11.595 instead of 7.64) but not the mechanism: the two stuck solutions carry one extra turn around the loop 5–6–7–8–9–10–1 that the chord closes, one in each direction. The pink edges show where the turn is spread.</p></div>
+
+<h3>3. What a certifiably optimal solver promises</h3>
+<p>Write \(p^\star\) for the lowest cost any solution can have. A <strong>certifiably optimal</strong> (or certifiably correct) method returns an estimate \(\hat{\mathbf{x}}\) and also a <strong>lower bound</strong> \(d^\star \le p^\star\), computed by convex relaxation and not by local search. <span class="src">§6.1 · p. 151</span> The bound is the certificate:</p>
+<figure class="fig"><svg viewBox="0 0 600 150" role="img" aria-label="A horizontal cost axis with three marks from left to right: d star, the relaxation bound; p star, the true optimum; and f of x hat, the cost of our estimate. A short bracket from p star to f of x hat is the true suboptimality, which is unknown. A longer bracket from d star to f of x hat is the bound we can compute.">
+  <defs><marker id="w09ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <line x1="40" y1="95" x2="560" y2="95" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w09ar1)"/>
+  <text x="566" y="99" font-size="12" fill="var(--muted)">cost</text>
+  <line x1="170" y1="88" x2="170" y2="102" stroke="var(--c5)" stroke-width="3"/>
+  <line x1="300" y1="88" x2="300" y2="102" stroke="var(--ink)" stroke-width="3"/>
+  <line x1="440" y1="88" x2="440" y2="102" stroke="var(--c3)" stroke-width="3"/>
+  <text x="170" y="120" text-anchor="middle" font-size="14" fill="var(--ink)">d*</text>
+  <text x="170" y="137" text-anchor="middle" font-size="11" fill="var(--muted)">relaxation bound</text>
+  <text x="300" y="120" text-anchor="middle" font-size="14" fill="var(--ink)">p*</text>
+  <text x="300" y="137" text-anchor="middle" font-size="11" fill="var(--muted)">true optimum</text>
+  <text x="440" y="120" text-anchor="middle" font-size="14" fill="var(--ink)">f(x̂)</text>
+  <text x="440" y="137" text-anchor="middle" font-size="11" fill="var(--muted)">cost of our estimate</text>
+  <path d="M300 78 L300 70 L440 70 L440 78" fill="none" stroke="var(--c3)" stroke-width="1.5"/>
+  <text x="370" y="62" text-anchor="middle" font-size="12" fill="var(--ink)">true suboptimality (unknown)</text>
+  <path d="M170 78 L170 40 L440 40 L440 48" fill="none" stroke="var(--c5)" stroke-width="1.5"/>
+  <text x="305" y="32" text-anchor="middle" font-size="12" fill="var(--ink)">bound we can compute: f(x̂) − d*</text>
+</svg><figcaption>We never learn p*, but it is trapped between two numbers we do have. If they coincide, the estimate is proven optimal.</figcaption></figure>
+<p>Since \(d^\star \le p^\star \le f(\hat{\mathbf{x}})\), the estimate is at most \(f(\hat{\mathbf{x}})-d^\star\) worse than the best possible. If that difference is zero, \(\hat{\mathbf{x}}\) is a global minimum, proven.</p>
+<p>This does not contradict NP-hardness. On a hard instance the method is allowed to return a bound with a gap and no proof of optimality. The book gives two reasons it is still worth having: for the noise levels of real SLAM problems the gap is nearly always zero, and when it is not, the failure is itself a warning the robot can act on. <span class="src">§6.1 · p. 151</span></p>
+<div class="box kid"><h4>In plain words</h4><p>A local solver is a hiker in fog who stops when every direction goes up. A certifiable solver also carries an altimeter reading for the lowest point on the whole map. If the hiker's altitude matches it, the hiker is at the bottom. If not, the difference says how much lower the true bottom could be.</p></div>
+
+<h3>4. Convexity: when every local minimum is global</h3>
+<p>The book assumes you know why convex problems are the easy ones. Here is the minimum you need. A set \(\mathcal{C}\) is <strong>convex</strong> if the straight segment between any two of its points stays inside it. A function \(f\) is <strong>convex</strong> if its graph never rises above its chords: for all \(\mathbf{x},\mathbf{y}\) and all \(t\in[0,1]\),</p>
+\[ f\bigl(t\mathbf{x}+(1-t)\mathbf{y}\bigr) \le t\,f(\mathbf{x})+(1-t)\,f(\mathbf{y}). \]
+<p>A <strong>convex problem</strong> minimizes a convex function over a convex set.</p>
+<figure class="fig"><svg viewBox="0 0 600 250" role="img" aria-label="Two graphs. Left, a convex bowl-shaped curve with a horizontal chord lying above it and a single minimum. Right, a curve with two valleys, a lower global minimum on the left and a higher local minimum on the right; the chord joining the two valley bottoms passes below the hump between them.">
+  <text x="150" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Convex</text>
+  <path d="M40 40 Q150 300 260 40" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
+  <line x1="84" y1="123" x2="216" y2="123" stroke="var(--c1)" stroke-width="2" stroke-dasharray="6 4"/>
+  <circle cx="84" cy="123" r="4" fill="var(--c1)"/><circle cx="216" cy="123" r="4" fill="var(--c1)"/>
+  <circle cx="150" cy="170" r="5" fill="var(--c1)"/>
+  <text x="150" y="192" text-anchor="middle" font-size="11" fill="var(--muted)">the only minimum</text>
+  <text x="150" y="222" text-anchor="middle" font-size="12" fill="var(--ink)">every chord lies on</text>
+  <text x="150" y="238" text-anchor="middle" font-size="12" fill="var(--ink)">or above the graph</text>
+  <text x="450" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Not convex</text>
+  <path d="M338 114 C352 190 362 200 372 200 S420 116 455 115 S505 157 521 157 S550 110 563 49" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
+  <line x1="372" y1="200" x2="521" y2="157" stroke="var(--c3)" stroke-width="2" stroke-dasharray="6 4"/>
+  <circle cx="372" cy="200" r="5" fill="var(--c1)"/><circle cx="521" cy="157" r="5" fill="var(--c3)"/>
+  <text x="450" y="100" text-anchor="middle" font-size="11" fill="var(--muted)">chord below the graph</text>
+  <text x="372" y="222" text-anchor="middle" font-size="11" fill="var(--muted)">global minimum</text>
+  <text x="521" y="180" text-anchor="middle" font-size="11" fill="var(--muted)">local minimum</text>
+</svg><figcaption>Left: a convex function has one valley. Right: one chord that dips below the graph is enough to make a function non-convex, and a second valley becomes possible.</figcaption></figure>
+
+<div class="box note"><h4>Filling the gap: in a convex problem, a local minimum is a global minimum</h4>
+<p>Suppose \(\mathbf{x}\) is a local minimum but some other feasible point \(\mathbf{y}\) is better, \(f(\mathbf{y}) \lt f(\mathbf{x})\). Walk a small step \(t\) from \(\mathbf{x}\) toward \(\mathbf{y}\), to \(\mathbf{z}=(1-t)\mathbf{x}+t\mathbf{y}\). The set is convex, so \(\mathbf{z}\) is feasible. The function is convex, so</p>
+\[ f(\mathbf{z}) \le (1-t)f(\mathbf{x})+t f(\mathbf{y}) \lt (1-t)f(\mathbf{x})+t f(\mathbf{x}) = f(\mathbf{x}). \]
+<p>That holds for every \(t\in(0,1]\), however small, so there are better points arbitrarily close to \(\mathbf{x}\). Then \(\mathbf{x}\) was not a local minimum. The assumption was wrong, and no better \(\mathbf{y}\) exists.</p></div>
+
+<p>Three quick tests you will reuse all week:</p>
+<div class="tbl"><table>
+  <tr><th>Object</th><th>Convex?</th><th>Why</th></tr>
+  <tr><td>\(f(x)=x^2\), or any least-squares cost \(\norm{\mathbf{A}\mathbf{x}-\mathbf{b}}^2\)</td><td>Yes</td><td>The second derivative, \(2\) or \(2\mathbf{A}\T\mathbf{A}\), is never negative. A twice-differentiable function is convex exactly when its Hessian is positive semidefinite everywhere.</td></tr>
+  <tr><td>\(f(r)=4(1-\cos r)\), the edge cost above</td><td>No</td><td>Its second derivative \(4\cos r\) is negative for \(90^\circ \lt |r| \le 180^\circ\).</td></tr>
+  <tr><td>The unit circle \(\{\mathbf{x}: \norm{\mathbf{x}}=1\}\), and the rotations \(\SO(2)\)</td><td>No</td><td>The midpoint of \((1,0)\) and \((-1,0)\) is the origin, which is not on the circle. Likewise the average of the rotations by 0° and 180° is the zero matrix, which is not a rotation.</td></tr>
+  <tr><td>The symmetric matrices with \(\mathbf{X}\succeq 0\) (positive semidefinite, \(\mathbf{v}\T\mathbf{X}\mathbf{v}\ge 0\) for all \(\mathbf{v}\))</td><td>Yes</td><td>If \(\mathbf{X}\succeq0\) and \(\mathbf{Y}\succeq0\) then \(\mathbf{v}\T(t\mathbf{X}+(1-t)\mathbf{Y})\mathbf{v} = t\,\mathbf{v}\T\mathbf{X}\mathbf{v}+(1-t)\,\mathbf{v}\T\mathbf{Y}\mathbf{v} \ge 0\).</td></tr>
+</table></div>
+<p>The third row is the root of the trouble: any problem whose unknowns include rotations has a non-convex feasible set (<a href="#d19">Week 4 · Day 1</a>). The fourth row is the way out, starting tomorrow.</p>
+
+<h3>5. Relaxation: an easier problem that bounds the hard one</h3>
+<p>A <strong>relaxation</strong> of a minimization problem keeps the objective and enlarges the feasible set. Minimizing over more candidates can only lower the minimum, so the relaxed optimum \(d^\star\) is a lower bound on \(p^\star\). And if the relaxed minimizer happens to lie in the original feasible set, it is optimal for the original problem too, because nothing in the larger set beats it.</p>
+<p>A one-line example. Minimize \((x-0.4)^2\) over the two points \(x\in\{0,1\}\): the best is \(x=0\) with \(p^\star=0.16\). Relax the set to the interval \([0,1]\), which is convex: the minimizer is \(x=0.4\) with \(d^\star=0\). The bound \(0\le0.16\) holds but has a gap, and \(0.4\) is not feasible. Now change the objective to \((x+0.3)^2\). The relaxed minimizer is \(x=0\), an original point, so \(p^\star=d^\star=0.09\) and the relaxation has solved the hard problem. When that happens the relaxation is called <strong>tight</strong> or <strong>exact</strong>.</p>
+<p>Day 2 builds such a relaxation for a whole class of problems, Days 3 and 4 apply it to pose-graph optimization, and Day 5 solves it fast.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The solver converged, so the answer is right."</strong> Convergence means the gradient vanished. That happens at every local minimum, including the twisted ones in the widget.</li>
+<li><strong>"NP-hard means it cannot be solved."</strong> It means no efficient algorithm handles every instance. Most instances that come from real robots are among the easy ones.</li>
+<li><strong>"A certifiable solver always returns the global optimum."</strong> It always returns an estimate and a bound. The bound proves optimality only when the gap is zero.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A noise-free ring of 12 headings with the cost above. What is the cost of the stationary point that is twisted once (k = 1)?</p><div class="opts"><button type="button" class="opt">0</button><button type="button" class="opt">7.64</button><button type="button" class="opt">6.43</button><button type="button" class="opt">24</button></div><p class="exp" hidden>Each of the 12 edges has residual 360°/12 = 30°, so the cost is 4 × 12 × (1 − cos 30°) = 48 × 0.134 = 6.43. Since 1 is less than 12/4, it is a local minimum.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A certifiable solver returns an estimate with cost 10.2 and a lower bound of 9.5. What do you know?</p><div class="opts"><button type="button" class="opt">The estimate is at most 0.7 above the optimal cost; it may or may not be optimal</button><button type="button" class="opt">The estimate is a local minimum that is not global</button><button type="button" class="opt">The optimal cost is 9.5</button><button type="button" class="opt">The solver failed and the estimate is useless</button></div><p class="exp" hidden>The optimal cost lies between 9.5 and 10.2. The gap bounds the suboptimality by 0.7 but does not say whether the true gap is zero.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. Which of these sets is convex?</p><div class="opts"><button type="button" class="opt">The two points {0, 1}</button><button type="button" class="opt">The unit circle in the plane</button><button type="button" class="opt">The 2 × 2 rotation matrices</button><button type="button" class="opt">The unit disk, all points with norm at most 1</button></div><p class="exp" hidden>The segment between two points of the disk stays in the disk. For the other three, a midpoint leaves the set: 0.5, the origin, and the zero matrix.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Pose-graph optimization is NP-hard, yet certifiable solvers for it exist. Why is that not a contradiction?</p><div class="opts"><button type="button" class="opt">They only work on small graphs</button><button type="button" class="opt">On hard instances they may return only a bound, without a proof of optimality</button><button type="button" class="opt">They need a very good initial guess</button><button type="button" class="opt">NP-hardness applies to 3-D problems only</button></div><p class="exp" hidden>They are efficient on every instance but certify optimality only when the relaxation happens to be tight. In the worst case the output is an estimate plus a suboptimality bound.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>SLAM costs are non-convex. Local solvers stop at any local minimum and cannot tell it from the global one.</li>
+<li>A single loop of rotation measurements already has twisted local minima, with cost \(4n(1-\cos(2\pi k/n))\) on a clean ring.</li>
+<li>A certifiable solver returns an estimate and a lower bound \(d^\star\le p^\star\); the gap \(f(\hat{\mathbf{x}})-d^\star\) bounds the suboptimality, and a zero gap proves optimality.</li>
+<li>In a convex problem every local minimum is global. Rotations form a non-convex set; positive semidefinite matrices form a convex one.</li>
+<li>A relaxation enlarges the feasible set, which gives a lower bound, and it is exact when its minimizer is feasible for the original problem.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 6 opening and §6.1 "Certifiably Optimal Solvers for SLAM", pp. 149–152, including Figure 6.1.</li>
+<li>Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004: convex sets and functions, the second-order condition, and local-equals-global for convex problems.</li>
+<li>The twisted-ring calculation is our own worked example of the cost in equation (6.9) restricted to planar rotations.</li>
+</ol></div>
+<p class="next"></p>
+</section>

@@ -1,0 +1,168 @@
+<section class="day" data-day="67" id="d67" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 12 · Day 1</span>
+  <h2>Tracking in real time: pose-only BA, keyframes, and local BA</h2>
+  <p class="lead">After today you can explain how a real-time visual SLAM system divides its work between threads, write the pose-only and local bundle adjustment problems, and derive the Jacobian that one tracking step needs.</p>
+  <p class="meta">About 60 min · Read §7.4 opening and §7.4.1, pp. 207–209, and Figure 7.7 on p. 210 (about 3 pages) · Needs Week 11 Day 4</p>
+</header>
+
+<div class="box read"><h4>Read first: §7.4.1, pp. 208–209, and Figure 7.7 on p. 210</h4>
+<p>Page 207 only recaps §7.3 and opens §7.4. While you read the rest, look for:</p>
+<ul>
+<li>The two rates on p. 208: frame rate (10–50 Hz) and keyframe rate (0.5–5 Hz).</li>
+<li>What stands under the arg min in equation (7.4), compared with full BA, equation (7.3) on p. 205.</li>
+<li>In equation (7.5) on p. 209: the sum runs over \(\mathsf{K}_1 \cup \mathsf{K}_2\), but only the poses in \(\mathsf{K}_1\) are optimized.</li>
+<li>The four threads in Figure 7.7.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Full bundle adjustment is the most accurate thing you can do with a set of images, and it is far too slow to repeat for every new frame. Real-time systems therefore split the problem by how fast each answer is needed: the camera pose for every frame (a 6-unknown problem against a frozen map), the nearby map for every keyframe (a small BA), and the global shape only when a loop closes.</p></div>
+
+<h3>1. Why not run BA on every frame?</h3>
+<p>Recall <strong>full BA</strong> from <a href="#d64">Week 11 · Day 4</a>: minimize the reprojection error over all camera poses \(\mathbf{T}^i_w\) and all points \(\mathbf{x}^w_j\), equation (7.3). Each pose has 6 degrees of freedom and each point 3. Suppose a robot films for one minute at 30 Hz and the map holds 20,000 points. Then full BA has</p>
+\[ 6 \times 1800 + 3 \times 20{,}000 = 70{,}800 \ \text{unknowns}, \]
+<p>and a new image arrives every 33 ms. The book puts the frame rate at 10 to 50 Hz and says plainly that full BA cannot keep up. <span class="src">§7.4.1 · p. 208</span> Two ideas make real-time operation possible.</p>
+<p><strong>Parallel tracking and mapping.</strong> Split the work into two threads that run side by side. The <strong>tracking thread</strong> handles every image, but estimates only that image's camera pose. The <strong>mapping thread</strong> runs BA, but only on a subset \(\mathsf{K} \subset \mathsf{C}\) of the images called <strong>keyframes</strong>. Only keyframe poses become part of the map, so BA needs to run at keyframe rate, typically 0.5 to 5 Hz. <span class="src">§7.4.1 · p. 208</span></p>
+<p><strong>Locality.</strong> What the camera sees now says almost nothing about parts of the map that are far away, except when a loop closes. So the mapping thread optimizes only a window of nearby keyframes (<strong>local BA</strong>), and a third thread that runs rarely takes care of loops. <span class="src">§7.4.1 · pp. 208–209</span></p>
+<figure class="fig"><svg viewBox="0 0 600 232" role="img" aria-label="Timeline with three lanes. Tracking processes every frame; four of the frames are keyframes. Each keyframe starts a local BA in the local mapping lane. Late in the timeline one keyframe triggers the loop closing lane, which runs pose-graph optimization and then full BA.">
+  <defs><marker id="w12ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <text x="10" y="38" font-size="13" font-weight="700" fill="var(--ink)">Tracking</text>
+  <text x="10" y="54" font-size="11" fill="var(--muted)">every frame</text>
+  <text x="10" y="103" font-size="13" font-weight="700" fill="var(--ink)">Local mapping</text>
+  <text x="10" y="119" font-size="11" fill="var(--muted)">every keyframe</text>
+  <text x="10" y="168" font-size="13" font-weight="700" fill="var(--ink)">Loop closing</text>
+  <text x="10" y="184" font-size="11" fill="var(--muted)">when a loop is found</text>
+  <g fill="var(--c5-soft)" stroke="var(--c5)">
+    <rect x="159" y="28" width="12" height="24"/><rect x="178" y="28" width="12" height="24"/><rect x="197" y="28" width="12" height="24"/><rect x="216" y="28" width="12" height="24"/><rect x="235" y="28" width="12" height="24"/>
+    <rect x="273" y="28" width="12" height="24"/><rect x="292" y="28" width="12" height="24"/><rect x="311" y="28" width="12" height="24"/><rect x="330" y="28" width="12" height="24"/><rect x="349" y="28" width="12" height="24"/><rect x="368" y="28" width="12" height="24"/>
+    <rect x="406" y="28" width="12" height="24"/><rect x="425" y="28" width="12" height="24"/><rect x="444" y="28" width="12" height="24"/><rect x="463" y="28" width="12" height="24"/><rect x="482" y="28" width="12" height="24"/>
+    <rect x="520" y="28" width="12" height="24"/><rect x="539" y="28" width="12" height="24"/><rect x="558" y="28" width="12" height="24"/>
+  </g>
+  <g fill="var(--c5)" stroke="var(--c5)">
+    <rect x="140" y="28" width="12" height="24"/><rect x="254" y="28" width="12" height="24"/><rect x="387" y="28" width="12" height="24"/><rect x="501" y="28" width="12" height="24"/>
+  </g>
+  <text x="140" y="20" font-size="11" fill="var(--muted)">dark = keyframe</text>
+  <g stroke="var(--muted)" stroke-width="1.5">
+    <line x1="146" y1="54" x2="146" y2="88" marker-end="url(#w12ar1)"/><line x1="260" y1="54" x2="260" y2="88" marker-end="url(#w12ar1)"/><line x1="393" y1="54" x2="393" y2="88" marker-end="url(#w12ar1)"/><line x1="507" y1="54" x2="507" y2="88" marker-end="url(#w12ar1)"/>
+    <line x1="430" y1="118" x2="430" y2="153" marker-end="url(#w12ar1)"/>
+  </g>
+  <g fill="var(--c2-soft)" stroke="var(--c2)">
+    <rect x="140" y="92" width="76" height="24" rx="5"/><rect x="254" y="92" width="76" height="24" rx="5"/><rect x="387" y="92" width="76" height="24" rx="5"/><rect x="501" y="92" width="76" height="24" rx="5"/>
+  </g>
+  <text x="178" y="108" text-anchor="middle" font-size="11" fill="var(--ink)">local BA</text>
+  <text x="292" y="108" text-anchor="middle" font-size="11" fill="var(--ink)">local BA</text>
+  <text x="425" y="108" text-anchor="middle" font-size="11" fill="var(--ink)">local BA</text>
+  <text x="539" y="108" text-anchor="middle" font-size="11" fill="var(--ink)">local BA</text>
+  <rect x="410" y="157" width="166" height="24" rx="5" fill="var(--c4-soft)" stroke="var(--c4)"/>
+  <text x="493" y="173" text-anchor="middle" font-size="11" fill="var(--ink)">PGO, then full BA</text>
+  <line x1="140" y1="208" x2="578" y2="208" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w12ar1)"/>
+  <text x="140" y="225" font-size="11" fill="var(--muted)">time</text>
+</svg><figcaption>Three rates. Tracking must finish before the next frame arrives. Local mapping has until the next keyframe. Loop closing runs in the background and may take longer still.</figcaption></figure>
+
+<h3>2. The tracking thread: pose-only BA</h3>
+<p>For the current image \(i\), the tracking thread matches keypoints to map points that already exist, then solves <span class="src">§7.4.1 · p. 208, eq. (7.4)</span></p>
+\[ {\mathbf{T}^i_w}^{*} = \argmin_{\mathbf{T}^i_w} \sum_{j \in \mathsf{P}} \rho\!\left( \norm{ \mathbf{z}_{ij} - \pi\!\left( \mathbf{R}^i_w \mathbf{x}^w_j + \mathbf{t}^i_w \right) }_{\boldsymbol{\Sigma}_{ij}} \right). \tag{7.4} \]
+<p>Every symbol is the one from Week 11: \(\mathbf{z}_{ij}\) is the observed keypoint of point \(j\) in image \(i\), \(\pi\) is the camera projection, \(\mathbf{R}^i_w, \mathbf{t}^i_w\) are the rotation and translation of \(\mathbf{T}^i_w\) (they take a point from the world frame to camera \(i\)'s frame), \(\norm{\mathbf{e}}_{\boldsymbol{\Sigma}}\) is the noise-weighted length \(\sqrt{\mathbf{e}\T \boldsymbol{\Sigma}^{-1} \mathbf{e}}\), and \(\rho\) is a robust kernel such as Huber (<a href="#d34">Week 6 · Day 4</a>). The only change from (7.3) is under the arg min: the points \(\mathbf{x}^w_j\) are now known constants. This is called <strong>pose-only BA</strong> (or motion-only BA). It is the perspective-n-point problem of <a href="#d21">Week 4 · Day 3</a> with a good initial guess: the pose of the previous frame, or a motion-model prediction of it.</p>
+
+<div class="box note"><h4>Filling the gap: the Jacobian of the reprojection error with respect to the pose</h4>
+<p>The book states (7.4) and moves on. To solve it with Gauss-Newton (<a href="#d10">Week 2 · Day 4</a>) you need the derivative of each residual with respect to a small change of pose. Take one point, drop the indices, and write \(\mathbf{x}^c = \mathbf{R}\mathbf{x}^w + \mathbf{t}\) for the point in the camera frame.</p>
+<p><strong>Step 1: perturb the pose.</strong> As in §2.1.3, \(\mathbf{T} = \mathbf{T}^0 \Exp(\boldsymbol{\xi})\) with \(\boldsymbol{\xi} \in \R^6\), translation part first and rotation part \(\boldsymbol{\phi}\) second. To first order \(\Exp(\boldsymbol{\xi}) \approx \mathbf{I} + \boldsymbol{\xi}^\wedge\), which moves the world point by \(\boldsymbol{\xi}_{1:3} + \boldsymbol{\phi} \times \mathbf{x}^w\) before \(\mathbf{T}^0\) is applied. Since \(\boldsymbol{\phi} \times \mathbf{x}^w = -(\mathbf{x}^w)^\wedge \boldsymbol{\phi}\),</p>
+\[ \mathbf{x}^c(\boldsymbol{\xi}) \approx \mathbf{x}^c_0 + \mathbf{R}^0 \begin{bmatrix} \mathbf{I} &amp; -(\mathbf{x}^w)^\wedge \end{bmatrix} \boldsymbol{\xi} . \]
+<p>This is the top three rows of \(\mathbf{T}^0 (\tilde{\boldsymbol{\ell}}^w)^{\odot}\) in the book's equations (2.14)–(2.15).</p>
+<p><strong>Step 2: differentiate the projection.</strong> For the pinhole model \(\pi(\mathbf{x}^c) = (f_u x/z + u_0,\; f_v y/z + v_0)\) with \(\mathbf{x}^c = (x, y, z)\),</p>
+\[ \boldsymbol{\Pi} = \frac{\partial \pi}{\partial \mathbf{x}^c} = \begin{bmatrix} f_u/z &amp; 0 &amp; -f_u x/z^2 \\ 0 &amp; f_v/z &amp; -f_v y/z^2 \end{bmatrix}. \]
+<p><strong>Step 3: chain them.</strong> The predicted keypoint changes by \(\mathbf{J}\boldsymbol{\xi}\) with the \(2 \times 6\) matrix</p>
+\[ \mathbf{J} = \boldsymbol{\Pi}\, \mathbf{R}^0 \begin{bmatrix} \mathbf{I} &amp; -(\mathbf{x}^w)^\wedge \end{bmatrix}, \qquad \mathbf{e}(\boldsymbol{\xi}) \approx \mathbf{e}_0 - \mathbf{J}\boldsymbol{\xi}, \quad \mathbf{e}_0 = \mathbf{z} - \pi(\mathbf{x}^c_0). \]
+<p><strong>Step 4: one Gauss-Newton step.</strong> With equal isotropic noise and no robust kernel, minimizing \(\sum_j \norm{\mathbf{e}_{0,j} - \mathbf{J}_j \boldsymbol{\xi}}^2\) gives the normal equations</p>
+\[ \Big( \sum_j \mathbf{J}_j\T \mathbf{J}_j \Big) \boldsymbol{\xi} = \sum_j \mathbf{J}_j\T \mathbf{e}_{0,j}, \qquad \mathbf{T}^0 \leftarrow \mathbf{T}^0 \Exp(\boldsymbol{\xi}). \]
+<p>The matrix on the left is \(6 \times 6\) however many points are matched. The work per iteration is one pass over the matches plus one tiny solve, which is why tracking fits in a frame time.</p>
+<p><strong>Numbers.</strong> Camera at \(\mathbf{R}^0 = \mathbf{I}\), \(\mathbf{t}^0 = \mathbf{0}\), \(f_u = f_v = 500\) px, point \(\mathbf{x}^w = (1, 0, 5)\) m. Then \(f/z = 100\), \(-f x / z^2 = -20\), and</p>
+\[ \boldsymbol{\Pi} = \begin{bmatrix} 100 &amp; 0 &amp; -20 \\ 0 &amp; 100 &amp; 0 \end{bmatrix}, \quad -(\mathbf{x}^w)^\wedge = \begin{bmatrix} 0 &amp; 5 &amp; 0 \\ -5 &amp; 0 &amp; 1 \\ 0 &amp; -1 &amp; 0 \end{bmatrix}, \quad \mathbf{J} = \begin{bmatrix} 100 &amp; 0 &amp; -20 &amp; 0 &amp; 520 &amp; 0 \\ 0 &amp; 100 &amp; 0 &amp; -500 &amp; 0 &amp; 100 \end{bmatrix}. \]
+<p>Read the first row: moving the pose perturbation 1 cm along \(x\) shifts the keypoint by 1 px, 1 cm along \(z\) by only 0.2 px, and a rotation of 1 mrad about \(y\) by 0.52 px. Motion along the viewing direction is the hardest to see.</p></div>
+
+<h3>3. Try it in a flat world</h3>
+<p>The widgets of this week use a <strong>flatland camera</strong>: the world is a plane with coordinates \((x, z)\), a camera pose is \((c_x, c_z, \theta)\) (3 unknowns instead of 6), a point is \((p_x, p_z)\), and the image is a line on which the point appears at \(u = f\,x_c / z_c\), where \((x_c, z_c)\) is the point in the camera frame and \(f = 300\) px. Everything above carries over with smaller matrices: one residual per match, a \(1 \times 3\) Jacobian, a \(3 \times 3\) system.</p>
+<p>Try it: press "Gauss-Newton step" four times. Then switch on "2 wrong matches", step until the pose stops moving, and finally switch on "Huber kernel" and keep stepping.</p>
+<div class="viz" data-viz="w12_track"></div>
+<p class="cap">Notice three things. From the previous pose, three or four steps bring the camera to within about a centimetre of the truth, and the RMS reprojection error settles near the pixel noise. Two wrong matches out of twelve drag the least-squares pose off by tens of centimetres and several degrees. With the Huber kernel the pose returns to within a few centimetres after several more steps, while the two bad matches keep their large residuals: the kernel does not repair them, it stops listening to them.</p>
+
+<h3>4. Keyframes and the mapping thread</h3>
+<p>A frame taken 30 ms after the last one shows almost the same scene from almost the same place. It adds little information and, because the baseline is tiny, almost no ability to triangulate. Keyframe-based systems therefore use most frames once, to track the camera, and then drop them. Only keyframes and their observations enter the map. <span class="src">§7.3.4 · p. 206</span> A keyframe can be taken at a fixed interval, but the book recommends promoting a frame when it contains significantly new information. <span class="src">§7.4.1 · p. 208</span></p>
+<div class="tbl"><table>
+  <tr><th>Thread</th><th>Runs</th><th>Solves</th><th>Unknowns</th></tr>
+  <tr><td>Tracking</td><td>Every frame, 10–50 Hz</td><td>Pose-only BA, eq. (7.4)</td><td>One camera pose</td></tr>
+  <tr><td>Local mapping</td><td>Every keyframe, 0.5–5 Hz</td><td>Local BA, eq. (7.5)</td><td>Nearby keyframe poses and the points they see</td></tr>
+  <tr><td>Loop closing</td><td>Looks for a loop at every keyframe; corrects when one is found</td><td>Pose-graph optimization</td><td>Keyframe poses</td></tr>
+  <tr><td>Full BA</td><td>Optionally, after a loop closure</td><td>Full BA, eq. (7.3), on keyframes</td><td>All keyframe poses and all points</td></tr>
+</table></div>
+<p>These are the four threads of the ORB-SLAM2 pipeline in Figure 7.7. <span class="src">§7.4.1 · pp. 209–210</span></p>
+
+<h3>5. Local BA and the covisibility graph</h3>
+<p>Which keyframes are "nearby"? One answer is temporal: the last \(k\) frames or keyframes, the usual choice in visual odometry and visual-inertial systems. A better answer for SLAM is <strong>covisibility</strong>: two keyframes are neighbours if they observe more than \(\theta\) map points in common. The <strong>covisibility graph</strong> has keyframes as nodes and an edge for each such pair. <span class="src">§7.4.1 · p. 209</span> A camera that returns to an old place becomes a neighbour of old keyframes, which a temporal window would miss.</p>
+<p>Local BA then uses three sets (Figure 7.6): \(\mathsf{K}_1\), the current keyframe \(k\) and its covisibility neighbours; \(\mathsf{P}_1\), the points seen by them; and \(\mathsf{K}_2\), all other keyframes that see some point of \(\mathsf{P}_1\).</p>
+\[ \{ {\mathbf{T}^k_w}^{*}, {\mathbf{x}^w_j}^{*} \mid k \in \mathsf{K}_1,\, j \in \mathsf{P}_1 \} = \argmin_{\mathbf{T}^k_w,\, \mathbf{x}^w_j} \frac{1}{2} \sum_{i \in \mathsf{K}_1 \cup \mathsf{K}_2,\; j \in \mathsf{P}_1} \rho\!\left( \norm{ \mathbf{z}_{ij} - \pi\!\left( \mathbf{R}^i_w \mathbf{x}^w_j + \mathbf{t}^i_w \right) }_{\boldsymbol{\Sigma}_{ij}} \right). \tag{7.5} \]
+<figure class="fig"><svg viewBox="0 0 600 226" role="img" aria-label="A row of eight keyframes drawn as triangles below a band of map points. The three keyframes on the right, ending with the current keyframe k, form K1 and are connected by solid lines to the points of P1 above them. Two keyframes in the middle form K2 and are connected by dashed lines to some of the same points. The three keyframes on the left and the points above them are not used.">
+  <g stroke="var(--c5)" stroke-width="1">
+    <line x1="390" y1="150" x2="350" y2="66"/><line x1="390" y1="150" x2="400" y2="46"/><line x1="390" y1="150" x2="440" y2="78"/>
+    <line x1="450" y1="150" x2="400" y2="46"/><line x1="450" y1="150" x2="440" y2="78"/><line x1="450" y1="150" x2="490" y2="52"/>
+    <line x1="510" y1="150" x2="440" y2="78"/><line x1="510" y1="150" x2="490" y2="52"/><line x1="510" y1="150" x2="540" y2="74"/><line x1="510" y1="150" x2="570" y2="48"/>
+  </g>
+  <g stroke="var(--c2)" stroke-width="1" stroke-dasharray="5 4">
+    <line x1="310" y1="150" x2="350" y2="66"/><line x1="310" y1="150" x2="400" y2="46"/><line x1="250" y1="150" x2="350" y2="66"/>
+  </g>
+  <g fill="var(--line2)">
+    <circle cx="40" cy="60" r="5"/><circle cx="85" cy="44" r="5"/><circle cx="130" cy="72" r="5"/><circle cx="175" cy="50" r="5"/><circle cx="220" cy="68" r="5"/><circle cx="265" cy="46" r="5"/>
+  </g>
+  <g fill="var(--c1)">
+    <circle cx="350" cy="66" r="6"/><circle cx="400" cy="46" r="6"/><circle cx="440" cy="78" r="6"/><circle cx="490" cy="52" r="6"/><circle cx="540" cy="74" r="6"/><circle cx="570" cy="48" r="6"/>
+  </g>
+  <g fill="var(--soft)" stroke="var(--line2)" stroke-width="1.5">
+    <path d="M50 150 l-11 18 l22 0 z"/><path d="M110 150 l-11 18 l22 0 z"/><path d="M170 150 l-11 18 l22 0 z"/>
+  </g>
+  <g fill="var(--c2-soft)" stroke="var(--c2)" stroke-width="1.5">
+    <path d="M250 150 l-11 18 l22 0 z"/><path d="M310 150 l-11 18 l22 0 z"/>
+  </g>
+  <g fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="1.5">
+    <path d="M390 150 l-11 18 l22 0 z"/><path d="M450 150 l-11 18 l22 0 z"/>
+  </g>
+  <path d="M510 150 l-11 18 l22 0 z" fill="var(--c5)" stroke="var(--c5)" stroke-width="1.5"/>
+  <text x="530" y="166" font-size="13" font-style="italic" fill="var(--ink)">k</text>
+  <text x="150" y="22" text-anchor="middle" font-size="12" fill="var(--muted)">other map points: untouched</text>
+  <text x="460" y="22" text-anchor="middle" font-size="12" fill="var(--ink)">P₁: points optimized</text>
+  <text x="110" y="196" text-anchor="middle" font-size="12" fill="var(--muted)">not in this local BA</text>
+  <text x="280" y="196" text-anchor="middle" font-size="12" fill="var(--ink)">K₂: poses fixed</text>
+  <text x="450" y="196" text-anchor="middle" font-size="12" fill="var(--ink)">K₁: poses optimized</text>
+  <text x="280" y="214" text-anchor="middle" font-size="11" fill="var(--muted)">observations still count</text>
+  <text x="450" y="214" text-anchor="middle" font-size="11" fill="var(--muted)">k and its neighbours</text>
+</svg><figcaption>The three sets of local BA. Dashed lines are observations from keyframes whose poses stay fixed; they still pull on the points of P₁.</figcaption></figure>
+<p>The keyframes in \(\mathsf{K}_2\) act as anchors. Their poses are held constant, but their observations of \(\mathsf{P}_1\) stay in the sum, so the local window cannot slide or stretch relative to the rest of the map.</p>
+<p>Figure 7.5 shows a second, sparser graph over the same keyframes, the <strong>essential graph</strong>: it keeps only edges between keyframes with very many points in common (at least \(\theta = 100\) in the example, against \(\theta = 15\) for the covisibility graph). It is the graph on which pose-graph optimization runs when a loop is corrected. <span class="src">Figure 7.5 · p. 208</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Tracking improves the map."</strong> In (7.4) the points are constants. Tracking only reads the map; the mapping thread writes it.</li>
+<li><strong>"Local BA ignores keyframes outside the window."</strong> It ignores most of them, but not \(\mathsf{K}_2\): those poses are fixed and their observations of \(\mathsf{P}_1\) are kept in the cost.</li>
+<li><strong>"More matched points make each tracking iteration solve a bigger system."</strong> The system stays \(6 \times 6\). More points only lengthen the sum that builds it.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A camera sits at the identity pose with \(f_u = 400\) px. A map point is at \(\mathbf{x}^w = (0, 0, 4)\) m. By the Jacobian above, how far does its predicted keypoint move in \(u\) for a pose perturbation whose translation part is \((0.01, 0, 0)\) m and whose rotation part is zero?</p><div class="opts"><button type="button" class="opt">0.25 px</button><button type="button" class="opt">4 px</button><button type="button" class="opt">1 px</button><button type="button" class="opt">100 px</button></div><p class="exp" hidden>The first entry of the first row of J is f_u / z = 400 / 4 = 100 px per meter, and R⁰ = I. So 0.01 m gives 1 px.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. The tracking thread matches 300 map points in the current image. How large is the linear system it solves in each Gauss-Newton iteration of pose-only BA?</p><div class="opts"><button type="button" class="opt">6 × 6</button><button type="button" class="opt">300 × 300</button><button type="button" class="opt">600 × 600</button><button type="button" class="opt">906 × 906</button></div><p class="exp" hidden>Only the pose is unknown, and it has 6 degrees of freedom. The 600 residuals are summed into a 6 × 6 matrix.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. In local BA, equation (7.5), what happens to a keyframe in \(\mathsf{K}_2\)?</p><div class="opts"><button type="button" class="opt">Its pose is optimized and its observations are dropped</button><button type="button" class="opt">It is removed from the map</button><button type="button" class="opt">It is used only for place recognition</button><button type="button" class="opt">Its pose is held fixed and its observations of the points in P₁ stay in the cost</button></div><p class="exp" hidden>The sum runs over K₁ ∪ K₂ but the arg min only over poses in K₁. The fixed keyframes anchor the window to the rest of the map.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. From the same keyframes you build a covisibility graph with threshold θ = 15 and an essential graph with θ = 100. Which statement is right?</p><div class="opts"><button type="button" class="opt">The essential graph has more edges and is used for local BA</button><button type="button" class="opt">The essential graph has fewer edges and is used for pose-graph optimization when a loop is corrected</button><button type="button" class="opt">Both graphs have the same edges</button><button type="button" class="opt">The covisibility graph is used only by the tracking thread</button></div><p class="exp" hidden>A higher threshold keeps fewer pairs. The dense covisibility graph defines the local BA window; the sparse essential graph keeps loop correction cheap.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Full BA is too slow for frame rate (10–50 Hz), so the work is split into threads that run at different rates.</li>
+<li>Tracking solves pose-only BA (7.4): the map is fixed, one pose is unknown, and each Gauss-Newton step is a 6 × 6 solve.</li>
+<li>The pose Jacobian of a reprojection residual is \(\boldsymbol{\Pi}\,\mathbf{R}^0 [\,\mathbf{I} \;\; -(\mathbf{x}^w)^\wedge]\), a \(2 \times 6\) matrix.</li>
+<li>Mapping runs only on keyframes, and only locally: local BA (7.5) optimizes \(\mathsf{K}_1\) and \(\mathsf{P}_1\) with \(\mathsf{K}_2\) held fixed.</li>
+<li>Covisibility defines "local". Loop correction uses the sparser essential graph, and full BA is an optional final polish.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §7.4 and §7.4.1 "Keypoint-based Image Alignment", pp. 207–210, equations (7.4)–(7.5), Figures 7.5–7.7; §7.3.4, p. 206 (keyframes).</li>
+<li><em>SLAM Handbook</em>, §2.1.3, pp. 57–58, equations (2.10)–(2.16), for the right perturbation of a pose.</li>
+<li>Barfoot, <em>State Estimation for Robotics</em>, 2017, for the pose Jacobian of a camera measurement.</li>
+<li>Hartley and Zisserman, <em>Multiple View Geometry</em>, 2004, for the pinhole projection.</li>
+</ol></div>
+<p class="next"></p>
+</section>

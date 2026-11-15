@@ -1,0 +1,131 @@
+<section class="day" data-day="7" id="d7" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 2 · Day 1</span>
+  <h2>Factor graphs: a picture of what depends on what</h2>
+  <p class="lead">After today you can write the posterior of a small SLAM problem as a product of factors, draw its factor graph, and read off which unknowns each measurement constrains.</p>
+  <p class="meta">About 60 min · Read Ch. 1 opening and §1.1, pp. 19–25 (7 pages) · Needs Week 1</p>
+</header>
+
+<div class="box read"><h4>Read first: Chapter 1 opening and §1.1, pp. 19–25</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The sentence on p. 20 that says why the toy example needs an absolute measurement on the first pose.</li>
+<li>Equations (1.4) and (1.5) on pp. 22–23. Match each probability density in (1.4) with one factor in (1.5).</li>
+<li>Figure 1.4 on p. 24: which factors each of the four SLAM variants has, and which it lacks.</li>
+<li>The lone landmark in Figure 1.5 (p. 25), and what the book expects of it.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>The belief about all poses and landmarks, given all measurements, is one huge probability density. It splits into a product of small pieces, each involving only one or two unknowns. A <strong>factor graph</strong> draws that product: one node per unknown, one node per piece, and an edge wherever a piece depends on an unknown. Everything the back-end does later this week is computed on this graph.</p></div>
+
+<h3>1. Smoothing: estimate the whole trajectory</h3>
+<p>Chapter 1 is about the back-end only. The front-end has already extracted the measurements and decided which measurement belongs to which landmark (data association). <span class="src">Ch. 1 · p. 19</span></p>
+<p>The chapter takes the <strong>smoothing</strong> view: the unknowns are every pose the robot has had so far, not only the latest one. If the unknowns are poses alone, the problem is <strong>pose-based SLAM</strong>. If landmark parameters are estimated too, it is the <strong>full SLAM</strong> problem. <span class="src">Historical note · p. 19</span></p>
+<p>Keeping all the old poses sounds wasteful. It pays off because of structure. A filter that keeps only the latest pose ends up with a covariance or information matrix in which every entry is non-zero. With the whole trajectory kept, the information matrix has few non-zero entries and stays that way. <span class="src">Historical note · p. 19</span> The method this chapter builds toward factorizes that matrix, or the measurement Jacobian, into a triangular "square root", hence the name square-root smoothing and mapping (SAM). <span class="src">Historical note · p. 20</span> You meet the matrix on Day 3 and its sparsity in Week 3.</p>
+
+<h3>2. The toy example: unknowns and measurements</h3>
+<p>The book's running example has a robot at three successive poses \(\mathbf{p}_1,\mathbf{p}_2,\mathbf{p}_3\) and two landmarks \(\boldsymbol{\ell}_1,\boldsymbol{\ell}_2\). The robot measures the <strong>bearing</strong> (the direction) to \(\boldsymbol{\ell}_1\) from \(\mathbf{p}_1\) and \(\mathbf{p}_2\), and to \(\boldsymbol{\ell}_2\) from \(\mathbf{p}_3\). There is also one absolute measurement of \(\mathbf{p}_1\). <span class="src">§1.1.1 · pp. 20–21</span></p>
+<p>The <strong>state</strong> \(\mathbf{x}\) stacks all unknowns into one vector, equation (1.2):</p>
+\[ \mathbf{x} = \begin{bmatrix} \mathbf{p}_1 \\ \mathbf{p}_2 \\ \mathbf{p}_3 \\ \boldsymbol{\ell}_1 \\ \boldsymbol{\ell}_2 \end{bmatrix}. \]
+<p>In the plane a pose is three numbers (position \(x, y\) and heading \(\theta\)) and a landmark is two, so \(\mathbf{x}\) has \(3\cdot 3 + 2\cdot 2 = 13\) entries. In this chapter the book treats a pose as an ordinary vector and postpones the special handling that rotations need to Chapter 2. <span class="src">§1.1.1 · p. 20, footnote 1</span></p>
+<p>Measurements are noisy, so the true \(\mathbf{x}\) cannot be recovered. What can be computed is a <strong>probability density function (PDF)</strong> \(p(\mathbf{x})\): a non-negative function that integrates to one, equation (1.1), and says how much belief each value of \(\mathbf{x}\) deserves. The density we want is the <strong>posterior</strong> \(p(\mathbf{x}\mid\mathbf{z})\), the belief about the unknowns after seeing the measurements \(\mathbf{z}\), equation (1.3). Computing it, or its peak, is called <strong>probabilistic inference</strong>. <span class="src">§1.1.1 · p. 21</span></p>
+
+<h3>3. The posterior is a product of small pieces</h3>
+<p>The book rewrites the posterior with Bayes' law and arrives at equation (1.4):</p>
+\[ \begin{aligned} p(\mathbf{x}\mid\mathbf{z}) \propto{} & p(\mathbf{p}_1)\,p(\mathbf{p}_2\mid\mathbf{p}_1)\,p(\mathbf{p}_3\mid\mathbf{p}_2) \\ & \times p(\boldsymbol{\ell}_1)\,p(\boldsymbol{\ell}_2) \\ & \times p(\mathbf{z}_1\mid\mathbf{p}_1) \\ & \times p(\mathbf{z}_2\mid\mathbf{p}_1,\boldsymbol{\ell}_1)\,p(\mathbf{z}_3\mid\mathbf{p}_2,\boldsymbol{\ell}_1)\,p(\mathbf{z}_4\mid\mathbf{p}_3,\boldsymbol{\ell}_2). \end{aligned} \tag{1.4} \]
+<p>The symbol \(\propto\) means "equal up to a constant factor that does not depend on \(\mathbf{x}\)". <span class="src">§1.1.2 · p. 22</span></p>
+
+<div class="box note"><h4>Filling the gap: where equation (1.4) comes from</h4>
+<p>The book gives the result in one line. Here are the steps.</p>
+<p><strong>Step 1, Bayes' law.</strong> \(p(\mathbf{x}\mid\mathbf{z}) = p(\mathbf{z}\mid\mathbf{x})\,p(\mathbf{x})/p(\mathbf{z})\). The measurements are fixed numbers, so \(p(\mathbf{z})\) is a constant, and \(p(\mathbf{x}\mid\mathbf{z}) \propto p(\mathbf{z}\mid\mathbf{x})\,p(\mathbf{x})\). The first factor is the <strong>likelihood</strong> (how probable the measurements are if the state were \(\mathbf{x}\)). The second is the <strong>prior</strong> (what we believed before measuring).</p>
+<p><strong>Step 2, split the prior.</strong> Assume that, before any measurement, the landmarks are independent of the trajectory and of each other: \(p(\mathbf{x}) = p(\mathbf{p}_1,\mathbf{p}_2,\mathbf{p}_3)\,p(\boldsymbol{\ell}_1)\,p(\boldsymbol{\ell}_2)\). The chain rule of probability, which is always true, gives</p>
+\[ p(\mathbf{p}_1,\mathbf{p}_2,\mathbf{p}_3) = p(\mathbf{p}_1)\,p(\mathbf{p}_2\mid\mathbf{p}_1)\,p(\mathbf{p}_3\mid\mathbf{p}_1,\mathbf{p}_2). \]
+<p>The <strong>Markov assumption</strong> says the next pose depends on the past only through the current pose: \(p(\mathbf{p}_3\mid\mathbf{p}_1,\mathbf{p}_2) = p(\mathbf{p}_3\mid\mathbf{p}_2)\). That gives the first two lines of (1.4).</p>
+<p><strong>Step 3, split the likelihood.</strong> Assume the noise of each measurement is independent of the noise of the others. Then, once the state is given, the measurements are independent: \(p(\mathbf{z}\mid\mathbf{x}) = \prod_k p(\mathbf{z}_k\mid\mathbf{x})\). Each measurement depends only on the variables it physically involves, so \(p(\mathbf{z}_2\mid\mathbf{x}) = p(\mathbf{z}_2\mid\mathbf{p}_1,\boldsymbol{\ell}_1)\), and likewise for the others. That gives the last two lines.</p>
+<p>All the sparsity of SLAM comes from steps 2 and 3: motion is local in time, and a sensor reading involves one pose and at most a few other variables.</p></div>
+
+<p>Before introducing factor graphs, the book draws this model as a <strong>Bayesian network</strong> (Figure 1.2): a node for every variable, the measurements included, each carrying a prior or conditional density. Known quantities are drawn as squares. <span class="src">§1.1.1 · pp. 21–22</span> A Bayes net is good for describing how the data were generated. For optimization we want a picture that contains only what we solve for.</p>
+
+<h3>4. The factor graph</h3>
+<p>A factor graph has two kinds of nodes. A <strong>variable node</strong> stands for one unknown. A <strong>factor node</strong>, drawn as a small black dot, stands for one term of the product, and is joined only to the variables that term depends on. The measurements do not appear as nodes: they are known numbers, already inside the factors. <span class="src">§1.1.2 · pp. 22–23</span></p>
+<figure class="fig"><svg viewBox="0 0 600 215" role="img" aria-label="Two small graphs for the same bearing measurement. Left, a Bayes net: circles for pose p3 and landmark l2, a square for the known measurement z4, and an arrow from each circle to the square. Right, a factor graph: the same two circles joined through one small black factor dot, labelled phi 9 of p3 and l2, proportional to p of z4 given p3 and l2.">
+  <defs><marker id="w02ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <text x="145" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Bayes net</text>
+  <text x="145" y="40" text-anchor="middle" font-size="11" fill="var(--muted)">every quantity is a node</text>
+  <rect x="129" y="62" width="32" height="32" fill="var(--soft)" stroke="var(--line2)" stroke-width="1.5"/>
+  <text x="145" y="83" text-anchor="middle" font-size="13" fill="var(--ink)">z₄</text>
+  <circle cx="70" cy="158" r="18" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="1.5"/>
+  <text x="70" y="163" text-anchor="middle" font-size="13" fill="var(--ink)">p₃</text>
+  <circle cx="220" cy="158" r="18" fill="var(--c2-soft)" stroke="var(--c2)" stroke-width="1.5"/>
+  <text x="220" y="163" text-anchor="middle" font-size="13" fill="var(--ink)">ℓ₂</text>
+  <line x1="82" y1="144" x2="128" y2="97" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w02ar1)"/>
+  <line x1="208" y1="144" x2="162" y2="97" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w02ar1)"/>
+  <text x="145" y="205" text-anchor="middle" font-size="11" fill="var(--muted)">square = known, arrows = "produces"</text>
+  <line x1="300" y1="12" x2="300" y2="205" stroke="var(--line)" stroke-width="1"/>
+  <text x="455" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Factor graph</text>
+  <text x="455" y="40" text-anchor="middle" font-size="11" fill="var(--muted)">unknowns and factors only</text>
+  <line x1="398" y1="158" x2="512" y2="158" stroke="var(--muted)" stroke-width="1.5"/>
+  <circle cx="380" cy="158" r="18" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="1.5"/>
+  <text x="380" y="163" text-anchor="middle" font-size="13" fill="var(--ink)">p₃</text>
+  <circle cx="530" cy="158" r="18" fill="var(--c2-soft)" stroke="var(--c2)" stroke-width="1.5"/>
+  <text x="530" y="163" text-anchor="middle" font-size="13" fill="var(--ink)">ℓ₂</text>
+  <circle cx="455" cy="158" r="6" fill="var(--ink)"/>
+  <text x="455" y="112" text-anchor="middle" font-size="13" fill="var(--ink)">φ₉(p₃, ℓ₂)</text>
+  <text x="455" y="132" text-anchor="middle" font-size="11" fill="var(--muted)">∝ p(z₄ | p₃, ℓ₂)</text>
+  <text x="455" y="205" text-anchor="middle" font-size="11" fill="var(--muted)">z₄ is a number inside the factor</text>
+</svg><figcaption>One bearing measurement drawn both ways. The factor graph drops the measurement node and keeps one dot that touches exactly the two unknowns the measurement involves.</figcaption></figure>
+<p>Renaming each density in (1.4) as a factor \(\phi_i\) gives equation (1.5), \(\phi(\mathbf{x}) = \phi_1(\mathbf{p}_1)\,\phi_2(\mathbf{p}_2,\mathbf{p}_1)\cdots\phi_9(\mathbf{p}_3,\boldsymbol{\ell}_2)\). The nine factors of the toy example are: <span class="src">§1.1.2 · p. 23</span></p>
+<div class="tbl"><table>
+  <tr><th>Factor</th><th>Proportional to</th><th>Touches</th><th>What it says</th></tr>
+  <tr><td>\(\phi_1\)</td><td>\(p(\mathbf{p}_1)\)</td><td>\(\mathbf{p}_1\)</td><td>Prior belief about the first pose</td></tr>
+  <tr><td>\(\phi_2,\ \phi_3\)</td><td>\(p(\mathbf{p}_2\mid\mathbf{p}_1),\ p(\mathbf{p}_3\mid\mathbf{p}_2)\)</td><td>Two consecutive poses</td><td>How the robot moved between them</td></tr>
+  <tr><td>\(\phi_4,\ \phi_5\)</td><td>\(p(\boldsymbol{\ell}_1),\ p(\boldsymbol{\ell}_2)\)</td><td>One landmark</td><td>Prior belief about that landmark</td></tr>
+  <tr><td>\(\phi_6\)</td><td>\(p(\mathbf{z}_1\mid\mathbf{p}_1)\)</td><td>\(\mathbf{p}_1\)</td><td>The absolute measurement of the first pose</td></tr>
+  <tr><td>\(\phi_7,\ \phi_8,\ \phi_9\)</td><td>\(p(\mathbf{z}_2\mid\mathbf{p}_1,\boldsymbol{\ell}_1)\), \(p(\mathbf{z}_3\mid\mathbf{p}_2,\boldsymbol{\ell}_1)\), \(p(\mathbf{z}_4\mid\mathbf{p}_3,\boldsymbol{\ell}_2)\)</td><td>One pose and one landmark</td><td>A bearing measurement</td></tr>
+</table></div>
+<p>A factor joined to one variable is called <strong>unary</strong>, and one joined to two is <strong>binary</strong>. <span class="src">§1.1.3 · p. 25, footnote 2</span> Two details matter later. A factor only has to be <em>proportional</em> to its density: constants that do not depend on the state can be dropped, because they change neither the shape of the posterior nor the location of its peak. And although \(\mathbf{z}_4\) is not drawn, \(\phi_9\) depends on it, which the book sometimes writes as \(\phi_9(\mathbf{p}_3,\boldsymbol{\ell}_2;\mathbf{z}_4)\). <span class="src">§1.1.2 · p. 23</span></p>
+<div class="box kid"><h4>In plain words</h4><p>Each dot is one clue. "I started about here." "I then moved about this far." "From where I stood, that tree was in this direction." Each clue mentions only one or two things. The graph is the list of clues, drawn so that you can see at a glance which things each clue talks about.</p></div>
+
+<p>Try it: the widget starts close to the toy example, with three poses, \(\boldsymbol{\ell}_1\) seen from \(\mathbf{p}_1\) and \(\mathbf{p}_2\), and \(\boldsymbol{\ell}_2\) seen from \(\mathbf{p}_3\). It draws one prior dot on \(\mathbf{p}_1\) where the book has two unary factors (\(\phi_1\) and \(\phi_6\)), and it starts without the landmark priors. Read the last tile, then switch on "Landmark priors". Switch them off again and switch off "Prior on p₁".</p>
+<div class="viz" data-viz="w02_fg"></div>
+<p class="cap">Notice the count of undetermined directions. At the start it is 1: \(\boldsymbol{\ell}_2\) is seen once, and a single bearing only places it somewhere along a line of sight. A landmark prior, a range measurement, or a second sighting (sensing range 2.0) brings it to 0. With no prior on \(\mathbf{p}_1\) and no landmark priors it never drops below 3: the whole picture can shift in \(x\), shift in \(y\), and rotate without changing any measurement.</p>
+<p>The last tile is computed: it is the number of unknowns minus the rank of the Jacobian matrix that you will build on Day 3. It makes the book's remark concrete: without the absolute measurement on \(\mathbf{p}_1\) there is no information about absolute position, because the other measurements are all relative. <span class="src">§1.1.1 · p. 20</span></p>
+
+<h3>5. Factor graphs as a language</h3>
+<p>Each factor can be read as one equation in the variables it touches. There are usually more equations than unknowns, and they contradict each other slightly because of noise. That is why each equation needs a statement of how much it is trusted, and why the solution will be a least-squares one (tomorrow). <span class="src">§1.1.3 · p. 24</span></p>
+<p>Different kinds of SLAM are different patterns of variables and factors. Figure 1.4 shows four: <span class="src">§1.1.3 · pp. 24–25</span></p>
+<div class="tbl"><table>
+  <tr><th>Variant</th><th>Variables</th><th>Factors</th></tr>
+  <tr><td>Landmark-based SLAM</td><td>Poses and landmarks</td><td>Landmark measurements, plus a motion prior between consecutive poses (usually odometry)</td></tr>
+  <tr><td>Bundle adjustment (BA), also called structure from motion</td><td>Poses and landmarks</td><td>Landmark measurements only, no motion prior</td></tr>
+  <tr><td>Pose-graph optimization (PGO)</td><td>Poses only</td><td>Odometry between consecutive poses, plus loop closures between poses far apart in time</td></tr>
+  <tr><td>Simultaneous trajectory estimation and mapping (STEAM)</td><td>Landmarks, and states that hold a pose together with its derivatives such as velocity</td><td>Landmark measurements, plus a smooth continuous-time motion prior</td></tr>
+</table></div>
+<p>The graph also shows how well each unknown will be determined before any number is computed. In Figure 1.5, a simulated robot moves for about 100 steps and observes about 20 landmarks. The odometry factors form a chain, and the landmark factors hang off it. A landmark joined to the chain by many factors will be pinned down well. A landmark with a single factor will not. <span class="src">§1.1.3 · p. 25</span> That is the effect you produced in the widget.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The black dots are the measurements."</strong> A dot is a function of the unknowns. A measurement is a number stored inside that function. Priors are dots too, and they involve no measurement at all.</li>
+<li><strong>"A factor must be a properly normalized probability."</strong> It only needs to be proportional to one. Constants that do not depend on \(\mathbf{x}\) are dropped.</li>
+<li><strong>"More factors than variables means the problem is solvable."</strong> Counting is not enough. In the widget's starting state there are 6 factors for 5 variables, and one landmark is still not determined.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. In the book's toy example, equation (1.5), how many factors are joined to the variable p1?</p><div class="opts"><button type="button" class="opt">2</button><button type="button" class="opt">3</button><button type="button" class="opt">4</button><button type="button" class="opt">5</button></div><p class="exp" hidden>Four: the prior φ1, the motion factor φ2 (shared with p2), the absolute measurement φ6, and the bearing factor φ7 (shared with ℓ1).</p></div>
+  <div class="q" data-a="1"><p class="qq">Q2. A planar robot has 4 poses and 3 landmarks. There is one prior on the first pose, odometry between consecutive poses, and each landmark is seen from exactly two poses. How many factors does the graph have?</p><div class="opts"><button type="button" class="opt">7</button><button type="button" class="opt">10</button><button type="button" class="opt">13</button><button type="button" class="opt">18</button></div><p class="exp" hidden>1 prior + 3 odometry factors + 3 × 2 = 6 landmark factors = 10. (18 is the number of unknown scalars: 4 × 3 + 3 × 2.)</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. Which assumption allows p(p3 | p1, p2) to be replaced by p(p3 | p2)?</p><div class="opts"><button type="button" class="opt">The Markov assumption: the next pose depends on the past only through the current pose</button><button type="button" class="opt">Bayes' law</button><button type="button" class="opt">The measurements are noise-free</button><button type="button" class="opt">The landmarks do not move</button></div><p class="exp" hidden>The chain rule gives p(p3 | p1, p2). Dropping p1 from the condition is the Markov assumption about the motion model. It is why motion factors join only consecutive poses.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q4. You take a landmark-based SLAM factor graph and delete every factor that joins two poses. Which problem is left?</p><div class="opts"><button type="button" class="opt">Pose-graph optimization</button><button type="button" class="opt">STEAM</button><button type="button" class="opt">Localization</button><button type="button" class="opt">Bundle adjustment</button></div><p class="exp" hidden>Bundle adjustment has pose and landmark variables and landmark measurements, but no motion prior between poses.</p></div></div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>The state x stacks every pose and landmark. The goal is the posterior p(x | z).</li>
+<li>Bayes' law, the Markov assumption on motion, and independent measurement noise turn the posterior into a product of small densities, equation (1.4).</li>
+<li>A factor graph has a node per unknown and a dot per factor, joined only to the unknowns that factor depends on. Measurements are inside the factors.</li>
+<li>Landmark-based SLAM, BA, PGO, and STEAM differ only in which variables and factors the graph contains.</li>
+<li>The graph's connectivity tells you which unknowns are well constrained, and why something must anchor the first pose.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 1 opening and Historical Note, pp. 19–20; §1.1 "Visualizing SLAM With Factor Graphs", pp. 20–25.</li>
+<li>The chain rule and conditional-independence steps in "Filling the gap" follow Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005.</li>
+<li>The count of undetermined directions in the widget is the rank deficiency of the measurement Jacobian, standard linear algebra (Golub and Van Loan, <em>Matrix Computations</em>, 2013).</li>
+</ol></div>
+<p class="next"></p>
+</section>

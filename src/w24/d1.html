@@ -1,0 +1,102 @@
+<section class="day" data-day="139" id="d139" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 24 · Day 1</span>
+  <h2>From SLAM to Spatial AI: representation and the closed loop</h2>
+  <p class="lead">After today you can say what a Spatial AI system is, state the chapter's two hypotheses, and explain why a persistent world model in a closed loop beats frame-to-frame estimation.</p>
+  <p class="meta">About 60 min · Read §18.1–18.2, pp. 521–526 (6 pages) · Needs Week 1 Day 1 and Week 19 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §18.1 and §18.2, pp. 521–526</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The two example products, and the numbers attached to the second: 65 g and under 1 W (pp. 521–522).</li>
+<li>The definition of a representation (p. 522) and the two hypotheses in italics (p. 523).</li>
+<li>The six numbered properties of a Spatial AI system and the sentence naming its "key computational quality" (p. 525).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>The chapter treats Spatial AI as SLAM grown up: a device keeps a persistent, close-to-metric model of its surroundings and checks every new piece of sensor data against it. The hard part is doing this within the size, cost, and power budget of a real product.</p></div>
+
+<h3>1. The gap between the task and the budget</h3>
+<p>Chapter 18, by Andrew Davison, has no equations and argues for a position. <strong>Spatial AI</strong> is the capability of a device to build rich but efficient representations of its surroundings that let it act intelligently. The aim is the right representation for real-time interpretation and action; scene understanding in the abstract is not the goal. <span class="src">§18.1.1 · p. 521</span> A design is squeezed between what the task needs and what the device can carry. <span class="src">§18.1.1 · pp. 521–522</span></p>
+<div class="tbl"><table>
+  <tr><th>Device</th><th>The task requires</th><th>The setting allows</th></tr>
+  <tr><td>Household robot</td><td>Clean and know when it is clean; recognize, move, and tidy objects; make way for people</td><td>Consumer price, size, safety, limited power</td></tr>
+  <tr><td>AR glasses ("IA", intelligence augmentation)</td><td>Remember every place, object, and person met; find lost things; pin notes to real things</td><td>The form of ordinary spectacles, 65 g, a full day per charge, under 1 W</td></tr>
+</table></div>
+<p>A waking day of 16 hours at 1 W is \(16\ \text{Wh} = 57.6\ \text{kJ}\) for cameras, processing, and display together. Today's robot-vision processors are far from that, and robust performance is hard even with bulky sensors and unlimited computing. <span class="src">§18.1.1 · p. 522</span></p>
+
+<h3>2. Representation, also called a world model</h3>
+<p>A <strong>representation</strong> is the set of values in memory that stand for the state of the device and the world around it. It persists, it changes as information arrives or the world changes, and parts of it may be abstracted or forgotten to save resources. <span class="src">§18.1.2 · p. 522</span> Machine learning calls this a <strong>world model</strong>. The idea looks new there because most networks are <strong>stateless</strong>: input in, output out, nothing kept. Networks trained <strong>end to end</strong> from sensor to action do well on short tasks and struggle on long ones. A map is the oldest fix: a robot vacuum can guarantee full coverage because it remembers where it has been. <span class="src">§18.1.2 · pp. 522–523</span></p>
+<p><strong>Hypothesis 1.</strong> A device that must run for a long time, do many tasks (some unknown at design time), and communicate with people should keep a scene representation that is general, persistent, close to metric 3D geometry at least locally, and understandable by a human. This excludes single-task representations and opaque learned states. The reasons given are efficiency, composability, interpretability, and generality. <span class="src">§18.1.2 · p. 523</span></p>
+<p><strong>Hypothesis 2.</strong> The usefulness of such a system across many tasks is captured by a small number of performance measures, so a drone, a tidying robot, and an AR display would run largely the same system, tuned by a few numbers. <span class="src">§18.1.2 · pp. 523–524</span> <a href="#d143">Day 5</a> returns to this.</p>
+<p>A <strong>Spatial AI system</strong>, for the chapter, is a module that builds and maintains such a representation incrementally, in real time, from mainly visual input, with quantifiable performance. <span class="src">§18.1.2 · p. 524</span></p>
+
+<h3>3. SLAM has been walking this road already</h3>
+<p>Real-time visual SLAM has grown richer in steps, and you have met each one. <span class="src">§18.1.3 · p. 524</span></p>
+<div class="tbl"><table>
+  <tr><th>Level</th><th>What the map holds</th><th>Where you studied it</th></tr>
+  <tr><td>1. Sparse localization</td><td>Camera poses and 3D points</td><td><a href="#d65">Week 11 · Day 5</a></td></tr>
+  <tr><td>2. Dense mapping</td><td>Surfaces: distance fields, surfels, Gaussians</td><td><a href="#d44">Week 8 · Day 2</a>, <a href="#d118">Week 20 · Day 4</a></td></tr>
+  <tr><td>3. Semantic labeling</td><td>A class or feature on every map element</td><td>Weeks 22 and 23</td></tr>
+</table></div>
+<p>Beyond these the chapter expects scene graphs of segmented, physically simulated objects (Week 22). The levels describe progress; they are no recipe. A new representation is almost never bolted onto a working system. It changes the whole system: once a dense map exists the tracker can align whole images against it (<a href="#d68">Week 12 · Day 2</a>), and labels can improve the reconstruction. <span class="src">§18.1.3 · pp. 524–525</span> Hence the chapter's working assumption: today's SLAM systems are the best guide to the structure of tomorrow's Spatial AI.</p>
+
+<h3>4. The overall computational structure</h3>
+<p>Section 18.2 lists six properties of any such system. <span class="src">§18.2 · p. 525</span></p>
+<ol>
+<li><strong>Embedded:</strong> cameras and supporting sensors such as an IMU, with low-power processing, in a mobile body.</li>
+<li><strong>Real-time model and pose,</strong> with geometry and semantics, mainly from on-board sensors.</li>
+<li><strong>What is where:</strong> ideally the identity, position, shape, and motion of everything nearby.</li>
+<li><strong>Close to metric,</strong> at least locally.</li>
+<li><strong>Focused quality:</strong> full detail only where the device looks and will act; the rest at lower quality, upgradable on a revisit.</li>
+<li><strong>Alert:</strong> every incoming piece of visual data is checked against a prediction from the model.</li>
+</ol>
+<p>The quality the chapter singles out is the <strong>closed loop</strong>: the model is persistent, updated incrementally, and used inside the real-time loop for data association and tracking. The contrast is <strong>incremental estimation</strong> such as pure visual odometry, which estimates motion frame to frame and keeps no long-term structure. Closed loop does not mean one fixed rate for everything. It means each result is available when needed, so the whole never pauses. <span class="src">§18.2 · pp. 525–526</span></p>
+<figure class="fig"><svg viewBox="0 0 600 250" role="img" aria-label="Top, incremental estimation: frame k minus 1 linked to frame k by a relative motion. Bottom, closed loop: a new image is compared with a predicted view; the result is fused into a persistent world model, which is rendered into the next predicted view.">
+  <defs><marker id="w24ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <text x="10" y="18" font-size="12" fill="var(--muted)">Incremental: a frame is compared only with the previous one</text>
+  <rect x="40" y="30" width="110" height="36" rx="8" fill="var(--c3-soft)" stroke="var(--c3)"/><text x="95" y="53" text-anchor="middle" font-size="13" fill="var(--ink)">frame k−1</text>
+  <rect x="245" y="30" width="110" height="36" rx="8" fill="var(--c3-soft)" stroke="var(--c3)"/><text x="300" y="53" text-anchor="middle" font-size="13" fill="var(--ink)">frame k</text>
+  <line x1="150" y1="48" x2="241" y2="48" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w24ar1)"/><text x="196" y="40" text-anchor="middle" font-size="11" fill="var(--muted)">motion</text>
+  <text x="10" y="100" font-size="12" fill="var(--muted)">Closed loop: each frame is compared with a prediction from the world model</text>
+  <rect x="20" y="120" width="110" height="40" rx="8" fill="var(--surface)" stroke="var(--line2)"/><text x="75" y="145" text-anchor="middle" font-size="13" fill="var(--ink)">new image</text>
+  <rect x="190" y="120" width="140" height="40" rx="8" fill="var(--c5-soft)" stroke="var(--c5)"/><text x="260" y="145" text-anchor="middle" font-size="13" fill="var(--ink)">compare, track</text>
+  <rect x="400" y="112" width="180" height="56" rx="10" fill="var(--c1-soft)" stroke="var(--c1)"/><text x="490" y="137" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">world model</text><text x="490" y="155" text-anchor="middle" font-size="11" fill="var(--muted)">persistent, updated in place</text>
+  <rect x="190" y="204" width="140" height="40" rx="8" fill="var(--c2-soft)" stroke="var(--c2)"/><text x="260" y="229" text-anchor="middle" font-size="13" fill="var(--ink)">predicted view</text>
+  <line x1="130" y1="140" x2="186" y2="140" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w24ar1)"/>
+  <line x1="330" y1="140" x2="396" y2="140" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w24ar1)"/><text x="363" y="131" text-anchor="middle" font-size="11" fill="var(--muted)">fuse</text>
+  <path d="M490 168 V224 H334" fill="none" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w24ar1)"/><text x="412" y="216" text-anchor="middle" font-size="11" fill="var(--muted)">render</text>
+  <line x1="260" y1="204" x2="260" y2="164" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w24ar1)"/><text x="268" y="187" font-size="11" fill="var(--muted)">predict</text>
+</svg><figcaption>Incremental estimation chains relative motions and forgets. A closed loop measures every frame against one stored model.</figcaption></figure>
+<p>Try it: a camera sweeps a corridor four times, and two estimators get the same measurements.</p>
+<div class="viz" data-viz="w24_loop"></div>
+<p class="cap">Notice that the curves are similar for the first 42 frames, while the map is being built. After that the map-based error stays near 0.04, while the odometry error wanders and averages 0.14 over the last sweep. Press New noise: odometry sometimes wanders back toward zero, but nothing holds it there.</p>
+
+<div class="box note"><h4>Filling the gap: why the stored map bounds the error</h4>
+<p>In the widget, a landmark at \(l_j\) seen from position \(x_k\) gives \(z_{kj} = l_j - x_k + n_{kj}\), with independent noise of variance \(\sigma^2\).</p>
+<p><em>Odometry</em> sums frame-to-frame motions, each the average change in \(z\) over the landmarks two frames share. While the shared set is unchanged the noise cancels in the sum. Each time a landmark enters or leaves the view, a term fails to cancel and a fresh error, a fraction of \(\sigma\) in size, is added for good. After \(h\) hand-overs the error variance has grown in proportion to \(h\): the random walk of <a href="#d1">Week 1 · Day 1</a>.</p>
+<p><em>The stored map</em> holds landmark \(j\) as \(\hat{l}_j = l_j + e_j\), where \(e_j\) is the error at the moment it was stored. On any later frame with \(m\) landmarks in view,</p>
+\[ \hat{x}_k = \frac{1}{m}\sum_{j}\bigl(\hat{l}_j - z_{kj}\bigr) = x_k + \frac{1}{m}\sum_j e_j - \frac{1}{m}\sum_j n_{kj}. \]
+<p>The first error term is frozen: it is the same on every return to those landmarks. The second is fresh noise of variance \(\sigma^2/m\). Neither depends on how long the system has run. With \(\sigma = 0.05\) and \(m \approx 6\) the fresh part is \(0.05/\sqrt{6} \approx 0.02\); the rest of the 0.04 is map error frozen in during the first sweep.</p></div>
+
+<p>Section 18.2 ends with the route to efficiency: find the <strong>graphs of computation and data movement</strong> in the algorithms, and use hardware with the same graph so that data moves as little as possible. Three questions organize the rest of the week: what is stored where, what is processed where, and what is transmitted where and when. <span class="src">§18.2 · p. 526</span></p>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. Which system satisfies the chapter's first hypothesis about representation?</p><div class="opts"><button type="button" class="opt">A network mapping images directly to motor commands</button><button type="button" class="opt">A recurrent network whose hidden state cannot be read as geometry</button><button type="button" class="opt">A persistent 3D map of objects and surfaces, metric within each room, that a person can inspect</button><button type="button" class="opt">A grasp detector trained for one kind of mug</button></div><p class="exp" hidden>The hypothesis asks for a general, persistent representation, close to metric at least locally and understandable by a human. It excludes task-specific and opaque ones.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. AR glasses must run 16 hours per charge at no more than 1 W. How much energy may the device use in a day?</p><div class="opts"><button type="button" class="opt">57.6 kJ</button><button type="button" class="opt">16 kJ</button><button type="button" class="opt">960 J</button><button type="button" class="opt">3.6 MJ</button></div><p class="exp" hidden>16 h × 3600 s/h = 57 600 s at 1 J per second: 57.6 kJ, or 16 Wh.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A camera tracks against a stored map with 4 landmarks in view and measurement noise σ = 0.08. What is the standard deviation of the fresh, frame-to-frame part of the position error?</p><div class="opts"><button type="button" class="opt">0.08</button><button type="button" class="opt">0.02</button><button type="button" class="opt">0.07</button><button type="button" class="opt">0.04</button></div><p class="exp" hidden>The fresh part averages 4 independent noises: σ/√m = 0.08/2 = 0.04.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. A system estimates camera motion between consecutive frames very accurately and stores nothing else. What does it most clearly lack?</p><div class="opts"><button type="button" class="opt">Embedded sensors and processing</button><button type="button" class="opt">A persistent world model against which each new frame is checked</button><button type="button" class="opt">Real-time operation</button><button type="button" class="opt">A camera as the main sensor</button></div><p class="exp" hidden>This is pure visual odometry. With no model to predict from, it cannot detect change or bound its drift.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Spatial AI builds representations for real-time action, within a product's limits on size, cost, and power.</li>
+<li>Hypothesis 1: keep a general, persistent, close-to-metric, human-readable scene representation. Hypothesis 2: a few performance measures describe its usefulness.</li>
+<li>The defining structure is a closed loop: every measurement is compared with a prediction from a persistent model, which is then updated.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 18 (A. J. Davison), §18.1 "From SLAM to Spatial AI" and §18.2 "Overall Computational Structure", pp. 521–526.</li>
+<li>The error model in "Filling the gap" is this app's own illustration.</li>
+</ol></div>
+<p class="next"></p>
+</section>

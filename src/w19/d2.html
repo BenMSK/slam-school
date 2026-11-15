@@ -1,0 +1,166 @@
+<section class="day" data-day="110" id="d110" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 19 · Day 2</span>
+  <h2>Learning depth and camera pose, with and without labels</h2>
+  <p class="lead">After today you can explain how predicted depth and pose enter a SLAM system as factors, and write the view-synthesis loss that trains such networks without any 3D labels.</p>
+  <p class="meta">About 60 min · Read §13.1, pp. 368–373 (6 pages) · Needs Week 11 Day 3 and Week 12 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §13.1, pp. 368–373</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The three things predicted depth does for a monocular SLAM system (p. 369).</li>
+<li>The two reasons why simply stacking up per-frame depth maps gives a poor dense map, and what MonoRec adds for each (pp. 369–370).</li>
+<li>Equations (13.2) and (13.3) and the word "differentiable" just after them (pp. 371–372).</li>
+<li>How DVSO and D3VO connect the network to the factor graph (pp. 372–373).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A network can be trained to output depth from one image or relative pose from two. Used alone, such predictions are less accurate than geometry. Used as extra factors in a factor graph, they fix what a single camera cannot: scale, robustness, and density. And the network does not need 3D labels: if depth and pose are right, one image can be re-drawn from the other, and the mismatch is a loss you can differentiate.</p></div>
+
+<h3>1. Depth from one image, and what SLAM gains from it</h3>
+<p>Give a network many pairs of an image and its depth map, from depth sensors, LiDARs, or rendering engines, and it learns to predict depth from a single image. The book describes the current recipe as a pre-trained vision transformer followed by a convolutional decoder that brings the coarse features back to image resolution, trained on a mix of more than 20 real and synthetic datasets so that it generalizes. <span class="src">§13.1.1 · p. 369</span></p>
+<p>A monocular SLAM system gains three things from such a network. <span class="src">§13.1.1 · p. 369</span></p>
+<ul>
+<li><strong>Scale.</strong> One moving camera recovers the scene only up to a scale factor, and that factor drifts over time (<strong>scale drift</strong>). Depth predicted in meters pins it down.</li>
+<li><strong>Robustness.</strong> Predicted depth helps in cases that break monocular geometry: pure rotation, changing camera parameters, moving objects.</li>
+<li><strong>Density.</strong> Feature-based SLAM tracks a sparse set of points, and textureless areas barely appear in the map. A depth map has a value at every pixel.</li>
+</ul>
+<div class="box note"><h4>Filling the gap: why one camera cannot see scale</h4>
+<p>A pinhole camera with focal length \(f\) and principal point \((c_x, c_y)\) projects a point \((X, Y, Z)\) in its own frame to the pixel</p>
+\[ \pi_c(X, Y, Z) = \left( f\,\frac{X}{Z} + c_x,\; f\,\frac{Y}{Z} + c_y \right). \]
+<p>Multiply the whole world by \(s\): every point and every camera translation. A point's coordinates in any camera frame become \((sX, sY, sZ)\), and the ratios \(sX/sZ = X/Z\) do not change. Every image is identical, so no amount of image data can tell \(s\). A network that has seen many scenes with metric depth knows roughly how large cars and doorways are, and that is information the geometry does not contain. (Camera model: <a href="#d63">Week 11 · Day 3</a>.)</p></div>
+<p><strong>From depth maps to a dense map.</strong> Lifting every pixel into 3D with its predicted depth and the SLAM pose, and accumulating the points, gives a dense reconstruction. The book names two problems with doing only that, and two systems that go further. <span class="src">§13.1.1 · pp. 369–370</span></p>
+<div class="tbl"><table>
+  <tr><th>Problem</th><th>System</th><th>What it does</th></tr>
+  <tr><td>Depth maps of neighbouring frames disagree with each other</td><td>MonoRec</td><td>Feeds the depth network a <strong>cost volume</strong>: for each pixel and each of a set of candidate depths, how well the brightness agrees with the neighbouring frames</td></tr>
+  <tr><td>Moving objects leave trails in a static map</td><td>MonoRec</td><td>A second network predicts a moving-object mask from the cost volume, and masked pixels are not lifted into 3D</td></tr>
+  <tr><td>Depth maps contain only visible surfaces</td><td>Behind the Scenes (BTS)</td><td>Predicts a volumetric density field \(\phi(\mathbf{x}): \R^3 \to \R^+\) for the whole camera frustum, including occluded regions, which can be rendered from new viewpoints (next week's topic)</td></tr>
+</table></div>
+<p>MonoRec is trained with the sparse 3D points of the SLAM system as targets. Its depth and mask modules help each other, so they are trained jointly. <span class="src">p. 370</span></p>
+
+<h3>2. Pose from two images, and why it is not enough</h3>
+<p>The same idea works for motion. A network \(f_\theta\) takes images \(I_1\) and \(I_2\) and outputs the relative pose \(\mathbf{T}^2_1 \in \SE(3)\). With ground-truth pose \(\mathbf{T}^{2*}_1\), the book's training loss is <span class="src">§13.1.2 · eq. (13.1) · p. 371</span></p>
+\[ \mathcal{L}_{pose} = \left\| \left(\mathbf{T}^2_1\right)^{-1} \cdot \mathbf{T}^{2*}_1 \right\|, \qquad \mathbf{T}^2_1 = f_\theta(I_1, I_2). \tag{13.1} \]
+<div class="box note"><h4>Filling the gap: reading equation (13.1)</h4>
+<p>If the prediction is exact, \((\mathbf{T}^2_1)^{-1}\mathbf{T}^{2*}_1\) is the identity. Otherwise it is the leftover transformation between prediction and truth. The book does not say which norm measures its size. A standard choice, in the language of <a href="#d20">Week 4 · Day 2</a>, is the length of its tangent vector, \(\norm{\Log\!\big((\mathbf{T}^2_1)^{-1}\mathbf{T}^{2*}_1\big)}\), which is zero exactly at the identity.</p>
+<p>Example: the network predicts a rotation of 10° about the vertical axis, the truth is 12° about the same axis, and the translations agree. The leftover is a rotation of 2°, and its tangent vector has length \(2 \cdot \pi / 180 = 0.035\) rad. The book mentions alternatives: penalize the rotation angle, or the distance between quaternions.</p></div>
+<p>Early networks stacked the two frames and regressed axis-angle or Euler-angle parameters. Chaining relative poses gives a trajectory, and chained errors compound, as with any odometry (<a href="#d1">Week 1 · Day 1</a>). DeepVO addressed this with a recurrent network (an LSTM) that reads a sequence of feature maps and outputs a sequence of poses. TartanVO improved generalization by giving the network predicted optical flow and the camera intrinsics as inputs. <span class="src">§13.1.2 · p. 371</span></p>
+<p>The book's verdict is plain: predicting pose directly is often less accurate than classical SfM or SLAM, where the geometry is built into the system, and these networks tend to overfit to their training data. <span class="src">p. 371</span> That is the motivation for the rest of the chapter.</p>
+
+<h3>3. Training without 3D labels: view synthesis</h3>
+<p>Ground-truth depth and pose are expensive. <strong>View synthesis</strong> supplies a training signal from images alone. If you know the depth of every pixel of \(I_1\) and the relative pose, you know where each pixel of \(I_1\) appears in \(I_2\), so you can rebuild \(I_1\) out of colours taken from \(I_2\). If depth and pose are right, the rebuilt image matches \(I_1\). <span class="src">§13.1.3 · p. 371</span></p>
+<p>Let \(\pi_c^{-1}(\mathbf{x}, d)\) be the inverse projection, which returns the 3D point at depth \(d\) along the ray of pixel \(\mathbf{x}\). A pixel \(\mathbf{x}^1\) with depth \(d^1\) in \(I_1\) lands in \(I_2\) at</p>
+\[ \mathbf{x}^2 = \pi_c\!\left( \mathbf{T}^2_1\, \pi_c^{-1}(\mathbf{x}^1, d^1) \right) = \omega_{1\to2}(\mathbf{x}^1, d^1), \tag{13.2} \]
+<p>ignoring occlusions. <span class="src">eq. (13.2) · p. 371</span> The synthesized image samples \(I_2\) at those locations:</p>
+\[ \tilde{I}_2(\mathbf{x}) = I_2\big(\omega_{1\to2}(\mathbf{x}, \mathbf{d}(\mathbf{x}))\big). \tag{13.3} \]
+<p>(As printed on p. 372, the right-hand side of (13.3) reads \(I_1(\cdot)\). The sentences around it describe warping \(I_2\) into the viewpoint of \(I_1\), using pixels sampled from \(I_2\), which is what is written here.) The loss compares \(\tilde{I}_2\) with \(I_1\) pixel by pixel. This is the photometric error of direct methods from <a href="#d68">Week 12 · Day 2</a>, now used to train a network instead of to estimate a pose.</p>
+<figure class="fig"><svg viewBox="0 0 600 275" role="img" aria-label="Top view of two cameras side by side. A ray leaves camera 1 through pixel x1. The true scene point lies on that ray, and projecting it into camera 2 gives the pixel x2. A second point on the same ray, at a depth that is too small, projects to a different pixel in camera 2.">
+  <defs><marker id="w19ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <line x1="60" y1="190" x2="180" y2="190" stroke="var(--line2)" stroke-width="3"/>
+  <line x1="270" y1="190" x2="390" y2="190" stroke="var(--line2)" stroke-width="3"/>
+  <line x1="120" y1="230" x2="250" y2="60" stroke="var(--c5)" stroke-width="2"/>
+  <line x1="330" y1="230" x2="250" y2="60" stroke="var(--c1)" stroke-width="2"/>
+  <line x1="330" y1="230" x2="198" y2="128" stroke="var(--c3)" stroke-width="2" stroke-dasharray="5 4"/>
+  <path d="M120 230 L109 213 L131 213 z" fill="var(--ink)"/>
+  <path d="M330 230 L319 213 L341 213 z" fill="var(--ink)"/>
+  <circle cx="250" cy="60" r="6" fill="var(--c1)"/>
+  <circle cx="198" cy="128" r="6" fill="var(--c3)"/>
+  <circle cx="150.6" cy="190" r="5" fill="var(--c5)"/>
+  <circle cx="311.2" cy="190" r="5" fill="var(--c1)"/>
+  <circle cx="278.2" cy="190" r="5" fill="var(--c3)"/>
+  <text x="120" y="252" text-anchor="middle" font-size="12" fill="var(--ink)">camera 1</text>
+  <text x="330" y="252" text-anchor="middle" font-size="12" fill="var(--ink)">camera 2</text>
+  <line x1="150" y1="238" x2="298" y2="238" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar2)"/>
+  <text x="224" y="256" text-anchor="middle" font-size="11" fill="var(--muted)">relative pose T</text>
+  <text x="140" y="183" text-anchor="end" font-size="12" fill="var(--ink)">pixel x¹</text>
+  <text x="322" y="183" font-size="12" fill="var(--ink)">x² with the true depth</text>
+  <text x="272" y="207" text-anchor="end" font-size="12" fill="var(--ink)">x² if d is too small</text>
+  <text x="264" y="56" font-size="12" fill="var(--ink)">true point, depth d</text>
+  <text x="186" y="124" text-anchor="end" font-size="12" fill="var(--ink)">guess: too near</text>
+  <text x="440" y="120" font-size="11" fill="var(--muted)">1. back-project x¹ to depth d</text>
+  <text x="440" y="138" font-size="11" fill="var(--muted)">2. move the point with T</text>
+  <text x="440" y="156" font-size="11" fill="var(--muted)">3. project into camera 2</text>
+</svg><figcaption>Equation (13.2) as a picture. A wrong depth sends the pixel to the wrong place in image 2, where the colour usually differs. That difference is the training signal.</figcaption></figure>
+<div class="box note"><h4>Filling the gap: (13.2) with numbers, and why interpolation makes it differentiable</h4>
+<p>Take \(f = 500\) px, \(c_x = 320\), and a pixel at \(x^1 = 420\) on the middle row with depth \(d^1 = 4\) m. Back-project: \(X = d\,(x^1 - c_x)/f = 4 \cdot 100/500 = 0.8\) m, so the point is \((0.8, 0, 4)\). Camera 2 sits \(b = 0.2\) m to the right with the same orientation, so in its frame the point is \((0.6, 0, 4)\). Project: \(x^2 = 500 \cdot 0.6/4 + 320 = 395\). The pixel moved by \(-25\) px. For this sideways motion the general rule is</p>
+\[ x^2 = x^1 - \frac{f\,b}{d}, \]
+<p>and \(500 \cdot 0.2 / 4 = 25\) checks. Had the network said \(d = 5\) m, the point would be \((1.0, 0, 5)\), then \((0.8, 0, 5)\), and \(x^2 = 400\): five pixels off.</p>
+<p>The location \(x^2\) is rarely a whole number, so \(I_2\) is read by <strong>bilinear interpolation</strong>. In one dimension, at position \(p = a + t\) with integer \(a\) and \(0 \le t \lt 1\),</p>
+\[ I_2(p) = (1 - t)\, I_2[a] + t\, I_2[a+1], \qquad \frac{\partial I_2(p)}{\partial p} = I_2[a+1] - I_2[a]. \]
+<p>With \(I_2[395] = 0.40\), \(I_2[396] = 0.60\), and \(p = 395.25\), the value is \(0.45\) and the slope is \(0.20\) per pixel. The chain rule then reaches the depth: \(\partial x^2/\partial d = f b/d^2 = 100/16 = 6.25\) px per meter, so \(\partial \tilde{I}_2/\partial d = 0.20 \cdot 6.25 = 1.25\) per meter. Because that derivative exists, the gradient of the loss flows back into whatever produced \(d\), here a depth network, and likewise into a pose network. <span class="src">p. 372</span></p></div>
+<p>Try it: move the guessed depth and watch the difference row, then press "Step downhill".</p>
+<div class="viz" data-viz="w19_photo"></div>
+<p class="cap">Notice that the loss has its minimum, zero, exactly at the true depth of 4 m, where the shift used for the warp equals the true shift of 6 px. From the starting guess of 2.5 m, two presses of "Step downhill" reach 4.00 m. Each press is one Gauss-Newton step on 1/d that uses the interpolation slope from the note above. The curve over candidate depths is also what one slice of a MonoRec-style cost volume holds.</p>
+<p>The book credits Godard et al. with showing that this loss can train a depth network from stereo pairs, and later work with training a depth network and a pose network together from video. <span class="src">p. 372</span></p>
+
+<h3>4. DVSO and D3VO: predictions as factors</h3>
+<p><strong>DVSO</strong> (Deep Virtual Stereo Odometry) takes a classical direct system, DSO, and adds a factor to it: a term that pulls the depth computed by DSO toward the depth map predicted by a network. That network was trained with the view-synthesis loss on stereo pairs, where the distance between the two cameras is known in meters, so its depths are metric. The result behaves as if a second camera were present, hence "virtual stereo": better reconstruction, more accurate and robust poses, and correct scale from one camera. <span class="src">§13.1.3 · p. 372</span></p>
+<p><strong>D3VO</strong> adds two more predictions. A pose network supplies relative motion between consecutive frames. And a network predicts <strong>uncertainty</strong>: where brightness is likely to stay constant between frames and where it is not. Direct methods assume a surface point keeps its brightness, which fails on shiny, metallic, or glass surfaces. D3VO down-weights the photometric residuals at those pixels. Depth and pose networks are trained self-supervised with view-synthesis losses, and their outputs enter the factor graph as additional terms. <span class="src">§13.1.3 · pp. 372–373 · Fig. 13.5</span></p>
+<figure class="fig"><svg viewBox="0 0 600 300" role="img" aria-label="A factor graph with three pose nodes in a top row and three depth-map nodes in a bottom row. Black photometric factors connect two neighbouring poses and one depth map. Green factors between neighbouring poses come from a pose network. Violet factors attached to single depth maps come from a depth network.">
+  <line x1="120" y1="80" x2="210" y2="140" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="300" y1="80" x2="210" y2="140" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="120" y1="200" x2="210" y2="140" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="300" y1="80" x2="390" y2="140" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="480" y1="80" x2="390" y2="140" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="300" y1="200" x2="390" y2="140" stroke="var(--muted)" stroke-width="1.5"/>
+  <path d="M120 80 Q210 10 300 80" fill="none" stroke="var(--c1)" stroke-width="1.5"/>
+  <path d="M300 80 Q390 10 480 80" fill="none" stroke="var(--c1)" stroke-width="1.5"/>
+  <line x1="120" y1="200" x2="120" y2="246" stroke="var(--c4)" stroke-width="1.5"/>
+  <line x1="300" y1="200" x2="300" y2="246" stroke="var(--c4)" stroke-width="1.5"/>
+  <line x1="480" y1="200" x2="480" y2="246" stroke="var(--c4)" stroke-width="1.5"/>
+  <circle cx="120" cy="80" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <circle cx="300" cy="80" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <circle cx="480" cy="80" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <circle cx="120" cy="200" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <circle cx="300" cy="200" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <circle cx="480" cy="200" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <text x="120" y="85" text-anchor="middle" font-size="13" fill="var(--ink)">T₁</text>
+  <text x="300" y="85" text-anchor="middle" font-size="13" fill="var(--ink)">T₂</text>
+  <text x="480" y="85" text-anchor="middle" font-size="13" fill="var(--ink)">T₃</text>
+  <text x="120" y="205" text-anchor="middle" font-size="13" fill="var(--ink)">d₁</text>
+  <text x="300" y="205" text-anchor="middle" font-size="13" fill="var(--ink)">d₂</text>
+  <text x="480" y="205" text-anchor="middle" font-size="13" fill="var(--ink)">d₃</text>
+  <rect x="203" y="133" width="14" height="14" fill="var(--ink)"/>
+  <rect x="383" y="133" width="14" height="14" fill="var(--ink)"/>
+  <rect x="203" y="38" width="14" height="14" fill="var(--c1)"/>
+  <rect x="383" y="38" width="14" height="14" fill="var(--c1)"/>
+  <rect x="113" y="246" width="14" height="14" fill="var(--c4)"/>
+  <rect x="293" y="246" width="14" height="14" fill="var(--c4)"/>
+  <rect x="473" y="246" width="14" height="14" fill="var(--c4)"/>
+  <rect x="40" y="278" width="12" height="12" fill="var(--ink)"/>
+  <text x="58" y="289" font-size="12" fill="var(--ink)">photometric factor</text>
+  <rect x="214" y="278" width="12" height="12" fill="var(--c1)"/>
+  <text x="232" y="289" font-size="12" fill="var(--ink)">predicted relative pose</text>
+  <rect x="414" y="278" width="12" height="12" fill="var(--c4)"/>
+  <text x="432" y="289" font-size="12" fill="var(--ink)">predicted depth</text>
+</svg><figcaption>The pattern behind DVSO and D3VO. The classical factors stay. Network predictions are added as further factors, so the optimizer weighs them against the image evidence instead of trusting them outright.</figcaption></figure>
+<div class="box tip"><h4>Intuition</h4><p>A prediction used as a factor is advice, and a prediction used as the answer is an order. The factor graph can overrule advice when the images disagree with it. That is why "network plus factor graph" ends up more accurate than the network alone and more robust than the geometry alone.</p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Self-supervised means no geometry is used."</strong> The view-synthesis loss is built from projection, the relative pose, and depth. The geometry is in the loss, not in the labels.</li>
+<li><strong>"View synthesis from monocular video gives metric depth."</strong> The loss is unchanged if all depths and translations are scaled together. DVSO's network is metric because its training pairs came from a stereo rig with a known baseline. <span class="src">p. 372</span></li>
+<li><strong>"A pose network replaces the back-end."</strong> The book reports that direct pose prediction is often less accurate than classical methods and overfits. <span class="src">p. 371</span></li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A camera has f = 600 px. Camera 2 is 0.5 m to the right of camera 1 with the same orientation. A pixel has depth 10 m. By how many pixels does it shift between the images?</p><div class="opts"><button type="button" class="opt">3 px</button><button type="button" class="opt">30 px</button><button type="button" class="opt">60 px</button><button type="button" class="opt">300 px</button></div><p class="exp" hidden>The shift is f·b/d = 600 · 0.5 / 10 = 30 px.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. Image samples are I[7] = 0.2 and I[8] = 0.6. What does linear interpolation give at p = 7.75, and what is the derivative with respect to p?</p><div class="opts"><button type="button" class="opt">0.3 and 0.4</button><button type="button" class="opt">0.4 and 0.4</button><button type="button" class="opt">0.5 and 0.8</button><button type="button" class="opt">0.5 and 0.4</button></div><p class="exp" hidden>0.25 · 0.2 + 0.75 · 0.6 = 0.05 + 0.45 = 0.5. The slope is I[8] − I[7] = 0.4 per pixel.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. Why does MonoRec need a moving-object mask in addition to its cost volume?</p><div class="opts"><button type="button" class="opt">The cost volume assumes a static world and gives wrong signals on moving objects</button><button type="button" class="opt">The cost volume cannot be computed without known depth</button><button type="button" class="opt">The mask supplies the metric scale</button><button type="button" class="opt">The mask replaces the camera poses</button></div><p class="exp" hidden>Photometric consistency across frames only indicates depth if the point did not move. The mask removes moving points before they are lifted into the map (p. 370).</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. In D3VO, what is the predicted uncertainty used for?</p><div class="opts"><button type="button" class="opt">To choose which frames become keyframes</button><button type="button" class="opt">To replace the photometric error with a reprojection error</button><button type="button" class="opt">To down-weight photometric residuals where brightness is not expected to stay constant</button><button type="button" class="opt">To set the metric scale of the map</button></div><p class="exp" hidden>The network predicts where colour is likely preserved across frames, and residuals elsewhere count less (p. 373). Scale comes from the depth predictions.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Depth networks give monocular SLAM metric scale, robustness in degenerate cases, and dense maps.</li>
+<li>MonoRec adds a cost volume for consistency and a mask for moving objects. BTS predicts a density field that includes occluded space.</li>
+<li>Pose networks trained with (13.1) work, but are less accurate than geometry and overfit.</li>
+<li>View synthesis, (13.2) and (13.3), turns "depth and pose are right" into "the warped image matches", a loss that needs no 3D labels and is differentiable through bilinear interpolation.</li>
+<li>DVSO and D3VO add network predictions of depth, pose, and uncertainty to a direct SLAM system as factors and weights.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §13.1 "Deep Learning for Depth and Camera Pose", pp. 368–373, equations (13.1)–(13.3), Figures 13.3–13.5.</li>
+<li>Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (pinhole projection, scale ambiguity, disparity of a rectified pair).</li>
+<li>Solà, Deray, Atchuthan, <em>A micro Lie theory for state estimation in robotics</em>, 2018 (the Log map used to read (13.1)).</li>
+</ol></div>
+<p class="next"></p>
+</section>

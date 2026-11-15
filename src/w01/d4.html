@@ -1,0 +1,119 @@
+<section class="day" data-day="4" id="d4" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 1 · Day 4</span>
+  <h2>Linear least squares</h2>
+  <p class="lead">After today you can set up a linear least-squares problem, derive and solve its normal equations by hand, weight measurements by their noise, and explain why the result is the Gaussian maximum likelihood estimate.</p>
+  <p class="meta">About 60 min · Re-read the Notation pages, pp. xiv–xv (2 pages) · Needs Week 1 Day 3</p>
+</header>
+
+<div class="box read"><h4>Read first: the Notation pages, pp. xiv–xv</h4>
+<p>There are no new pages today. Skim the notation tables at the front of the book for:</p>
+<ul>
+<li>The three fonts (p. xiv): italic \(a\) is a scalar, bold lower-case \(\mathbf{a}\) a column vector, bold upper-case \(\mathbf{A}\) a matrix. Today's \(\mathbf{A}\), \(\mathbf{x}\), \(\mathbf{b}\) follow this.</li>
+<li>\(p(\mathbf{a}\mid\mathbf{b})\), \(\N(\boldsymbol{\mu},\boldsymbol{\Sigma})\), and the L2 norm \(\norm{\mathbf{x}}_2 = \sqrt{\sum x_i^2}\) (p. xiv). Every norm today is an L2 norm.</li>
+<li>The 3-D geometry table (p. xv): frames, rotation matrices, SO(3), SE(3). Only glance at it. You will need it when the course reaches Chapter 2.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Almost every computation in a SLAM back-end ends in the same small problem: find the \(\mathbf{x}\) that makes \(\mathbf{A}\mathbf{x}\) as close as possible to \(\mathbf{b}\). The answer solves the <strong>normal equations</strong> \(\mathbf{A}\T\mathbf{A}\,\mathbf{x} = \mathbf{A}\T\mathbf{b}\). Dividing each equation by its noise level first turns this into the maximum likelihood estimate under Gaussian noise.</p></div>
+
+<h3>1. More equations than unknowns</h3>
+<p>A robot drives along a line at constant speed. Its position is measured at four times:</p>
+<div class="tbl"><table>
+  <tr><th>Time t (s)</th><th>Measured position y (m)</th><th>Prediction of guess (1, 1)</th><th>Residual</th><th>Prediction of (1.5, 1)</th><th>Residual</th></tr>
+  <tr><td>0</td><td>1</td><td>1</td><td>0</td><td>1.5</td><td>−0.5</td></tr>
+  <tr><td>1</td><td>3</td><td>2</td><td>1</td><td>2.5</td><td>0.5</td></tr>
+  <tr><td>2</td><td>4</td><td>3</td><td>1</td><td>3.5</td><td>0.5</td></tr>
+  <tr><td>3</td><td>4</td><td>4</td><td>0</td><td>4.5</td><td>−0.5</td></tr>
+</table></div>
+<p>The model is \(y = x_1 + x_2\,t\), with two unknowns: the start position \(x_1\) and the speed \(x_2\). Each measurement gives one linear equation, \(x_1 + x_2 t_i = y_i\). Stack them:</p>
+\[ \underbrace{\begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \\ 1 & 3 \end{bmatrix}}_{\mathbf{A}} \underbrace{\begin{bmatrix} x_1 \\ x_2 \end{bmatrix}}_{\mathbf{x}} = \underbrace{\begin{bmatrix} 1 \\ 3 \\ 4 \\ 4 \end{bmatrix}}_{\mathbf{b}} . \]
+<p>Four equations, two unknowns: the system is <strong>overdetermined</strong>, and because the measurements are noisy no \(\mathbf{x}\) satisfies all four. For any candidate \(\mathbf{x}\) the <strong>residual</strong> \(\mathbf{r} = \mathbf{b} - \mathbf{A}\mathbf{x}\) lists how far each equation is from holding. The <strong>least-squares</strong> solution is the candidate with the smallest sum of squared residuals:</p>
+\[ \mathbf{x}^\star = \argmin_{\mathbf{x}}\ \norm{\mathbf{A}\mathbf{x}-\mathbf{b}}_2^2 = \argmin_{\mathbf{x}}\ \sum_i r_i^2 . \]
+<p>In the table, the guess \((1, 1)\) has cost \(0+1+1+0 = 2\). The line \((1.5, 1)\) has cost \(4\times 0.25 = 1\), and the next section shows that nothing does better. The book writes this problem as equation (1.24b), with the unknown called \(\boldsymbol{\delta}\) because there it is a correction to a current guess. <span class="src">§1.3.2 · p. 31</span></p>
+
+<h3>2. The normal equations</h3>
+<p>The minimizer satisfies a square linear system, the <strong>normal equations</strong>, which is the book's equation (1.25): <span class="src">§1.3.3 · p. 31</span></p>
+\[ \mathbf{A}\T\mathbf{A}\,\mathbf{x}^\star = \mathbf{A}\T\mathbf{b}. \]
+<p>For the example,</p>
+\[ \mathbf{A}\T\mathbf{A} = \begin{bmatrix} 4 & 6 \\ 6 & 14 \end{bmatrix}, \qquad \mathbf{A}\T\mathbf{b} = \begin{bmatrix} 12 \\ 23 \end{bmatrix}. \]
+<p>The entries have plain meanings: 4 is the number of points, 6 is \(\sum t_i\), 14 is \(\sum t_i^2\), 12 is \(\sum y_i\), and 23 is \(\sum t_i y_i\). Solve \(4x_1+6x_2 = 12\) and \(6x_1+14x_2 = 23\): multiply the first by 1.5 and subtract it from the second to get \(5x_2 = 5\), so \(x_2 = 1\) and then \(x_1 = (12-6)/4 = 1.5\). The best line is \(y = 1.5 + 1.0\,t\).</p>
+
+<div class="box note"><h4>Filling the gap: where the normal equations come from</h4>
+<p>Write the cost as a function \(f(\mathbf{x})\) and expand the square. The two cross terms are equal because each is a scalar and a scalar equals its transpose:</p>
+\[ f(\mathbf{x}) = (\mathbf{A}\mathbf{x}-\mathbf{b})\T(\mathbf{A}\mathbf{x}-\mathbf{b}) = \mathbf{x}\T\mathbf{A}\T\mathbf{A}\mathbf{x} - 2\,\mathbf{b}\T\mathbf{A}\mathbf{x} + \mathbf{b}\T\mathbf{b}. \]
+<p>Two differentiation rules are all you need: \(\nabla_{\mathbf{x}}(\mathbf{c}\T\mathbf{x}) = \mathbf{c}\) and, for a symmetric matrix \(\mathbf{Q}\), \(\nabla_{\mathbf{x}}(\mathbf{x}\T\mathbf{Q}\mathbf{x}) = 2\mathbf{Q}\mathbf{x}\). They are the vector versions of \((cx)' = c\) and \((qx^2)' = 2qx\). With \(\mathbf{Q} = \mathbf{A}\T\mathbf{A}\) and \(\mathbf{c} = \mathbf{A}\T\mathbf{b}\):</p>
+\[ \nabla f(\mathbf{x}) = 2\,\mathbf{A}\T\mathbf{A}\mathbf{x} - 2\,\mathbf{A}\T\mathbf{b} = \mathbf{0} \quad\Longrightarrow\quad \mathbf{A}\T\mathbf{A}\mathbf{x} = \mathbf{A}\T\mathbf{b}. \]
+<p>Is this stationary point a minimum, and the only one? The second derivative of \(f\) is the constant matrix \(2\mathbf{A}\T\mathbf{A}\). For any direction \(\mathbf{v}\), \(\mathbf{v}\T\mathbf{A}\T\mathbf{A}\mathbf{v} = \norm{\mathbf{A}\mathbf{v}}_2^2 \ge 0\), so \(f\) curves upward everywhere. If the columns of \(\mathbf{A}\) are linearly independent (\(\mathbf{A}\) has <strong>full column rank</strong>), then \(\mathbf{A}\mathbf{v}\neq\mathbf{0}\) whenever \(\mathbf{v}\neq\mathbf{0}\), the curvature is strictly positive in every direction, and \(f\) is a bowl with exactly one lowest point. If the columns are dependent, a whole line of \(\mathbf{x}\) values gives the same cost. That happens in SLAM when nothing anchors the map: with odometry only and no prior, shifting every pose by the same amount changes no residual.</p></div>
+
+<p>The normal equations also have a geometric reading. Move everything to one side: \(\mathbf{A}\T(\mathbf{b}-\mathbf{A}\mathbf{x}^\star) = \mathbf{0}\). Each row of \(\mathbf{A}\T\) is a column of \(\mathbf{A}\), so this says that the residual is perpendicular ("normal") to every column of \(\mathbf{A}\).</p>
+<figure class="fig"><svg viewBox="0 0 600 240" role="img" aria-label="A tilted plane represents the column space of A, the set of all vectors A x. The vector b starts at the origin in the plane and points out of the plane. The vector A x-hat lies in the plane and ends directly below the tip of b. The dashed residual joins the two tips and meets the plane at a right angle.">
+  <defs><marker id="w01ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--ink)"/></marker></defs>
+  <path d="M50 205 L400 205 L550 125 L200 125 Z" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <line x1="410" y1="160" x2="410" y2="48" stroke="var(--c3)" stroke-width="2" stroke-dasharray="5 4"/>
+  <path d="M410 147 L397 148 L397 161" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="190" y1="175" x2="406" y2="160.3" stroke="var(--ink)" stroke-width="2.5" marker-end="url(#w01ar4)"/>
+  <line x1="190" y1="175" x2="407" y2="46.8" stroke="var(--ink)" stroke-width="2.5" marker-end="url(#w01ar4)"/>
+  <circle cx="190" cy="175" r="3.5" fill="var(--ink)"/>
+  <text x="172" y="181" font-size="13" fill="var(--ink)">0</text>
+  <text x="276" y="100" font-size="14" font-weight="700" fill="var(--ink)">b</text>
+  <text x="300" y="191" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">A x̂</text>
+  <text x="422" y="108" font-size="13" fill="var(--c3)">r = b − A x̂</text>
+  <text x="60" y="228" font-size="12" fill="var(--muted)">column space of A: every vector A x</text>
+</svg><figcaption>Least squares is a projection. Among all vectors of the form A x, the closest to b is the one directly "below" it, and the leftover r is perpendicular to the plane.</figcaption></figure>
+<p>Check it on the example: \(\mathbf{r} = (-0.5,\ 0.5,\ 0.5,\ -0.5)\). Its dot product with the first column \((1,1,1,1)\) is 0, and with the second column \((0,1,2,3)\) it is \(0.5+1-1.5 = 0\).</p>
+
+<h3>3. Weights: trusting some measurements more</h3>
+<p>Plain least squares treats every equation alike. If measurement \(i\) has noise standard deviation \(\sigma_i\), a residual should count in units of its own \(\sigma_i\). <strong>Weighted least squares</strong> minimizes \(\sum_i r_i^2/\sigma_i^2\). With the covariance matrix \(\boldsymbol{\Sigma}\) of the measurement noise (diagonal with entries \(\sigma_i^2\) when the noises are independent) this is</p>
+\[ \norm{\mathbf{A}\mathbf{x}-\mathbf{b}}^2_{\boldsymbol{\Sigma}} = (\mathbf{A}\mathbf{x}-\mathbf{b})\T\boldsymbol{\Sigma}^{-1}(\mathbf{A}\mathbf{x}-\mathbf{b}), \qquad\text{solved by}\qquad \mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{A}\,\mathbf{x}^\star = \mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{b}. \]
+<p>The quantity \(\norm{\mathbf{e}}^2_{\boldsymbol{\Sigma}} = \mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\) is the squared <strong>Mahalanobis distance</strong>, the book's equation (1.10). <span class="src">§1.2.2 · p. 27</span> It measures an error in standard deviations. Example: \(\mathbf{e} = (3, 1)\) with \(\boldsymbol{\Sigma} = \diag(9,\ 0.25)\) gives \(9/9 + 1/0.25 = 1 + 4 = 5\). The first component is 3 units off where \(\sigma = 3\): one sigma. The second is 1 unit off where \(\sigma = 0.5\): two sigma, so it contributes four times as much, although it is the smaller number.</p>
+<p>You never need a separate weighted solver. Divide row \(i\) of \(\mathbf{A}\) and entry \(i\) of \(\mathbf{b}\) by \(\sigma_i\) (in general, multiply both by \(\boldsymbol{\Sigma}^{-1/2}\)) and the weighted problem becomes a plain one. This is <strong>whitening</strong>, and the book does it once in equations (1.22)–(1.23) and then drops the covariances from the notation. <span class="src">§1.3.1 · p. 30</span> Whitening also removes units, so rows that came from ranges in metres and rows that came from angles in radians can sit in the same \(\mathbf{A}\).</p>
+<p>Try it: the amber measurement disagrees with the other five. Change how much noise you believe it has. You can also drag any point.</p>
+<div class="viz" data-viz="w01_linefit"></div>
+<p class="cap">Notice: at σ = 1 the weighted line and the equal-weight line coincide, and the single amber point tilts the fit a long way because it sits far out at the right end. Raise its σ to 5 and the solid line swings back onto the other five points, while the amber residual, though large, is under one of its own σ. Lower σ to 0.2 and the line passes almost through the amber point.</p>
+<div class="box kid"><h4>In plain words</h4><p>Six witnesses describe the same event. Least squares finds the story that disagrees with all of them as little as possible. Weights say how reliable each witness is. A witness you barely trust (large σ) can be far from the final story without it counting for much.</p></div>
+
+<h3>4. Why squares? Gaussian maximum likelihood</h3>
+<p>Squaring the residuals is not a matter of taste. It is what Gaussian noise implies.</p>
+<div class="box note"><h4>Filling the gap: weighted least squares is the MLE</h4>
+<p>Let \(\mathbf{a}_i\T\) be row \(i\) of \(\mathbf{A}\), and suppose \(b_i = \mathbf{a}_i\T\mathbf{x} + \eta_i\) with independent noises \(\eta_i\sim\N(0,\sigma_i^2)\). Independence makes the likelihood of all the measurements a product:</p>
+\[ p(\mathbf{b}\mid\mathbf{x}) = \prod_i \frac{1}{\sigma_i\sqrt{2\pi}}\exp\!\left(-\frac{(b_i-\mathbf{a}_i\T\mathbf{x})^2}{2\sigma_i^2}\right). \]
+<p>Take the negative logarithm. The product becomes a sum and the factors in front become a constant that does not depend on \(\mathbf{x}\):</p>
+\[ -\log p(\mathbf{b}\mid\mathbf{x}) = \tfrac12\sum_i \frac{(b_i-\mathbf{a}_i\T\mathbf{x})^2}{\sigma_i^2} + \text{const} = \tfrac12\norm{\mathbf{A}\mathbf{x}-\mathbf{b}}^2_{\boldsymbol{\Sigma}} + \text{const}. \]
+<p>Maximizing the likelihood is minimizing its negative log, so \(\mathbf{x}^{\text{MLE}}\) is the weighted least-squares solution. A Gaussian prior on \(\mathbf{x}\) contributes one more squared term of the same kind, as in the function \(J(x)\) of <a href="#d2">Day 2</a>, so MAP estimation is least squares with a few extra rows.</p>
+<p>The same matrix tells you how good the answer is. The solution \(\mathbf{x}^\star = \boldsymbol{\Lambda}^{-1}\mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{b}\), with \(\boldsymbol{\Lambda} = \mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{A}\), is a linear function of \(\mathbf{b}\), and \(\mathbf{b}\) has covariance \(\boldsymbol{\Sigma}\). A linear map \(\mathbf{M}\) turns a covariance \(\boldsymbol{\Sigma}\) into \(\mathbf{M}\boldsymbol{\Sigma}\mathbf{M}\T\), so</p>
+\[ \cov(\mathbf{x}^\star) = \boldsymbol{\Lambda}^{-1}\mathbf{A}\T\boldsymbol{\Sigma}^{-1}\,\boldsymbol{\Sigma}\,\boldsymbol{\Sigma}^{-1}\mathbf{A}\boldsymbol{\Lambda}^{-1} = \boldsymbol{\Lambda}^{-1}\boldsymbol{\Lambda}\boldsymbol{\Lambda}^{-1} = \boldsymbol{\Lambda}^{-1}. \]
+<p>So \(\boldsymbol{\Lambda} = \mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{A} = \sum_i \mathbf{a}_i\mathbf{a}_i\T/\sigma_i^2\) is the information matrix of <a href="#d3">Day 3</a>: every measurement row adds its own piece of information. The book gives \(\mathbf{A}\T\mathbf{A}\) (after whitening) exactly this name in equation (1.26). <span class="src">§1.3.3 · p. 31</span></p></div>
+<p>In the example with every \(\sigma_i = 1\) m:</p>
+\[ \boldsymbol{\Lambda} = \begin{bmatrix} 4 & 6 \\ 6 & 14 \end{bmatrix}, \qquad \boldsymbol{\Lambda}^{-1} = \frac{1}{20}\begin{bmatrix} 14 & -6 \\ -6 & 4 \end{bmatrix} = \begin{bmatrix} 0.7 & -0.3 \\ -0.3 & 0.2 \end{bmatrix}. \]
+<p>The start position is known to \(\sqrt{0.7} = 0.84\) m and the speed to \(\sqrt{0.2} = 0.45\) m/s. Four measurements of 1 m quality give an estimate better than any one of them.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Least squares minimizes the perpendicular distance from the points to the line."</strong> It minimizes the error in the measured quantity, here the vertical distance. The perpendicularity in the figure is in the space of measurement vectors, not in the plot of the data.</li>
+<li><strong>"A larger σ gives a measurement more weight."</strong> The weight is \(1/\sigma^2\). Doubling σ quarters the weight.</li>
+<li><strong>"The subscript in \(\norm{\mathbf{e}}_{\boldsymbol{\Sigma}}\) means multiply by Σ."</strong> The subscript names the covariance; the formula uses its inverse.</li>
+<li><strong>"If \(\mathbf{A}\T\mathbf{A}\) is singular, the software is at fault."</strong> A singular \(\mathbf{A}\T\mathbf{A}\) means the measurements do not determine \(\mathbf{x}\). The cure is another measurement or a prior.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. Three equally good measurements of one unknown x read 2, 3, and 7. What is the least-squares estimate?</p><div class="opts"><button type="button" class="opt">3</button><button type="button" class="opt">4.5</button><button type="button" class="opt">4</button><button type="button" class="opt">7</button></div><p class="exp" hidden>A is a column of three ones, so AᵀA = 3 and Aᵀb = 12. The estimate is 12/3 = 4, the mean. The mean is the least-squares answer to "one number that fits them all".</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. Two measurements of one unknown: 10 with σ = 1 and 16 with σ = 2. What is the weighted least-squares estimate?</p><div class="opts"><button type="button" class="opt">11.2</button><button type="button" class="opt">12</button><button type="button" class="opt">13</button><button type="button" class="opt">14.8</button></div><p class="exp" hidden>Weights are 1/σ²: 1 and 0.25. (10 × 1 + 16 × 0.25) / (1 + 0.25) = 14 / 1.25 = 11.2. This is the fusion rule of Day 3.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. At the least-squares solution, what is true of the residual r = b − A x?</p><div class="opts"><button type="button" class="opt">It is the zero vector</button><button type="button" class="opt">It is parallel to b</button><button type="button" class="opt">Its entries are all equal</button><button type="button" class="opt">It is orthogonal to every column of A</button></div><p class="exp" hidden>The normal equations are Aᵀr = 0: the residual has zero dot product with each column of A. It is zero only if the equations happen to be consistent.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. An error e = (4, 1) has covariance diag(4, 1). What is its squared Mahalanobis distance?</p><div class="opts"><button type="button" class="opt">17</button><button type="button" class="opt">3</button><button type="button" class="opt">5</button><button type="button" class="opt">8</button></div><p class="exp" hidden>eᵀΣ⁻¹e = 16/4 + 1/1 = 5. The value 17 is the plain squared length, and 3 comes from dividing by σ instead of σ².</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. One row of a least-squares problem reads x₁ + 2x₂ = 5, from a sensor with σ = 0.1. What is the whitened row?</p><div class="opts"><button type="button" class="opt">0.1x₁ + 0.2x₂ = 0.5</button><button type="button" class="opt">10x₁ + 20x₂ = 50</button><button type="button" class="opt">100x₁ + 200x₂ = 500</button><button type="button" class="opt">x₁ + 2x₂ = 50</button></div><p class="exp" hidden>Whitening divides the row and its right-hand side by σ, here multiplying by 10. Squaring the whitened residual then gives the 1/σ² = 100 weight.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Least squares picks the \(\mathbf{x}\) that minimizes \(\norm{\mathbf{A}\mathbf{x}-\mathbf{b}}_2^2\), the sum of squared residuals.</li>
+<li>The minimizer solves the normal equations \(\mathbf{A}\T\mathbf{A}\mathbf{x} = \mathbf{A}\T\mathbf{b}\), and is unique when \(\mathbf{A}\) has full column rank. The residual is orthogonal to the columns of \(\mathbf{A}\).</li>
+<li>Weighted least squares minimizes the Mahalanobis norm \(\norm{\mathbf{A}\mathbf{x}-\mathbf{b}}^2_{\boldsymbol{\Sigma}}\). Whitening (dividing each row by its σ) reduces it to the plain problem.</li>
+<li>Under independent Gaussian noise the weighted least-squares solution is the maximum likelihood estimate.</li>
+<li>\(\boldsymbol{\Lambda} = \mathbf{A}\T\boldsymbol{\Sigma}^{-1}\mathbf{A}\) is the information matrix of the estimate, and \(\boldsymbol{\Lambda}^{-1}\) is its covariance.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Notation, pp. xiv–xv; equation (1.10), p. 27, and equations (1.22)–(1.26), pp. 30–31, quoted ahead of Week 2.</li>
+<li>Strang, <em>Introduction to Linear Algebra</em>, 2016, Chapter 4 (projections, least squares, the normal equations).</li>
+<li>Barfoot, <em>State Estimation for Robotics</em>, 2017 (least squares as Gaussian maximum likelihood; covariance of the estimate).</li>
+</ol></div>
+<p class="next"></p>
+</section>

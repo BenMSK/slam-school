@@ -1,0 +1,134 @@
+<section class="day" data-day="68" id="d68" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 12 · Day 2</span>
+  <h2>Direct image alignment: Lucas-Kanade, pyramids, and photometric BA</h2>
+  <p class="lead">After today you can read the photometric loss of direct SLAM term by term, derive the Lucas-Kanade update as a Gauss-Newton step, and explain why direct alignment is run coarse-to-fine on an image pyramid.</p>
+  <p class="meta">About 60 min · Read §7.4.2, pp. 209–211, with Figures 7.8 and 7.9 (about 2 pages of text) · Needs Week 12 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §7.4.2, pp. 209–211</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The three nested sums of equation (7.6) on p. 210, and the two kinds of unknowns named right after it.</li>
+<li>What the warp \(\omega\) does, in the paragraph below (7.6).</li>
+<li>How LSD-SLAM and DSO differ in what they optimize together (p. 210 and the caption of Figure 7.8).</li>
+<li>The three steps towards global consistency on p. 211.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A direct method skips keypoints. It asks: for which camera motion and which depths do the pixels of one image, moved into the other image, show the same brightness? The residual is a brightness difference, and its Jacobian is an image gradient times the geometric Jacobian of Day 1. Because an image is only locally linear, the solver must start close, which is what the pyramid is for.</p></div>
+
+<h3>1. The photometric loss, term by term</h3>
+<p>Keypoint methods first reduce each image to a few hundred matched points and then minimize a geometric error. Direct methods such as LSD-SLAM and DSO use the brightness values themselves and estimate structure and motion from the raw data. Correspondence is no longer a separate step: it is solved jointly with SLAM by minimizing <span class="src">§7.4.2 · pp. 209–210, eq. (7.6)</span></p>
+\[ E_{photo} = \sum_{i \in \mathcal{F}} \; \sum_{z \in \mathcal{P}_i} \; \sum_{j \in obs(z)} \rho\Big( I_i(z) - I_j\big( \omega(z, d_z, \mathbf{T}^i_j) \big) \Big). \tag{7.6} \]
+<div class="tbl"><table>
+  <tr><th>Symbol</th><th>Meaning</th></tr>
+  <tr><td>\(\mathcal{F}\)</td><td>The set of keyframes</td></tr>
+  <tr><td>\(\mathcal{P}_i\)</td><td>The pixels \(z\) selected in keyframe \(i\) (the "points" of a direct method)</td></tr>
+  <tr><td>\(obs(z)\)</td><td>The frames in which that point is visible</td></tr>
+  <tr><td>\(I_i(z)\)</td><td>Brightness of image \(i\) at pixel \(z\)</td></tr>
+  <tr><td>\(d_z\)</td><td>Depth of the scene at pixel \(z\): one unknown number per selected pixel</td></tr>
+  <tr><td>\(\mathbf{T}^i_j\)</td><td>The book's symbol for the rigid-body motion that takes points from frame \(i\) to frame \(j\): the other unknowns</td></tr>
+  <tr><td>\(\omega\)</td><td>The <strong>warp</strong>: where pixel \(z\) of image \(i\) lands in image \(j\)</td></tr>
+  <tr><td>\(\rho\)</td><td>A robust loss</td></tr>
+</table></div>
+<p>The warp is three operations you already know from Week 11. Un-project the pixel to a ray and scale it by the depth to get a 3-D point in frame \(i\); move that point to frame \(j\); project it:</p>
+\[ \omega(z, d_z, \mathbf{T}^i_j) = \pi\big( \mathbf{R}\, d_z\, \pi^{-1}(z) + \mathbf{t} \big), \qquad \mathbf{R}, \mathbf{t} \ \text{the rotation and translation of } \mathbf{T}^i_j , \]
+<p>with \(\pi^{-1}(z)\) the ray whose third coordinate is 1. If depth and motion are right and the surface looks equally bright from both views, the two brightness values agree. That assumption is <strong>photometric consistency</strong> (brightness constancy). <span class="src">§7.3.5 · p. 207</span></p>
+<figure class="fig"><svg viewBox="0 0 600 232" role="img" aria-label="Two cameras, keyframe i on the left and frame j on the right, each with an image plane. A ray leaves camera i through pixel z and reaches a 3-D point at depth d. A second ray joins that point to camera j and crosses its image plane at the warped pixel. An arrow between the cameras is the rigid-body motion T.">
+  <defs><marker id="w12ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <line x1="150" y1="200" x2="300" y2="50" stroke="var(--c5)" stroke-width="1.5"/>
+  <line x1="300" y1="50" x2="450" y2="200" stroke="var(--c3)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <rect x="90" y="158" width="120" height="4" fill="var(--c5)"/>
+  <rect x="390" y="158" width="120" height="4" fill="var(--c3)"/>
+  <path d="M150 200 l-9 14 l18 0 z" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="1.5"/>
+  <path d="M450 200 l-9 14 l18 0 z" fill="var(--c3-soft)" stroke="var(--c3)" stroke-width="1.5"/>
+  <circle cx="190" cy="160" r="5" fill="var(--c5)" stroke="var(--surface)" stroke-width="1.5"/>
+  <circle cx="410" cy="160" r="5" fill="var(--c3)" stroke="var(--surface)" stroke-width="1.5"/>
+  <circle cx="300" cy="50" r="7" fill="var(--c2)" stroke="var(--surface)" stroke-width="1.5"/>
+  <text x="300" y="30" text-anchor="middle" font-size="13" fill="var(--ink)">3-D point</text>
+  <text x="200" y="182" font-size="13" fill="var(--ink)">pixel z</text>
+  <text x="400" y="182" text-anchor="end" font-size="13" fill="var(--ink)">warped pixel ω</text>
+  <text x="226" y="100" text-anchor="end" font-size="13" fill="var(--ink)">depth d<tspan baseline-shift="sub" font-size="10">z</tspan></text>
+  <text x="90" y="150" font-size="12" fill="var(--muted)">image I<tspan baseline-shift="sub" font-size="10">i</tspan></text>
+  <text x="510" y="150" text-anchor="end" font-size="12" fill="var(--muted)">image I<tspan baseline-shift="sub" font-size="10">j</tspan></text>
+  <text x="100" y="212" text-anchor="middle" font-size="12" fill="var(--muted)">keyframe i</text>
+  <text x="500" y="212" text-anchor="middle" font-size="12" fill="var(--muted)">frame j</text>
+  <line x1="175" y1="220" x2="425" y2="220" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w12ar2)"/>
+  <text x="300" y="212" text-anchor="middle" font-size="12" fill="var(--ink)">rigid-body motion T</text>
+  <text x="470" y="64" text-anchor="middle" font-size="13" fill="var(--ink)">residual = I<tspan baseline-shift="sub" font-size="10">i</tspan>(z) − I<tspan baseline-shift="sub" font-size="10">j</tspan>(ω)</text>
+</svg><figcaption>The warp. Nobody searches for a match: depth and motion decide where the pixel lands, and the brightness difference there says how wrong they are.</figcaption></figure>
+
+<h3>2. Lucas-Kanade: the one-dimensional case</h3>
+<p>To see how such a loss is minimized, strip the problem down. Take one image row, \(I_1(x)\), and a second row that shows the same content moved by an unknown shift \(d\): \(I_2(x) = I_1(x - d)\). The warp is \(x \mapsto x + s\), and we look for the shift \(s\) that minimizes</p>
+\[ E(s) = \frac{1}{2} \sum_x r_x(s)^2, \qquad r_x(s) = I_2(x + s) - I_1(x). \]
+<p>At \(s = d\) every residual is zero. This is the smallest example of <strong>direct image alignment</strong>, and the classic algorithm for it is named after Lucas and Kanade.</p>
+<div class="box note"><h4>Filling the gap: Lucas-Kanade is Gauss-Newton</h4>
+<p>The residual is nonlinear in \(s\) because the image is. Linearize the image around the current estimate, to first order in a small extra shift \(\delta\):</p>
+\[ I_2(x + s + \delta) \approx I_2(x + s) + g_x\, \delta, \qquad g_x = \frac{\mathrm{d} I_2}{\mathrm{d} x}(x + s). \]
+<p>So \(r_x(s + \delta) \approx r_x(s) + g_x \delta\). The Jacobian of the residual is the <em>image gradient</em> at the warped position. Insert this into \(E\) and set the derivative with respect to \(\delta\) to zero:</p>
+\[ \sum_x g_x \big( r_x + g_x \delta \big) = 0 \quad\Longrightarrow\quad \delta = - \frac{\sum_x g_x\, r_x}{\sum_x g_x^2}, \qquad s \leftarrow s + \delta . \]
+<p>That is the Gauss-Newton step of <a href="#d10">Week 2 · Day 4</a> with a \(1 \times 1\) "Hessian" \(\sum g_x^2\). Two things follow at once.</p>
+<p><strong>No gradient, no information.</strong> Pixels in flat regions have \(g_x = 0\) and contribute nothing. In two dimensions the scalar \(\sum g^2\) becomes the \(2 \times 2\) matrix \(\sum \nabla I\, \nabla I\T\), which must be invertible. It is the second-moment matrix that the Harris and Shi-Tomasi detectors of Week 11 examine: a corner is a patch that Lucas-Kanade can track.</p>
+<p><strong>The step is only as good as the linearization.</strong> A pure stripe pattern \(I_1(x) = \sin(2\pi x / \lambda)\) makes this exact. Averaged over many periods, the cost per pixel and the step are</p>
+\[ E(s) = \tfrac{1}{2}\Big( 1 - \cos\frac{2\pi (s - d)}{\lambda} \Big), \qquad \delta = -\frac{\lambda}{2\pi} \sin\frac{2\pi (s - d)}{\lambda} . \]
+<p>The cost has a minimum at \(s = d\) and another at every \(s = d + k\lambda\). The step always moves towards the nearest one. So the iteration reaches the true shift exactly when it starts within half a period: \(|s_0 - d| \lt \lambda/2\). With \(\lambda = 16\) px and \(d = 3\) px, starting from \(s = 0\): the first step is \(\tfrac{16}{2\pi}\sin(2\pi \cdot 3/16) = 2.35\), leaving an error of 0.65 px; the second leaves 0.007 px. With \(d = 9\) px the same iteration walks to \(s = -7\), the wrong minimum.</p></div>
+
+<h3>3. The basin of convergence, and the pyramid</h3>
+<p>The set of starting values from which the iteration reaches the right answer is the <strong>basin of convergence</strong>. For direct alignment it is about half the size of the finest dominant structure in the image, often only a few pixels. A camera that moves quickly between two frames shifts the image by much more.</p>
+<p>The remedy is an <strong>image pyramid</strong>: blur the image and keep every second pixel, repeatedly. At level \(\ell\) the image is \(2^\ell\) times smaller, fine detail has been blurred away, and a shift of \(d\) original pixels is only \(d / 2^\ell\) pixels. <strong>Coarse-to-fine</strong> alignment solves at the coarsest level first, multiplies the result by 2, and uses it as the initial guess one level down. Each level only has to correct what the level above could not resolve. §7.7 of the book uses exactly this "coarse-to-fine Gauss-Newton optimization" for RGB-D tracking. <span class="src">§7.7 · p. 219</span></p>
+<p>Try it: the true shift is 20 px. Press "Run to convergence". Then switch the pyramid on and run again, one step at a time if you want to see the levels.</p>
+<div class="viz" data-viz="w12_lk"></div>
+<p class="cap">Notice: at full resolution the cost has a narrow valley at the true shift and shallow dips elsewhere. The estimate stops in a dip near the start, at about −2.6 px, far from 20 px. The strip under the curve shows that only starting values within roughly 13 px of the truth succeed. With the pyramid, the first steps run on a 32-pixel image whose cost has one broad valley; they land close to 20 px, and the finer levels only polish the result. The basin is now several times wider.</p>
+<div class="box kid"><h4>In plain words</h4><p>Lining up two detailed pictures by sliding one over the other only works if they are almost lined up already; otherwise every small detail finds some wrong partner. Squint first. With the detail blurred away only the big shapes are left, and those have one obvious best position. Then open your eyes a little at a time and fix what remains.</p></div>
+
+<h3>4. From a shift to a camera pose</h3>
+<p>Direct tracking of a camera replaces the scalar \(s\) by a pose perturbation \(\boldsymbol{\xi} \in \R^6\) and the shift \(x + s\) by the warp \(\omega\). By the chain rule, the Jacobian of one pixel's residual is</p>
+\[ \underbrace{\frac{\partial r}{\partial \boldsymbol{\xi}}}_{1 \times 6} = \pm \underbrace{\nabla I_j\big|_{\omega}}_{1 \times 2 \ \text{image gradient}} \; \underbrace{\boldsymbol{\Pi}\, \mathbf{R}^0 \begin{bmatrix} \mathbf{I} &amp; -\mathbf{x}^\wedge \end{bmatrix}}_{2 \times 6 \ \text{from Day 1}} , \]
+<p>where \(\mathbf{x} = d_z \pi^{-1}(z)\) is the point in frame \(i\) and the sign depends on how the residual is written. This is the pose Jacobian of <a href="#d67">Day 1</a> with one extra factor in front. Keypoint tracking measures where a point lands; direct tracking measures the brightness there, so it needs the gradient to convert pixels of motion into units of brightness. Each pixel gives one row, and the normal equations are again \(6 \times 6\).</p>
+<div class="tbl"><table>
+  <tr><th></th><th>Keypoint-based (indirect)</th><th>Direct</th></tr>
+  <tr><td>Residual</td><td>Reprojection error, in pixels</td><td>Photometric error, in brightness</td></tr>
+  <tr><td>Correspondence</td><td>Found beforehand by matching descriptors</td><td>Implied by depth and motion through the warp</td></tr>
+  <tr><td>Uses</td><td>Corners only</td><td>Any pixel with gradient, including edges and weak texture</td></tr>
+  <tr><td>Needs</td><td>Repeatable keypoints</td><td>A close initial guess and consistent brightness</td></tr>
+</table></div>
+<p>The caption of Figure 7.8 gives the argument for direct methods: with no intermediate abstraction, even very subtle brightness variations inform the camera motion. <span class="src">Figure 7.8 · p. 211</span></p>
+
+<h3>5. Two direct systems, and three levels of consistency</h3>
+<p><strong>LSD-SLAM</strong> alternates: it tracks the camera against the current depth maps, then updates the depth maps given the camera, and runs a pose-graph optimization for global consistency. <strong>DSO</strong> optimizes structure and motion together in one <strong>photometric bundle adjustment</strong>. Its robust loss is a weighted sum of squared differences over a small patch around each point and can adapt to an unknown exposure time. To run in real time on a CPU it keeps only a sliding window of keyframes and marginalizes older ones (marginalization is the Schur complement of <a href="#d15">Week 3 · Day 3</a>, and of tomorrow). <span class="src">§7.4.2 · pp. 210–211</span></p>
+<p>The book lists three steps by which real-time direct methods reach global consistency: <span class="src">§7.4.2 · p. 211</span></p>
+<ol>
+<li><strong>Sliding-window photometric BA</strong> over the last \(k\) keyframes, as in DSO. Consistent inside the window.</li>
+<li><strong>Pose-graph optimization</strong> on top: find the trajectory that agrees best with all pairwise image alignments (Figure 7.9).</li>
+<li><strong>Pose graph bundle adjustment (PGBA)</strong>: a variant of pose-graph optimization that also carries the full photometric uncertainty of BA, at the same cost, because still only poses are updated.</li>
+</ol>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Direct methods need no correspondences at all."</strong> They need no <em>matching step</em>. A correspondence is still used for every residual; it is computed from the current depth and pose by the warp, and it is wrong until those are right.</li>
+<li><strong>"A pyramid makes the result less accurate because coarse images are blurry."</strong> The coarse levels only supply the starting point. The final answer comes from the full-resolution level.</li>
+<li><strong>"More texture always helps."</strong> Fine, repetitive texture creates many local minima close together. It sharpens the final estimate and shrinks the basin.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. Three pixels have image gradients \(g = (2, -1, 2)\) and residuals \(r = (1, 1, -2)\). What is the Lucas-Kanade update \(\delta\)?</p><div class="opts"><button type="button" class="opt">−1/3 px</button><button type="button" class="opt">+1/3 px</button><button type="button" class="opt">+3 px</button><button type="button" class="opt">0 px</button></div><p class="exp" hidden>Σ g·r = 2 − 1 − 4 = −3 and Σ g² = 4 + 1 + 4 = 9, so δ = −(−3)/9 = +1/3 px.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. An image row contains only a stripe pattern with a period of 12 px. Starting from \(s = 0\) at full resolution, Lucas-Kanade finds the true shift only if the shift is smaller than about</p><div class="opts"><button type="button" class="opt">24 px</button><button type="button" class="opt">12 px</button><button type="button" class="opt">3 px</button><button type="button" class="opt">6 px</button></div><p class="exp" hidden>The cost repeats every 12 px and the iteration goes to the nearest minimum, so the start must be within half a period, 6 px, of the truth.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. At pyramid level 3 the iteration converges to a shift of 2.5 pixels of that level. What initial guess does level 2 receive, in pixels of level 2?</p><div class="opts"><button type="button" class="opt">5</button><button type="button" class="opt">2.5</button><button type="button" class="opt">1.25</button><button type="button" class="opt">20</button></div><p class="exp" hidden>Level 2 has twice the resolution of level 3, so the same motion is twice as many pixels: 5. In full-resolution pixels it is 20.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Why does a direct method not need a descriptor matcher?</p><div class="opts"><button type="button" class="opt">It tracks only one pixel per image</button><button type="button" class="opt">It assumes the camera does not move between frames</button><button type="button" class="opt">Given a depth and a camera motion, the warp computes where each pixel must appear in the other image</button><button type="button" class="opt">It matches keypoints inside the robust loss</button></div><p class="exp" hidden>Correspondence is a function of the unknowns in (7.6). Optimizing depth and motion solves it jointly with SLAM.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. Which description fits DSO, according to §7.4.2?</p><div class="opts"><button type="button" class="opt">Alternates between tracking and depth-map estimation, then runs pose-graph optimization</button><button type="button" class="opt">Jointly optimizes structure and motion in a sliding window of keyframes and marginalizes older ones</button><button type="button" class="opt">Matches ORB keypoints and runs local BA on a covisibility window</button><button type="button" class="opt">Runs full BA on all frames at frame rate</button></div><p class="exp" hidden>The first option is LSD-SLAM and the third is ORB-SLAM. DSO is a sliding-window photometric BA.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>The photometric loss (7.6) compares the brightness of a pixel with the brightness where the warp sends it; the unknowns are camera motions and per-pixel depths.</li>
+<li>In 1-D, the Gauss-Newton update is \(\delta = -\sum g r / \sum g^2\) with \(g\) the image gradient. This is Lucas-Kanade.</li>
+<li>The iteration converges only from within about half the size of the finest dominant structure. An image pyramid, solved coarse-to-fine, widens that basin by up to a factor of two per level.</li>
+<li>For a camera pose, the residual Jacobian is the image gradient times the geometric Jacobian of Day 1.</li>
+<li>LSD-SLAM alternates tracking and mapping; DSO does a sliding-window photometric BA. Pose-graph optimization or PGBA adds global consistency.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §7.4.2 "Direct Image Alignment", pp. 209–212, equation (7.6), Figures 7.8–7.9; §7.3.5, p. 207; §7.7, p. 219 (coarse-to-fine).</li>
+<li>Szeliski, <em>Computer Vision: Algorithms and Applications</em>, 2nd edition, 2022, for Lucas-Kanade alignment and coarse-to-fine estimation.</li>
+<li>Hartley and Zisserman, <em>Multiple View Geometry</em>, 2004, for projection and un-projection.</li>
+</ol></div>
+<p class="next"></p>
+</section>

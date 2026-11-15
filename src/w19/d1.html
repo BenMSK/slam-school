@@ -1,0 +1,134 @@
+<section class="day" data-day="109" id="d109" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 19 · Day 1</span>
+  <h2>Part III begins: Spatial AI, and where learning enters SLAM</h2>
+  <p class="lead">After today you can say what Part III adds to SLAM, name four places a neural network can enter a SLAM pipeline, and compute one attention step by hand.</p>
+  <p class="meta">About 60 min · Read Prelude III, pp. 361–365, and the opening of Ch 13, pp. 366–368 (8 pages) · Needs Week 2 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: Prelude III, pp. 361–365, and Chapter 13 up to §13.1, pp. 366–368</h4>
+<p>The Prelude is light reading. While you read, look for:</p>
+<ul>
+<li>The conditions under which the editors say SLAM "could be" solved, and the settings where it is not (p. 361).</li>
+<li>The three things Spatial AI adds to a map, in the last sentence of §III.1 (p. 361).</li>
+<li>The chapter-by-chapter plan of Part III (p. 365).</li>
+<li>In Chapter 13: the sentence about what goes wrong with the modular approach, and the three kinds of method the chapter covers (pp. 366–368).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Parts I and II built SLAM from models written by hand: a measurement model, a noise model, a solver. Part III asks what happens when some of those pieces are learned from data. Chapter 13 gives the first answer. A network can replace one component, add predicted depth or pose as extra factors, be trained through the optimizer itself, or regress 3D points directly from a pair of images. In most of these, the factor graph stays.</p></div>
+
+<h3>1. Is SLAM solved? What Part III is about</h3>
+<p>The Prelude opens with a question the field keeps asking. Its answer: yes, if you restrict yourself to small, static, indoor scenes with plenty of features. The uses people actually want are underwater, on other planets, in disaster zones, and in dense city traffic, and there the answer is no. <span class="src">Prelude III · p. 361</span></p>
+<p>The editors call the direction of travel <strong>Spatial AI</strong>. Compared with the SLAM of Parts I and II it differs in two ways. First, it uses deep learning for the parts of the problem that are hard to model by hand, which makes systems more adaptive and robust. Second, it changes what a map is: maps that can render views nobody captured (<strong>novel view synthesis</strong>), maps that carry meaning (<strong>semantic</strong> information), and maps that cope with a scene that changes. The Prelude adds two cautions: use foundation models, and do not forget that the result has to run on a real device. <span class="src">§III.1 · pp. 361–362</span></p>
+<p>Why not skip the map and ask a large image-and-text model about the scene? The Prelude's answer is that such models give a holistic description of an image and often struggle with spatial questions. Many tasks need a persistent 3D representation that is kept up to date, a spatio-temporal memory, and building one is what SLAM does. <span class="src">§III.2 · p. 362</span></p>
+<div class="tbl"><table>
+  <tr><th>Chapter</th><th>What it covers</th><th>In this course</th></tr>
+  <tr><td>13</td><td>Deep learning that enhances and extends conventional SLAM</td><td>Week 19 (this week)</td></tr>
+  <tr><td>14</td><td>Novel view synthesis and its use inside SLAM</td><td>Week 20</td></tr>
+  <tr><td>15</td><td>Dynamic environments and structural change</td><td>Week 21</td></tr>
+  <tr><td>16</td><td>From metric maps to semantically enriched maps</td><td>Week 22</td></tr>
+  <tr><td>17</td><td>Large language models for spatial reasoning</td><td>Week 23</td></tr>
+  <tr><td>18</td><td>Computational structure and system design for Spatial AI</td><td>Week 24</td></tr>
+</table></div>
+<p>The table follows §III.3. <span class="src">§III.3 · p. 365</span></p>
+
+<h3>2. What the applications ask for</h3>
+<p>Section III.2 walks through eight application areas. Read them as a list of requirements. In each one, SLAM supplies the pose and the geometry, and Spatial AI adds an understanding of what the geometry is. <span class="src">§III.2 · pp. 362–365</span></p>
+<div class="tbl"><table>
+  <tr><th>Application</th><th>What SLAM supplies</th><th>What the added understanding is for</th></tr>
+  <tr><td>AR/VR glasses</td><td>Device pose and a map, so virtual objects stay fixed to real surfaces; inside-out tracking without external sensors</td><td>Recognizing walls, furniture, people; shared content for several users</td></tr>
+  <tr><td>AI glasses</td><td>Persistent spatial awareness on a light, always-worn device</td><td>Translation, navigation help, task guidance, product information</td></tr>
+  <tr><td>Humanoid robots</td><td>Maps of homes, offices, hospitals that are updated while the robot localizes</td><td>Spatial relations ("the cup is on the table") and commands in natural language</td></tr>
+  <tr><td>Self-driving vehicles</td><td>Localization where GPS is unreliable (tunnels, urban canyons); detecting changes</td><td>Lanes, signs, pedestrians, other vehicles, for decisions</td></tr>
+  <tr><td>Drones</td><td>3D maps and obstacle avoidance without GPS, indoors or underground</td><td>Finding power lines, crops, structural damage</td></tr>
+  <tr><td>Factories and warehouses</td><td>Localization in a layout that keeps changing</td><td>Task-level reasoning about shelves and aisles</td></tr>
+  <tr><td>Emergency response</td><td>Real-time maps of collapsed buildings or flood zones</td><td>Locating survivors, delivering supplies</td></tr>
+  <tr><td>Healthcare and assistive devices</td><td>Spatial cues and obstacle warnings for visually impaired users; hospital service robots</td><td>Semantic understanding, which the book calls critical for effective assistance</td></tr>
+</table></div>
+
+<h3>3. Four ways to put a network into SLAM</h3>
+<p>Chapter 13 starts from the pipeline you know from Weeks 11 and 12: detect features, match them, reject outliers, then optimize a factor graph. A deep network is a function with many parameters that is fitted to examples. The chapter sorts the ways of using one by how much of the pipeline it takes over. <span class="src">Ch 13 intro · pp. 366–368</span></p>
+<figure class="fig"><svg viewBox="0 0 600 270" role="img" aria-label="A classical visual SLAM pipeline drawn as four boxes in a row: images, detect and match, factor graph or bundle adjustment, poses and map. Below it, four coloured bars show how much of the pipeline each learning approach covers. Bar 1 covers only detect and match. Bar 2 covers only the factor graph. Bar 3 covers detect and match together with the factor graph. Bar 4 covers everything after the images.">
+  <defs><marker id="w19ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="10" y="24" width="80" height="50" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="50" y="54" text-anchor="middle" font-size="13" fill="var(--ink)">Images</text>
+  <rect x="120" y="24" width="130" height="50" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="185" y="46" text-anchor="middle" font-size="13" fill="var(--ink)">Detect + match</text>
+  <text x="185" y="63" text-anchor="middle" font-size="11" fill="var(--muted)">front-end</text>
+  <rect x="280" y="24" width="150" height="50" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="355" y="46" text-anchor="middle" font-size="13" fill="var(--ink)">Factor graph (BA)</text>
+  <text x="355" y="63" text-anchor="middle" font-size="11" fill="var(--muted)">back-end</text>
+  <rect x="460" y="24" width="130" height="50" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="525" y="54" text-anchor="middle" font-size="13" fill="var(--ink)">Poses + map</text>
+  <line x1="90" y1="49" x2="117" y2="49" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar1)"/>
+  <line x1="250" y1="49" x2="277" y2="49" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar1)"/>
+  <line x1="430" y1="49" x2="457" y2="49" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar1)"/>
+  <rect x="120" y="100" width="130" height="28" rx="8" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="185" y="119" text-anchor="middle" font-size="12" fill="var(--ink)">1 · learned part</text>
+  <text x="262" y="119" font-size="11" fill="var(--muted)">SuperPoint, SuperGlue, RAFT</text>
+  <rect x="280" y="140" width="150" height="28" rx="8" fill="var(--c1-soft)" stroke="var(--c1)"/>
+  <text x="355" y="159" text-anchor="middle" font-size="12" fill="var(--ink)">2 · learned factors</text>
+  <text x="442" y="159" font-size="11" fill="var(--muted)">DVSO, D3VO</text>
+  <rect x="120" y="180" width="310" height="28" rx="8" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="275" y="199" text-anchor="middle" font-size="12" fill="var(--ink)">3 · trained end to end through BA</text>
+  <text x="442" y="199" font-size="11" fill="var(--muted)">DROID-SLAM, DPVO</text>
+  <rect x="120" y="220" width="470" height="28" rx="8" fill="var(--c4-soft)" stroke="var(--c4)"/>
+  <text x="355" y="239" text-anchor="middle" font-size="12" fill="var(--ink)">4 · one network: image pair → 3D pointmaps (DUSt3R, MASt3R)</text>
+</svg><figcaption>How much of the classical pipeline each approach replaces. Approaches 1 and 2 are covered in §13.1–13.2, approach 3 in §13.3, approach 4 in §13.4–13.6.</figcaption></figure>
+<ol>
+<li><strong>Replace one component.</strong> Train a network to detect features, describe them, match them, or reject outliers, then plug it back into the usual pipeline. Such networks can often beat their hand-designed counterparts. <span class="src">p. 366</span></li>
+<li><strong>Predict 3D properties and add them as factors.</strong> A network estimates depth from one image, or relative pose from two, and the prediction enters the factor graph as an extra term. <span class="src">p. 366</span></li>
+<li><strong>Train through the optimizer.</strong> The weakness of the modular approach is that errors made by one component feed the next and compound. The alternative is to make more of the pipeline one trainable module, with bundle adjustment as a layer of the network. This is the differentiable optimization of <a href="#d37">Week 7 · Day 1</a>, put to work. <span class="src">p. 366</span></li>
+<li><strong>Replace the stack.</strong> DUSt3R predicts a <strong>pointmap</strong>, one 3D point for every pixel, directly from uncalibrated images. <span class="src">p. 366</span></li>
+</ol>
+<p>The chapter's own summary is that these methods combine learning with geometry: some feed network predictions into an optimization-based pipeline, some join learned components to factor graphs, and some estimate motion and structure with a network alone. <span class="src">pp. 366–368</span></p>
+
+<h3>4. The network vocabulary you need this week</h3>
+<p>The chapter uses a handful of network terms without defining them. Here they are, at the depth this week needs.</p>
+<div class="box note"><h4>Filling the gap: networks, losses, and training in five lines</h4>
+<p>A <strong>neural network</strong> is a function \(f_\theta\) built by composing simple differentiable steps called <strong>layers</strong>. The vector \(\theta\) holds all its adjustable numbers, the <strong>parameters</strong> or weights. A <strong>loss</strong> \(\mathcal{L}(\theta)\) measures how far the outputs are from what we want on a set of training examples. <strong>Training</strong> lowers the loss by gradient descent:</p>
+\[ \theta \leftarrow \theta - \eta\, \nabla_\theta \mathcal{L}(\theta), \]
+<p>with a small step size \(\eta\). This is the steepest descent of <a href="#d10">Week 2 · Day 4</a>, applied to the weights instead of the robot's state. Example with one parameter: \(\mathcal{L}(\theta) = (\theta - 3)^2\), start at \(\theta = 0\), \(\eta = 0.25\). The gradient is \(2(\theta - 3) = -6\), so \(\theta\) becomes \(0 - 0.25 \cdot (-6) = 1.5\). The next gradient is \(-3\), giving \(\theta = 2.25\). Each step halves the distance to the minimum at 3.</p>
+<p>The gradient is computed by reverse-mode automatic differentiation (<a href="#d37">Week 7 · Day 1</a>), which is why every layer must be differentiable. If the labels come from a sensor or a simulator (for example, true depth), the training is <strong>supervised</strong>. If the loss is built from the input data alone, it is <strong>self-supervised</strong>; you will meet one tomorrow.</p></div>
+<p>Two kinds of layer appear all week.</p>
+<p>A <strong>convolutional</strong> layer slides one small filter over the image and applies it at every position. With the 1-D filter \((-1, 0, 1)\) and the signal \((2, 2, 5, 9, 9)\), the three interior outputs are \(5 - 2 = 3\), \(9 - 2 = 7\), and \(9 - 5 = 4\): the filter responds where brightness changes. A <strong>convolutional neural network (CNN)</strong> stacks many such layers with learned filters, usually shrinking the image grid as it goes, so the output is a coarse grid of <strong>feature vectors</strong>. RAFT's encoders output features at 1/8 of the input resolution. <span class="src">§13.2.3 · p. 376</span></p>
+<p>An <strong>attention</strong> layer lets every feature vector look at all the others, however far apart they are in the image. A <strong>transformer</strong> is a network made mostly of attention layers, and a <strong>vision transformer (ViT)</strong> is a transformer whose inputs are small image patches turned into vectors called <strong>tokens</strong>. Figure 13.6 draws attention as three boxes: MatMul, SoftMax, MatMul. <span class="src">Fig. 13.6 · p. 375</span></p>
+<div class="box note"><h4>Filling the gap: what MatMul → SoftMax → MatMul computes</h4>
+<p>Take one <strong>query</strong> vector \(\mathbf{q}\), and a set of tokens that each offer a <strong>key</strong> \(\mathbf{k}_j\) and a <strong>value</strong> \(\mathbf{v}_j\).</p>
+\[ s_j = \mathbf{q}\T \mathbf{k}_j, \qquad a_j = \frac{e^{s_j}}{\sum_m e^{s_m}}, \qquad \text{output} = \sum_j a_j \mathbf{v}_j . \]
+<p>The first matrix product computes all scores \(s_j\) at once. The <strong>softmax</strong> turns scores into positive weights that sum to 1. The second matrix product averages the values with those weights. (Transformers also divide the scores by \(\sqrt{d}\), the square root of the vector length, and learn the linear maps that produce queries, keys, and values.)</p>
+<p>Example: scores \((2, 1, 0)\) give \(e^2 = 7.39\), \(e^1 = 2.72\), \(e^0 = 1\), which sum to 11.11. The weights are \(0.665, 0.245, 0.090\). If the values are the numbers \(10, 20, 30\), the output is \(6.65 + 4.90 + 2.70 = 14.25\).</p>
+<p>In <strong>self-attention</strong> the queries and the keys come from the same image. In <strong>cross-attention</strong> the queries come from one image and the keys and values from the other, which is how a network compares two views.</p></div>
+<p>Try it: turn the query, then raise the sharpness β.</p>
+<div class="viz" data-viz="w19_attn"></div>
+<p class="cap">Notice that at the start the query points almost at key k2, which gets weight 0.73, and the output 2.15 is pulled toward the value 2. At β = 0 every key gets 1/6 and the output is the plain mean 3.5. At β = 20 the layer picks k2 alone. Attention is a soft, differentiable way of saying "find the best match".</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Part III replaces Parts I and II."</strong> The systems in this chapter still solve least-squares problems on factor graphs. What changes is where the residuals and their weights come from.</li>
+<li><strong>"A big image-language model makes the map unnecessary."</strong> The Prelude says these models often struggle with spatial understanding and that many tasks need a persistent 3D representation. <span class="src">§III.2 · p. 362</span></li>
+<li><strong>"Learned components always help."</strong> Plugging separately trained modules together lets their errors compound. That observation is the reason for end-to-end training. <span class="src">p. 366</span></li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. According to the Prelude, in which setting could SLAM be called solved?</p><div class="opts"><button type="button" class="opt">City-scale driving in dense traffic</button><button type="button" class="opt">Underwater exploration</button><button type="button" class="opt">Small, static, feature-rich indoor scenes</button><button type="button" class="opt">Any scene, once a foundation model is added</button></div><p class="exp" hidden>Page 361 limits "solved" to small, static, indoor, feature-rich environments, and lists the others as the open cases.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A system trains a depth network separately and adds its output to the factor graph as an extra term. Which approach of section 3 is this?</p><div class="opts"><button type="button" class="opt">Predicted 3D properties as factors</button><button type="button" class="opt">Replacing the whole stack with pointmaps</button><button type="button" class="opt">Training through bundle adjustment</button><button type="button" class="opt">A learned feature matcher</button></div><p class="exp" hidden>The network predicts a 3D property (depth) and the prediction becomes a factor. The optimizer is not part of the training, so it is not end to end.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. Attention scores for three keys are (1, 1, 0). What weight does the third key get? Use e = 2.72.</p><div class="opts"><button type="button" class="opt">0</button><button type="button" class="opt">0.33</button><button type="button" class="opt">0.27</button><button type="button" class="opt">0.16</button></div><p class="exp" hidden>The exponentials are 2.72, 2.72, 1, which sum to 6.44. The third weight is 1/6.44 = 0.155, about 0.16. A softmax weight is never exactly zero.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. With loss (θ − 3)², θ = 1, and step size η = 0.1, what is θ after one gradient-descent step?</p><div class="opts"><button type="button" class="opt">0.6</button><button type="button" class="opt">1.4</button><button type="button" class="opt">1.2</button><button type="button" class="opt">3</button></div><p class="exp" hidden>The gradient is 2(1 − 3) = −4. The update is 1 − 0.1·(−4) = 1.4.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>SLAM is solved only for small, static, feature-rich indoor scenes. Part III is about the rest, under the name Spatial AI.</li>
+<li>Spatial AI adds learning for what is hard to model, and richer maps: renderable, semantic, and able to change.</li>
+<li>A network can replace a component, supply factors, be trained through the optimizer, or regress pointmaps directly.</li>
+<li>Training is gradient descent on a loss over the network's weights.</li>
+<li>Attention scores every key against a query, applies a softmax, and returns the weighted average of the values.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Prelude to Part III, §III.1–III.3, pp. 361–365.</li>
+<li><em>SLAM Handbook</em>, Chapter 13 "Boosting SLAM with Deep Learning", introduction, pp. 366–368; Figure 13.6, p. 375.</li>
+<li>Goodfellow, Bengio, Courville, <em>Deep Learning</em>, 2016 (gradient descent, convolutional networks).</li>
+<li>Vaswani et al., <em>Attention Is All You Need</em>, 2017 (scaled dot-product attention).</li>
+</ol></div>
+<p class="next"></p>
+</section>

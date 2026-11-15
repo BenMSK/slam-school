@@ -1,0 +1,119 @@
+<section class="day" data-day="69" id="d69" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 12 · Day 3</span>
+  <h2>Solving bundle adjustment: sparsity and the Schur complement</h2>
+  <p class="lead">After today you can say which blocks of the bundle adjustment Hessian are zero and why, eliminate the points with the Schur complement to get the reduced camera system, and predict which of its blocks fill in.</p>
+  <p class="meta">About 60 min · Read §7.4.3, pp. 211–213, and Figure 7.10 on p. 214 (about 2 pages) · Needs Week 3 Day 3 and Week 12 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §7.4.3, pp. 211–213, and Figure 7.10 on p. 214</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The sentence on p. 211 that lists the three blocks each observation adds to the Hessian.</li>
+<li>The matrix that multiplies both sides of the linear system on p. 212, and the zero it creates.</li>
+<li>The three lines of equation (7.7) on p. 213.</li>
+<li>In Figure 7.10: the block between cameras 1 and 2 in the reduced system, and the missing block between cameras 1 and 3.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>In bundle adjustment every measurement involves exactly one camera and one point. That makes the point part of the Hessian block diagonal, so the points can be removed from the linear system almost for free. What remains is a small system in the cameras alone, the <strong>reduced camera system</strong>. Solve it, then recover every point by a tiny separate solve.</p></div>
+
+<h3>1. The linear system inside each BA iteration</h3>
+<p>Gauss-Newton and Levenberg-Marquardt (<a href="#d10">Week 2 · Day 4</a>, <a href="#d11">Day 5</a>) repeat one job: linearize all residuals at the current estimate and solve a linear system for the update. Stack the update as camera part \(\mathbf{d}_c\) (6 numbers per camera) followed by point part \(\mathbf{d}_p\) (3 numbers per point). The book writes the system as <span class="src">§7.4.3 · p. 213</span></p>
+\[ \begin{pmatrix} \mathbf{H}_{cc} &amp; \mathbf{H}_{cp} \\ \mathbf{H}_{cp}\T &amp; \mathbf{H}_{pp} \end{pmatrix} \begin{pmatrix} \mathbf{d}_c \\ \mathbf{d}_p \end{pmatrix} = \begin{pmatrix} \mathbf{b}_c \\ \mathbf{b}_p \end{pmatrix}. \]
+<div class="box note"><h4>Filling the gap: where the blocks come from, and which are zero</h4>
+<p>Take the residual of one observation, \(\mathbf{e}_{ij} = \mathbf{z}_{ij} - \pi(\mathbf{R}^i_w \mathbf{x}^w_j + \mathbf{t}^i_w)\). It depends on camera \(i\) and on point \(j\), and on nothing else. Its linearization therefore has two non-zero Jacobian blocks,</p>
+\[ \mathbf{e}_{ij} \approx \mathbf{e}^0_{ij} - \mathbf{A}_{ij}\, \boldsymbol{\xi}_i - \mathbf{B}_{ij}\, \delta\mathbf{x}_j, \qquad \mathbf{A}_{ij} = \boldsymbol{\Pi}\,\mathbf{R}^i_w \begin{bmatrix} \mathbf{I} &amp; -(\mathbf{x}^w_j)^\wedge \end{bmatrix} \ (2 \times 6), \quad \mathbf{B}_{ij} = \boldsymbol{\Pi}\,\mathbf{R}^i_w \ (2 \times 3), \]
+<p>where \(\mathbf{A}_{ij}\) is the pose Jacobian of <a href="#d67">Day 1</a> and \(\mathbf{B}_{ij}\) follows from \(\partial \mathbf{x}^c / \partial \mathbf{x}^w = \mathbf{R}^i_w\). With unit noise weights (otherwise insert \(\boldsymbol{\Sigma}_{ij}^{-1}\) in the middle of each product), the Gauss-Newton matrix \(\mathbf{H} = \mathbf{J}\T\mathbf{J}\) and right-hand side \(\mathbf{b} = \mathbf{J}\T\mathbf{e}^0\) are sums over observations:</p>
+\[ \begin{aligned} [\mathbf{H}_{cc}]_{ii} &amp;= \sum_{j} \mathbf{A}_{ij}\T \mathbf{A}_{ij}, &amp; [\mathbf{H}_{pp}]_{jj} &amp;= \sum_{i} \mathbf{B}_{ij}\T \mathbf{B}_{ij}, &amp; [\mathbf{H}_{cp}]_{ij} &amp;= \mathbf{A}_{ij}\T \mathbf{B}_{ij}, \\ [\mathbf{b}_c]_i &amp;= \sum_j \mathbf{A}_{ij}\T \mathbf{e}^0_{ij}, &amp; [\mathbf{b}_p]_j &amp;= \sum_i \mathbf{B}_{ij}\T \mathbf{e}^0_{ij}. \end{aligned} \]
+<p>The sums run over the observations that exist. Now read off the zeros:</p>
+<ul>
+<li>No residual involves two cameras, so \(\mathbf{H}_{cc}\) has no off-diagonal blocks. It is <strong>block diagonal</strong> with one \(6 \times 6\) block per camera.</li>
+<li>No residual involves two points, so \(\mathbf{H}_{pp}\) is block diagonal with one \(3 \times 3\) block per point.</li>
+<li>\([\mathbf{H}_{cp}]_{ij}\) is non-zero only if camera \(i\) observes point \(j\).</li>
+</ul>
+<p>This is the statement on p. 211 that each observation adds a diagonal block for its camera, a diagonal block for its point, and one off-diagonal camera-point block. It is the factor-graph sparsity of <a href="#d13">Week 3 · Day 1</a>, for a graph in which every factor joins one camera and one point.</p></div>
+
+<h3>2. The Schur complement trick</h3>
+<p>A map has far more points than cameras, typically by orders of magnitude, so the book eliminates the points first. <span class="src">§7.4.3 · pp. 211–212</span> The tool is general. For any block system in which \(\mathbf{D}\) is invertible, multiply both sides on the left by a matrix chosen to create a zero block:</p>
+\[ \begin{pmatrix} \mathbf{I} &amp; -\mathbf{B}\mathbf{D}^{-1} \\ \mathbf{0} &amp; \mathbf{I} \end{pmatrix} \begin{pmatrix} \mathbf{A} &amp; \mathbf{B} \\ \mathbf{C} &amp; \mathbf{D} \end{pmatrix} = \begin{pmatrix} \mathbf{A} - \mathbf{B}\mathbf{D}^{-1}\mathbf{C} &amp; \mathbf{B} - \mathbf{B}\mathbf{D}^{-1}\mathbf{D} \\ \mathbf{C} &amp; \mathbf{D} \end{pmatrix} = \begin{pmatrix} \mathbf{A} - \mathbf{B}\mathbf{D}^{-1}\mathbf{C} &amp; \mathbf{0} \\ \mathbf{C} &amp; \mathbf{D} \end{pmatrix}. \]
+<p>This is block Gaussian elimination: subtract \(\mathbf{B}\mathbf{D}^{-1}\) times the second block row from the first. The first row no longer contains \(\mathbf{x}_2\), so \(\mathbf{x}_1\) can be found alone, and \(\mathbf{x}_2\) afterwards:</p>
+\[ \big( \mathbf{A} - \mathbf{B}\mathbf{D}^{-1}\mathbf{C} \big)\, \mathbf{x}_1 = \mathbf{b}_1 - \mathbf{B}\mathbf{D}^{-1}\mathbf{b}_2, \qquad \mathbf{D}\,\mathbf{x}_2 = \mathbf{b}_2 - \mathbf{C}\,\mathbf{x}_1 . \]
+<p>The matrix \(\mathbf{A} - \mathbf{B}\mathbf{D}^{-1}\mathbf{C}\) is the <strong>Schur complement</strong> of \(\mathbf{D}\). Applied to BA with \(\mathbf{D} = \mathbf{H}_{pp}\): <span class="src">§7.4.3 · p. 213, eq. (7.7)</span></p>
+\[ \begin{aligned} \mathbf{H}^{red}_{cc} &amp;= \mathbf{H}_{cc} - \mathbf{H}_{cp}\mathbf{H}_{pp}^{-1}\mathbf{H}_{cp}\T, \\ \mathbf{H}^{red}_{cc}\, \mathbf{d}_c &amp;= \mathbf{b}_c - \mathbf{H}_{cp}\mathbf{H}_{pp}^{-1}\mathbf{b}_p, \\ \mathbf{H}_{pp}\, \mathbf{d}_p &amp;= \mathbf{b}_p - \mathbf{H}_{cp}\T \mathbf{d}_c . \end{aligned} \tag{7.7} \]
+<figure class="fig"><svg viewBox="0 0 600 120" role="img" aria-label="Three boxes joined by arrows. One: eliminate the points, folding every point into the camera equations. Two: solve the reduced camera system, a small system in the cameras only. Three: back-substitute, recovering each point from its cameras.">
+  <defs><marker id="w12ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="10" y="20" width="170" height="80" rx="12" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <rect x="215" y="20" width="170" height="80" rx="12" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <rect x="420" y="20" width="170" height="80" rx="12" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="95" y="46" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">1. Eliminate points</text>
+  <text x="95" y="66" text-anchor="middle" font-size="11" fill="var(--muted)">fold every point into</text>
+  <text x="95" y="81" text-anchor="middle" font-size="11" fill="var(--muted)">the camera equations</text>
+  <text x="300" y="46" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">2. Solve cameras</text>
+  <text x="300" y="66" text-anchor="middle" font-size="11" fill="var(--muted)">reduced camera system:</text>
+  <text x="300" y="81" text-anchor="middle" font-size="11" fill="var(--muted)">small, cameras only</text>
+  <text x="505" y="46" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">3. Back-substitute</text>
+  <text x="505" y="66" text-anchor="middle" font-size="11" fill="var(--muted)">recover each point</text>
+  <text x="505" y="81" text-anchor="middle" font-size="11" fill="var(--muted)">from its cameras</text>
+  <line x1="182" y1="60" x2="211" y2="60" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w12ar3)"/>
+  <line x1="387" y1="60" x2="416" y2="60" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w12ar3)"/>
+</svg><figcaption>The three lines of equation (7.7). Steps 1 and 3 handle the points one at a time; only step 2 solves a coupled system.</figcaption></figure>
+<p><strong>A system small enough to check by hand.</strong> One camera with a single unknown and two points with a single unknown each:</p>
+\[ \begin{pmatrix} 6 &amp; 2 &amp; 3 \\ 2 &amp; 2 &amp; 0 \\ 3 &amp; 0 &amp; 3 \end{pmatrix} \begin{pmatrix} d_c \\ d_{p1} \\ d_{p2} \end{pmatrix} = \begin{pmatrix} 7 \\ 2 \\ 3 \end{pmatrix}. \]
+<p>Here \(\mathbf{H}_{pp} = \diag(2, 3)\) is diagonal, so its inverse costs two divisions. Step 1: \(H^{red}_{cc} = 6 - (2 \cdot 2 / 2 + 3 \cdot 3 / 3) = 6 - 5 = 1\), and the right-hand side becomes \(7 - (2 \cdot 2/2 + 3 \cdot 3/3) = 2\). Step 2: \(d_c = 2\). Step 3: \(d_{p1} = (2 - 2 \cdot 2)/2 = -1\) and \(d_{p2} = (3 - 3 \cdot 2)/3 = -1\). Check in the first row: \(6 \cdot 2 - 2 - 3 = 7\).</p>
+
+<h3>3. Why this is cheap, and what fills in</h3>
+<p>Two facts make the trick pay.</p>
+<p><strong>\(\mathbf{H}_{pp}^{-1}\) is nearly free.</strong> A block-diagonal matrix is inverted block by block: one \(3 \times 3\) inverse per point, never a large factorization. The same holds for the back-substitution. In the book's words, both can be done "point by point". <span class="src">§7.4.3 · p. 213</span></p>
+<p><strong>The remaining system is small.</strong> With 100 keyframes and 20,000 points the full system has \(600 + 60{,}000 = 60{,}600\) unknowns. The reduced camera system has 600.</p>
+<p>The price is <strong>fill-in</strong> (<a href="#d15">Week 3 · Day 3</a>): \(\mathbf{H}_{cc}\) was block diagonal, and \(\mathbf{H}^{red}_{cc}\) is not. Write out one block of the product, using that \(\mathbf{H}_{pp}\) is block diagonal:</p>
+\[ [\mathbf{H}^{red}_{cc}]_{ik} = [\mathbf{H}_{cc}]_{ik} - \sum_{j} [\mathbf{H}_{cp}]_{ij}\, [\mathbf{H}_{pp}]_{jj}^{-1}\, [\mathbf{H}_{cp}]_{kj}\T . \]
+<p>The term for point \(j\) is non-zero only if camera \(i\) <em>and</em> camera \(k\) both observe it. So block \((i, k)\) of the reduced camera system is non-zero exactly when the two cameras share at least one point. Its sparsity pattern is the covisibility graph of <a href="#d67">Day 1</a> with threshold one. That explains Figure 7.10: a block between cameras 1 and 2, none between cameras 1 and 3. <span class="src">§7.4.3 · p. 213</span></p>
+<div class="box tip"><h4>Intuition</h4><p>A point seen by two cameras is a rigid link between them: move one camera and the point must move, which pulls on the other. Eliminating the point does not remove the link. It replaces "camera – point – camera" by a direct "camera – camera" constraint of the same strength. This is the marginalization of Week 3: the reduced camera system is the information the measurements carry about the cameras alone, whatever the points turn out to be.</p></div>
+
+<h3>4. Watch it work</h3>
+<p>The widget solves a real BA problem in the flat world of Day 1: 6 cameras (3 unknowns each) and 14 points (2 unknowns each), 46 unknowns and 48 one-dimensional observations. Cameras 1 and 2 are held in place by strong prior factors, as if their poses came from the initialization step; Day 4 explains why something of this kind is needed. A small Levenberg-Marquardt damping keeps bad starts from diverging.</p>
+<p>Try it: read the pattern of \(\mathbf{H}\), then press "Next step" three times to go through one iteration. Then press "Run 10 iterations".</p>
+<div class="viz" data-viz="w12_ba"></div>
+<p class="cap">Notice: in \(\mathbf{H}\), the camera block (top left) and the point block (bottom right) contain only small squares on the diagonal, and all coupling sits in the off-diagonal blocks. After the first press, the reduced system is 18 × 18 and mostly full, but the blocks for camera pairs 1–6 and 2–6 are empty: those cameras see no point in common. The Schur route and a direct solve of the 46 × 46 system give the same update to about twelve digits. Ten iterations bring the RMS reprojection error from about 35 px to about 0.3 px. That is below the 0.5 px noise because 40 free unknowns absorb most of the noise in only 48 measurements.</p>
+
+<h3>5. Dense or sparse: local BA and full BA</h3>
+<p>The reduced camera system still has to be solved, and its structure decides how. In <strong>local BA</strong> the keyframes were chosen because they see the same points, so almost every pair shares some: the reduced system is nearly full and a dense solver is the right tool. <strong>Full BA</strong> has many more keyframes, but most pairs are far apart and share nothing: the reduced system is large and sparse, and a sparse solver (the sparse Cholesky of Week 3) pays off. <span class="src">§7.4.3 · p. 213</span></p>
+<div class="tbl"><table>
+  <tr><th></th><th>Local BA</th><th>Full BA</th></tr>
+  <tr><td>Keyframes</td><td>A covisibility window, tens</td><td>The whole map, hundreds or more</td></tr>
+  <tr><td>Covisibility between pairs</td><td>High</td><td>Low on average</td></tr>
+  <tr><td>Reduced camera system</td><td>Small and almost full</td><td>Large and sparse</td></tr>
+  <tr><td>Solver for it</td><td>Dense</td><td>Sparse</td></tr>
+</table></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The Schur complement approximates the solution."</strong> It is exact. It is Gaussian elimination done in a clever order; the widget shows the difference from a direct solve at rounding level.</li>
+<li><strong>"\(\mathbf{H}_{pp}\) is diagonal."</strong> It is <em>block</em> diagonal: the three coordinates of one point are coupled with each other, not with other points.</li>
+<li><strong>"Eliminating the points means the points are not optimized."</strong> They are updated in step 3 of every iteration. Elimination only changes the order in which the unknowns are solved.</li>
+<li><strong>"Eliminate the cameras instead; there are fewer of them."</strong> The cost is set by what remains. Eliminating cameras would leave a huge, filled-in system in the points.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="3"><p class="qq">Q1. A 3-D BA problem has 50 keyframes and 10,000 points. How many unknowns do the full system and the reduced camera system have?</p><div class="opts"><button type="button" class="opt">30,300 and 30,000</button><button type="button" class="opt">10,050 and 50</button><button type="button" class="opt">60,300 and 300</button><button type="button" class="opt">30,300 and 300</button></div><p class="exp" hidden>6 × 50 + 3 × 10,000 = 30,300 in total. After the points are eliminated only the 6 × 50 = 300 camera unknowns remain.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A scalar toy system has \(H_{cc} = 5\), \(\mathbf{H}_{cp} = (2, \; 1)\), and \(\mathbf{H}_{pp} = \diag(4, 1)\). What is the reduced camera system's matrix \(H^{red}_{cc}\)?</p><div class="opts"><button type="button" class="opt">3</button><button type="button" class="opt">5</button><button type="button" class="opt">2</button><button type="button" class="opt">0</button></div><p class="exp" hidden>5 − (2·2/4 + 1·1/1) = 5 − 2 = 3.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q3. Cameras 2 and 7 observe no point in common. What do you know about block (2, 7) of the reduced camera system?</p><div class="opts"><button type="button" class="opt">It is the identity</button><button type="button" class="opt">It is non-zero because all cameras are coupled after elimination</button><button type="button" class="opt">It is zero</button><button type="button" class="opt">Nothing; it depends on the noise</button></div><p class="exp" hidden>Each point contributes to block (i, k) only if both cameras observe it. With no shared point every term in the sum is zero, and H_cc had no such block to begin with.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Why is \(\mathbf{H}_{pp}^{-1}\) cheap to compute?</p><div class="opts"><button type="button" class="opt">Because the points are fixed during the iteration</button><button type="button" class="opt">Because no residual involves two points, so the matrix is block diagonal and each small block is inverted separately</button><button type="button" class="opt">Because it is replaced by the identity</button><button type="button" class="opt">Because there are fewer points than cameras</button></div><p class="exp" hidden>Block diagonality comes from the structure of the measurements: one camera and one point per observation.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q5. Which solver suits the reduced camera system of a local BA over 15 strongly covisible keyframes?</p><div class="opts"><button type="button" class="opt">A sparse solver, because BA is always sparse</button><button type="button" class="opt">None; the system is diagonal</button><button type="button" class="opt">A dense solver, because nearly every pair of keyframes shares points</button><button type="button" class="opt">Pose-graph optimization</button></div><p class="exp" hidden>High covisibility fills in almost every block of the 90 × 90 reduced system. Sparse solvers pay off in full BA, where most keyframe pairs share nothing.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Each observation couples one camera with one point, so \(\mathbf{H}_{cc}\) and \(\mathbf{H}_{pp}\) are block diagonal and \(\mathbf{H}_{cp}\) holds a block for each observation.</li>
+<li>The Schur complement eliminates the points: \(\mathbf{H}^{red}_{cc} = \mathbf{H}_{cc} - \mathbf{H}_{cp}\mathbf{H}_{pp}^{-1}\mathbf{H}_{cp}\T\). It is exact block elimination.</li>
+<li>Solve the reduced camera system for \(\mathbf{d}_c\), then back-substitute each point: \(\mathbf{H}_{pp}\mathbf{d}_p = \mathbf{b}_p - \mathbf{H}_{cp}\T\mathbf{d}_c\).</li>
+<li>Block \((i,k)\) of the reduced system is non-zero exactly when cameras \(i\) and \(k\) share a point.</li>
+<li>Local BA gives a nearly full reduced system (dense solver); full BA gives a large sparse one (sparse solver).</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §7.4.3 "Solving BA", pp. 211–214, equation (7.7), Figure 7.10.</li>
+<li>Triggs, McLauchlan, Hartley, Fitzgibbon, <em>Bundle Adjustment: A Modern Synthesis</em>, 2000, for the block structure of the normal equations and the reduced camera system.</li>
+<li>Hartley and Zisserman, <em>Multiple View Geometry</em>, 2004, appendix on sparse Levenberg-Marquardt, for the same derivation.</li>
+<li>Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004, appendix on the Schur complement.</li>
+</ol></div>
+<p class="next"></p>
+</section>

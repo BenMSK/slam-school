@@ -1,0 +1,147 @@
+<section class="day" data-day="38" id="d38" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 7 · Day 2</span>
+  <h2>Unrolled differentiation: backpropagating through the solver's iterations</h2>
+  <p class="lead">After today you can differentiate the result of T solver iterations with respect to the problem's parameters by the chain rule, say what it costs in time and memory, and quantify the bias of truncating the backward pass or of using a single step.</p>
+  <p class="meta">About 60 min · Read §4.2.1–4.2.2, pp. 104–106 (3 pages) · Needs Week 7 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §4.2.1–4.2.2, pp. 104–106</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>Equation (4.4) on p. 104 and (4.6) on p. 105: the solver written as a composition of update maps.</li>
+<li>Algorithm 1 on p. 105: line 5 (unrolled) and line 6 (implicit) are two ways to fill in the same gradient.</li>
+<li>The footnote on p. 105: gradient descent is only the example; the same idea covers Gauss-Newton.</li>
+<li>On p. 106, what "storing only the last M iterations" buys, and what equations (4.8)–(4.10) avoid computing.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>An iterative solver is a program: \(T\) applications of an update rule. <strong>Unrolled differentiation</strong> treats those \(T\) updates as \(T\) layers of a network and backpropagates through them. It is exact for the program that actually ran, it works for any differentiable solver, and it pays with memory that grows with \(T\). Truncating the backward pass trades a small, predictable bias for that memory.</p></div>
+
+<h3>1. The solver as a chain of maps</h3>
+<p>Start from an initial guess \(\mathbf{x}_0 = \Phi_0(\mathbf{y})\) and apply an update map \(T\) times: <span class="src">§4.2.1 · pp. 104–105</span></p>
+\[ \mathbf{x}_t = \Phi_t(\mathbf{x}_{t-1};\, \mathbf{y}), \qquad t = 1, \dots, T . \tag{4.4} \]
+<p>The book's example of an update map is one step of gradient descent on the lower-level cost, with learning rate \(\eta_t\):</p>
+\[ \Phi_t(\mathbf{x}_{t-1};\, \mathbf{y}) = \mathbf{x}_{t-1} - \eta_t\, \frac{\partial \mathcal{L}(\mathbf{x}_{t-1}, \mathbf{y})}{\partial \mathbf{x}_{t-1}} . \tag{4.5} \]
+<p>A Gauss-Newton or Levenberg-Marquardt step is another valid \(\Phi_t\) (footnote 1, p. 105). Stop after \(T\) steps and use \(\mathbf{x}_T\) in place of the true minimizer:</p>
+\[ \mathbf{x}^* \approx \mathbf{x}_T = \Phi(\mathbf{y}) = (\Phi_T \circ \cdots \circ \Phi_1 \circ \Phi_0)(\mathbf{y}) . \tag{4.6} \]
+<p>The bilevel problem (4.2) then collapses into an ordinary single-level problem, \(\min_{\mathbf{y}} \mathcal{U}(\mathbf{y}, \Phi(\mathbf{y}))\), equation (4.7), in which \(\Phi\) is just a deep function of \(\mathbf{y}\). AutoDiff can differentiate it. <span class="src">§4.2.1 · p. 105</span></p>
+<figure class="fig"><svg viewBox="0 0 600 196" role="img" aria-label="A chain of update maps Phi 1, Phi 2 up to Phi T. The iterate x0 enters Phi 1, x1 leaves it and enters Phi 2, and so on until x T enters the upper-level cost U. The front-end output y feeds every update map from above. A dashed arrow runs under the whole chain from U back to Phi 1.">
+  <defs><marker id="w07ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker>
+  <marker id="w07ar2b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--c3)"/></marker></defs>
+  <rect x="100" y="12" width="380" height="28" rx="8" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="290" y="31" text-anchor="middle" font-size="12" fill="var(--ink)">front-end output y (the same y enters every step)</text>
+  <rect x="110" y="86" width="70" height="46" rx="9" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="145" y="114" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">Φ₁</text>
+  <rect x="232" y="86" width="70" height="46" rx="9" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="267" y="114" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">Φ₂</text>
+  <rect x="400" y="86" width="70" height="46" rx="9" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="435" y="114" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">Φ<tspan baseline-shift="sub" font-size="10">T</tspan></text>
+  <rect x="524" y="86" width="60" height="46" rx="9" fill="var(--c1-soft)" stroke="var(--c1)"/>
+  <text x="554" y="114" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">U</text>
+  <line x1="52" y1="109" x2="106" y2="109" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar2)"/>
+  <text x="78" y="100" text-anchor="middle" font-size="12" fill="var(--ink)">x₀</text>
+  <line x1="180" y1="109" x2="228" y2="109" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar2)"/>
+  <text x="204" y="100" text-anchor="middle" font-size="12" fill="var(--ink)">x₁</text>
+  <line x1="302" y1="109" x2="334" y2="109" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar2)"/>
+  <text x="318" y="100" text-anchor="middle" font-size="12" fill="var(--ink)">x₂</text>
+  <text x="352" y="113" text-anchor="middle" font-size="14" fill="var(--muted)">· · ·</text>
+  <line x1="370" y1="109" x2="396" y2="109" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar2)"/>
+  <line x1="470" y1="109" x2="520" y2="109" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar2)"/>
+  <text x="496" y="100" text-anchor="middle" font-size="12" fill="var(--ink)">x<tspan baseline-shift="sub" font-size="10">T</tspan></text>
+  <line x1="145" y1="40" x2="145" y2="82" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar2)"/>
+  <line x1="267" y1="40" x2="267" y2="82" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar2)"/>
+  <line x1="435" y1="40" x2="435" y2="82" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar2)"/>
+  <line x1="554" y1="156" x2="150" y2="156" stroke="var(--c3)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#w07ar2b)"/>
+  <line x1="554" y1="132" x2="554" y2="156" stroke="var(--c3)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="352" y="180" text-anchor="middle" font-size="12" fill="var(--c3)">reverse mode walks back through every stored iterate</text>
+</svg><figcaption>Unrolling turns the solver into a T-layer network whose layers share the input y. The parameter y influences the result through every layer, so the gradient is a sum over all T paths.</figcaption></figure>
+
+<h3>2. The chain rule along the chain</h3>
+<p>The book stops at "compute \(\partial\Phi(\mathbf{y})/\partial\mathbf{y}\) via AutoDiff". It is worth seeing what AutoDiff actually computes, because the formula explains the cost.</p>
+<div class="box note"><h4>Filling the gap: the sensitivity recursion</h4>
+<p>Differentiate (4.4) with respect to \(\mathbf{y}\). \(\Phi_t\) depends on \(\mathbf{y}\) in two ways: directly, and through \(\mathbf{x}_{t-1}\). Name the two partial derivatives</p>
+\[ \mathbf{A}_t = \frac{\partial \Phi_t}{\partial \mathbf{x}_{t-1}} \;(n\times n), \qquad \mathbf{B}_t = \frac{\partial \Phi_t}{\partial \mathbf{y}} \;(n\times m), \]
+<p>and the quantity we are after \(\mathbf{S}_t = \partial\mathbf{x}_t/\partial\mathbf{y}\). Then</p>
+\[ \mathbf{S}_t = \mathbf{A}_t\,\mathbf{S}_{t-1} + \mathbf{B}_t, \qquad \mathbf{S}_0 = \frac{\partial\Phi_0}{\partial\mathbf{y}} \quad(\text{zero if the initial guess ignores } \mathbf{y}). \]
+<p>Running this next to the solver is <strong>forward mode</strong>. For the gradient-descent map (4.5), differentiating once more gives</p>
+\[ \mathbf{A}_t = \mathbf{I} - \eta_t\,\frac{\partial^2\mathcal{L}}{\partial\mathbf{x}\,\partial\mathbf{x}}, \qquad \mathbf{B}_t = -\eta_t\,\frac{\partial^2\mathcal{L}}{\partial\mathbf{x}\,\partial\mathbf{y}}, \qquad \text{both at } (\mathbf{x}_{t-1}, \mathbf{y}). \]
+<p>Unfolding the recursion shows the "sum over paths":</p>
+\[ \mathbf{S}_T = \mathbf{B}_T + \mathbf{A}_T\mathbf{B}_{T-1} + \mathbf{A}_T\mathbf{A}_{T-1}\mathbf{B}_{T-2} + \dots + \mathbf{A}_T\cdots\mathbf{A}_2\mathbf{B}_1 \;(+\; \mathbf{A}_T\cdots\mathbf{A}_1\mathbf{S}_0). \]
+<p><strong>Reverse mode</strong> computes the same sum from the other end, without ever forming an \(n\times m\) matrix. Start with the adjoint \(\boldsymbol{\lambda}_T = (\partial\mathcal{U}/\partial\mathbf{x}_T)\T\) and walk back:</p>
+\[ \boldsymbol{\lambda}_{t-1} = \mathbf{A}_t\T\,\boldsymbol{\lambda}_t, \qquad \nabla_{\mathbf{y}}\,\mathcal{U} = \frac{\partial\mathcal{U}}{\partial\mathbf{y}} + \sum_{t=1}^{T} \boldsymbol{\lambda}_t\T\,\mathbf{B}_t . \]
+<p>Each backward step needs \(\mathbf{A}_t\) and \(\mathbf{B}_t\), which are evaluated at \(\mathbf{x}_{t-1}\). That is why every iterate must still be in memory when the backward pass reaches it.</p></div>
+<p><strong>Worked example.</strong> The toy problem of <a href="#d37">Day 1</a>: \(\mathcal{L} = \tfrac12(x^2-y)^2 + \tfrac12(x-1)^2\), with \(\partial\mathcal{L}/\partial x = 2x(x^2-y) + (x-1)\), \(\partial^2\mathcal{L}/\partial x^2 = 6x^2 - 2y + 1\), and \(\partial^2\mathcal{L}/\partial x\,\partial y = -2x\). So \(A_t = 1 - \eta(6x_{t-1}^2 - 2y + 1)\) and \(B_t = 2\eta\,x_{t-1}\). Take \(y = 2\), \(x_0 = 1\), \(\eta = 0.1\):</p>
+<div class="tbl"><table>
+  <tr><th>t</th><th>x at t − 1</th><th>A at t</th><th>B at t</th><th>x at t</th><th>S at t = A·S + B</th></tr>
+  <tr><td>1</td><td>1.0000</td><td>0.700</td><td>0.2000</td><td>1.2000</td><td>0.2000</td></tr>
+  <tr><td>2</td><td>1.2000</td><td>0.436</td><td>0.2400</td><td>1.3144</td><td>0.436 · 0.2000 + 0.2400 = 0.3272</td></tr>
+  <tr><td>3</td><td>1.3144</td><td>0.263</td><td>0.2629</td><td>1.3546</td><td>0.263 · 0.3272 + 0.2629 = 0.3491</td></tr>
+</table></div>
+<p>After two steps, forward mode gives \(\nabla_y\,\mathcal{U} = (x_2 - 1.5)\,S_2 = (-0.1856)(0.3272) = -0.0607\). Reverse mode on the same two steps: \(\lambda_2 = -0.1856\), \(\lambda_1 = A_2\lambda_2 = -0.0809\), and \(\lambda_2 B_2 + \lambda_1 B_1 = -0.0445 - 0.0162 = -0.0607\). Same number, as it must be. The true gradient from Day 1 is \(-0.0447\); with only two steps we are differentiating a solver that has not converged yet.</p>
+
+<h3>3. Exact for the program, not for the problem</h3>
+<p>Try it: the chart plots each estimate of dU/dy against the number of inner steps K. Raise K, then switch the inner solver to Gauss-Newton.</p>
+<div class="viz" data-viz="w07_bilevel"></div>
+<p class="cap">Notice that at the defaults (gradient descent, η = 0.1, K = 2) the unrolled gradient is −0.0607, the value from the worked example, while the reference is −0.0447. By K = 8 they agree. Lower η to 0.05 and it takes about K = 20; switch to Gauss-Newton and K = 2 is enough. The unrolled gradient is always the exact derivative of U(x_K), and it is only as good as x_K is close to x*.</p>
+<p>The costs follow directly from the recursions: <span class="src">§4.2.1–4.2.2 · pp. 105–106</span></p>
+<div class="tbl"><table>
+  <tr><th>Way to unroll</th><th>What it stores</th><th>Work besides the T solver steps</th><th>Bias</th></tr>
+  <tr><td>Forward mode</td><td>the n × m matrix S, updated in place</td><td>m tangents carried through every step: about m times the solver</td><td>none (for x at T)</td></tr>
+  <tr><td>Reverse mode</td><td>all T iterates and whatever each step computed from them</td><td>one backward sweep of T steps</td><td>none (for x at T)</td></tr>
+  <tr><td>Truncated reverse, last M steps</td><td>the last M iterates</td><td>a backward sweep of M steps</td><td>the dropped terms, see §4 below</td></tr>
+  <tr><td>One step, (4.8)</td><td>one iterate</td><td>one second-derivative product</td><td>large unless one step nearly solves the problem</td></tr>
+</table></div>
+<p>With \(m\) in the millions, forward mode is out. Reverse mode it is, and then memory grows linearly with \(T\). The book calls this the difficulty of "long-term dependencies", and it gets worse when both \(\mathbf{x}\) and \(\mathbf{y}\) are high-dimensional. <span class="src">§4.2.2 · p. 106</span></p>
+<div class="box tip"><h4>Intuition</h4><p>Reverse-mode unrolling is like auditing a calculation by replaying the tape backward. You can do it only if you kept the whole tape. A solver that needs 100 iterations produces a tape 100 states long, even though only the last state is the answer.</p></div>
+
+<h3>4. Truncated unrolling: keep only the last M steps</h3>
+<p><strong>Truncated unrolled differentiation</strong> stops the backward walk after \(M\) steps: it uses \(t = T, T-1, \dots\) and ignores the influence that \(\mathbf{y}\) had on earlier iterates. Only the last \(M\) iterates are stored. The book reports (citing its reference [992]) that a few backward steps can perform comparably to the exact gradient with much less memory and computation. <span class="src">§4.2.2 · p. 106</span></p>
+<div class="box note"><h4>Filling the gap: how big is the truncation bias?</h4>
+<p>Truncation keeps the first \(M\) terms of the sum for \(\mathbf{S}_T\) above and drops the rest. Every dropped term contains at least \(M\) factors \(\mathbf{A}\). Near the solution the iterates barely change, so \(\mathbf{A}_t \approx \mathbf{A}\) and \(\mathbf{B}_t \approx \mathbf{B}\) are nearly constant, and for a solver that converges, repeated multiplication by \(\mathbf{A}\) shrinks vectors (that is what convergence means). In the scalar toy problem this is a geometric series:</p>
+\[ S_{\text{full}} = B\,(1 + A + A^2 + \dots) = \frac{B}{1-A}, \qquad S_{\text{last } M} = B\,(1 + A + \dots + A^{M-1}) = \frac{B\,(1 - A^M)}{1-A} . \]
+<p>The truncated gradient is the full one times \(1 - A^M\): the fraction \(A^M\) is missing. For gradient descent with \(\eta = 0.1\) at the solution \(x^* = 1.366\), \(A = 1 - 0.1\times 8.196 = 0.18\). So \(M = 1\) loses 18%, \(M = 2\) loses 3.2%, \(M = 3\) loses 0.6%. In the widget set K = 30 and "Backprop through last M" to 1: the truncated gradient reads −0.0366, which is 82% of −0.0447.</p>
+<p>The rule to remember: the slower the inner solver converges (the closer \(A\) is to 1), the more backward steps you need. A second-order solver such as Gauss-Newton has a small \(A\) near the solution, so short truncation works well with it.</p></div>
+
+<h3>5. The extreme case: one inner step</h3>
+<p>Under tight memory and time limits, some methods unroll a single step, \(\mathbf{x}_1(\mathbf{y}) = \Phi_1(\mathbf{x}_0;\mathbf{y})\), and use <span class="src">§4.2.2 · p. 106</span></p>
+\[ \nabla_{\mathbf{y}}\,\mathcal{U} = \frac{\partial\,\mathcal{U}(\mathbf{y},\mathbf{x}_1(\mathbf{y}))}{\partial\mathbf{y}} + \frac{\partial\,\mathcal{U}(\mathbf{y},\mathbf{x}_1(\mathbf{y}))}{\partial\mathbf{x}_1}\,\frac{\partial\mathbf{x}_1(\mathbf{y})}{\partial\mathbf{y}}, \tag{4.8} \]
+\[ \frac{\partial\mathbf{x}_1(\mathbf{y})}{\partial\mathbf{y}} = -\frac{\partial^2\mathcal{L}(\mathbf{x}_0,\mathbf{y})}{\partial\mathbf{x}_0\,\partial\mathbf{y}} . \tag{4.9} \]
+<p>Equation (4.9) is \(\mathbf{B}_1\) from §2 for a gradient step with the learning rate set to 1; with a general learning rate it is \(-\eta\,\partial^2\mathcal{L}/\partial\mathbf{x}_0\partial\mathbf{y}\). The matrix of mixed second derivatives is \(n\times m\) and expensive, but (4.8) needs only its product with the row vector \(\partial\mathcal{U}/\partial\mathbf{x}_1\).</p>
+<div class="box note"><h4>Filling the gap: where the finite difference (4.10) comes from</h4>
+<p>Let \(\mathbf{v} = (\partial\mathcal{U}/\partial\mathbf{x}_1)\T\). We want \(\mathbf{v}\T\,\dfrac{\partial^2\mathcal{L}}{\partial\mathbf{x}\,\partial\mathbf{y}}\). Its transpose is \(\dfrac{\partial^2\mathcal{L}}{\partial\mathbf{y}\,\partial\mathbf{x}}\,\mathbf{v}\), and that is a directional derivative: the rate at which the gradient \(\partial\mathcal{L}/\partial\mathbf{y}\) changes when \(\mathbf{x}\) moves along \(\mathbf{v}\). A central difference estimates it from two gradient evaluations at \(\mathbf{x}_0^{\pm} = \mathbf{x}_0 \pm \epsilon\,\mathbf{v}\):</p>
+\[ \frac{\partial^2\mathcal{L}}{\partial\mathbf{y}\,\partial\mathbf{x}}\,\mathbf{v} \;\approx\; \frac{1}{2\epsilon}\left( \frac{\partial\mathcal{L}(\mathbf{x}_0^{+},\mathbf{y})}{\partial\mathbf{y}} - \frac{\partial\mathcal{L}(\mathbf{x}_0^{-},\mathbf{y})}{\partial\mathbf{y}} \right) . \]
+<p>This is the right-hand side of the book's (4.10). To get the second term of (4.8), multiply by the factor from (4.9): \(-1\), or \(-\eta\) for a general learning rate. Keep track of that sign when you implement it.</p>
+<p>Toy check with \(x_0 = 1\), \(y = 2\), \(\eta = 0.1\): \(x_1 = 1.2\), so \(v = x_1 - 1.5 = -0.3\). Here \(\partial\mathcal{L}/\partial y = y - x^2\). With \(\epsilon = 0.01\): \(x_0^{+} = 0.997\), \(x_0^{-} = 1.003\), and</p>
+\[ \frac{(2 - 0.997^2) - (2 - 1.003^2)}{0.02} = \frac{1.005991 - 0.993991}{0.02} = 0.6 . \]
+<p>Exact value: \((-2x_0)\,v = (-2)(-0.3) = 0.6\). The gradient term is \(-\eta\times 0.6 = -0.06\), which is what the widget shows at K = 1.</p></div>
+<p>One caution from the book: the perturbation \(\mathbf{x}_0 \pm \epsilon\,\mathbf{v}\) is a plain addition only for vector variables. If \(\mathbf{x}\) contains rotations or poses, the perturbation must be applied on the manifold, which is the subject of <a href="#d40">Day 4</a>. <span class="src">§4.2.2 · p. 106</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Unrolling gives the gradient of the bilevel problem."</strong> It gives the gradient of \(\mathcal{U}(\mathbf{x}_T)\). The two agree only when \(\mathbf{x}_T\) has converged.</li>
+<li><strong>"More inner steps always cost more memory."</strong> Only in reverse mode without truncation. With truncation the memory is set by \(M\), not \(T\).</li>
+<li><strong>"If the initial guess is good, no gradient is lost."</strong> With zero inner steps, \(\mathbf{x}_0\) does not depend on \(\mathbf{y}\) at all (unless the initializer does) and the indirect gradient is exactly zero, however good the guess.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. Toy problem, gradient descent with η = 0.1 from x₀ = 1 at y = 2. The initial guess does not depend on y. What is dx₁/dy?</p><div class="opts"><button type="button" class="opt">0.4</button><button type="button" class="opt">0.2</button><button type="button" class="opt">0.333</button><button type="button" class="opt">0</button></div><p class="exp" hidden>S₁ = B₁ = −η · ∂²L/∂x∂y = −0.1 · (−2 · 1) = 0.2. The value 0.333 is the converged sensitivity; 0.4 is what one Gauss-Newton step gives.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. You unroll T = 200 solver iterations in reverse mode. Each iterate has n = 500,000 numbers stored as 8-byte floats. How much memory do the stored iterates alone need?</p><div class="opts"><button type="button" class="opt">4 MB</button><button type="button" class="opt">8 MB</button><button type="button" class="opt">80 MB</button><button type="button" class="opt">800 MB</button></div><p class="exp" hidden>200 × 500,000 × 8 bytes = 800,000,000 bytes = 800 MB. One iterate is only 4 MB; the factor T is the cost of unrolling.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. Near the solution, each backward step multiplies the adjoint by A = 0.5. If you truncate the backward pass to the last M = 3 steps, what fraction of the converged gradient is missing?</p><div class="opts"><button type="button" class="opt">12.5%</button><button type="button" class="opt">50%</button><button type="button" class="opt">25%</button><button type="button" class="opt">87.5%</button></div><p class="exp" hidden>The truncated sum is (1 − A^M) of the full one, so the missing fraction is A^M = 0.5³ = 0.125.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. In the widget at η = 0.1 and K = 2 the unrolled gradient is −0.0607 but the finite-difference reference is −0.0447. What explains the gap?</p><div class="opts"><button type="button" class="opt">Rounding error in AutoDiff</button><button type="button" class="opt">Reverse mode is approximate; forward mode would match the reference</button><button type="button" class="opt">It is the exact derivative of U(x₂), and x₂ = 1.314 has not reached x* = 1.366</button><button type="button" class="opt">The finite-difference reference is inaccurate</button></div><p class="exp" hidden>Unrolling differentiates the program that ran. Two steps of gradient descent define a different function of y than the converged solution does. Forward and reverse mode give the same −0.0607.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. One-step approximation with learning rate η = 0.1. The central difference of ∂L/∂y along v = ∂U/∂x₁ returns 0.6. What is the second term of (4.8)?</p><div class="opts"><button type="button" class="opt">0.6</button><button type="button" class="opt">−0.06</button><button type="button" class="opt">0.06</button><button type="button" class="opt">−0.6</button></div><p class="exp" hidden>The finite difference estimates (∂²L/∂y∂x)·v. The term in (4.8) multiplies it by ∂x₁/∂y's factor −η from (4.9): −0.1 × 0.6 = −0.06.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Unrolling writes the solver as \(\mathbf{x}_T = (\Phi_T\circ\dots\circ\Phi_0)(\mathbf{y})\) and differentiates that composition with AutoDiff.</li>
+<li>The sensitivity obeys \(\mathbf{S}_t = \mathbf{A}_t\mathbf{S}_{t-1} + \mathbf{B}_t\); reverse mode evaluates the same sum backward with adjoints \(\boldsymbol{\lambda}_{t-1} = \mathbf{A}_t\T\boldsymbol{\lambda}_t\) and must store all iterates.</li>
+<li>The result is exact for \(\mathbf{x}_T\) and approaches the true bilevel gradient as the inner solver converges.</li>
+<li>Truncating to the last \(M\) steps drops terms of size about \(A^M\); fast inner solvers tolerate short truncation.</li>
+<li>The one-step version (4.8)–(4.10) needs only two extra gradient evaluations, at the price of a large bias when one step is far from solving the lower level.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §4.2.1 "Unrolled Differentiation" and §4.2.2 "Truncated Unrolled Differentiation", pp. 104–106; Algorithm 1; equations (4.4)–(4.10).</li>
+<li>Griewank and Walther, <em>Evaluating Derivatives: Principles and Techniques of Algorithmic Differentiation</em>, 2nd ed., 2008 (forward and reverse accumulation through an iteration, memory of the reverse sweep).</li>
+<li>Nocedal and Wright, <em>Numerical Optimization</em>, 2006 (convergence rates of gradient descent and Gauss-Newton; finite-difference directional derivatives). The sensitivity recursion, the geometric-series bias estimate, and the toy numbers are this app's own working of standard material.</li>
+</ol></div>
+<p class="next"></p>
+</section>

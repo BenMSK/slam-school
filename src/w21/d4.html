@@ -1,0 +1,101 @@
+<section class="day" data-day="124" id="d124" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 21 · Day 4</span>
+  <h2>Objects through time: re-localization, change-aware SLAM, and temporal patterns</h2>
+  <p class="lead">After today you can explain how a moved object is found again, how change-aware SLAM tells real change from noise and pose error while the robot is running, and how a map can model when things change.</p>
+  <p class="meta">About 60 min · Read §15.3.2.3, §15.3.3, and §15.3.4, pp. 439–445 (7 pages) · Needs Week 21 Day 3 and Week 6 Day 5</p>
+</header>
+
+<div class="box read"><h4>Read first: §15.3.2.3 to §15.3.4, pp. 439–445</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>What makes object instance re-localization harder than place recognition (pp. 439–440), and the chairs-and-mug example.</li>
+<li>The two extreme solutions and "local consistency" (p. 442).</li>
+<li>How NeuSE, POV-SLAM, and Khronos each decide which object observations belong together (p. 443).</li>
+<li>The three families of temporal models (p. 445).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>The object is the natural unit of long-term change. Finding a moved object again is a small place-recognition problem with few features and many look-alikes. Online, a mismatch between map and view can mean change, noise, or a wrong pose. Change-aware systems trust only short stretches of data that cannot have changed, reason per object, and keep for each object a probability that it is still there.</p></div>
+
+<h3>1. Objects from change, and finding them again</h3>
+<p>Change and objects explain each other. <strong>Object detection from changes</strong> clusters the surfaces that changed in a dense reconstruction into likely objects. It needs no semantic detector, but partial views mislead it: two touching objects removed together come out as one, and one object seen through occlusions comes out as several. <span class="src">§15.3.2.3 · p. 439</span></p>
+<p><strong>Object instance re-localization</strong> tracks an object through long-term changes: given an earlier and a later scan, decide which instances correspond and estimate each one's 6-DoF motion. It resembles place recognition, with four added difficulties. <span class="src">§15.3.2.3 · pp. 439–440</span></p>
+<div class="tbl"><table>
+  <tr><th>Difficulty</th><th>Detail</th></tr>
+  <tr><td>Arbitrary motion</td><td>An object can move any distance between observations</td></tr>
+  <tr><td>Few features</td><td>An object is far smaller than a scene, and small objects seen from afar give few measurements</td></tr>
+  <tr><td>Perceptual aliasing</td><td>A seminar room holds a hundred identical chairs. Which is which may not matter; one shared chair model could do. A mug among identical mugs matters to its owner. A remedy: accept unique matches, and keep several hypotheses when candidates look alike.</td></tr>
+  <tr><td>Closed or open set</td><td>With a fixed set of objects this is an optimal matching problem. If objects can be added and removed, a new, similar object is always an alternative explanation.</td></tr>
+</table></div>
+<p>Solutions extract and match descriptors. One family puts several <strong>keypoints with descriptors</strong> on each object and solves for the 6-DoF transform from correspondences. The keypoints can be visual features or 3D descriptors such as FPFH and SHOT, which ignore appearance but describe only a local patch, so matches often need geometric verification; learned shape descriptors perform best. A second family computes a <strong>single descriptor per object</strong>. The networks are built \(\SE(3)\)-invariant, for matching across viewpoints, or \(\SE(3)\)-equivariant, for registering the matched objects. <span class="src">§15.3.2.3 · pp. 440–441</span></p>
+
+<div class="box note"><h4>Filling the gap: invariant and equivariant, with three points</h4>
+<p>Let \(f\) turn a point set \(X\) into a descriptor and \(\mathbf{T}\) be a rigid motion. \(f\) is <strong>invariant</strong> if \(f(\mathbf{T}X) = f(X)\). It is <strong>equivariant</strong> if \(f(\mathbf{T}X) = \rho(\mathbf{T})\, f(X)\) for a known action \(\rho\): the descriptor moves with the object in a predictable way.</p>
+<p>Take \(X = \{(0,0),\ (2,0),\ (0,1)\}\) and the same object rotated by \(90^\circ\) and shifted by \((5,5)\): \(Y = \{(5,5),\ (5,7),\ (4,5)\}\). The sorted pairwise distances are \(\{1,\ 2,\ \sqrt5\}\) for both: an invariant descriptor, which says "same object" and not where it went. The centroid is \((\tfrac23, \tfrac13)\) for \(X\) and \((\tfrac{14}{3}, \tfrac{17}{3})\) for \(Y\), which is the first centroid rotated by \(90^\circ\) to \((-\tfrac13, \tfrac23)\) and shifted by \((5,5)\): an equivariant descriptor, which reveals part of the motion. Hence invariance for matching, equivariance for registration.</p></div>
+
+<h3>2. Change-aware SLAM: change, noise, or a wrong pose?</h3>
+<p>Long-term change does not wait for the next session: a robot back from the kitchen after two minutes may find the living room changed. <strong>Change-aware SLAM</strong> detects and represents such changes during online operation. <span class="src">§15.3.3 · p. 441</span></p>
+<p>This is harder than multi-session mapping. Changes can happen at any moment, so stationarity holds only over a short window, with little data to average out noise. And a pose error looks like change: with the pose estimate off by a metre, mapped surfaces seem absent although nothing moved. Localization and change detection need each other's answer. If every measurement is treated as an unchanged inlier, the registration averages true and false matches. If the whole old scene is declared changed, the open-loop estimate is trivially optimal and the map is neither complete nor consistent. <span class="src">§15.3.3 · p. 442</span></p>
+<p>Two ideas keep the problem manageable. <strong>Object-level reasoning:</strong> measurements are first summarized locally into rigid semantic objects, and localization and change decisions are made per object, a much smaller problem that is semantically consistent by construction. <strong>Local consistency:</strong> detecting change on every raw frame lets a few noisy points mark an object as changed, while cautious rules fuse different things into one corrupted model. The way out is to find stretches of data guaranteed free of change. The minimum is data tracked from frame to frame, since the scene cannot change unobserved while the robot observes it; with assumptions on the rate of change and on odometry error this extends to a sliding or active window. <span class="src">§15.3.3 · p. 442</span></p>
+
+<div class="box note"><h4>Filling the gap: a persistence probability</h4>
+<p>Several systems keep, for each object, a probability that it is still where the map says. The book gives no formula. The simplest model is a two-state Bayes filter, the mathematics of the occupancy cell of <a href="#d43">Week 8 · Day 1</a>. Let \(p\) be the probability that the object is present and \(o = p/(1-p)\) its odds. The detector fires on a present object with probability \(P_D\) (recall) and on an empty spot with probability \(P_F\). Dividing Bayes' rule for "present" by Bayes' rule for "absent":</p>
+\[ o \leftarrow o \cdot \frac{P_D}{P_F} \ \ \text{(detected)}, \qquad o \leftarrow o \cdot \frac{1 - P_D}{1 - P_F} \ \ \text{(in view, not detected)}, \qquad o \leftarrow o \ \ \text{(not in view)}. \]
+<p>The third case is Day 3's absence of evidence: no measurement, no update. Forgetting is a separate step: before each visit \(p \leftarrow s\,p\), with \(s\) the probability that the object stayed put.</p>
+<p>With \(P_D = 0.8\), \(P_F = 0.05\), \(s = 1\), starting at \(p = 0.5\): one detection multiplies the odds by 16, so \(p = 16/17 = 0.94\). Each look without a detection multiplies them by \(0.2/0.95 = 0.21\): odds \(16 \to 3.37 \to 0.71 \to 0.15\), so \(p = 0.77,\ 0.41,\ 0.13\). One miss does not remove the object, because the detector misses a fifth of the time. Three in a row do.</p></div>
+<p>Try it: add your own sequence of visits with the three buttons.</p>
+<div class="viz" data-viz="w21_persist"></div>
+<p class="cap">Notice: in the example, two detections lift the probability to 0.99. Three visits with the object out of view lower it only to 0.85, and only because of the 0.95 survival factor. Two looks without a detection then take it to 0.47 and 0.15, and the object is removed. Raise the recall to 0.99 and a single miss is almost conclusive. The filter is this course's illustration, not any one system's model.</p>
+
+<p>The systems the book describes: <span class="src">§15.3.3 · pp. 443–444, Figure 15.13</span></p>
+<div class="tbl"><table>
+  <tr><th>System</th><th>What the book says it does</th></tr>
+  <tr><td>Panoptic Multi-TSDFs</td><td>A first real-time change-aware mapping system, given consistent poses. Only <strong>active submaps</strong>, tracked frame to frame, are updated. Overlapping inactive submaps are discarded whole if they disagree and merged if they agree.</td></tr>
+  <tr><td>POCD</td><td>Segments frames into objects and registers them against the current map, tolerating some odometry noise. A probabilistic persistence model per object is updated when the object is observed and when it should have been observed but was not.</td></tr>
+  <tr><td>NeuSE</td><td>Learns \(\SE(3)\)-equivariant neural object representations from partial views. Associations serve as loop-closure constraints; inconsistent or missing ones signal change.</td></tr>
+  <tr><td>POV-SLAM</td><td>Expectation-maximization: alternates between poses given the associations, and associations and persistence probabilities given the layout</td></tr>
+  <tr><td>Khronos</td><td>Creates candidate association factors between nearby objects and lets graduated non-convexity (<a href="#d35">Week 6 · Day 5</a>) pick the inliers. A first dense spatio-temporal metric-semantic SLAM method: it also estimates when each change happened.</td></tr>
+  <tr><td>Changing-SLAM</td><td>A first unified short- and long-term formulation, on top of ORB-SLAM. Object points are tracked frame to frame (short-term); untracked ones are associated globally to nearby objects of the same class (long-term). A persistence score lets undetected objects be forgotten.</td></tr>
+</table></div>
+
+<h3>3. Temporal scene understanding</h3>
+<p>A map can also capture the patterns behind the changes and predict how the scene will evolve. <span class="src">§15.3.4 · pp. 444–445</span></p>
+<div class="tbl"><table>
+  <tr><th>Family</th><th>Idea</th><th>Notes from the book</th></tr>
+  <tr><td><strong>Maps of dynamics</strong></td><td>Estimate the typical motion patterns of a place from object trajectories</td><td>Constant (a one-way road) or time-dependent (into the office in the morning, out in the evening)</td></tr>
+  <tr><td><strong>Periodic events</strong></td><td>Assume a hidden periodic process drives the scene and estimate it</td><td>Frequency maps (Krajnik et al.) keep only the dominant Fourier modes: compact, and able to predict future states</td></tr>
+  <tr><td><strong>Learning-based methods</strong></td><td>Learn to predict object-level change, typically on scene graphs</td><td>Flexible; combine semantic priors with observations. Need more data, and change data is scarce.</td></tr>
+</table></div>
+
+<div class="box note"><h4>Filling the gap: a door as a sum of cosines</h4>
+<p>A door is open every day from 08:00 to 18:00. Its state \(s(t)\) is 1 when open, with period 24 h, open fraction \(D = 10/24\), centred on 13:00. The Fourier series of this rectangular pulse train is</p>
+\[ s(t) = D + \sum_{n \ge 1} \frac{2}{n\pi} \sin(n\pi D)\, \cos\!\left( \frac{2\pi n\,(t - 13)}{24} \right). \]
+<p>Keep the mean and the first mode, whose amplitude is \(\tfrac{2}{\pi}\sin(75^\circ) = 0.615\):</p>
+\[ p(t) \approx 0.417 + 0.615 \cos\!\left( \frac{2\pi\,(t - 13)}{24} \right). \]
+<p>Predict "open" when \(p(t) \gt 0.5\). That needs \(\cos(\cdot) \gt 0.135\), which holds for \(|t - 13| \lt 5.48\) h: from 07:31 to 18:29. Three stored numbers predict the door on any future day to within half an hour.</p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The map and the view disagree, so the scene changed."</strong> A wrong pose produces the same disagreement. Change must be judged together with localization, or inside a locally consistent window.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="0"><p class="qq">Q1. An object's prior probability of being present is 0.5. The detector has recall 0.9 and fires on empty spots 10% of the time. The robot detects the object once, then looks again and does not detect it. What is the probability now (no forgetting)?</p><div class="opts"><button type="button" class="opt">0.50</button><button type="button" class="opt">0.90</button><button type="button" class="opt">0.10</button><button type="button" class="opt">0.81</button></div><p class="exp" hidden>Odds start at 1. The detection multiplies them by 0.9/0.1 = 9, the miss by 0.1/0.9 = 1/9. The odds are back at 1, so p = 0.5.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q2. You have matched a mug in two scans and now need the rigid transform between its two positions. Which kind of object descriptor helps with that step?</p><div class="opts"><button type="button" class="opt">An SE(3)-invariant one, because it is the same in both scans</button><button type="button" class="opt">Either; they carry the same information</button><button type="button" class="opt">An SE(3)-equivariant one, because it changes with the object's pose in a known way</button><button type="button" class="opt">Neither; registration needs semantic labels</button></div><p class="exp" hidden>An invariant descriptor has discarded the pose. An equivariant one transforms with the object, so comparing two of them recovers the motion.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A robot returns to a room with a pose estimate that is 1 m off. Nothing has moved. What does per-frame change detection against the old map tend to report?</p><div class="opts"><button type="button" class="opt">No change, because the scene is identical</button><button type="button" class="opt">A loop closure</button><button type="button" class="opt">Short-term dynamic objects</button><button type="button" class="opt">Mapped surfaces as absent, because they are not where the offset view expects them</button></div><p class="exp" hidden>Pose error and scene change look alike.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. A frequency map stores p(t) = 0.3 + 0.4 cos(2π(t − 14)/24) for a shop's shutter being open, t in hours. What does it predict at 20:00?</p><div class="opts"><button type="button" class="opt">p = 0.7, open</button><button type="button" class="opt">p = 0.3, closed</button><button type="button" class="opt">p = 0.5, undecided</button><button type="button" class="opt">p = −0.1, closed</button></div><p class="exp" hidden>At 20:00 the argument is 2π·6/24 = 90°, whose cosine is 0, so p = 0.3, below 0.5: closed.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Changed surfaces can be clustered into objects, and moved objects re-localized by matching descriptors: invariant ones to match, equivariant ones to register.</li>
+<li>Online, a mismatch can be change, noise, or pose error. Change-aware SLAM reasons per object and trusts only locally consistent data, at minimum what was tracked frame to frame.</li>
+<li>A persistence probability goes up with a detection, down with a look that finds nothing, and is untouched when the object was not in view.</li>
+<li>Temporal models go further: maps of dynamics, periodic models stored as a few Fourier modes, and learned predictors on scene graphs.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §15.3.2.3, §15.3.3 "Change-aware SLAM", §15.3.4 "Temporal Scene Understanding", pp. 439–445, Figures 15.12–15.13.</li>
+<li>Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (the binary Bayes filter in odds form).</li>
+<li>Oppenheim and Willsky, <em>Signals and Systems</em>, 1997 (the Fourier series of a periodic rectangular pulse).</li>
+</ol></div>
+<p class="next"></p>
+</section>

@@ -1,0 +1,149 @@
+<section class="day" data-day="77" id="d77" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 13 · Day 5</span>
+  <h2>The full LiDAR SLAM system: loop closures, pose graphs, and the map</h2>
+  <p class="lead">After today you can trace a scan through the four modules of a LiDAR SLAM system, work out how a loop closure spreads a correction over the trajectory, and explain how the map is updated and how several sessions or robots are merged.</p>
+  <p class="meta">About 60 min · Read §8.4–8.5, pp. 240–249 (10 pages, mostly prose and figures) · Needs Week 13 Day 4</p>
+</header>
+
+<div class="box read"><h4>Read first: §8.4 and §8.5, pp. 240–249</h4>
+<p>These pages read quickly. While you read, look for:</p>
+<ul>
+<li>The four numbered modules of Figure 8.7 and the rates they run at (pp. 241–242).</li>
+<li>What turns a place-recognition candidate into a constraint, and the checks against false ones (p. 242).</li>
+<li>The kinds of factor in Figure 8.8 (p. 243), and the two tricks that keep the graph small (pp. 243–244).</li>
+<li>The options for updating the map after optimization (p. 244), and what an anchor node is for (pp. 245–246).</li>
+<li>In §8.5, why uncertainty is called an open problem (p. 249).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A LiDAR SLAM system is odometry plus memory. Odometry gives a locally consistent trajectory that drifts. Place recognition notices a revisit, registration measures it, and <strong>pose-graph optimization</strong> bends the whole past trajectory so that odometry and loop closures agree as well as they can. Then the map, which was drawn with the old poses, has to be redrawn or deformed to match.</p></div>
+
+<h3>1. Four modules at two rates</h3>
+<p>Most current systems are built from the four modules of Figure 8.7: odometry, loop closure detection, pose-graph optimization, and map update. Odometry runs at the sensor rate, for example 10 Hz, and the others more slowly, for example 1 Hz. <span class="src">§8.4.1 · p. 242</span></p>
+<figure class="fig"><svg viewBox="0 0 600 220" role="img" aria-label="Two lanes. In the fast lane, run for every scan at about 10 hertz, a scan enters odometry, which registers it to the local map. In the slow lane, at about 1 hertz, loop closure detection passes loop edges to pose-graph optimization, which also receives odometry edges, and sends corrected poses to the map update. The corrected map and pose flow back to odometry.">
+  <defs><marker id="w13ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="6" y="8" width="588" height="92" rx="12" fill="var(--soft)" stroke="var(--line)"/>
+  <rect x="6" y="106" width="588" height="108" rx="12" fill="var(--soft)" stroke="var(--line)"/>
+  <text x="16" y="27" font-size="12" fill="var(--muted)">Every scan, about 10 Hz</text>
+  <text x="16" y="206" font-size="12" fill="var(--muted)">Now and then, about 1 Hz</text>
+  <rect x="20" y="40" width="80" height="44" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="60" y="67" text-anchor="middle" font-size="13" fill="var(--ink)">Scan</text>
+  <rect x="140" y="36" width="174" height="52" rx="10" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="227" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">1 · Odometry</text>
+  <text x="227" y="76" text-anchor="middle" font-size="11" fill="var(--muted)">register to the local map</text>
+  <line x1="100" y1="62" x2="136" y2="62" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w13ar5)"/>
+  <rect x="14" y="140" width="180" height="52" rx="10" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="104" y="162" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">2 · Loop closure detection</text>
+  <text x="104" y="180" text-anchor="middle" font-size="11" fill="var(--muted)">place recognition, then ICP</text>
+  <rect x="250" y="140" width="180" height="52" rx="10" fill="var(--c4-soft)" stroke="var(--c4)"/>
+  <text x="340" y="162" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">3 · Pose-graph optim.</text>
+  <text x="340" y="180" text-anchor="middle" font-size="11" fill="var(--muted)">all odometry and loop edges</text>
+  <rect x="476" y="140" width="114" height="52" rx="10" fill="var(--c1-soft)" stroke="var(--c1)"/>
+  <text x="533" y="162" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">4 · Map update</text>
+  <text x="533" y="180" text-anchor="middle" font-size="11" fill="var(--muted)">re-place points</text>
+  <line x1="60" y1="84" x2="60" y2="136" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w13ar5)"/>
+  <text x="68" y="124" font-size="11" fill="var(--muted)">each new scan</text>
+  <path d="M227 88 L227 114 L340 114 L340 136" fill="none" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w13ar5)"/>
+  <text x="348" y="130" font-size="11" fill="var(--muted)">odometry edges</text>
+  <line x1="194" y1="166" x2="246" y2="166" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w13ar5)"/>
+  <text x="221" y="158" text-anchor="middle" font-size="11" fill="var(--muted)">loop</text>
+  <text x="221" y="182" text-anchor="middle" font-size="11" fill="var(--muted)">edges</text>
+  <line x1="430" y1="166" x2="472" y2="166" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w13ar5)"/>
+  <text x="451" y="158" text-anchor="middle" font-size="11" fill="var(--muted)">poses</text>
+  <path d="M533 140 L533 62 L318 62" fill="none" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w13ar5)"/>
+  <text x="426" y="54" text-anchor="middle" font-size="11" fill="var(--muted)">corrected map and pose</text>
+</svg><figcaption>The fast lane must keep up with the sensor. The slow lane may take longer because odometry bridges the gap.</figcaption></figure>
+<p>The odometry module sees only the surroundings of the sensor, its <strong>active local map</strong> (Day 3). It knows nothing of a place visited ten minutes ago. Global consistency, meaning that current and past observations agree in one map, is the job of the slow lane. <span class="src">§8.4 · pp. 240–242</span></p>
+
+<h3>2. From a candidate to a constraint</h3>
+<p>Place recognition only says that two scans look alike. A loop closure needs a number: the relative transformation between the two poses. That takes three more steps. <span class="src">§8.4.1 · p. 242</span></p>
+<ol>
+<li><strong>Initial guess.</strong> In a small pose graph the current estimates of the two poses give a geometric prior. Otherwise the guess comes from the place-recognition method itself (yesterday's awareness), or from a global registration method that needs no guess and tolerates low overlap.</li>
+<li><strong>Fine registration.</strong> ICP between the two scans, started from that guess, yields the relative pose.</li>
+<li><strong>Verification.</strong> Heuristics reject doubtful candidates: the travel distance or time between the two visits, or the confidence of a RANSAC-based alignment (<a href="#d32">Week 6 · Day 2</a>).</li>
+</ol>
+<p>A false loop closure is worse than a missed one. It ties together two places that are not the same and bends the whole map to fit. For the ones that slip through, robust pose-graph optimization can down-weight or disable individual constraints (<a href="#d31">Week 6</a>). <span class="src">§8.4.2 · p. 244</span></p>
+
+<h3>3. Pose-graph optimization</h3>
+<p>The back-end is a factor graph whose variables are sensor poses and whose factors are relative-pose constraints, hence <strong>pose graph</strong>. Figure 8.8 shows the factor types: a prior that fixes the origin, odometry factors between consecutive poses, loop-closure factors between distant ones, and optional attitude factors that constrain roll and pitch when an inertial sensor is available. <span class="src">§8.4.2 · p. 243</span> A relative-pose measurement \(\tilde{\mathbf{T}}_{ij}\) between poses \(\mathbf{T}_i\) and \(\mathbf{T}_j\) contributes the residual \(\mathbf{e}_{ij} = \Log\big(\tilde{\mathbf{T}}_{ij}^{-1}\,\mathbf{T}_i^{-1}\mathbf{T}_j\big)\), and <strong>pose-graph optimization (PGO)</strong> minimizes \(\sum \mathbf{e}_{ij}\T\boldsymbol{\Sigma}_{ij}^{-1}\mathbf{e}_{ij}\) over all poses, by the methods of Weeks 2 to 4.</p>
+<div class="box note"><h4>Filling the gap: how a loop closure spreads the correction</h4>
+<p>A one-dimensional loop shows the mechanism with no Lie groups. A robot makes \(n\) odometry steps \(u_1,\dots,u_n\) with variances \(\sigma_1^2,\dots,\sigma_n^2\). A loop closure then measures the total displacement between the first and last pose as \(z\), with variance \(\sigma_L^2\). Odometry alone says the total is \(\sum_k u_k\), so the two disagree by</p>
+\[ e = z - \sum_{k=1}^{n} u_k . \]
+<p>Let \(\delta_k\) be the correction applied to step \(k\). Least squares minimizes</p>
+\[ \sum_{k=1}^{n}\frac{\delta_k^2}{\sigma_k^2} + \frac{\big(e - \sum_k \delta_k\big)^2}{\sigma_L^2}. \]
+<p>Setting the derivative with respect to \(\delta_k\) to zero gives \(\delta_k/\sigma_k^2 = (e - \sum_m \delta_m)/\sigma_L^2\). The right side is the same for every \(k\); call it \(\mu\). Then \(\delta_k = \mu\sigma_k^2\), and summing over \(k\) and solving for \(\mu\) gives</p>
+\[ \delta_k = e\,\frac{\sigma_k^2}{\sigma_1^2 + \dots + \sigma_n^2 + \sigma_L^2}. \]
+<p>Each step absorbs a share of the disagreement in proportion to its variance. <strong>Numbers:</strong> three steps \(u = (10, 10, 10)\) m with variances \((1, 1, 4)\), and an accurate loop closure, \(z = 29.4\) m with \(\sigma_L^2 \approx 0\). Then \(e = -0.6\) and \(\delta = -0.6 \times (\tfrac16, \tfrac16, \tfrac46) = (-0.1, -0.1, -0.4)\). The corrected positions are \(0,\ 9.9,\ 19.8,\ 29.4\). Every pose moved, not only the last, and the least trusted step moved most.</p>
+<p>This is why the book cares about the covariances on the edges: giving a high covariance to stretches where drift is likely to be high makes the optimizer put the correction there. <span class="src">§8.4.2 · p. 244</span> It is also why §8.5 lists uncertainty as unsolved. Estimated odometry uncertainty is often unreliable, so many systems fall back on fixed covariances, which spreads the error evenly whether or not that is where it arose. <span class="src">§8.5 · p. 249</span></p></div>
+<p><strong>Keeping it real-time.</strong> The graph grows for as long as the robot runs, but it is sparse, with few edges per node, and sparse factorization with good ordering and incremental relinearization (iSAM2, <a href="#d17">Week 3</a>) updates graphs of over 1000 nodes in a fraction of a second. <span class="src">§8.4.2 · p. 243</span> Two habits keep the node count down. <span class="src">§8.4.2 · pp. 243–244</span></p>
+<ul>
+<li>Add a node every few metres travelled, not for every scan.</li>
+<li>Group the trajectory into <strong>submaps</strong> of fixed size, say 30 m of travel, with one node each, and treat the odometry inside a submap as exact.</li>
+</ul>
+<p>Count it for a robot that walks at 1 m/s for one hour, 3.6 km. One node per scan at 10 Hz is 36,000 nodes. One node every 2 m is 1,800. One submap per 30 m is 120. This is how pose-graph SLAM reaches city scale.</p>
+
+<h3>4. Updating the map</h3>
+<p>After optimization the trajectory is globally consistent. The map is not: its points were placed using the old, drifted poses. At a revisited junction the walls appear twice, slightly apart, as on the left of Figure 8.9. <span class="src">§8.4.2 · p. 244</span></p>
+<figure class="fig"><svg viewBox="0 0 600 170" role="img" aria-label="Left: a corridor corner mapped on two visits with odometry only; the second copy is shifted and rotated, so every wall appears twice. Right: after pose-graph optimization and map update, the two copies coincide.">
+  <path d="M30 34 L170 34 L170 124" fill="none" stroke="var(--c5)" stroke-width="3"/>
+  <path d="M30 74 L130 74 L130 124" fill="none" stroke="var(--c5)" stroke-width="3"/>
+  <path d="M44 52 L183 38 L192 128" fill="none" stroke="var(--c3)" stroke-width="3"/>
+  <path d="M48 92 L147 82 L152 132" fill="none" stroke="var(--c3)" stroke-width="3"/>
+  <text x="140" y="158" text-anchor="middle" font-size="12" fill="var(--ink)">odometry only: every wall twice</text>
+  <path d="M350 34 L490 34 L490 124" fill="none" stroke="var(--c5)" stroke-width="3"/>
+  <path d="M350 74 L450 74 L450 124" fill="none" stroke="var(--c5)" stroke-width="3"/>
+  <path d="M352 36 L492 36 L492 126" fill="none" stroke="var(--c3)" stroke-width="3"/>
+  <path d="M352 76 L452 76 L452 126" fill="none" stroke="var(--c3)" stroke-width="3"/>
+  <text x="450" y="158" text-anchor="middle" font-size="12" fill="var(--ink)">after PGO and map update</text>
+  <line x1="300" y1="20" x2="300" y2="150" stroke="var(--line)" stroke-width="1"/>
+</svg><figcaption>Blue: the first visit. Pink: the second visit. Fixing the poses is half the job; the points must follow.</figcaption></figure>
+<div class="tbl"><table>
+  <tr><th>Way to update the map</th><th>How it works</th><th>Cost</th></tr>
+  <tr><td>Rebuild</td><td>Re-insert all past scans at their corrected poses</td><td>Simple, but every past observation must be stored for ever, which does not scale to large environments</td></tr>
+  <tr><td>Deform</td><td>Bend the existing map representation to follow the correction</td><td>No need to keep every raw scan</td></tr>
+  <tr><td>Attach map elements to poses</td><td>Store each surfel or submap relative to a pose in the graph</td><td>The map follows the optimized poses; the more scalable route</td></tr>
+</table></div>
+<p><span class="src">§8.4.2 · p. 244</span> The third option is worth spelling out. If a point is stored as \(\mathbf{p}\) in the frame of pose \(\mathbf{T}_i\), its world position is \(\mathbf{T}_i\mathbf{p}\). When the optimizer changes \(\mathbf{T}_i\), the world position changes with it and nothing has to be recomputed. The price is the assumption that the points inside one submap are correct relative to each other, the same assumption that made submap nodes possible.</p>
+
+<h3>5. Several sessions, several robots, and what is still open</h3>
+<p>Taking the finished clouds of two separate runs and aligning them rigidly does not work well: each run keeps its own small internal errors, about a metre per kilometre, so walls double up wherever those errors differ (Figure 8.10). The sessions have to be optimized jointly. <span class="src">§8.4.3 · p. 245</span></p>
+<div class="box note"><h4>Filling the gap: what an anchor node does</h4>
+<p>Let each session \(s\) keep its poses \(\mathbf{T}^s_i\) in its own coordinate frame, and add one extra variable per session, the <strong>anchor</strong> \(\boldsymbol{\Delta}_s \in \SE(3)\), which places that frame in a common global frame: the global pose is \(\boldsymbol{\Delta}_s\mathbf{T}^s_i\). Factors inside a session do not see the anchor, because \((\boldsymbol{\Delta}_s\mathbf{T}^s_i)^{-1}(\boldsymbol{\Delta}_s\mathbf{T}^s_j) = \mathbf{T}^{s\,-1}_i\mathbf{T}^s_j\). A loop closure between pose \(i\) of session \(a\) and pose \(j\) of session \(b\) measures</p>
+\[ \tilde{\mathbf{T}} \approx \big(\boldsymbol{\Delta}_a\mathbf{T}^a_i\big)^{-1}\big(\boldsymbol{\Delta}_b\mathbf{T}^b_j\big), \]
+<p>and is the only kind of factor that involves the anchors. Until the first such factor exists, \(\boldsymbol{\Delta}_b\) is completely free: the sessions float relative to each other. Since there is no geometric prior between disconnected sessions, that first link can only come from place recognition. <span class="src">§8.4.3 · pp. 245–246</span></p></div>
+<p><strong>Multi-robot SLAM</strong> does the same with data arriving live from several robots, so that a team can share one map and plan together. A <strong>centralized</strong> system sends measurements to a base station that computes the combined map; a <strong>decentralized</strong> (distributed) one builds a map on every robot and merges the robot maps at a base station. <span class="src">§8.4.3.1 · p. 246</span> Two competitions mark the progress. At MAGIC in 2010, the winning team ran 14 wheeled robots with 2D LiDAR in a 500 m × 500 m area; each sent pose-graph constraints to a base station that built one 2D map. At the DARPA Subterranean Challenge in 2021, robots with 3D LiDAR and further odometry sources ran pose-graph SLAM on board in tunnels with stairs and ramps, and a base station merged the maps; one system sent compressed surfel submaps, 21.5 MB per robot for a complete map. <span class="src">§8.4.3.1 · pp. 247–248</span></p>
+<p>The hardest version is fully distributed SLAM, where every robot maintains the joint map under communication limits, and consistency is the central issue. <span class="src">§8.4.3.1 · p. 248</span> The chapter closes with four open areas. <span class="src">§8.5 · pp. 248–249</span></p>
+<ul>
+<li><strong>Robustness.</strong> Cluttered scenes, featureless corridors and mines, snow, fog, and dust still break systems, and performance depends on hand tuning. Day 2's singular 6 × 6 matrix is the corridor case.</li>
+<li><strong>Multi-sensor fusion.</strong> Radar in rain or smoke, cameras in tunnels. Open questions are redundancy against computation, early (tightly coupled) against late fusion, and imperfect calibration and synchronization.</li>
+<li><strong>Uncertainty.</strong> Fusing estimates needs calibrated covariances, and those from ICP-based odometry are often unreliable.</li>
+<li><strong>Deployment.</strong> Size, weight, power, and latency matter: the most accurate system is not always the right one for a car that must react quickly.</li>
+</ul>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"After a loop closure, snap the current pose to the old one."</strong> That fixes one pose and leaves a tear in the trajectory. The correction is distributed over all poses of the loop, in proportion to their uncertainty.</li>
+<li><strong>"Once the poses are optimized the map is correct."</strong> The map was built with the old poses. Without a map update the walls stay doubled.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A robot drives at 2 m/s for 30 minutes with a 10 Hz LiDAR. How many pose-graph nodes does it create if it adds one node every 3 m?</p><div class="opts"><button type="button" class="opt">18,000</button><button type="button" class="opt">1,200</button><button type="button" class="opt">600</button><button type="button" class="opt">120</button></div><p class="exp" hidden>It travels 2 × 1800 = 3600 m, so 3600/3 = 1,200 nodes. One node per scan would be 18,000.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. Place recognition reports that the current scan resembles scan 412. What has to happen before an edge is added to the pose graph?</p><div class="opts"><button type="button" class="opt">Fine registration of the two scans from an initial guess, then validity checks</button><button type="button" class="opt">Nothing: the edge says the two poses are equal</button><button type="button" class="opt">The map has to be rebuilt first</button><button type="button" class="opt">Odometry has to be restarted from scan 412</button></div><p class="exp" hidden>Similarity is not a measurement. The edge needs a relative transformation, obtained by ICP from a good starting guess, and the candidate should pass checks that guard against false loop closures.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q3. Three odometry steps have variances 1, 1, and 2. An exact loop closure shows that their sum is 0.8 m too short. How much is added to the third step?</p><div class="opts"><button type="button" class="opt">0.27 m</button><button type="button" class="opt">0.2 m</button><button type="button" class="opt">0.4 m</button><button type="button" class="opt">0.8 m</button></div><p class="exp" hidden>δ₃ = e σ₃²/(σ₁² + σ₂² + σ₃²) = 0.8 × 2/4 = 0.4 m. The first two steps get 0.2 m each.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q4. In multi-session SLAM, what does the anchor node of a session represent?</p><div class="opts"><button type="button" class="opt">The transformation from that session's own coordinate frame to the common global frame</button><button type="button" class="opt">The first loop closure of the session</button><button type="button" class="opt">A prior that fixes every pose of the session</button><button type="button" class="opt">The position of the base station</button></div><p class="exp" hidden>Each session keeps its own frame. The anchor places that frame in the global one, and it is constrained only by loop closures between sessions.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>LiDAR SLAM = odometry (fast) + loop closure detection, pose-graph optimization, and map update (slower).</li>
+<li>A place-recognition candidate becomes a constraint only after fine registration from a good initial guess and verification.</li>
+<li>PGO distributes the loop-closure correction over the trajectory in proportion to edge covariances. Sparsity, sparse node placement, and submaps keep it real-time.</li>
+<li>The map must be updated after optimization: rebuilt, deformed, or attached to poses so that it follows them.</li>
+<li>Multi-session and multi-robot SLAM add anchor nodes and inter-session loop closures. Robustness, fusion, uncertainty, and deployment remain open.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §8.4 "LiDAR SLAM" and §8.5 "Further Readings &amp; Recent Trends", pp. 240–249; Figures 8.7–8.12.</li>
+<li>The one-dimensional loop is weighted linear least squares, as in Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (graph-based SLAM).</li>
+<li>Kim, Kaess, Fletcher, Leonard, Bachrach, Roy, Teller, <em>Multiple relative pose graphs for robust cooperative mapping</em>, 2010 (the anchor-node formulation used in the note).</li>
+</ol></div>
+<p class="next"></p>
+</section>

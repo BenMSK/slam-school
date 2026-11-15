@@ -1,0 +1,124 @@
+<section class="day" data-day="73" id="d73" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 13 · Day 1</span>
+  <h2>How a LiDAR measures the world</h2>
+  <p class="lead">After today you can explain how a LiDAR turns the travel time of a laser pulse into a 3D point, compare the main sensor types, and predict how point spacing changes with range and how sensor motion bends a scan.</p>
+  <p class="meta">About 60 min · Read Ch 8 intro and §8.1, pp. 224–227 (4 pages) · Needs Week 8 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: Chapter 8 intro and §8.1, pp. 224–227</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The time-of-flight principle, and what external light does to it (p. 225).</li>
+<li>The three beam patterns of Figure 8.1, and which part of each sensor moves (p. 225).</li>
+<li>In Figure 8.2, how the density of points changes with distance from the sensor (p. 226).</li>
+<li>What a sensor can report besides range: intensity, and for FMCW sensors, velocity (pp. 226–227).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A LiDAR is a laser with a stopwatch. It measures how long a pulse takes to come back, converts that to a distance, and pairs the distance with the direction the beam was pointing. The result is a <strong>point cloud</strong>: accurate in range, sparse and uneven in coverage, and collected over a tenth of a second instead of at one instant. Each of those three properties shapes an algorithm later this week.</p></div>
+
+<h3>1. Range from the travel time of light</h3>
+<p><strong>LiDAR</strong> (light detection and ranging) sends out laser pulses and times their reflections. The basic principle is <strong>time of flight (TOF)</strong>: the pulse travels to a surface and back, so a delay \(\Delta t\) between emission and detection means the surface is at distance</p>
+\[ d = \frac{c\,\Delta t}{2}, \qquad c \approx 3\times 10^{8}\ \text{m/s}. \]
+<p>The factor 2 is the round trip. <span class="src">§8.1 · p. 225</span></p>
+<figure class="fig"><svg viewBox="0 0 600 190" role="img" aria-label="A LiDAR on the left sends a pulse to a wall 10 metres away and receives the echo. A time axis below shows the emitted pulse at time zero and the received pulse 66.7 nanoseconds later.">
+  <defs><marker id="w13ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="20" y="28" width="112" height="62" rx="10" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="76" y="55" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">LiDAR</text>
+  <text x="76" y="74" text-anchor="middle" font-size="11" fill="var(--muted)">laser, detector</text>
+  <rect x="520" y="14" width="12" height="92" fill="var(--line2)"/>
+  <text x="562" y="64" text-anchor="middle" font-size="12" fill="var(--ink)">wall</text>
+  <line x1="134" y1="46" x2="516" y2="46" stroke="var(--c3)" stroke-width="2" marker-end="url(#w13ar1)"/>
+  <text x="326" y="38" text-anchor="middle" font-size="12" fill="var(--ink)">pulse out</text>
+  <line x1="518" y1="72" x2="136" y2="72" stroke="var(--c5)" stroke-width="2" marker-end="url(#w13ar1)"/>
+  <text x="326" y="90" text-anchor="middle" font-size="12" fill="var(--ink)">echo back</text>
+  <text x="326" y="114" text-anchor="middle" font-size="12" fill="var(--muted)">d = 10 m each way</text>
+  <line x1="50" y1="162" x2="556" y2="162" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w13ar1)"/>
+  <path d="M90 162 L100 136 L110 162" fill="var(--c3-soft)" stroke="var(--c3)" stroke-width="2"/>
+  <path d="M430 162 L440 144 L450 162" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="2"/>
+  <text x="100" y="180" text-anchor="middle" font-size="12" fill="var(--ink)">t = 0</text>
+  <text x="440" y="180" text-anchor="middle" font-size="12" fill="var(--ink)">Δt = 2d / c = 66.7 ns</text>
+  <text x="566" y="166" font-size="11" fill="var(--muted)">time</text>
+</svg><figcaption>Time of flight. The echo is weaker than the pulse, which is why strong sunlight lowers the signal-to-noise ratio.</figcaption></figure>
+
+<div class="box note"><h4>Filling the gap: how good must the stopwatch be?</h4>
+<p>Put numbers in. A wall at \(d = 10\) m gives \(\Delta t = 2 \times 10 / (3\times10^{8}) = 6.67\times10^{-8}\) s, or 66.7 nanoseconds. Now ask what timing error \(\delta t\) corresponds to a range error of 1 cm:</p>
+\[ \delta t = \frac{2\,\delta d}{c} = \frac{2 \times 0.01}{3\times 10^{8}} \approx 6.7\times 10^{-11}\ \text{s} = 67\ \text{picoseconds}. \]
+<p>So centimetre accuracy needs timing at the level of tens of picoseconds. Two consequences follow. The range error is set by the clock and the pulse shape, so it stays roughly the same size whether the wall is 5 m or 50 m away. And anything that makes the echo harder to time, such as sunlight raising the background level, directly costs accuracy. The book states the second point as a lower signal-to-noise ratio. <span class="src">§8.1 · p. 225</span></p></div>
+
+<p>TOF is not the only principle. Two continuous-wave schemes borrowed from radar are also used: <strong>AMCW</strong> (amplitude-modulated continuous wave) and <strong>FMCW</strong> (frequency-modulated continuous wave). An FMCW LiDAR sweeps the frequency of its light and can read the relative velocity of the surface from the frequency shift of the return, which helps in scenes with moving objects, at a higher cost and complexity. <span class="src">§8.1 · pp. 225–227</span> Next week's radar chapter works through FMCW in detail.</p>
+
+<h3>2. Sensor types and their beam patterns</h3>
+<p>One laser beam measures one direction. To cover a scene the beam must be steered, and sensors are classified by how they do it. <span class="src">§8.1 · pp. 225–226</span></p>
+<div class="tbl"><table>
+  <tr><th>Type</th><th>How the beam is steered</th><th>What you get</th><th>Trade-off</th></tr>
+  <tr><td>2D mechanical</td><td>A rotating mirror sweeps one beam; an encoder disk reads the mirror angle (Figure 8.1a)</td><td>One ring of (angle, range) pairs: a slice of the world in a single plane</td><td>Sees only that plane</td></tr>
+  <tr><td>3D mechanical, multi-beam</td><td>Several emitters at different elevation angles sit on one head that spins through 360° (Figure 8.1b)</td><td>One ring per emitter, all around the sensor</td><td>Mechanical wear and lower data rates</td></tr>
+  <tr><td>Scanning solid-state</td><td>MEMS mirrors or optical phased arrays, with little or no mechanical rotation</td><td>A point cloud without a spinning head</td><td>Fewer moving parts to wear out, so longer life</td></tr>
+  <tr><td>Risley prism</td><td>Prisms steer the beam quickly with little physical movement, tracing a spiral inside the lens window (Figure 8.1c)</td><td>A cloud that gets denser the longer the sensor looks</td><td>Compact, but a limited field of view</td></tr>
+  <tr><td>Flash</td><td>No scanning: the scene is lit at once and an array of detectors times the return</td><td>Ranges on a pixel grid, and ambient channels that resemble camera images (p. 227)</td><td>No moving parts; power, weight, and cost differ from scanning designs</td></tr>
+</table></div>
+<p>The 3D multi-beam design came out of the DARPA Grand Challenges of the 2000s (the Velodyne HDL-64E), and sensors have since become much smaller and cheaper. <span class="src">§8.1 · p. 226</span> Whatever the mechanism, every sensor returns a set of individual range measurements, each with an <strong>intensity</strong> (also called remission): how much of the beam came back. <span class="src">§8.1 · p. 226</span></p>
+
+<h3>3. From ranges and angles to a point cloud</h3>
+<p>A measurement is a range \(r\) along a known direction. In 2D the direction is one angle \(\alpha\) and the point is \((r\cos\alpha,\ r\sin\alpha)\). In 3D the direction has an azimuth \(\alpha\) (around the vertical axis) and an elevation \(\epsilon\) (above the horizontal plane), and the point in the sensor frame is</p>
+\[ \mathbf{p} = r \begin{bmatrix} \cos\epsilon\,\cos\alpha \\ \cos\epsilon\,\sin\alpha \\ \sin\epsilon \end{bmatrix}. \]
+<p>Collect these for one full sweep and you have a point cloud \(\mathsf{P} = \{\mathbf{p}_i \in \R^3\}\), the object every algorithm in this chapter works on. This is the conversion you met in <a href="#d43">Week 8 · Day 1</a>.</p>
+<p>Try it: a 2D LiDAR sweeps a room. Change the number of beams and the range noise, and compare the near wall with the far one. Leave the speed at 0 for now.</p>
+<div class="viz" data-viz="w13_scan"></div>
+<p class="cap">Notice that with 120 beams the gap between neighbouring beams is 7.7 cm at the nearest wall point, 1.5 m away, and 37.6 cm at the farthest corner, 7.2 m away. The lower plot is what the sensor really outputs: one range per angle. Corners of the room show up as kinks, and the edge of the block as jumps.</p>
+
+<div class="box note"><h4>Filling the gap: why far surfaces are sparse</h4>
+<p>Neighbouring beams differ in direction by a fixed angular step \(\Delta\theta\). Two rays that leave the same point with an angle \(\Delta\theta\) between them are an arc length</p>
+\[ s \approx r\,\Delta\theta \qquad (\Delta\theta \text{ in radians}) \]
+<p>apart after travelling a distance \(r\). The gap grows in proportion to range. With \(\Delta\theta = 0.2^\circ = 0.00349\) rad, points are 1.7 cm apart at 5 m and 17 cm apart at 50 m.</p>
+<figure class="fig"><svg viewBox="0 0 600 190" role="img" aria-label="Two neighbouring beams leave a sensor with a small angle between them. On a surface at range r they are a distance s apart; on a surface three times farther away they are three s apart.">
+  <circle cx="40" cy="100" r="7" fill="var(--c5)"/>
+  <line x1="40" y1="100" x2="480" y2="62" stroke="var(--c2)" stroke-width="1.5"/>
+  <line x1="40" y1="100" x2="480" y2="138" stroke="var(--c2)" stroke-width="1.5"/>
+  <line x1="187" y1="62" x2="187" y2="138" stroke="var(--line2)" stroke-width="3"/>
+  <line x1="480" y1="34" x2="480" y2="166" stroke="var(--line2)" stroke-width="3"/>
+  <circle cx="187" cy="87.3" r="4" fill="var(--c3)"/><circle cx="187" cy="112.7" r="4" fill="var(--c3)"/>
+  <circle cx="480" cy="62" r="4" fill="var(--c3)"/><circle cx="480" cy="138" r="4" fill="var(--c3)"/>
+  <text x="40" y="128" text-anchor="middle" font-size="12" fill="var(--ink)">sensor</text>
+  <text x="96" y="80" text-anchor="middle" font-size="12" fill="var(--ink)">angle Δθ</text>
+  <text x="187" y="52" text-anchor="middle" font-size="12" fill="var(--ink)">range r</text>
+  <text x="196" y="104" font-size="12" fill="var(--ink)">gap s</text>
+  <text x="480" y="24" text-anchor="middle" font-size="12" fill="var(--ink)">range 3r</text>
+  <text x="490" y="104" font-size="12" fill="var(--ink)">gap 3s</text>
+</svg><figcaption>The same angular step covers three times the distance on a surface three times as far.</figcaption></figure>
+<p>In 3D the same happens in both directions. Figure 8.2 shows a 64-beam sensor with a 104° vertical field of view. If its beams were evenly spaced they would be \(104/63 \approx 1.65^\circ\) apart, so at 20 m neighbouring rings would be \(20 \times 1.65 \times \pi/180 \approx 0.58\) m apart. Because both gaps scale with \(r\), the number of points per square metre on a surface facing the sensor falls like \(1/r^2\). That is the pattern in Figure 8.2: dense near the device, sparse far away. <span class="src">§8.1 · p. 226</span></p></div>
+
+<div class="box kid"><h4>In plain words</h4><p>Imagine spinning in a dark room with a laser pointer and a tape measure that reads instantly. Every few degrees you write down how far the dot is. Plot those distances around a centre and you have drawn the room. Nearby walls get many dots, far walls only a few, because the same turn of your wrist moves the dot farther on a distant wall.</p></div>
+
+<h3>4. A scan is not a snapshot</h3>
+<p>One full sweep is called a <strong>scan</strong>, and scans carry time stamps so they can be processed in order. <span class="src">§8.2 · p. 227</span> But the sweep itself takes time. At a scan rate of 10 Hz it lasts 0.1 s. <span class="src">§8.2.2.1 · p. 231</span> A camera with a global shutter freezes the scene; a spinning LiDAR does not. A car at 15 m/s travels 1.5 m while its LiDAR turns once, so the first and last points of the same scan were measured from places 1.5 m apart. If the software treats them as measured from one place, straight walls come out bent and closed rooms do not close. This is <strong>motion distortion</strong>.</p>
+<p>Go back to the widget and raise the sensor speed. The beams still hit the true walls, but the dots are drawn as if the sensor had stayed at its starting position. At 5 m/s the sensor moves 50 cm during the sweep, and the last points of the scan are drawn half a metre short of the wall they hit. Day 3 shows how odometry systems undo this.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"A LiDAR scan is like a depth image: dense and regular."</strong> The points are spread by angle, so they are dense near the sensor and sparse far away, and a multi-beam sensor leaves wide gaps between rings.</li>
+<li><strong>"Range accuracy gets worse in proportion to distance."</strong> The timing error does not depend on distance. What degrades with distance is the spacing between points, and weak echoes from far surfaces.</li>
+<li><strong>"All points of a scan share one time stamp."</strong> They are spread over the sweep period. Ignoring that is harmless for a parked sensor and a large error for a fast one.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A pulse returns 200 ns after it was emitted. How far away is the surface?</p><div class="opts"><button type="button" class="opt">60 m</button><button type="button" class="opt">30 m</button><button type="button" class="opt">15 m</button><button type="button" class="opt">6 m</button></div><p class="exp" hidden>d = cΔt/2 = (3×10⁸ × 200×10⁻⁹)/2 = 30 m. The pulse travelled 60 m in total, there and back.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q2. A sensor has an angular step of 0.4°. About how far apart are neighbouring points on a wall 30 m away that faces the sensor?</p><div class="opts"><button type="button" class="opt">2 cm</button><button type="button" class="opt">12 cm</button><button type="button" class="opt">21 cm</button><button type="button" class="opt">84 cm</button></div><p class="exp" hidden>s ≈ rΔθ = 30 × 0.4 × π/180 = 0.209 m, about 21 cm.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. Why can a Risley-prism LiDAR that sits still produce a denser cloud than its instantaneous beam count suggests?</p><div class="opts"><button type="button" class="opt">Its spiral pattern keeps filling in the window as time passes</button><button type="button" class="opt">It measures velocity as well as range</button><button type="button" class="opt">It rotates through 360° faster than a mechanical sensor</button><button type="button" class="opt">It uses a higher modulation frequency</button></div><p class="exp" hidden>The beam traces a spiral inside the lens window, so accumulating measurements over time covers more directions. The cost is a limited field of view.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q4. A LiDAR spins at 10 Hz on a vehicle driving straight at 20 m/s. How far does the sensor move between the first and last point of one scan?</p><div class="opts"><button type="button" class="opt">2 cm</button><button type="button" class="opt">20 cm</button><button type="button" class="opt">20 m</button><button type="button" class="opt">2 m</button></div><p class="exp" hidden>One sweep takes 0.1 s, and 20 m/s × 0.1 s = 2 m. Points at the end of the scan are measured from a position 2 m ahead of the first ones.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Time of flight gives range as d = cΔt/2. Centimetre accuracy needs timing to tens of picoseconds, and the range error does not grow with distance.</li>
+<li>Sensors differ in how they steer the beam: a rotating mirror (2D), a spinning multi-beam head (3D), MEMS or phased arrays, or Risley prisms. All return ranges with intensity.</li>
+<li>A range plus the beam angles is a point. Neighbouring points are about rΔθ apart, so density falls with distance.</li>
+<li>A scan is collected over about 0.1 s. If the sensor moves during that time, the scan is distorted unless the motion is compensated.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 8 introduction and §8.1 "LiDAR Sensing Preliminaries and Categorization", pp. 224–227; the definition of a scan in §8.2, p. 227; the scan period in §8.2.2.1, p. 231.</li>
+<li>Siegwart, Nourbakhsh, Scaramuzza, <em>Introduction to Autonomous Mobile Robots</em>, 2nd edition, 2011 (time-of-flight ranging, used in the timing arithmetic).</li>
+<li>The spacing rule s ≈ rΔθ is the arc-length formula; the 1.65° ring spacing assumes evenly spaced beams and is an illustration, not a specification of the sensor in Figure 8.2.</li>
+</ol></div>
+<p class="next"></p>
+</section>

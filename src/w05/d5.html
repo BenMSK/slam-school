@@ -1,0 +1,143 @@
+<section class="day" data-day="29" id="d29" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 5 · Day 5</span>
+  <h2>Splines and Gaussian processes on Lie groups</h2>
+  <p class="lead">After today you can rewrite a spline in cumulative form, interpolate between two poses on SE(d) with Exp and Log, and write the random-walk motion-prior factor between two poses together with its linearization.</p>
+  <p class="meta">About 60 min · Read §2.2.4 and §2.3, pp. 69–74 (6 pages) · Needs Week 4 Day 5 and Week 5 Day 4</p>
+</header>
+
+<div class="box read"><h4>Read first: §2.2.4 and §2.3, pp. 69–74</h4>
+<p>This is the longest reading of the week, and the densest. While you read, look for:</p>
+<ul>
+<li>First re-read the top of p. 62 (§2.1.5.4, equations (2.33)–(2.35)): the left Jacobian \(\mathbf{J}\) defined there is used on p. 71.</li>
+<li>Which differences appear in the cumulative form, equation (2.54) (p. 69).</li>
+<li>In the lower half of Figure 2.5, how many cumulative basis functions are neither 0 nor 1 at a given time (p. 70).</li>
+<li>Footnote 3 on p. 71: why the perturbation is on the left this time.</li>
+<li>What the local variable in Figure 2.7 and equation (2.68) is (pp. 72–73).</li>
+<li>The last sentence of §2.2.4: the one difference between the spline and GP approaches (p. 74).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Poses cannot be added or scaled, so a weighted sum of poses means nothing on SE(d). The <em>difference</em> between two neighbouring poses, however, can be turned into an ordinary vector with Log, scaled or given a Gaussian prior there, and turned back with Exp. Splines reach this through cumulative basis functions. Gaussian processes reach it through a local variable defined between control points. For the simplest case of each, the result is the same interpolation formula.</p></div>
+
+<h3>1. Why the sum fails on a group</h3>
+<p>Everything this week has used \(\mathbf{p}(t) = \sum_k \psi_k(t)\,\mathbf{p}_k\) with vectors \(\mathbf{p}_k\). Try it with rotations. The entrywise average of the planar rotations by 0° and by 90° is</p>
+\[ \tfrac12\begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 1 \end{bmatrix} + \tfrac12\begin{bmatrix} 0 &amp; -1 \\ 1 &amp; 0 \end{bmatrix} = \begin{bmatrix} 0.5 &amp; -0.5 \\ 0.5 &amp; 0.5 \end{bmatrix}, \]
+<p>whose determinant is 0.5, not 1. It is not a rotation: it also shrinks. This is the point of <a href="#d19">Week 4 · Day 1</a>: \(\SO(d)\) and \(\SE(d)\) are not vector spaces. The sensible answer, a rotation by 45°, comes from taking the <em>relative</em> rotation (90°), halving its angle, and applying that to the first rotation. The rest of today generalizes this recipe. <span class="src">§2.2.4 · p. 69</span></p>
+
+<h3>2. The cumulative form of a spline</h3>
+<p>With the same scalar basis functions \(\psi_k(t)\) for every component, the spline is \(\mathbf{p}(t) = \sum_{k=1}^{K}\psi_k(t)\,\mathbf{p}_k\), equation (2.53). The \(\mathbf{p}_k\) are now called <strong>control points</strong>. The book rewrites the sum so that only the first control point and differences of neighbours appear: <span class="src">§2.2.4.1 · p. 69</span></p>
+\[ \mathbf{p}(t) = \psi^c_1(t)\,\mathbf{p}_1 + \sum_{k=2}^{K} \psi^c_k(t)\,(\mathbf{p}_k - \mathbf{p}_{k-1}), \qquad \psi^c_k(t) = \sum_{\ell=k}^{K}\psi_\ell(t) . \tag{2.54, 2.55} \]
+<p>The \(\psi^c_k\) are the <strong>cumulative basis functions</strong>.</p>
+<div class="box note"><h4>Filling the gap: deriving the cumulative form</h4>
+<p>Write each control point as the first one plus the steps that lead to it: \(\mathbf{p}_k = \mathbf{p}_1 + \sum_{j=2}^{k}(\mathbf{p}_j - \mathbf{p}_{j-1})\). Substitute into (2.53):</p>
+\[ \mathbf{p}(t) = \Big(\sum_{k=1}^{K}\psi_k\Big)\mathbf{p}_1 + \sum_{k=2}^{K}\psi_k \sum_{j=2}^{k}(\mathbf{p}_j - \mathbf{p}_{j-1}) . \]
+<p>In the double sum, the step \(\mathbf{p}_j - \mathbf{p}_{j-1}\) is multiplied by every \(\psi_k\) with \(k \ge j\). Collecting them gives \(\sum_{j=2}^{K}\big(\sum_{k=j}^{K}\psi_k\big)(\mathbf{p}_j - \mathbf{p}_{j-1})\), which is (2.54). The first bracket is \(\psi^c_1\), and it equals 1 wherever the basis functions sum to one.</p></div>
+<p>For a linear spline with knots \(T\) seconds apart, each \(\psi^c_k\) is a ramp: 0 before its segment, rising linearly from 0 to 1 across it, and 1 afterwards (equations (2.58)–(2.59), lower half of Figure 2.5). Write \(\alpha_k(t)\) for the fraction of the segment that has passed. On the segment that ends at control point \(k\), every earlier step has weight 1, every later step has weight 0, and one step is in transition: <span class="src">§2.2.4.1 · p. 70</span></p>
+\[ \mathbf{p}(t) = \mathbf{p}_{k-1} + \alpha_k(t)\,(\mathbf{p}_k - \mathbf{p}_{k-1}) . \tag{2.60} \]
+<p>Numbers: control points 2, 5, 4, and a time 30% of the way from the second to the third. The cumulative weights are \(1, 1, 0.3\), so \(p = 2 + 1\cdot(5-2) + 0.3\cdot(4-5) = 4.7\), which is the linear interpolation \(5 + 0.3\cdot(4-5)\).</p>
+<div class="box note"><h4>Reading note: an index shift on p. 70</h4>
+<p>Equations (2.56)–(2.57) place control point \(k\) at time \((k-1)T\) (check: \(\psi_1 = 1\) at \(t = 0\)). Equations (2.58)–(2.62) are written as if control point \(k\) sat at time \(kT\): in (2.60) the curve reaches \(\mathbf{p}_k\) as \(t \to kT\). The two halves of the page are one index apart. Nothing later depends on it. What matters is the pattern above: on each segment, \(\alpha\) runs from 0 to 1 while the curve goes from one control point to the next.</p></div>
+
+<h3>3. From the vector space to the group</h3>
+<p>The cumulative form uses only three operations, and each has a group counterpart from <a href="#d20">Week 4 · Day 2</a>:</p>
+<div class="tbl"><table>
+<tr><th>Vector space</th><th>Lie group</th></tr>
+<tr><td>Difference \(\mathbf{p}_k - \mathbf{p}_{k-1}\)</td><td>\(\Log\big(\mathbf{T}_k\mathbf{T}_{k-1}^{-1}\big)\), a vector</td></tr>
+<tr><td>Scale the difference by \(\psi^c_k(t)\)</td><td>Scale that vector by \(\psi^c_k(t)\)</td></tr>
+<tr><td>Add the result to \(\mathbf{p}_{k-1}\)</td><td>Apply \(\Exp(\cdot)\) and multiply onto \(\mathbf{T}_{k-1}\)</td></tr>
+</table></div>
+<p>For the linear spline this turns (2.60) into <span class="src">§2.2.4.1 · p. 71</span></p>
+\[ \mathbf{T}(t) = \Exp\!\Big( \alpha_k(t)\,\Log\big(\mathbf{T}_k\mathbf{T}_{k-1}^{-1}\big) \Big)\,\mathbf{T}_{k-1} = \big(\mathbf{T}_k\mathbf{T}_{k-1}^{-1}\big)^{\alpha_k(t)}\,\mathbf{T}_{k-1} . \tag{2.61, 2.62} \]
+<p>The power in the second form is shorthand for the first: a matrix raised to a real power means Exp of the scaled Log. Check the ends. At \(\alpha = 0\), \(\Exp(\mathbf{0}) = \mathbf{I}\) and \(\mathbf{T}(t) = \mathbf{T}_{k-1}\). At \(\alpha = 1\), \(\mathbf{T}(t) = \mathbf{T}_k\mathbf{T}_{k-1}^{-1}\mathbf{T}_{k-1} = \mathbf{T}_k\). In between, the result is always a valid pose, because Exp always lands on the group.</p>
+<figure class="fig"><svg viewBox="0 0 600 140" role="img" aria-label="Four boxes in a row joined by arrows. First box, on the group: the relative pose T k times T k minus one inverse. Arrow labelled Log to the second box, a plain vector xi in the Lie algebra. Arrow labelled times alpha to the third box, the scaled vector alpha xi. Arrow labelled Exp to the fourth box, back on the group: T of t equals Exp of alpha xi times T k minus one.">
+  <defs><marker id="w05ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="150" y="14" width="300" height="114" rx="12" fill="var(--soft)"/>
+  <text x="300" y="34" text-anchor="middle" font-size="12" fill="var(--muted)">Lie algebra: scale and add freely</text>
+  <text x="60" y="34" text-anchor="middle" font-size="12" fill="var(--muted)">group</text>
+  <text x="540" y="34" text-anchor="middle" font-size="12" fill="var(--muted)">group</text>
+  <rect x="8" y="52" width="104" height="60" rx="10" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="60" y="78" text-anchor="middle" font-size="13" fill="var(--ink)">Tₖ Tₖ₋₁⁻¹</text>
+  <text x="60" y="97" text-anchor="middle" font-size="11" fill="var(--muted)">relative pose</text>
+  <rect x="168" y="52" width="104" height="60" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="220" y="78" text-anchor="middle" font-size="13" fill="var(--ink)">ξ</text>
+  <text x="220" y="97" text-anchor="middle" font-size="11" fill="var(--muted)">plain vector</text>
+  <rect x="328" y="52" width="104" height="60" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="380" y="78" text-anchor="middle" font-size="13" fill="var(--ink)">α ξ</text>
+  <text x="380" y="97" text-anchor="middle" font-size="11" fill="var(--muted)">scaled vector</text>
+  <rect x="488" y="52" width="104" height="60" rx="10" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="540" y="78" text-anchor="middle" font-size="13" fill="var(--ink)">T(t)</text>
+  <text x="540" y="97" text-anchor="middle" font-size="11" fill="var(--muted)">Exp(αξ) Tₖ₋₁</text>
+  <line x1="114" y1="84" x2="164" y2="84" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w05ar1)"/>
+  <line x1="274" y1="84" x2="324" y2="84" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w05ar1)"/>
+  <line x1="434" y1="84" x2="484" y2="84" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w05ar1)"/>
+  <text x="139" y="74" text-anchor="middle" font-size="12" fill="var(--ink)">Log</text>
+  <text x="299" y="74" text-anchor="middle" font-size="12" fill="var(--ink)">× α</text>
+  <text x="459" y="74" text-anchor="middle" font-size="12" fill="var(--ink)">Exp</text>
+</svg><figcaption>Interpolating between two poses: leave the group with Log, do the vector arithmetic in the Lie algebra, return with Exp.</figcaption></figure>
+<p>Try it: drag the far pose, turn its heading, and slide α from 0 to 1.</p>
+<div class="viz" data-viz="w05_se2"></div>
+<p class="cap">Notice that the interpolated pose follows a circular arc while its heading turns at a steady rate. At the starting position, ξ = (15.01, −10.67, 2.09), ordered translation then rotation as in the book, and at α = 0.5 the pose is 2.45 units from the midpoint of the straight line. The first two numbers of ξ are not the displacement between the two positions. The last tile repeats section 1: blending the two rotation matrices entrywise gives determinant 0.25 at α = 0.5.</p>
+<p>Two remarks. First, the book perturbs on the left here, where §2.1.3 perturbed on the right. Footnote 3 gives the reason: when the unknown pose maps world coordinates to sensor coordinates, splines are usually applied in the sensor frame, and the perturbation is placed there too. <span class="src">§2.2.4.1 · p. 71</span> Second, with a higher-order spline more than one step is in transition at a time (three for a cubic), so \(\mathbf{T}(t)\) is a product of several such Exp factors. The active set is still small.</p>
+
+<h3>4. Linearizing through the interpolation</h3>
+<p>The control poses are the estimation variables. Gauss-Newton perturbs each one, \(\mathbf{T}_k = \Exp(\boldsymbol{\xi}_k)\,\mathbf{T}_k^0\), and needs to know how the interpolated pose moves in response: \(\mathbf{T}(t) = \Exp(\boldsymbol{\xi}(t))\,\mathbf{T}^0(t)\), equation (2.63). The book quotes the first-order answer: <span class="src">§2.2.4.1 · p. 71</span></p>
+\[ \boldsymbol{\xi}(t) \approx \big(\mathbf{I} - \mathbf{A}(\alpha_k)\big)\,\boldsymbol{\xi}_{k-1} + \mathbf{A}(\alpha_k)\,\boldsymbol{\xi}_k, \qquad \mathbf{A}(\alpha) = \alpha\,\mathbf{J}\big(\alpha\,\boldsymbol{\xi}_{\mathrm{rel}}\big)\,\mathbf{J}\big(\boldsymbol{\xi}_{\mathrm{rel}}\big)^{-1}, \tag{2.64, 2.65} \]
+<p>where \(\boldsymbol{\xi}_{\mathrm{rel}} = \Log(\mathbf{T}_k^0\mathbf{T}_{k-1}^{0\,-1})\) and \(\mathbf{J}\) is the left Jacobian of \(\SE(d)\) from <a href="#d23">Week 4 · Day 5</a>. (The book writes the group element itself as the argument of \(\mathbf{J}\); it means the Jacobian evaluated at that element's Log.)</p>
+<div class="box note"><h4>Filling the gap: three checks that make (2.65) believable</h4>
+<ul>
+<li>\(\alpha = 0\): \(\mathbf{A} = \mathbf{0}\), so \(\boldsymbol{\xi}(t) = \boldsymbol{\xi}_{k-1}\). At the start of the segment the interpolated pose <em>is</em> control pose \(k-1\).</li>
+<li>\(\alpha = 1\): \(\mathbf{A} = \mathbf{J}\mathbf{J}^{-1} = \mathbf{I}\), so \(\boldsymbol{\xi}(t) = \boldsymbol{\xi}_k\).</li>
+<li>Control poses close together: \(\boldsymbol{\xi}_{\mathrm{rel}}\) is small, \(\mathbf{J} \approx \mathbf{I}\), and \(\mathbf{A} \approx \alpha\mathbf{I}\). Then \(\boldsymbol{\xi}(t) \approx (1-\alpha)\boldsymbol{\xi}_{k-1} + \alpha\,\boldsymbol{\xi}_k\): the perturbation is interpolated the same way as the pose. The Jacobians correct this when the two control poses are far apart.</li>
+</ul></div>
+<p>Now take any measurement at time \(t\) whose linearized error is \(\mathbf{e}_i(t) \approx \mathbf{z}_i - \mathbf{h}_i(\cdot) - \mathbf{H}_i\,\boldsymbol{\xi}(t)\), equation (2.66), and substitute (2.64):</p>
+\[ \mathbf{e}_i(t) \approx \mathbf{z}_i - \mathbf{h}_i\big(\mathbf{T}^0(t)\,\tilde{\boldsymbol{\ell}}_i\big) - \mathbf{H}_i\big(\mathbf{I} - \mathbf{A}(\alpha_k)\big)\,\boldsymbol{\xi}_{k-1} - \mathbf{H}_i\,\mathbf{A}(\alpha_k)\,\boldsymbol{\xi}_k . \tag{2.67} \]
+<p>This is the chain rule of <a href="#d25">Day 1</a> again. There a measurement's Jacobian was \(\mathbf{H}_i\) times a basis-function value; here it is \(\mathbf{H}_i\) times \(\mathbf{I} - \mathbf{A}\) for one control pose and \(\mathbf{H}_i\mathbf{A}\) for the other. Each measurement touches two control poses. <span class="src">§2.2.4.1 · p. 72</span></p>
+
+<h3>5. Gaussian processes on Lie groups</h3>
+<p>The GP needs a vector for its SDE to act on. The book defines one between each pair of control poses, the <strong>local variable</strong> <span class="src">§2.2.4.2 · pp. 72–73</span></p>
+\[ \boldsymbol{\xi}_k(t) = \Log\big(\mathbf{T}(t)\,\mathbf{T}_k^{-1}\big), \qquad t_k \le t \le t_{k+1} . \]
+<p>It is zero at \(t_k\) and equals \(\Log(\mathbf{T}_{k+1}\mathbf{T}_k^{-1})\) at \(t_{k+1}\) (Figure 2.7). The control poses \(\mathbf{T}_k\) are the <strong>global variables</strong> and remain the things we estimate. Put the simplest SDE on the local variable, a random walk:</p>
+\[ \dot{\boldsymbol{\xi}}_k(t) = \mathbf{w}(t), \quad \mathbf{w}(t) \sim \mathcal{GP}\big(\mathbf{0}, \boldsymbol{\mathcal{Q}}\,\delta(t-t')\big) \qquad\Longrightarrow\qquad \boldsymbol{\xi}_k(t) \sim \mathcal{GP}\big(\mathbf{0}, \min(t,t')\,\boldsymbol{\mathcal{Q}}\big) , \tag{2.68, 2.70} \]
+<p>with time counted from \(t_k\). This is <a href="#d27">Day 3</a>'s result with \(\boldsymbol{\Phi} = \mathbf{I}\): over a segment of length \(T\) the local variable picks up covariance \(T\boldsymbol{\mathcal{Q}}\). The motion-prior factors are then, in terms of the control poses,</p>
+\[ \mathbf{e}_1 = \Log\big(\mathbf{T}_1\check{\mathbf{T}}_1^{-1}\big), \qquad \mathbf{e}_k = \Log\big(\mathbf{T}_k\mathbf{T}_{k-1}^{-1}\big) \ \ (k \gt 1), \tag{2.73} \]
+<p>the first weighted by the initial covariance \(\mathcal{K}(t_1,t_1)\) around a prior pose \(\check{\mathbf{T}}_1\), the others by \(T\boldsymbol{\mathcal{Q}}\). In words: neighbouring control poses should be close, and \(T\boldsymbol{\mathcal{Q}}\) says how close. It is the same chain as on Day 3 (Figure 2.6), with \(\Log(\mathbf{T}_k\mathbf{T}_{k-1}^{-1})\) in place of \(\mathbf{x}_k - \mathbf{x}_{k-1}\). Querying between control poses by GP interpolation gives equation (2.74), which is (2.62) again: here the linear interpolation is a consequence of choosing a random walk, not a separate choice. <span class="src">§2.2.4.2 · p. 73</span></p>
+<div class="box note"><h4>Filling the gap: linearizing the prior factor, equation (2.75)</h4>
+<p>Write \(\mathbf{T}_{\mathrm{rel}} = \mathbf{T}_k^0\mathbf{T}_{k-1}^{0\,-1}\). Perturbing both poses on the left and using \((\Exp(\boldsymbol{\xi})\mathbf{T})^{-1} = \mathbf{T}^{-1}\Exp(-\boldsymbol{\xi})\):</p>
+\[ \mathbf{e}_k = \Log\big( \Exp(\boldsymbol{\xi}_k)\,\mathbf{T}_{\mathrm{rel}}\,\Exp(-\boldsymbol{\xi}_{k-1}) \big) . \]
+<p><strong>Step 1.</strong> Move the right-hand exponential to the left with the adjoint identity \(\mathbf{T}\,\Exp(\boldsymbol{\xi}) = \Exp(\Ad(\mathbf{T})\,\boldsymbol{\xi})\,\mathbf{T}\) from Week 4 · Day 5: \(\mathbf{T}_{\mathrm{rel}}\Exp(-\boldsymbol{\xi}_{k-1}) = \Exp(-\Ad(\mathbf{T}_{\mathrm{rel}})\boldsymbol{\xi}_{k-1})\,\mathbf{T}_{\mathrm{rel}}\).</p>
+<p><strong>Step 2.</strong> Two small exponentials next to each other combine by adding their arguments, to first order: \(\mathbf{e}_k \approx \Log\big( \Exp(\boldsymbol{\xi}_k - \Ad(\mathbf{T}_{\mathrm{rel}})\boldsymbol{\xi}_{k-1})\,\mathbf{T}_{\mathrm{rel}} \big)\).</p>
+<p><strong>Step 3.</strong> A small left perturbation \(\boldsymbol{\epsilon}\) changes the Log by \(\mathbf{J}^{-1}\boldsymbol{\epsilon}\) (this is equation (2.34) on p. 62). When neighbouring control poses are close, \(\mathbf{J} \approx \mathbf{I}\), and</p>
+\[ \mathbf{e}_k \approx \Log(\mathbf{T}_{\mathrm{rel}}) + \boldsymbol{\xi}_k - \Ad(\mathbf{T}_{\mathrm{rel}})\,\boldsymbol{\xi}_{k-1} . \tag{2.75} \]
+<p>So the factor's Jacobian is \(\mathbf{I}\) with respect to \(\boldsymbol{\xi}_k\) and \(-\Ad(\mathbf{T}_{\mathrm{rel}})\) with respect to \(\boldsymbol{\xi}_{k-1}\). The printed (2.75) has no \(\mathbf{J}^{-1}\); reading it as the close-poses approximation is our interpretation.</p></div>
+<p>If measurements fall between control poses, they are handled exactly as for the linear spline, with (2.67), because both methods interpolate linearly between \(\SE(d)\) control poses. The book's summary of the difference: the GP approach adds motion-prior factors that regularize the problem, and the spline approach does not. A footnote adds that such prior terms can also be introduced for splines. <span class="src">§2.2.4.2 · p. 74</span></p>
+<div class="box tip"><h4>Where to read more (§2.3)</h4><p>The book points to Chirikjian for the theory of uncertainty on manifolds, including global treatments; to Boumal for optimization on manifolds; to Barfoot for estimation on Lie groups when the uncertainty is compact, and for the nonparametric continuous-time methods; and to the survey by Talbot et al. for continuous-time estimation, parametric and nonparametric. <span class="src">§2.3 · p. 74</span></p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The power in (2.62) is taken entry by entry."</strong> It is the group power: Log, scale by α, Exp.</li>
+<li><strong>"Interpolating position and angles separately is the same thing."</strong> On \(\SE(d)\) rotation and translation are coupled by Exp. The widget shows an arc where separate interpolation gives a straight line.</li>
+<li><strong>"The local variable is a new unknown."</strong> It is a device for writing the prior as a vector-space SDE. The estimation variables are still the control poses, plus derivatives if the chosen prior needs them.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. Two planar rotations are by 30° and by 90°. What is the group interpolation between them at α = 0.25?</p><div class="opts"><button type="button" class="opt">60°</button><button type="button" class="opt">45°</button><button type="button" class="opt">37.5°</button><button type="button" class="opt">75°</button></div><p class="exp" hidden>The relative rotation is 60°. A quarter of it is 15°, applied to the first: 30° + 15° = 45°.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A linear spline has control points p₁, p₂, p₃. At a time halfway between the second and the third, what are the cumulative weights on the steps (p₂ − p₁) and (p₃ − p₂)?</p><div class="opts"><button type="button" class="opt">1 and 0.5</button><button type="button" class="opt">0.5 and 0.5</button><button type="button" class="opt">0.5 and 0</button><button type="button" class="opt">0 and 0.5</button></div><p class="exp" hidden>The first step is complete (weight 1) and the second is half done (weight 0.5): p = p₁ + (p₂ − p₁) + 0.5 (p₃ − p₂).</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. In equation (2.64), what is the perturbation of the interpolated pose when α = 1?</p><div class="opts"><button type="button" class="opt">Zero</button><button type="button" class="opt">The perturbation of control pose k − 1</button><button type="button" class="opt">The average of the two control-pose perturbations</button><button type="button" class="opt">The perturbation of control pose k</button></div><p class="exp" hidden>A(1) = J J⁻¹ = I, so the weight on control pose k − 1 is zero and the weight on control pose k is the identity. At α = 1 the interpolated pose is control pose k.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. A random-walk prior on SE(d) has power spectral density 0.5 I and control poses every 0.1 s. What covariance weights the factor between consecutive control poses?</p><div class="opts"><button type="button" class="opt">0.5 I</button><button type="button" class="opt">5 I</button><button type="button" class="opt">0.05 I</button><button type="button" class="opt">0.005 I</button></div><p class="exp" hidden>The local variable accumulates covariance T Q over one segment: 0.1 × 0.5 I = 0.05 I, as in equation (2.71).</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. According to the book, what is the main difference between the linear-spline and random-walk-GP formulations on SE(d)?</p><div class="opts"><button type="button" class="opt">They interpolate between control poses differently</button><button type="button" class="opt">The GP adds motion-prior factors between control poses; the spline has none</button><button type="button" class="opt">Only the spline can use measurements between control poses</button><button type="button" class="opt">The GP needs no linearization</button></div><p class="exp" hidden>Both use the same linear interpolation and the same measurement linearization (2.67). The GP's motion-prior factors regularize the problem (p. 74).</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Cumulative form: \(\mathbf{p}(t) = \psi^c_1\mathbf{p}_1 + \sum_{k\ge2}\psi^c_k(\mathbf{p}_k - \mathbf{p}_{k-1})\) with \(\psi^c_k = \sum_{\ell\ge k}\psi_\ell\). Only differences of neighbours appear.</li>
+<li>On a group: \(\mathbf{T}(t) = \Exp\big(\alpha_k\Log(\mathbf{T}_k\mathbf{T}_{k-1}^{-1})\big)\mathbf{T}_{k-1}\), equations (2.61)–(2.62).</li>
+<li>Perturbations pass through the interpolation as \(\boldsymbol{\xi}(t) \approx (\mathbf{I} - \mathbf{A})\boldsymbol{\xi}_{k-1} + \mathbf{A}\boldsymbol{\xi}_k\), with \(\mathbf{A} \approx \alpha\mathbf{I}\) for nearby control poses.</li>
+<li>GP on a group: an SDE on the local variable \(\boldsymbol{\xi}_k(t) = \Log(\mathbf{T}(t)\mathbf{T}_k^{-1})\). The random walk gives factors \(\Log(\mathbf{T}_k\mathbf{T}_{k-1}^{-1})\) with covariance \(T\boldsymbol{\mathcal{Q}}\).</li>
+<li>Spline and GP share the interpolation. The GP adds the motion prior.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §2.2.4 "Spline and GPs on Lie Groups", pp. 69–74, equations (2.53)–(2.75), Figures 2.5–2.7; §2.3 "Further Readings &amp; Recent Trends", p. 74.</li>
+<li>The derivation of the cumulative form, the checks on (2.65), and the steps to (2.75) are worked out here from the book's equations and the adjoint identity of §2.1.5.</li>
+<li>The formula \(\mathbf{A}(\alpha) = \alpha\,\mathbf{J}(\alpha\boldsymbol{\xi})\,\mathbf{J}(\boldsymbol{\xi})^{-1}\) and the first-order effect of a left perturbation on the Log follow Barfoot, <em>State Estimation for Robotics</em>, 2017.</li>
+</ol></div>
+<p class="next"></p>
+</section>

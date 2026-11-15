@@ -1,0 +1,146 @@
+<section class="day" data-day="11" id="d11" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 2 · Day 5</span>
+  <h2>Levenberg-Marquardt and Powell's dogleg</h2>
+  <p class="lead">After today you can explain how Levenberg-Marquardt damps a Gauss-Newton step, run its accept-or-reject loop by hand, and describe how Powell's dogleg builds a step inside a trust region.</p>
+  <p class="meta">About 60 min · Read §1.4.3–1.4.4, pp. 34–35 (2 pages) · Needs Week 2 Day 4</p>
+</header>
+
+<div class="box read"><h4>Read first: §1.4.3 and §1.4.4, pp. 34–35</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>Equation (1.37) on p. 34 and the two limits the book names: \(\lambda=0\) and large \(\lambda\).</li>
+<li>What Marquardt changed in (1.38), and the one-sentence Bayesian reading of both versions (p. 34).</li>
+<li>The last paragraph of p. 34: what happens to \(\lambda\) when a step is rejected and when it is accepted.</li>
+<li>Figure 1.6 and the gain ratio (1.39) on p. 35.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>The Gauss-Newton model is only trustworthy close to the current estimate. A <strong>trust-region method</strong> limits the step to the region where the model can be believed, checks afterwards whether the cost really went down, and adjusts the region. Levenberg-Marquardt does this with a damping number \(\lambda\). Powell's dogleg does it with an explicit radius.</p></div>
+
+<h3>1. Damping the normal equations</h3>
+<p>Levenberg's change to Gauss-Newton is one term: add a non-negative constant \(\lambda\) to the diagonal of the normal equations, equation (1.37). <span class="src">§1.4.3 · p. 34</span></p>
+\[ \bigl(\mathbf{A}\T\mathbf{A}+\lambda\mathbf{I}\bigr)\,\boldsymbol{\delta}^{\text{lm}} = \mathbf{A}\T\mathbf{b}. \tag{1.37} \]
+<div class="box note"><h4>Filling the gap: what problem does (1.37) solve?</h4>
+<p>It is the normal equation of the linearized cost plus a penalty on the length of the step:</p>
+\[ \boldsymbol{\delta}^{\text{lm}} = \argmin_{\boldsymbol{\delta}}\; \norm{\mathbf{A}\boldsymbol{\delta}-\mathbf{b}}_2^2 + \lambda\,\norm{\boldsymbol{\delta}}_2^2 . \]
+<p>Check: the gradient of this expression is \(2\mathbf{A}\T\mathbf{A}\boldsymbol{\delta}-2\mathbf{A}\T\mathbf{b}+2\lambda\boldsymbol{\delta}\), and setting it to zero gives (1.37). So \(\lambda\) is the price of moving. A larger \(\lambda\) gives a shorter step.</p>
+<p>This is how LM is a trust-region method. Minimizing the model subject to a hard limit \(\norm{\boldsymbol{\delta}}\le\Delta\) leads, whenever the limit is active, to the same equation (1.37), with \(\lambda\) playing the role of the Lagrange multiplier of the constraint. Each \(\lambda\) corresponds to some radius \(\Delta\), and raising \(\lambda\) shrinks it. LM steers the radius indirectly, through \(\lambda\).</p>
+<p>It is also the book's Bayesian reading. The penalty \(\lambda\norm{\boldsymbol{\delta}}^2\) is a squared Mahalanobis distance with covariance \(\tfrac{1}{\lambda}\mathbf{I}\). In factor-graph terms, LM adds to every variable a unary Gaussian factor that says "the update is zero, give or take \(1/\sqrt{\lambda}\)". <span class="src">§1.4.3 · p. 34</span></p></div>
+
+<h3>2. Between Gauss-Newton and steepest descent</h3>
+<p>With \(\lambda=0\), (1.37) is Gauss-Newton. With \(\lambda\) much larger than the entries of \(\mathbf{A}\T\mathbf{A}\), the matrix on the left is almost \(\lambda\mathbf{I}\) and the step is almost \(\tfrac{1}{\lambda}\mathbf{A}\T\mathbf{b}\). Since \(\nabla J=-2\mathbf{A}\T\mathbf{b}\), that is a steepest-descent step with \(\alpha=1/(2\lambda)\). LM blends the two methods, and \(\lambda\) is the dial. <span class="src">§1.4.3 · p. 34</span></p>
+<div class="box note"><h4>Filling the gap: the blend, direction by direction</h4>
+<p>Write the eigen-decomposition \(\mathbf{A}\T\mathbf{A}=\sum_i\lambda_i\mathbf{v}_i\mathbf{v}_i\T\), with orthonormal eigenvectors \(\mathbf{v}_i\) and eigenvalues \(\lambda_i\gt 0\). Adding \(\lambda\mathbf{I}\) keeps the eigenvectors and adds \(\lambda\) to every eigenvalue, so</p>
+\[ \boldsymbol{\delta}^{\text{lm}} = \sum_i \frac{\mathbf{v}_i\T\mathbf{A}\T\mathbf{b}}{\lambda_i+\lambda}\,\mathbf{v}_i . \]
+<p>Gauss-Newton is the same sum with denominators \(\lambda_i\). In a steep direction (\(\lambda_i\gg\lambda\)) the damping changes almost nothing. In a flat direction (\(\lambda_i\ll\lambda\)) the denominator is about \(\lambda\) and the component becomes a gradient step. Flat directions are where GN divides by a small number and takes its wildest steps, so the damping acts where it is needed.</p>
+<p><em>Numbers.</em> \(\mathbf{A}\T\mathbf{A}=\diag(100,1)\) and \(\mathbf{A}\T\mathbf{b}=(100,\,1)\), so the GN step is \((1,\,1)\).</p>
+<div class="tbl"><table>
+  <tr><th>λ</th><th>LM step (1.37)</th><th>Comment</th></tr>
+  <tr><td>0</td><td>(1, 1)</td><td>Gauss-Newton</td></tr>
+  <tr><td>1</td><td>(100/101, 1/2) = (0.990, 0.500)</td><td>Steep direction untouched, flat direction halved</td></tr>
+  <tr><td>10</td><td>(100/110, 1/11) = (0.909, 0.091)</td><td>Flat direction almost switched off</td></tr>
+  <tr><td>1000</td><td>(100/1100, 1/1001) = (0.091, 0.001)</td><td>Close to the gradient step (1/λ)Aᵀb = (0.100, 0.001)</td></tr>
+</table></div></div>
+<p><strong>Marquardt's scaling.</strong> Marquardt replaced the identity by the diagonal of \(\mathbf{A}\T\mathbf{A}\), equation (1.38): <span class="src">§1.4.3 · p. 34</span></p>
+\[ \bigl(\mathbf{A}\T\mathbf{A}+\lambda\,\diag(\mathbf{A}\T\mathbf{A})\bigr)\,\boldsymbol{\delta}^{\text{lm}} = \mathbf{A}\T\mathbf{b}. \tag{1.38} \]
+<p>Now each variable is damped in proportion to its own diagonal entry, which measures how sharply the cost curves along that variable. A variable with small curvature gets little damping and may take a larger step; a variable with large curvature is held more tightly. In the table's example the step becomes \((1,1)/(1+\lambda)\): both directions shrink by the same factor. A practical benefit is that the result no longer depends on the units chosen for each variable, whereas \(\lambda\mathbf{I}\) penalizes one radian and one meter alike.</p>
+
+<h3>3. The accept-or-reject loop</h3>
+<p>The second difference from Gauss-Newton is that LM checks its work. After computing a step it evaluates the true cost at the new point. <span class="src">§1.4.3 · p. 34</span></p>
+<pre class="code"><code>x ← initial estimate,  λ ← starting value
+repeat
+    A, b ← linearize and whiten at x
+    solve (AᵀA + λ diag(AᵀA)) δ = Aᵀb
+    if J(x + δ) &lt; J(x):   x ← x + δ,  λ ← λ / 10      accept: trust the model more
+    else:                 λ ← λ × 10                  reject: x stays, solve again
+until converged</code></pre>
+<p>The factor 10 is the book's example of a heuristic. After a rejection \(\mathbf{x}\) has not moved, so \(\mathbf{A}\) and \(\mathbf{b}\) are still valid, but the damped matrix has changed and must be factorized again.</p>
+<p><em>By hand.</em> Yesterday's one-unknown problem from \(y=2\), where Gauss-Newton diverged. There \(A=2\), \(b=-11.07\), \(J=122.6\). Use (1.37), which for one unknown is \(\delta=Ab/(A^2+\lambda)\), and start with \(\lambda=0.1\).</p>
+<div class="tbl"><table>
+  <tr><th>Attempt</th><th>λ</th><th>Step δ</th><th>Lands at y</th><th>Cost there</th><th>Decision</th></tr>
+  <tr><td>1</td><td>0.1</td><td>−22.14/4.1 = −5.40</td><td>−3.40</td><td>165.1</td><td>Higher than 122.6: reject, λ = 1</td></tr>
+  <tr><td>2</td><td>1</td><td>−22.14/5 = −4.43</td><td>−2.43</td><td>139.3</td><td>Reject, λ = 10</td></tr>
+  <tr><td>3</td><td>10</td><td>−22.14/14 = −1.58</td><td>0.42</td><td>15.7</td><td>Accept, λ = 1</td></tr>
+  <tr><td>4</td><td>1</td><td>−33.72/73.42 = −0.46</td><td>−0.04</td><td>0.17</td><td>Accept, λ = 0.1</td></tr>
+</table></div>
+<p>Attempt 4 is linearized at the new point \(y=0.418\), where \(A=8.51\) and \(b=-3.96\). From there \(\lambda\) keeps falling and the iteration finishes like Gauss-Newton.</p>
+<p>Try it: press Step four times and compare with the table. Then set the starting λ to 1000 and step again.</p>
+<div class="viz" data-viz="w02_lm1d"></div>
+<p class="cap">Notice the violet parabola. It is the damped model \((A\delta-b)^2+\lambda\delta^2\): narrower than the dashed Gauss-Newton parabola, with its minimum pulled toward the current estimate. Each rejection makes it narrower. With a starting λ of 1000 nothing is rejected, but the first steps are tiny (2.00, 1.98, 1.76, 0.15): a cautious gradient method that speeds up as λ falls.</p>
+
+<h3>4. All three on the pose graph</h3>
+<p>The loop of 13 poses again, this time with a poor initial estimate: the poses start scrambled. The LM curve uses Marquardt's form (1.38) with a starting λ of 0.001.</p>
+<p>Try it: press Step once and read the three cost tiles. Then press Run 20. Then press New noise and run again.</p>
+<div class="viz" data-viz="w02_pgo"></div>
+<p class="cap">Notice the first step. Gauss-Newton's cost jumps from 12874 to 30626. LM proposes almost the same step, sees the cost rise, rejects it, and tries again with a larger λ, so its curve never goes up. Both reach the minimum, 2.81: Gauss-Newton after 5 iterations, LM after 10. Steepest descent is still above 2000 after 20. After New noise, Gauss-Newton and LM both stop at 351. That is a local minimum: from chained odometry the same measurements give 7.20.</p>
+<p>Two lessons. LM protects against uphill steps, which is not always the fastest route: here undamped Gauss-Newton recovered by itself and arrived first. And no method on this page protects against a bad starting point. Choose "All poses at the start" and both GN and LM stall at a cost in the hundreds. This is the warning about local minima from Day 2. <span class="src">§1.2.3 · p. 29</span></p>
+
+<h3>5. Powell's dogleg</h3>
+<p>Every rejected LM step costs a new factorization of the damped matrix, and factorization is the most expensive part of an iteration. <strong>Powell's dogleg (PDL)</strong> avoids that. It computes the Gauss-Newton step and the steepest-descent step once, separately, and builds the actual step out of the two. If that step is rejected, the two ingredients are still valid and are combined differently. Each update of the estimate needs only one factorization. <span class="src">§1.4.4 · p. 35</span></p>
+<p>PDL keeps an explicit <strong>trust region</strong>: a ball of radius \(\Delta\) around the current estimate inside which the linearization is trusted. The step runs along the steepest-descent step, bends sharply toward the Gauss-Newton step (the bend is the "dogleg"), and stops where it meets the boundary. Figure 1.6 shows one case. The complete rule has three:</p>
+<figure class="fig"><svg viewBox="0 0 600 215" role="img" aria-label="Three panels, each showing a dashed circle (the trust region) around the current estimate, a short amber steepest-descent arrow, a longer blue Gauss-Newton arrow, and a thick green step that is taken. Left, large circle: the Gauss-Newton step is inside, and is taken. Middle, medium circle: the green step follows the steepest-descent arrow to its tip, then bends toward the Gauss-Newton tip and stops at the circle. Right, small circle: even the steepest-descent arrow leaves the circle, and the green step is that arrow cut at the circle.">
+  <defs>
+    <marker id="w02ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--c2)"/></marker>
+    <marker id="w02ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--c5)"/></marker>
+  </defs>
+  <text x="95" y="16" text-anchor="middle" font-size="12" fill="var(--ink)">GN step inside: take it</text>
+  <text x="300" y="16" text-anchor="middle" font-size="12" fill="var(--ink)">GN outside: bend at SD tip</text>
+  <text x="500" y="16" text-anchor="middle" font-size="12" fill="var(--ink)">SD outside too: cut it</text>
+  <circle cx="95" cy="118" r="85" fill="var(--soft)" stroke="var(--line2)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <line x1="95" y1="118" x2="165" y2="140" stroke="var(--c1)" stroke-width="6" stroke-linecap="round"/>
+  <line x1="95" y1="118" x2="125" y2="104" stroke="var(--c2)" stroke-width="2" marker-end="url(#w02ar3)"/>
+  <line x1="95" y1="118" x2="165" y2="140" stroke="var(--c5)" stroke-width="2" marker-end="url(#w02ar4)"/>
+  <circle cx="95" cy="118" r="4" fill="var(--ink)"/>
+  <circle cx="300" cy="118" r="55" fill="var(--soft)" stroke="var(--line2)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <path d="M300 118 L330 104 L354.4 126" fill="none" stroke="var(--c1)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="300" y1="118" x2="330" y2="104" stroke="var(--c2)" stroke-width="2" marker-end="url(#w02ar3)"/>
+  <line x1="300" y1="118" x2="370" y2="140" stroke="var(--c5)" stroke-width="2" marker-end="url(#w02ar4)"/>
+  <line x1="330" y1="104" x2="370" y2="140" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/>
+  <circle cx="300" cy="118" r="4" fill="var(--ink)"/>
+  <circle cx="490" cy="118" r="22" fill="var(--soft)" stroke="var(--line2)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <line x1="490" y1="118" x2="509.9" y2="108.7" stroke="var(--c1)" stroke-width="6" stroke-linecap="round"/>
+  <line x1="490" y1="118" x2="520" y2="104" stroke="var(--c2)" stroke-width="2" marker-end="url(#w02ar3)"/>
+  <line x1="490" y1="118" x2="560" y2="140" stroke="var(--c5)" stroke-width="2" marker-end="url(#w02ar4)"/>
+  <circle cx="490" cy="118" r="4" fill="var(--ink)"/>
+</svg><figcaption>Amber arrow: steepest-descent step. Blue arrow: Gauss-Newton step. Dashed circle: trust region. Thick green: the step taken. As the trust region shrinks from left to right, the step turns from pure Gauss-Newton into a short gradient step.</figcaption></figure>
+<div class="box note"><h4>Filling the gap: the three cases, with numbers</h4>
+<p>The steepest-descent step used here goes to the lowest point of the quadratic model along the gradient direction \(\mathbf{g}=\mathbf{A}\T\mathbf{b}\). Minimizing \(\norm{\mathbf{A}(s\,\mathbf{g})-\mathbf{b}}^2\) over the scalar \(s\) gives \(s=\norm{\mathbf{g}}^2/\norm{\mathbf{A}\mathbf{g}}^2\) and \(\boldsymbol{\delta}^{\text{sd}}=s\,\mathbf{g}\). It is never longer than the Gauss-Newton step. Then:</p>
+<ul>
+<li>If \(\norm{\boldsymbol{\delta}^{\text{gn}}}\le\Delta\): take \(\boldsymbol{\delta}^{\text{gn}}\).</li>
+<li>Otherwise, if \(\norm{\boldsymbol{\delta}^{\text{sd}}}\ge\Delta\): take \(\boldsymbol{\delta}^{\text{sd}}\) shortened to length \(\Delta\).</li>
+<li>Otherwise: take \(\boldsymbol{\delta}^{\text{sd}}+\beta\,(\boldsymbol{\delta}^{\text{gn}}-\boldsymbol{\delta}^{\text{sd}})\) with \(\beta\) between 0 and 1 chosen so that the length is exactly \(\Delta\).</li>
+</ul>
+<p><em>Example.</em> Again \(\mathbf{A}\T\mathbf{A}=\diag(100,1)\) and \(\mathbf{g}=(100,1)\), so \(\boldsymbol{\delta}^{\text{gn}}=(1,1)\) with length \(1.41\). For the SD step, \(\norm{\mathbf{g}}^2=10001\) and \(\norm{\mathbf{A}\mathbf{g}}^2=\mathbf{g}\T\mathbf{A}\T\mathbf{A}\mathbf{g}=100\cdot100^2+1=1000001\), so \(s=0.0100\) and \(\boldsymbol{\delta}^{\text{sd}}=(1.00,\,0.01)\) with length \(1.00\). With \(\Delta=2\) the step is \((1,1)\). With \(\Delta=0.5\) it is \((0.5,\,0.005)\). With \(\Delta=1.2\) we are in the third case: \((1,\;0.01+0.99\beta)\) must have length \(1.2\), so \(0.01+0.99\beta=\sqrt{1.44-1}=0.663\), \(\beta=0.66\), and the step is \((1,\,0.663)\).</p></div>
+<p>Whether to trust the model more or less is decided by the <strong>gain ratio</strong>, equation (1.39): <span class="src">§1.4.4 · p. 35</span></p>
+\[ \rho = \frac{J(\mathbf{x}^t)-J(\mathbf{x}^t+\boldsymbol{\delta})}{L(\mathbf{0})-L(\boldsymbol{\delta})}. \tag{1.39} \]
+<p>The numerator is how much the true cost fell. The denominator is how much the linearized model said it would fall: read \(L(\boldsymbol{\delta})\) as the linearized cost \(\norm{\mathbf{A}\boldsymbol{\delta}-\mathbf{b}}^2\) at the current estimate. If \(\rho\lt 0.25\) the model promised much more than it delivered, and the trust region is reduced. If \(\rho\gt 0.75\) the model was right or pessimistic, the step is accepted, and the trust region is enlarged, by an amount that depends on the length of the step.</p>
+<p><em>Example.</em> At \(y=2\) in the one-unknown problem, \(L(0)=b^2=122.6\). The full Gauss-Newton step predicts \(L(\delta)=0\), a reduction of \(122.6\). The true cost rose to \(167.7\), a reduction of \(-45.2\). So \(\rho=-0.37\): shrink. For the damped step \(\delta=-1.58\), the model gives \(L(\delta)=(2\cdot(-1.58)+11.07)^2=62.5\), a predicted reduction of \(60.0\). The true reduction was \(122.6-15.7=106.9\), so \(\rho=1.78\): accept and grow.</p>
+<div class="box kid"><h4>In plain words</h4><p>Gauss-Newton trusts its map of the terrain completely and jumps to where the map says the valley floor is. Levenberg-Marquardt and dogleg trust the map only within a certain distance, take a step no longer than that, and then look around. If the ground is lower, as promised, they trust the map a bit farther next time. If not, they stay put and trust it less.</p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"λ is a step size."</strong> It works the other way round: a larger λ gives a shorter, more gradient-like step.</li>
+<li><strong>"LM finds the global minimum."</strong> It only refuses steps that raise the cost. It converges to whichever local minimum its path leads to, as the widget shows after New noise.</li>
+<li><strong>"LM is a slower Gauss-Newton."</strong> Near the solution every step is accepted, λ falls toward zero, and LM takes Gauss-Newton steps. The extra cost arises only when steps are rejected.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. One unknown, A = 2 and b = 6. What is the Levenberg step (1.37) with λ = 5?</p><div class="opts"><button type="button" class="opt">3</button><button type="button" class="opt">1.33</button><button type="button" class="opt">2.4</button><button type="button" class="opt">0.67</button></div><p class="exp" hidden>δ = Ab/(A² + λ) = 12/(4 + 5) = 1.33. The Gauss-Newton step would be 12/4 = 3, so the damping has shortened it.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. An LM step gives a higher cost than the current estimate. What does the algorithm do next?</p><div class="opts"><button type="button" class="opt">Keeps the current estimate, multiplies λ by 10, and solves the damped equations again</button><button type="button" class="opt">Accepts the step and divides λ by 10</button><button type="button" class="opt">Accepts the step but halves it</button><button type="button" class="opt">Stops and reports failure</button></div><p class="exp" hidden>A rejected step means the model was trusted too far. The estimate is not updated, λ is raised, and the new, shorter step is tried.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. Why can Powell's dogleg be cheaper than LM when steps get rejected?</p><div class="opts"><button type="button" class="opt">It never rejects steps</button><button type="button" class="opt">It does not need the Jacobian</button><button type="button" class="opt">It uses steepest descent only</button><button type="button" class="opt">It recombines the already computed GN and SD steps for the smaller trust region, with no new factorization</button></div><p class="exp" hidden>LM must refactorize AᵀA + λ·diag after every change of λ. Dogleg factorizes once per linearization and only changes how the two steps are combined.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. A step reduces the true cost by 2, while the linearized model predicted a reduction of 20. What does the gain ratio say?</p><div class="opts"><button type="button" class="opt">ρ = 10: enlarge the trust region</button><button type="button" class="opt">ρ = 0.1: enlarge the trust region</button><button type="button" class="opt">ρ = 0.1: the model was too optimistic, reduce the trust region</button><button type="button" class="opt">ρ = 18: reject the step</button></div><p class="exp" hidden>ρ = actual/predicted = 2/20 = 0.1, below 0.25. The linearization does not hold over a step this long, so the region shrinks.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>LM solves (AᵀA + λI)δ = Aᵀb, or Marquardt's (AᵀA + λ diag(AᵀA))δ = Aᵀb: Gauss-Newton with a penalty on the step length.</li>
+<li>λ = 0 gives Gauss-Newton. Large λ gives a short steepest-descent step. Flat directions are damped first.</li>
+<li>LM evaluates the true cost after each step: lower means accept and divide λ by 10, higher means reject and multiply λ by 10.</li>
+<li>Powell's dogleg combines the SD and GN steps inside an explicit trust region, so a rejection needs no new factorization.</li>
+<li>The gain ratio compares actual and predicted reduction: below 0.25 shrink the region, above 0.75 grow it.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §1.4.3 "Levenberg-Marquardt" and §1.4.4 "Dogleg Minimization", pp. 34–35.</li>
+<li>The penalized and trust-region forms of the LM step, the eigenvalue view of damping, and the three dogleg cases follow Nocedal and Wright, <em>Numerical Optimization</em>, 2006.</li>
+</ol></div>
+<p class="next"></p>
+</section>

@@ -1,0 +1,126 @@
+<section class="day" data-day="51" id="d51" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 9 · Day 3</span>
+  <h2>Pose-graph optimization as maximum likelihood, and its rotation-only form</h2>
+  <p class="lead">After today you can derive the pose-graph cost from its noise model, build the incidence and Laplacian matrices of a pose graph, and eliminate the translations to get a problem in the rotations alone.</p>
+  <p class="meta">About 60 min · Read §6.1.2 up to equation (6.18), pp. 154–160 (6 pages) · Needs Week 9 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §6.1.2 opening, §6.1.2.1, and §6.1.2.2 up to equation (6.18), pp. 154–160</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The convention for a measurement \(\tilde{\mathbf{T}}_{ij}\) and the direction of its edge (p. 155, Figure 6.2).</li>
+<li>The noise model (6.8) and the cost it leads to, Problem 6.1 (p. 156).</li>
+<li>Box 6.1 (pp. 157–158): the incidence matrix and the Laplacian of the graph in Figure 6.2.</li>
+<li>Equation (6.16) and Problem 6.2 (p. 159): the translations disappear.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>With the right noise model, pose-graph optimization has a cost that is quadratic in the entries of the rotations and translations. For fixed rotations the best translations solve a linear least-squares problem, so they can be written down and substituted away. What remains is \(\min\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\) over rotations: one data matrix, a quadratic objective, and rotation constraints. That is a QCQP waiting for Shor's relaxation.</p></div>
+
+<h3>1. Poses, relative poses, and the pose graph</h3>
+<p><strong>Pose-graph optimization (PGO)</strong> estimates \(n\) poses \(\mathbf{T}_1,\dots,\mathbf{T}_n\in\SE(d)\), with \(d=2\) or \(3\), from noisy measurements of relative poses. <span class="src">§6.1.2.1 · p. 154</span> A pose is a pair \(\mathbf{T}_i=(\mathbf{t}_i,\mathbf{R}_i)\) of a position \(\mathbf{t}_i\in\R^d\) and a rotation \(\mathbf{R}_i\in\SO(d)\), or as a matrix (<a href="#d19">Week 4 · Day 1</a>)</p>
+\[ \mathbf{T}_i=\begin{bmatrix}\mathbf{R}_i &amp; \mathbf{t}_i\\ \mathbf{0} &amp; 1\end{bmatrix}, \qquad \mathbf{T}_i^{-1}\mathbf{T}_j=\begin{bmatrix}\mathbf{R}_i\T &amp; -\mathbf{R}_i\T\mathbf{t}_i\\ \mathbf{0} &amp; 1\end{bmatrix}\begin{bmatrix}\mathbf{R}_j &amp; \mathbf{t}_j\\ \mathbf{0} &amp; 1\end{bmatrix}=\begin{bmatrix}\mathbf{R}_i\T\mathbf{R}_j &amp; \mathbf{R}_i\T(\mathbf{t}_j-\mathbf{t}_i)\\ \mathbf{0} &amp; 1\end{bmatrix}. \]
+<p>So the true relative pose "pose \(j\) seen from pose \(i\)" has rotation \(\bar{\mathbf{R}}_{ij}=\mathbf{R}_i\T\mathbf{R}_j\) and translation \(\bar{\mathbf{t}}_{ij}=\mathbf{R}_i\T(\mathbf{t}_j-\mathbf{t}_i)\). Example in the plane: pose \(i\) is at \((1,0)\) facing 90° (up), pose \(j\) is at \((1,2)\). Then \(\mathbf{t}_j-\mathbf{t}_i=(0,2)\), and rotating by \(-90^\circ\) gives \(\bar{\mathbf{t}}_{ij}=(2,0)\): two meters straight ahead, as it should be.</p>
+<p>A measurement \(\tilde{\mathbf{T}}_{ij}=(\tilde{\mathbf{t}}_{ij},\tilde{\mathbf{R}}_{ij})\) is a noisy version of \(\mathbf{T}_i^{-1}\mathbf{T}_j\). The <strong>pose graph</strong> has one node per pose and one directed edge \(i\to j\) per measurement \(\tilde{\mathbf{T}}_{ij}\). The book assumes the graph is connected; otherwise the problem splits into independent pieces. <span class="src">§6.1.2.1 · p. 155</span></p>
+
+<h3>2. The noise model, and the cost it produces</h3>
+<p>To do maximum likelihood (<a href="#d8">Week 2 · Day 2</a>) you need a probability density for the noise. For translations the book uses a Gaussian. For rotations it uses the <strong>isotropic Langevin distribution</strong> \(\mathcal{L}(\mathbf{M},\kappa)\) on \(\SO(d)\): <span class="src">eq. (6.7) · p. 155</span></p>
+\[ p(\mathbf{R};\mathbf{M},\kappa)=\frac{1}{c_d(\kappa)}\exp\bigl(\kappa\tr(\mathbf{M}\T\mathbf{R})\bigr). \]
+<p>\(\mathbf{M}\) is the most likely rotation (the <strong>mode</strong>), \(\kappa\ge0\) is the <strong>concentration</strong>, and \(c_d(\kappa)\) normalizes. In the plane, \(\mathbf{M}\T\mathbf{R}\) is a rotation by the angle \(\theta\) between the two, whose trace is \(2\cos\theta\). The density is then proportional to \(\exp(2\kappa\cos\theta)\), the von Mises distribution on the circle with concentration \(2\kappa\). <span class="src">p. 156</span> For large \(\kappa\) only small \(\theta\) matter, \(\cos\theta\approx1-\theta^2/2\), and the density is close to \(\exp(-\kappa\theta^2)\): a Gaussian with variance \(1/(2\kappa)\). So \(\kappa=50\) means a standard deviation of \(0.1\) rad, about 5.7°. With \(\kappa=0\) every rotation is equally likely.</p>
+<p>The generative model for each edge is <span class="src">eq. (6.8) · p. 156</span></p>
+\[ \tilde{\mathbf{t}}_{ij}=\bar{\mathbf{t}}_{ij}+\mathbf{t}^\epsilon_{ij},\quad \mathbf{t}^\epsilon_{ij}\sim\N\bigl(\mathbf{0},\tau_{ij}^{-1}\mathbf{I}_d\bigr), \qquad\qquad \tilde{\mathbf{R}}_{ij}=\bar{\mathbf{R}}_{ij}\mathbf{R}^\epsilon_{ij},\quad \mathbf{R}^\epsilon_{ij}\sim\mathcal{L}(\mathbf{I}_d,\kappa_{ij}). \]
+<p>\(\tau_{ij}\) is the translation precision (one over the variance per axis). The book says "a straightforward calculation" turns this into Problem 6.1: <span class="src">eq. (6.9) · p. 156</span></p>
+\[ p^\star_{\text{MLE}}=\min_{\mathbf{t}_i\in\R^d,\ \mathbf{R}_i\in\SO(d)}\ \sum_{(i,j)}\ \kappa_{ij}\norm{\mathbf{R}_j-\mathbf{R}_i\tilde{\mathbf{R}}_{ij}}_F^2+\tau_{ij}\norm{\mathbf{t}_j-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{t}}_{ij}}_2^2 . \]
+
+<div class="box note"><h4>Filling the gap: the straightforward calculation</h4>
+<p>Maximum likelihood minimizes the sum of negative log-densities of the measurements. Do one edge.</p>
+<p><em>Translation.</em> The noise is \(\mathbf{t}^\epsilon=\tilde{\mathbf{t}}_{ij}-\mathbf{R}_i\T(\mathbf{t}_j-\mathbf{t}_i)\), and \(-\log\) of the Gaussian is \(\tfrac{\tau_{ij}}{2}\norm{\mathbf{t}^\epsilon}^2\) plus a constant. Multiplying a vector by the rotation \(\mathbf{R}_i\) does not change its length, so</p>
+\[ \norm{\tilde{\mathbf{t}}_{ij}-\mathbf{R}_i\T(\mathbf{t}_j-\mathbf{t}_i)}^2=\norm{\mathbf{R}_i\tilde{\mathbf{t}}_{ij}-(\mathbf{t}_j-\mathbf{t}_i)}^2=\norm{\mathbf{t}_j-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{t}}_{ij}}^2 . \]
+<p><em>Rotation.</em> The noise is \(\mathbf{R}^\epsilon=\bar{\mathbf{R}}_{ij}\T\tilde{\mathbf{R}}_{ij}=\mathbf{R}_j\T\mathbf{R}_i\tilde{\mathbf{R}}_{ij}\), and \(-\log\) of the Langevin density with mode \(\mathbf{I}\) is \(-\kappa_{ij}\tr(\mathbf{R}_j\T\mathbf{R}_i\tilde{\mathbf{R}}_{ij})\) plus a constant. Now expand a squared Frobenius norm (the sum of squared entries, \(\norm{\mathbf{A}}_F^2=\tr(\mathbf{A}\T\mathbf{A})\)) of two matrices that are both orthogonal, so each has \(\norm{\cdot}_F^2=d\):</p>
+\[ \norm{\mathbf{R}_j-\mathbf{R}_i\tilde{\mathbf{R}}_{ij}}_F^2=d+d-2\tr\bigl(\mathbf{R}_j\T\mathbf{R}_i\tilde{\mathbf{R}}_{ij}\bigr) \quad\Longrightarrow\quad -\kappa_{ij}\tr\bigl(\mathbf{R}_j\T\mathbf{R}_i\tilde{\mathbf{R}}_{ij}\bigr)=\tfrac{\kappa_{ij}}{2}\norm{\mathbf{R}_j-\mathbf{R}_i\tilde{\mathbf{R}}_{ij}}_F^2-\kappa_{ij}d . \]
+<p>Add the two, drop the constants, and multiply everything by 2 (which does not move the minimizer): that is (6.9).</p>
+<p><em>In the plane.</em> For rotations by angles \(a\) and \(b\), \(\tr(\mathbf{R}(a)\T\mathbf{R}(b))=2\cos(a-b)\), so \(\norm{\mathbf{R}(a)-\mathbf{R}(b)}_F^2=4-4\cos(a-b)\). The rotation term of an edge is \(4\kappa_{ij}(1-\cos r_{ij})\) with \(r_{ij}=\theta_j-\theta_i-\tilde\theta_{ij}\). With \(\kappa=1\) this is the cost of the Day 1 widget.</p></div>
+<p>The reason for choosing Langevin noise over the Gaussian-in-the-tangent-space model of Chapter 2 is this algebraic form: every term of (6.9) is a squared norm of something <em>linear</em> in the entries of \(\mathbf{R}_i\) and \(\mathbf{t}_i\). <span class="src">§6.1.2.1 · p. 156</span> No logarithm map appears.</p>
+
+<h3>3. The graph as matrices</h3>
+<p>Box 6.1 introduces two matrices. Here they are on a graph of our own with three poses and edges \(e_1=(1,2)\), \(e_2=(2,3)\), \(e_3=(1,3)\).</p>
+<figure class="fig"><svg viewBox="0 0 600 190" role="img" aria-label="A pose graph with three nodes T1, T2, T3. Directed edges go from T1 to T2 (edge e1), from T2 to T3 (edge e2), and from T1 to T3 (edge e3).">
+  <defs><marker id="w09ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <line x1="139" y1="139" x2="279" y2="62" stroke="var(--muted)" stroke-width="2" marker-end="url(#w09ar3)"/>
+  <line x1="321" y1="62" x2="459" y2="138" stroke="var(--muted)" stroke-width="2" marker-end="url(#w09ar3)"/>
+  <line x1="144" y1="150" x2="454" y2="150" stroke="var(--muted)" stroke-width="2" marker-end="url(#w09ar3)"/>
+  <circle cx="120" cy="150" r="22" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="2"/><text x="120" y="155" text-anchor="middle" font-size="14" fill="var(--ink)">T₁</text>
+  <circle cx="300" cy="50" r="22" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="2"/><text x="300" y="55" text-anchor="middle" font-size="14" fill="var(--ink)">T₂</text>
+  <circle cx="480" cy="150" r="22" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="2"/><text x="480" y="155" text-anchor="middle" font-size="14" fill="var(--ink)">T₃</text>
+  <text x="190" y="88" text-anchor="end" font-size="12" fill="var(--ink)">e₁ = (1, 2)</text>
+  <text x="410" y="88" font-size="12" fill="var(--ink)">e₂ = (2, 3)</text>
+  <text x="300" y="174" text-anchor="middle" font-size="12" fill="var(--ink)">e₃ = (1, 3)</text>
+</svg><figcaption>Each edge points from the pose whose frame the measurement is expressed in (the tail) to the pose that is measured (the head).</figcaption></figure>
+<p>The <strong>incidence matrix</strong> \(\mathbf{A}\) has one row per edge, with \(-1\) in the column of the tail and \(+1\) in the column of the head. The <strong>Laplacian</strong> is \(\mathbf{L}=\mathbf{A}\T\mathbf{A}\): <span class="src">Box 6.1 · pp. 157–158</span></p>
+\[ \mathbf{A}=\begin{bmatrix}-1 &amp; 1 &amp; 0\\ 0 &amp; -1 &amp; 1\\ -1 &amp; 0 &amp; 1\end{bmatrix},\qquad \mathbf{L}=\mathbf{A}\T\mathbf{A}=\begin{bmatrix}2 &amp; -1 &amp; -1\\ -1 &amp; 2 &amp; -1\\ -1 &amp; -1 &amp; 2\end{bmatrix}. \]
+<p>The diagonal of \(\mathbf{L}\) counts the edges at each node, an off-diagonal entry is \(-1\) where an edge exists, and edge directions have disappeared. Every row sums to zero, so \(\mathbf{L}\mathbf{1}=\mathbf{0}\): zero is always an eigenvalue. A connected graph has exactly one zero eigenvalue.</p>
+<p>Why this matrix shows up in estimation: put a number \(x_i\) on each node. Row \(e\) of \(\mathbf{A}\mathbf{x}\) is \(x_j-x_i\), so</p>
+\[ \mathbf{x}\T\mathbf{L}\mathbf{x}=\norm{\mathbf{A}\mathbf{x}}^2=\sum_{(i,j)}(x_j-x_i)^2 . \]
+<p>The Laplacian is the matrix of "sum of squared differences across edges", which is what a relative measurement penalizes. Two weighted versions are needed for PGO:</p>
+<div class="tbl"><table>
+  <tr><th>Matrix</th><th>Size</th><th>Diagonal block \(i\)</th><th>Off-diagonal block for an edge \(i\to j\)</th></tr>
+  <tr><td>\(\mathbf{L}(\mathcal{W}^\tau)\), Laplacian of the translational weight graph, eq. (6.12)</td><td>\(n\times n\)</td><td>\(\sum\tau\) over the edges at \(i\)</td><td>\(-\tau_{ij}\)</td></tr>
+  <tr><td>\(\mathbf{L}(\tilde{G}^\rho)\), the <strong>connection Laplacian</strong>, eq. (6.13)</td><td>\(dn\times dn\), in \(d\times d\) blocks</td><td>\(\bigl(\sum\kappa\bigr)\mathbf{I}_d\) over the edges at \(i\)</td><td>\(-\kappa_{ij}\tilde{\mathbf{R}}_{ij}\) at \((i,j)\) and its transpose at \((j,i)\)</td></tr>
+</table></div>
+<p>With weights \(\tau=(2,5,1)\) on \(e_1,e_2,e_3\), the first is \(\begin{bmatrix}3 &amp; -2 &amp; -1\\ -2 &amp; 7 &amp; -5\\ -1 &amp; -5 &amp; 6\end{bmatrix}\). The second is the same pattern with the measured rotations written into the off-diagonal blocks. Stack the unknown rotations side by side, \(\mathbf{R}\triangleq(\mathbf{R}_1\ \cdots\ \mathbf{R}_n)\in\R^{d\times dn}\). Then \(\mathbf{R}\T\mathbf{R}\) has blocks \(\mathbf{R}_i\T\mathbf{R}_j\), and multiplying out block by block gives</p>
+\[ \tr\bigl(\mathbf{L}(\tilde{G}^\rho)\,\mathbf{R}\T\mathbf{R}\bigr)=\sum_{(i,j)}\kappa_{ij}\bigl(2d-2\tr(\tilde{\mathbf{R}}_{ij}\mathbf{R}_j\T\mathbf{R}_i)\bigr)=\sum_{(i,j)}\kappa_{ij}\norm{\mathbf{R}_j-\mathbf{R}_i\tilde{\mathbf{R}}_{ij}}_F^2 , \]
+<p>the rotation half of (6.9). (Each edge puts \(\kappa_{ij}\mathbf{I}_d\) on two diagonal blocks, which gives the \(2d\), and the two off-diagonal blocks give the same trace once each.)</p>
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The incidence matrix in (6.17b) is the one from Box 6.1."</strong> Box 6.1 puts edges on rows, so \(\mathbf{A}\) is \(m\times n\). In (6.17b) and (6.18) the product \(\mathbf{A}\boldsymbol{\Omega}^{1/2}\) with the \(m\times m\) matrix \(\boldsymbol{\Omega}\) only has matching sizes if edges are on columns. Read \(\mathbf{A}(\overrightarrow{\mathcal{G}})\) there as the \(n\times m\) transpose of the box's matrix. We do so below.</li>
+<li><strong>"The letter L in (6.18) is a Laplacian."</strong> There it is a lower-triangular factor from an LQ decomposition.</li>
+</ul></div>
+
+<h3>4. Eliminating the translations</h3>
+<p>Fix the rotations. The rotation terms of (6.9) are then constants, and the translation terms \(\tau_{ij}\norm{\mathbf{t}_j-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{t}}_{ij}}^2\) are squared norms of expressions that are linear in the unknown \(\mathbf{t}\)'s. That is linear least squares (<a href="#d4">Week 1 · Day 4</a>), and it has a closed-form solution: <span class="src">eq. (6.16) · p. 159</span></p>
+\[ \mathbf{t}^\star(\mathbf{R})=-\operatorname{vec}\bigl(\mathbf{R}\,\tilde{\mathbf{V}}\T\,\mathbf{L}(\mathcal{W}^\tau)^{\dagger}\bigr). \]
+<p>Here \(\tilde{\mathbf{V}}\in\R^{n\times dn}\) is built from the translation measurements (6.14), \({}^\dagger\) is the pseudo-inverse, and \(\operatorname{vec}\) stacks the columns of the resulting \(d\times n\) matrix, which are \(\mathbf{t}_1,\dots,\mathbf{t}_n\). (The book prints \(\mathbf{R}^*\) inside (6.16); it is the \(\mathbf{R}\) we fixed.) Substituting \(\mathbf{t}^\star(\mathbf{R})\) back gives Problem 6.2: <span class="src">eq. (6.17) · p. 159</span></p>
+\[ p^\star_{\text{MLE}}=\min_{\mathbf{R}\in\SO(d)^n}\tr\bigl(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R}\bigr),\qquad \tilde{\mathbf{Q}}=\mathbf{L}(\tilde{G}^\rho)+\tilde{\mathbf{D}}\T\boldsymbol{\Omega}^{\frac12}\boldsymbol{\Pi}\boldsymbol{\Omega}^{\frac12}\tilde{\mathbf{D}} . \]
+
+<div class="box note"><h4>Filling the gap: where (6.16) and (6.17b) come from</h4>
+<p>Collect the translations as columns of \(\mathbf{T}=(\mathbf{t}_1\ \cdots\ \mathbf{t}_n)\in\R^{d\times n}\), and let \(\mathbf{A}\) be the \(n\times m\) incidence matrix (column \(e\) has \(-1\) at the tail \(i\) and \(+1\) at the head \(j\)). Then column \(e\) of \(\mathbf{T}\mathbf{A}\) is \(\mathbf{t}_j-\mathbf{t}_i\). The matrix \(\tilde{\mathbf{D}}\) of (6.15) has \(-\tilde{\mathbf{t}}_{ij}\T\) in row \(e\), block \(i\), so column \(e\) of \(\mathbf{R}\tilde{\mathbf{D}}\T\) is \(-\mathbf{R}_i\tilde{\mathbf{t}}_{ij}\). With \(\boldsymbol{\Omega}=\operatorname{Diag}(\tau_{e_1},\dots,\tau_{e_m})\), the whole translation cost is one Frobenius norm:</p>
+\[ \sum_{(i,j)}\tau_{ij}\norm{\mathbf{t}_j-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{t}}_{ij}}^2=\norm{\bigl(\mathbf{T}\mathbf{A}+\mathbf{R}\tilde{\mathbf{D}}\T\bigr)\boldsymbol{\Omega}^{\frac12}}_F^2 . \]
+<p>Set the derivative with respect to \(\mathbf{T}\) to zero (the normal equations):</p>
+\[ \bigl(\mathbf{T}\mathbf{A}+\mathbf{R}\tilde{\mathbf{D}}\T\bigr)\boldsymbol{\Omega}\mathbf{A}\T=\mathbf{0} \quad\Longrightarrow\quad \mathbf{T}\,\underbrace{\mathbf{A}\boldsymbol{\Omega}\mathbf{A}\T}_{\mathbf{L}(\mathcal{W}^\tau)}=-\mathbf{R}\,\underbrace{\tilde{\mathbf{D}}\T\boldsymbol{\Omega}\mathbf{A}\T}_{\tilde{\mathbf{V}}\T}. \]
+<p>You can check entry by entry that \(\mathbf{A}\boldsymbol{\Omega}\tilde{\mathbf{D}}\) is the matrix \(\tilde{\mathbf{V}}\) defined in (6.14). The Laplacian is singular because \(\mathbf{L}\mathbf{1}=\mathbf{0}\): shifting every position by the same vector changes no residual. The pseudo-inverse picks the solution whose positions average to zero, \(\mathbf{T}=-\mathbf{R}\tilde{\mathbf{V}}\T\mathbf{L}(\mathcal{W}^\tau)^\dagger\), which is (6.16).</p>
+<p>Put this \(\mathbf{T}\) back into the residual matrix and factor:</p>
+\[ \bigl(\mathbf{T}\mathbf{A}+\mathbf{R}\tilde{\mathbf{D}}\T\bigr)\boldsymbol{\Omega}^{\frac12}=\mathbf{R}\tilde{\mathbf{D}}\T\boldsymbol{\Omega}^{\frac12}\,\underbrace{\bigl(\mathbf{I}_m-\boldsymbol{\Omega}^{\frac12}\mathbf{A}\T\mathbf{L}(\mathcal{W}^\tau)^\dagger\mathbf{A}\boldsymbol{\Omega}^{\frac12}\bigr)}_{\boldsymbol{\Pi}} . \]
+<p>\(\boldsymbol{\Pi}\) is the identity minus the orthogonal projector onto the row space of \(\mathbf{A}\boldsymbol{\Omega}^{1/2}\), so it is the orthogonal projector onto the kernel of \(\mathbf{A}\boldsymbol{\Omega}^{1/2}\), exactly as the book defines it. This is least squares as you know it: the best fit removes the part of the data the model can explain and leaves the part it cannot. A projector satisfies \(\boldsymbol{\Pi}\boldsymbol{\Pi}\T=\boldsymbol{\Pi}\), so the leftover cost is</p>
+\[ \norm{\mathbf{R}\tilde{\mathbf{D}}\T\boldsymbol{\Omega}^{\frac12}\boldsymbol{\Pi}}_F^2=\tr\bigl(\mathbf{R}\tilde{\mathbf{D}}\T\boldsymbol{\Omega}^{\frac12}\boldsymbol{\Pi}\boldsymbol{\Omega}^{\frac12}\tilde{\mathbf{D}}\mathbf{R}\T\bigr)=\tr\bigl(\tilde{\mathbf{D}}\T\boldsymbol{\Omega}^{\frac12}\boldsymbol{\Pi}\boldsymbol{\Omega}^{\frac12}\tilde{\mathbf{D}}\ \mathbf{R}\T\mathbf{R}\bigr), \]
+<p>using the cyclic property of the trace. Adding the rotation half from section 3 gives \(\tilde{\mathbf{Q}}\) in (6.17b).</p></div>
+
+<p>Try it: the widget builds all of these matrices for six poses. Choose a pose, twist its heading, and watch the positions and the cost.</p>
+<div class="viz" data-viz="w09_elim"></div>
+<p class="cap">Notice that the last two tiles always agree: at the start both are 17.83, and with pose 2 twisted by 30° both are 187.43. The left one needed the positions from (6.16); the right one, \(\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\), never computed a position. Notice also that twisting one pose moves the other poses, and that the cost curve over a full turn is one non-convex wave.</p>
+
+<h3>5. What Problem 6.2 looks like</h3>
+<p>Problem 6.2 has \(n\) rotations as unknowns and a single \(dn\times dn\) data matrix \(\tilde{\mathbf{Q}}\) that is computed once from the measurements. \(\tilde{\mathbf{Q}}\) is positive semidefinite, since \(\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\) is a sum of squared norms for <em>any</em> \(d\times dn\) matrix \(\mathbf{R}\). The book points out that the problem now has the form of rotation averaging, with a more complicated data matrix. <span class="src">§6.1.2.2 · p. 160</span></p>
+<p>One practical point. \(\boldsymbol{\Pi}\) is a dense \(m\times m\) matrix, which would be expensive for a large graph. Equation (6.18) rewrites it using a sparse triangular factor of the (reduced) weighted incidence matrix, so that products with \(\tilde{\mathbf{Q}}\) stay cheap. <span class="src">eq. (6.18) · p. 160</span> The solver of Day 5 needs only such products.</p>
+<p>The objective is quadratic in the entries of \(\mathbf{R}\). The only obstacle left is the constraint set \(\SO(d)^n\). Tomorrow it gets the treatment of Day 2.</p>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. In the plane, pose i is at (3, 1) with heading 180° and pose j is at (1, 1). What is the true relative translation of j seen from i?</p><div class="opts"><button type="button" class="opt">(−2, 0)</button><button type="button" class="opt">(0, 2)</button><button type="button" class="opt">(2, 0)</button><button type="button" class="opt">(0, −2)</button></div><p class="exp" hidden>t_j − t_i = (−2, 0). Multiplying by R_iᵀ, a rotation by −180°, flips both signs: (2, 0). Pose j is two meters straight ahead of a robot that faces in the −x direction.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A planar edge has κ = 10 and a rotation residual of 60°. How much does its rotation term contribute to the cost (6.9)?</p><div class="opts"><button type="button" class="opt">20</button><button type="button" class="opt">10</button><button type="button" class="opt">5</button><button type="button" class="opt">40</button></div><p class="exp" hidden>In the plane the term is 4κ(1 − cos r) = 4 · 10 · (1 − 0.5) = 20.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A node has three edges with translation precisions τ = 2, 5, and 1. What is its diagonal entry in L(W^τ)?</p><div class="opts"><button type="button" class="opt">3</button><button type="button" class="opt">−8</button><button type="button" class="opt">10</button><button type="button" class="opt">8</button></div><p class="exp" hidden>By (6.12) the diagonal entry is the sum of the weights of the edges at that node: 2 + 5 + 1 = 8.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Why can the translations be eliminated in closed form, but not the rotations?</p><div class="opts"><button type="button" class="opt">Translations are measured more accurately</button><button type="button" class="opt">For fixed rotations the cost is an unconstrained linear least-squares problem in the translations; the rotations are constrained to SO(d)</button><button type="button" class="opt">There are fewer translations than rotations</button><button type="button" class="opt">The Laplacian of the graph is invertible</button></div><p class="exp" hidden>Translations are free vectors that enter the residuals linearly, so the normal equations solve them. Rotations enter linearly too, but must satisfy quadratic constraints, so no single linear solve gives the optimum.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q5. A rotation measurement has concentration κ = 200. Roughly what angular standard deviation is that?</p><div class="opts"><button type="button" class="opt">About 0.3°</button><button type="button" class="opt">About 5.7°</button><button type="button" class="opt">About 2.9°</button><button type="button" class="opt">About 0.07°</button></div><p class="exp" hidden>For large κ the angle is nearly Gaussian with variance 1/(2κ) = 1/400, so the standard deviation is 0.05 rad, which is 2.9°.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>A measurement \(\tilde{\mathbf{T}}_{ij}\) is a noisy \(\mathbf{T}_i^{-1}\mathbf{T}_j\), with rotation \(\mathbf{R}_i\T\mathbf{R}_j\) and translation \(\mathbf{R}_i\T(\mathbf{t}_j-\mathbf{t}_i)\).</li>
+<li>Gaussian translation noise and Langevin rotation noise give the cost (6.9), a sum of squared norms that are linear in the entries of the unknowns.</li>
+<li>The Laplacian \(\mathbf{A}\T\mathbf{A}\) encodes sums of squared differences across edges; its weighted and block versions carry \(\tau\), \(\kappa\), and the measured rotations.</li>
+<li>For fixed rotations the optimal translations are \(\mathbf{t}^\star(\mathbf{R})\) from (6.16); substituting them leaves \(\min\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\) over \(\SO(d)^n\).</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §6.1.2 and §6.1.2.1, and §6.1.2.2 "Simplifying the Maximum Likelihood Estimator" with Box 6.1, pp. 154–160, equations (6.7)–(6.18), Figure 6.2.</li>
+<li>Rosen, Carlone, Bandeira, Leonard, <em>SE-Sync: A certifiably correct algorithm for synchronization over the special Euclidean group</em>, 2019: the derivation of the rotation-only problem that our "Filling the gap" follows, with the incidence matrix written with one column per edge.</li>
+<li>Barfoot, <em>State Estimation for Robotics</em>, 2017: poses as matrices and their inverses.</li>
+</ol></div>
+<p class="next"></p>
+</section>

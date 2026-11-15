@@ -1,0 +1,128 @@
+<section class="day" data-day="35" id="d35" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 6 · Day 5</span>
+  <h2>Alternating minimization and graduated non-convexity</h2>
+  <p class="lead">After today you can derive IRLS as alternating minimization, compute the GNC weights for the truncated quadratic and Geman-McClure losses, and explain when graduated non-convexity helps and when it fails.</p>
+  <p class="meta">About 60 min · Read §3.3.3–3.4, pp. 92–100 (9 pages, 2 of them figures) · Needs Week 6 Day 4</p>
+</header>
+
+<div class="box read"><h4>Read first: §3.3.3, §3.3.4, §3.4, pp. 92–100</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The two steps (3.22) and (3.23) on p. 93. Which one is a SLAM solve, and which one is \(N\) one-line formulas?</li>
+<li>The two surrogate losses (3.24) and (3.25) on p. 94, and in Figure 3.8 which way \(\mu\) moves for each.</li>
+<li>The third step that GNC adds on p. 95.</li>
+<li>The experiment on pp. 96–98 where GNC fails, and what rescues it.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>IRLS on a non-convex loss slides into whichever valley its starting point belongs to. <strong>Graduated non-convexity (GNC)</strong> first replaces the loss by a nearly convex version with a single broad valley, solves that, and then reshapes the loss step by step back into the real one, following the minimum as it moves. Each step is still an ordinary weighted least-squares solve.</p></div>
+
+<h3>1. IRLS is alternating minimization</h3>
+<p>Yesterday ended with the joint problem (3.16): minimize \(\sum_i [\,w_i\,r_i^2(\mathbf{x}) + \Phi_\rho(w_i)\,]\) over the state \(\mathbf{x}\) and the weights \(w_i\in[0,1]\). Optimizing both at once is hard. Optimizing either one with the other held fixed is easy. <span class="src">§3.3.3 · p. 92</span></p>
+<ul>
+<li><strong>Variable update.</strong> With the weights fixed, \(\Phi_\rho(w_i)\) is a constant and what remains is weighted least squares:
+\[ \mathbf{x}^{(t)} \in \argmin_{\mathbf{x}} \sum_i w_i^{(t)}\,r_i^2(\mathbf{x}). \tag{3.22} \]</li>
+<li><strong>Weight update.</strong> With \(\mathbf{x}\) fixed, each residual is a known number and the sum splits into \(N\) separate scalar problems:
+\[ w_i^{(t+1)} \in \argmin_{w_i\in[0,1]}\ \Phi_\rho(w_i) + w_i\,r_i^2(\mathbf{x}^{(t)}), \qquad i = 1,\dots,N. \tag{3.23} \]</li>
+</ul>
+<p><span class="src">§3.3.3 · p. 93</span> You solved both scalar problems yesterday:</p>
+<div class="tbl"><table>
+  <tr><th>Loss</th><th>Outlier process Φ(w)</th><th>Weight update</th></tr>
+  <tr><td>Truncated quadratic</td><td>\((1-w)\,\beta^2\)</td><td>\(w = 1\) if \(r^2\lt\beta^2\), \(w = 0\) if \(r^2\gt\beta^2\) (anything in \([0,1]\) at equality)</td></tr>
+  <tr><td>Geman-McClure</td><td>\(\beta^2(\sqrt{w}-1)^2\)</td><td>\(w = \big(\beta^2/(r^2+\beta^2)\big)^2\)</td></tr>
+</table></div>
+<p>Alternating the two steps is <strong>alternating minimization</strong>, and it is IRLS. With the Geman-McClure loss it is also the dynamic covariance scaling algorithm from the robust SLAM literature. <span class="src">§3.3.3 · p. 93</span> The book adds, without proof, that the weight from (3.23) is the same as yesterday's rule (3.12).</p>
+<div class="box note"><h4>Filling the gap: why the two weight rules agree</h4>
+<p>Write \(z = r^2\) and \(\phi(z) = \rho(\sqrt{z})\), as in Theorem 3.4. B-R duality says \(\phi(z) = \min_{w}\,[\,w z + \Phi_\rho(w)\,]\). Let \(w^\star(z)\) be the minimizer. If it lies inside \([0,1]\), the derivative with respect to \(w\) vanishes there: \(z + \Phi_\rho'(w^\star) = 0\). Now differentiate \(\phi(z) = w^\star(z)\,z + \Phi_\rho(w^\star(z))\) with respect to \(z\):</p>
+\[ \phi'(z) = w^\star + \underbrace{\big[z + \Phi_\rho'(w^\star)\big]}_{=\,0}\,\frac{dw^\star}{dz} = w^\star. \]
+<p>So the optimal weight is the slope of \(\phi\): \(w^\star = \phi'(r^2)\). On the other hand \(\rho(r) = \phi(r^2)\), so by the chain rule \(\psi(r) = \rho'(r) = 2r\,\phi'(r^2)\), which gives \(\phi'(r^2) = \psi(r)/(2r)\). That is rule (3.12). The two derivations of IRLS produce the same weights.</p>
+<p>This also explains the three conditions in Theorem 3.4. \(\phi'(z)\to1\) as \(z\to0\) says small residuals get weight 1. \(\phi'(z)\to0\) as \(z\to\infty\) says huge residuals get weight 0. \(\phi''(z)\lt0\) says the weight decreases as the residual grows, so it stays between 0 and 1.</p>
+<p><strong>A useful consequence.</strong> Each step minimizes the joint cost (3.16) over one block of unknowns with the other fixed, so neither step can increase it. The cost goes down at every iteration and the iteration settles. Nothing says it settles at the global minimum.</p></div>
+
+<h3>2. Why plain IRLS gets stuck</h3>
+<p>The first variable update uses all weights equal to 1, so it is least squares, and Day 1 showed how bad that estimate is. The first weight update then judges every measurement by its residual <em>with respect to that bad estimate</em>. With the truncated quadratic the judgment is final: measurements that happen to lie near the wrong estimate get weight 1, the rest get 0, and the next solve sees only the first group. Yesterday's widget stopped after 2 steps for this reason. The book reports that IRLS with the truncated quadratic or Geman-McClure loss can fail with as little as 10% outliers. <span class="src">§3.3.4 · p. 93</span></p>
+<div class="box tip"><h4>Intuition</h4><p>Picture the robust cost as a landscape with many pits. IRLS only walks downhill. GNC first floods the landscape so that one wide basin remains, lets the walker reach its bottom, then drains the water slowly. As the pits reappear the walker is already standing in the deep one.</p></div>
+
+<h3>3. Surrogate losses with a dial</h3>
+<p>GNC replaces \(\rho\) by a family \(\rho_\mu\) controlled by one number \(\mu\). At one end of the dial \(\rho_\mu\) is convex, at the other it is the original loss. <span class="src">§3.3.4 · p. 93</span> The book gives two families. <span class="src">§3.3.4 · pp. 94–95</span></p>
+<p><strong>GNC truncated quadratic</strong> (Example 3.6):</p>
+\[ \rho_\mu(r) = \begin{cases} r^2 & \text{if } r^2 \in \big[0,\ \tfrac{\mu}{\mu+1}\beta^2\big] \\ 2\beta|r|\sqrt{\mu(\mu+1)} - \mu(\beta^2 + r^2) & \text{if } r^2 \in \big[\tfrac{\mu}{\mu+1}\beta^2,\ \tfrac{\mu+1}{\mu}\beta^2\big] \\ \beta^2 & \text{if } r^2 \in \big[\tfrac{\mu+1}{\mu}\beta^2,\ +\infty\big) \end{cases} \tag{3.24} \]
+<p><strong>GNC Geman-McClure</strong> (Example 3.7):</p>
+\[ \rho_\mu(r) = \frac{\mu\beta^2 r^2}{\mu\beta^2 + r^2}. \tag{3.25} \]
+<div class="tbl"><table>
+  <tr><th></th><th>GNC truncated quadratic</th><th>GNC Geman-McClure</th></tr>
+  <tr><td>Convex end</td><td>\(\mu\to0\)</td><td>\(\mu\to\infty\)</td></tr>
+  <tr><td>Original loss at</td><td>\(\mu\to\infty\)</td><td>\(\mu = 1\)</td></tr>
+  <tr><td>Each iteration</td><td>multiply \(\mu\) by a factor above 1 (1.4 in the paper the book cites)</td><td>divide \(\mu\) by that factor, down to 1</td></tr>
+  <tr><td>Outlier process \(\Phi_{\rho_\mu}(w)\)</td><td>\(\dfrac{\mu(1-w)}{\mu+w}\beta^2\)</td><td>\(\mu\beta^2(\sqrt{w}-1)^2\)</td></tr>
+  <tr><td>Weight update (derived below)</td><td>\(1\) below the band, \(\dfrac{\beta\sqrt{\mu(\mu+1)}}{|r|}-\mu\) inside it, \(0\) above</td><td>\(\left(\dfrac{\mu\beta^2}{r^2+\mu\beta^2}\right)^{2}\)</td></tr>
+</table></div>
+<div class="box note"><h4>Filling the gap: checking the ends of the dial, and deriving the weights</h4>
+<p><strong>Geman-McClure.</strong> Divide top and bottom of (3.25) by \(\mu\beta^2\): \(\rho_\mu(r) = r^2/(1 + r^2/(\mu\beta^2))\). As \(\mu\to\infty\) this tends to \(r^2\), the convex quadratic. At \(\mu = 1\) it is (3.17). In between, differentiating twice with \(c = \mu\beta^2\) gives \(\rho_\mu''(r) = 2c^2(c - 3r^2)/(c+r^2)^3\), which is positive while \(r^2 \lt \mu\beta^2/3\). So \(\mu\) sets the width of the convex zone, and a large \(\mu\) puts most residuals inside it. The surrogate is (3.17) with \(\beta^2\) replaced by \(\mu\beta^2\), so the weight is (3.20) with the same replacement.</p>
+<p><strong>Truncated quadratic: the pieces join.</strong> At the lower edge \(r^2 = \tfrac{\mu}{\mu+1}\beta^2\), so \(|r| = \beta\sqrt{\mu/(\mu+1)}\), and the middle expression is \(2\mu\beta^2 - \mu\beta^2 - \tfrac{\mu^2}{\mu+1}\beta^2 = \tfrac{\mu}{\mu+1}\beta^2 = r^2\). At the upper edge it is \(2(\mu+1)\beta^2 - \mu\beta^2 - (\mu+1)\beta^2 = \beta^2\). As \(\mu\to\infty\) both edges close in on \(\beta^2\) and (3.24) becomes \(\min\{r^2, \beta^2\}\). As \(\mu\to0\) the band stretches over all residuals and \(\rho_\mu(r)\approx 2\beta\sqrt{\mu}\,|r|\): a shallow V, which is convex.</p>
+<p><strong>Truncated quadratic: the weight.</strong> The book gives \(\Phi_{\rho_\mu}\) and leaves the weight update (3.27) to the reader. Minimize \(g(w) = w\,r^2 + \mu\beta^2\,\dfrac{1-w}{\mu+w}\) over \(w\in[0,1]\). By the quotient rule,</p>
+\[ \frac{d}{dw}\,\frac{1-w}{\mu+w} = \frac{-(\mu+w) - (1-w)}{(\mu+w)^2} = -\frac{\mu+1}{(\mu+w)^2}, \qquad\text{so}\qquad g'(w) = r^2 - \frac{\mu(\mu+1)\beta^2}{(\mu+w)^2}. \]
+<p>Setting \(g'(w) = 0\) gives \((\mu+w)^2 = \mu(\mu+1)\beta^2/r^2\), hence</p>
+\[ w^\star = \frac{\beta\sqrt{\mu(\mu+1)}}{|r|} - \mu . \]
+<p>This is at least 1 when \(r^2 \le \tfrac{\mu}{\mu+1}\beta^2\) and at most 0 when \(r^2 \ge \tfrac{\mu+1}{\mu}\beta^2\), so outside the band the weight is clipped to 1 or 0. Those are exactly the three cases of (3.24). Example: \(\beta = 1,\ \mu = 1,\ r = 1.2\). The band is \(r^2\in[0.5, 2]\) and \(r^2 = 1.44\) is inside, so \(w^\star = \sqrt{2}/1.2 - 1 = 0.18\). The plain truncated quadratic would say 0.</p></div>
+
+<h3>4. The GNC algorithm</h3>
+<p>Each iteration has three steps. <span class="src">§3.3.4 · p. 95</span></p>
+<pre class="code"><code>w_i = 1 for all i;  mu = a value where rho_mu is (nearly) convex
+repeat:
+    1. variable update:  x = argmin_x  sum_i w_i * r_i(x)^2          (3.26)
+    2. weight update:    w_i = argmin_w  Phi_mu(w) + w * r_i(x)^2    (3.27)
+    3. control update:   move mu one notch toward the original loss
+until rho_mu is the original loss</code></pre>
+<p>Steps 1 and 2 are IRLS on the current surrogate. Step 3 is the only addition, and it is why the method is cheap to add to an existing solver.</p>
+<p>The book does not say where to start \(\mu\). The widget below uses a common-sense choice: after the first least-squares solve, take the largest residual \(r_{\max}\) and pick \(\mu\) so that no measurement starts with weight zero. For the truncated quadratic that means the upper edge of the band lies beyond \(r_{\max}^2\), and the widget sets \(\mu_0 = \beta^2/(2r_{\max}^2-\beta^2)\), which puts the edge at \(2r_{\max}^2\). For Geman-McClure it sets \(\mu_0 = 2r_{\max}^2/\beta^2\), so every weight starts above \((2/3)^2 = 0.44\).</p>
+<p>Try it: the same data as yesterday. Press Step and watch the top plot change shape while the line swings.</p>
+<div class="viz" data-viz="w06_gnc"></div>
+<p class="cap">Notice: with the truncated quadratic (β = 0.5), least squares leaves a largest residual of 3.53, so μ starts at 0.010 and the surrogate is a wide shallow bowl. In about 7 steps, with μ still below 0.1, the line has swung from y = 0.12x + 2.81 onto the inliers. The remaining steps sharpen the weights to 0 and 1. GNC ends at y = 0.51x + 0.94 with cost 4.33. Plain IRLS on the same loss (dotted line) ends at y = 0.09x + 2.86 with cost 8.04. Now set Outliers to 50%: with the truncated quadratic, GNC ends at the same wrong line as IRLS, while with Geman-McClure it still succeeds where plain IRLS fails.</p>
+
+<h3>5. What GNC can and cannot do</h3>
+<p>On the three datasets of Day 1 (Figure 3.9), GNC with either loss recovers fairly accurate trajectories where gradient descent and IRLS sometimes failed, and in real problems it has tolerated around 80–90% wrong loop closures. <span class="src">§3.3.4 · p. 95</span> Two limits:</p>
+<ul>
+<li><strong>No guarantee.</strong> GNC is a heuristic. The 50% experiment in the widget is a small example. Its performance depends on the problem: excellent for pose-graph optimization, much worse on some other perception problems. <span class="src">§3.3.4 · p. 95</span></li>
+<li><strong>It leans on the odometry.</strong> All the experiments so far assumed an <strong>odometry backbone</strong>: a chain of trusted measurements that also supplies a decent initial guess. Figure 3.10 corrupts just two odometry measurements. GNC then starts from a broken initial guess and ends in a local minimum where it labels all measurements, inliers included, as outliers. <span class="src">§3.3.4 · pp. 96–98</span></li>
+</ul>
+<p>The fix the book tries is to combine the two halves of the chapter. PCM does not use an initial guess, so it can prune gross outliers first. PCM followed by GNC gives the best results on SubT and Victoria Park. On M3500 all three variants (GNC, PCM, PCM + GNC) fail in this harder setting. <span class="src">§3.3.4 · p. 98</span> Robust SLAM without a trusted backbone is an open problem.</p>
+<p>Where the field goes from here (§3.4): <span class="src">§3.4 · pp. 98–100</span></p>
+<div class="tbl"><table>
+  <tr><th>Topic</th><th>Directions the book points to</th></tr>
+  <tr><td>Consensus maximization</td><td>RANSAC variants that refine by local optimization, score better than by counting (MLESAC), or bias the sampling (PROSAC). Exact solvers by branch and bound: globally optimal, exponential in the worst case.</td></tr>
+  <tr><td>Consistency graphs</td><td>Group-\(k\) consistency, where a test involves \(k\) measurements and the graph becomes a hypergraph. Soft versions with continuous edge weights.</td></tr>
+  <tr><td>Robust back-ends</td><td>Formulations with latent on/off variables per measurement, max-mixture noise models, expectation-maximization, a single parametrized family of robust losses, and convergence guarantees for GNC-like schemes.</td></tr>
+  <tr><td>Certifiable algorithms</td><td>Relax the robust problem to a convex semidefinite program that can be solved in polynomial time and can certify afterwards that a solution is globally optimal. Slower than heuristics. Chapter 6 (Weeks 9 and 10) develops the idea.</td></tr>
+</table></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"GNC finds the global minimum."</strong> It follows one minimum while the cost deforms. Usually that is the right one. There is no proof that it must be.</li>
+<li><strong>"μ always increases."</strong> It depends on how the surrogate is written: up for (3.24), down to 1 for (3.25).</li>
+<li><strong>"GNC replaces front-end outlier rejection."</strong> Figure 3.10 shows the two working best together, because they fail in different situations.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. GNC with the truncated quadratic, β = 1 and μ = 1. What weight does a measurement with residual r = 1.2 get?</p><div class="opts"><button type="button" class="opt">0</button><button type="button" class="opt">1</button><button type="button" class="opt">About 0.18</button><button type="button" class="opt">About 0.69</button></div><p class="exp" hidden>The band is r² ∈ [0.5, 2] and r² = 1.44 is inside it, so w = β√(μ(μ+1))/|r| − μ = 1.414/1.2 − 1 = 0.18. Without graduation the weight would be 0, since 1.2 exceeds β.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. GNC with Geman-McClure, β = 1. A measurement has residual r = 2. What are its weights at μ = 4 and at the end, μ = 1?</p><div class="opts"><button type="button" class="opt">0.25, then 0.04</button><button type="button" class="opt">0.04, then 0.25</button><button type="button" class="opt">0.5, then 0.2</button><button type="button" class="opt">1, then 0</button></div><p class="exp" hidden>w = (μβ²/(r² + μβ²))². At μ = 4: (4/8)² = 0.25. At μ = 1: (1/5)² = 0.04. Early on the measurement still has a say. As μ falls it is progressively shut out.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. Why does starting from a nearly convex surrogate make the result less dependent on the initial guess?</p><div class="opts"><button type="button" class="opt">A convex surrogate has the same minimizer as the original loss</button><button type="button" class="opt">It makes each least-squares solve cheaper</button><button type="button" class="opt">It removes the outliers before optimization starts</button><button type="button" class="opt">A convex cost has no bad local minima, so the first solves reach the same place from any start, and later solves begin from there</button></div><p class="exp" hidden>The surrogate's minimizer is not the final answer, but it is a far better starting point than least squares. Each later problem is a small change of the previous one, so its minimum is nearby.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. In the alternating scheme (3.22)–(3.23), which statement is true?</p><div class="opts"><button type="button" class="opt">The weight update requires a Gauss-Newton solve</button><button type="button" class="opt">Neither step can increase the joint cost (3.16)</button><button type="button" class="opt">The variable update changes the outlier process</button><button type="button" class="opt">The scheme converges to the global minimum for the truncated quadratic</button></div><p class="exp" hidden>Each step minimizes the same joint cost over one block of unknowns, so the cost never goes up. The weight update is N closed-form formulas, and convergence is only to a stationary point.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q5. In the book's Figure 3.10 experiment, why does GNC fail?</p><div class="opts"><button type="button" class="opt">There are more than 50% outliers among the loop closures</button><button type="button" class="opt">The truncated quadratic cannot be graduated</button><button type="button" class="opt">Two odometry measurements are corrupted, so there is no trusted backbone and the initial guess is broken</button><button type="button" class="opt">μ was increased too slowly</button></div><p class="exp" hidden>GNC depends on a reasonable start, which normally comes from reliable odometry. With corrupted odometry it converges to a local minimum that rejects inliers too. PCM, which needs no initial guess, helps on two of the three datasets.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>With weights as variables (3.16), IRLS is alternating minimization: a weighted least-squares solve (3.22), then \(N\) closed-form weight updates (3.23).</li>
+<li>The B-R weight equals \(\phi'(r^2) = \psi(r)/(2r)\), the same as rule (3.12).</li>
+<li>GNC runs the same two steps on a surrogate \(\rho_\mu\) and adds a third: move \(\mu\) from the convex end toward the original loss.</li>
+<li>For the truncated quadratic, \(\mu\) grows and \(w = \beta\sqrt{\mu(\mu+1)}/|r| - \mu\) inside the band. For Geman-McClure, \(\mu\) shrinks to 1 and \(w = (\mu\beta^2/(r^2+\mu\beta^2))^2\).</li>
+<li>GNC has no guarantee and needs a usable initial guess. Without an odometry backbone, combine it with front-end rejection such as PCM.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §3.3.3 "Alternating Minimization", §3.3.4 "Graduated Non-Convexity", §3.4 "Further Readings &amp; Recent Trends", pp. 92–100, equations (3.21)–(3.27), Examples 3.6 and 3.7, Figures 3.8–3.10.</li>
+<li>Black and Rangarajan, <em>On the Unification of Line Processes, Outlier Rejection, and Robust Statistics with Applications in Early Vision</em>, 1996 (outlier processes; the relation between the weight and the derivative of the loss).</li>
+<li>Yang, Antonante, Tzoumas, Carlone, <em>Graduated Non-Convexity for Robust Spatial Perception: From Non-Minimal Solvers to Global Outlier Rejection</em>, 2020 (the GNC surrogates and their closed-form weights).</li>
+<li>The weight derivation, the convexity range of (3.25), and the starting values of μ used in the widget are worked out here from the book's formulas.</li>
+</ol></div>
+<p class="next"></p>
+</section>

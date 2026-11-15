@@ -1,0 +1,142 @@
+<section class="day" data-day="32" id="d32" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 6 · Day 2</span>
+  <h2>RANSAC: finding the largest set of measurements that agree</h2>
+  <p class="lead">After today you can state the consensus maximization problem, run RANSAC by hand on a small example, and compute how many iterations it needs for a given inlier fraction and minimal-set size.</p>
+  <p class="meta">About 60 min · Read §3.2 opening and §3.2.1, pp. 78–81 (4 pages) · Needs Week 6 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §3.2 opening and §3.2.1, pp. 78–81</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The two "key insights" on pp. 79–80: inliers obey a geometric constraint, and the inliers are the largest set that obeys it for one common \(\mathbf{x}\).</li>
+<li>Problem (3.4) on p. 80, and the remark that it involves only a small part of the SLAM state.</li>
+<li>The three steps of RANSAC on pp. 80–81, and the words <em>minimal set</em> and <em>minimal solver</em>.</li>
+<li>The two numerical examples on p. 81: \(n = 5,\ \omega = 0.7\) and \(n = 10,\ \omega = 0.1\).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Inliers are measurements of one physical situation, so they all fit one model. Outliers have no reason to agree with each other. RANSAC guesses the model from the smallest possible random sample, counts how many measurements agree with the guess, and keeps the guess with the most support.</p></div>
+
+<h3>1. Inliers obey geometry</h3>
+<p>A SLAM front-end first produces a set of candidate measurements that may contain many outliers, then filters it. <span class="src">§3.2 · p. 78</span> The book's running case (Example 3.1) is feature-based visual SLAM. The front-end matches 2D feature points between the image at time \(k-1\) and the image at time \(k\). Each matched pair is a <strong>2D-2D correspondence</strong>, and some matches are wrong. <span class="src">§3.2.1 · p. 79</span></p>
+<p>What makes filtering possible is that correct matches are not free to be anything. If the scene is static, the way pixels move between two images is fixed by the camera's motion. For calibrated cameras, corresponding points \(\mathbf{z}_i(k-1)\) and \(\mathbf{z}_i(k)\) satisfy the <strong>epipolar constraint</strong></p>
+\[ \mathbf{z}_i(k-1)\T \left( [\mathbf{t}^{k-1}_{k}]_\times\, \mathbf{R}^{k-1}_{k} \right) \mathbf{z}_i(k) = 0, \tag{3.2} \]
+<p>where \(\mathbf{R}^{k-1}_k\) and \(\mathbf{t}^{k-1}_k\) are the unknown rotation and translation of the camera between the two times. <span class="src">§3.2.1 · p. 79</span> Here \([\mathbf{t}]_\times\) is the 3×3 skew-symmetric matrix that performs a cross product: \([\mathbf{t}]_\times \mathbf{v} = \mathbf{t} \times \mathbf{v}\).</p>
+
+<div class="box note"><h4>Filling the gap: where the epipolar constraint comes from</h4>
+<p>The book states (3.2) without proof. It takes four lines. For a calibrated camera, \(\mathbf{z}\) is the direction of the viewing ray: the pixel written as a 3-vector \([u, v, 1]\T\) in normalized image coordinates. The 3D point lies somewhere along that ray, at an unknown depth \(d \gt 0\).</p>
+<figure class="fig"><svg viewBox="0 0 600 215" role="img" aria-label="Two camera centres on the ground and one 3D point above them form a triangle. One side is the ray from the camera at time k minus 1 to the point, of length d1 along direction z of k minus 1. Another side is the ray from the camera at time k to the point, d2 times R times z of k. The third side is the translation t between the two cameras.">
+  <line x1="110" y1="170" x2="300" y2="36" stroke="var(--c5)" stroke-width="2.5"/>
+  <line x1="450" y1="170" x2="300" y2="36" stroke="var(--c1)" stroke-width="2.5"/>
+  <line x1="110" y1="170" x2="450" y2="170" stroke="var(--c2)" stroke-width="2.5"/>
+  <circle cx="300" cy="36" r="6" fill="var(--ink)"/>
+  <rect x="98" y="160" width="24" height="20" rx="3" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <rect x="438" y="160" width="24" height="20" rx="3" fill="var(--c1-soft)" stroke="var(--c1)"/>
+  <text x="300" y="20" text-anchor="middle" font-size="12" fill="var(--ink)">static 3D point</text>
+  <text x="192" y="98" text-anchor="end" font-size="13" fill="var(--ink)">d₁ · z(k−1)</text>
+  <text x="394" y="98" font-size="13" fill="var(--ink)">d₂ · R · z(k)</text>
+  <text x="280" y="190" text-anchor="middle" font-size="13" fill="var(--ink)">t</text>
+  <text x="110" y="200" text-anchor="middle" font-size="11" fill="var(--muted)">camera at k−1</text>
+  <text x="450" y="200" text-anchor="middle" font-size="11" fill="var(--muted)">camera at k</text>
+</svg><figcaption>All three vectors are written in the frame of the camera at k−1. They close a triangle, so they lie in one plane.</figcaption></figure>
+<p><strong>Step 1.</strong> Write the point's coordinates in both camera frames: \(\mathbf{p}^{k-1} = d_1\,\mathbf{z}_i(k-1)\) and \(\mathbf{p}^{k} = d_2\,\mathbf{z}_i(k)\). The relative pose maps one to the other, \(\mathbf{p}^{k-1} = \mathbf{R}\,\mathbf{p}^{k} + \mathbf{t}\) (dropping the indices on \(\mathbf{R}^{k-1}_k, \mathbf{t}^{k-1}_k\)). So</p>
+\[ d_1\,\mathbf{z}_i(k-1) = d_2\,\mathbf{R}\,\mathbf{z}_i(k) + \mathbf{t}. \]
+<p><strong>Step 2.</strong> Take the cross product of both sides with \(\mathbf{t}\). Since \(\mathbf{t}\times\mathbf{t} = \mathbf{0}\), the last term disappears:</p>
+\[ d_1\,[\mathbf{t}]_\times\,\mathbf{z}_i(k-1) = d_2\,[\mathbf{t}]_\times\,\mathbf{R}\,\mathbf{z}_i(k). \]
+<p><strong>Step 3.</strong> Take the dot product of both sides with \(\mathbf{z}_i(k-1)\). The left side is \(d_1\,\mathbf{z}_i(k-1)\T(\mathbf{t}\times\mathbf{z}_i(k-1))\), which is zero because a cross product is perpendicular to both of its factors.</p>
+\[ 0 = d_2\;\mathbf{z}_i(k-1)\T\,[\mathbf{t}]_\times\,\mathbf{R}\;\mathbf{z}_i(k). \]
+<p><strong>Step 4.</strong> Divide by \(d_2 \gt 0\). That is (3.2). The unknown depths have dropped out, which is the point: the constraint links two pixels and the camera motion, and nothing else.</p>
+<p><strong>Why five correspondences.</strong> Equation (3.2) is unchanged if \(\mathbf{t}\) is multiplied by any non-zero number, so only the direction of \(\mathbf{t}\) can be recovered: 2 unknowns. The rotation has 3. That is 5 unknowns, and each correspondence gives one scalar equation, so 5 correspondences are the minimum. This is why footnote 4 on p. 80 says the minimal set has size 5 and the pose is found "up to scale".</p></div>
+
+<p>With noisy pixels the left side of (3.2) is small but not zero, so in practice one asks for \(\left|\mathbf{z}_i(k-1)\T([\mathbf{t}]_\times\mathbf{R})\,\mathbf{z}_i(k)\right| \le \gamma\). In general, each kind of measurement comes with a constraint of the form</p>
+\[ C(\mathbf{z}_i, \mathbf{x}) \le \gamma, \tag{3.3} \]
+<p>where \(\mathbf{x}\) is the unknown the constraint depends on (here the relative pose) and \(\gamma\) is a threshold tuned to the noise level. <span class="src">§3.2.1 · p. 79</span></p>
+
+<h3>2. Consensus maximization</h3>
+<p>One correspondence alone can satisfy (3.3) for some \(\mathbf{x}\). The test only bites when many correspondences must satisfy it for the <em>same</em> \(\mathbf{x}\). Let \(\mathsf{M}\) be the set of candidate (<strong>putative</strong>) correspondences. The inlier set is estimated as the largest subset that one \(\mathbf{x}\) can explain:</p>
+\[ \mathsf{S}^\star_{\text{CM}} = \argmax_{\mathbf{x},\ \mathsf{S}\subset\mathsf{M}} |\mathsf{S}| \quad \text{s.t.}\quad C(\mathbf{z}_i, \mathbf{x}) \le \gamma \quad \forall i \in \mathsf{S}. \tag{3.4} \]
+<p>This is <strong>consensus maximization</strong>. \(|\mathsf{S}|\) is the number of elements of \(\mathsf{S}\). <span class="src">§3.2.1 · p. 80</span> Two properties matter:</p>
+<ul>
+<li>It is small. \(\mathbf{x}\) is one relative pose between two frames, not the whole trajectory and map.</li>
+<li>It is still hard. \(\mathsf{M}\) has \(2^{|\mathsf{M}|}\) subsets, so trying them all is hopeless: 100 correspondences give about \(1.3\times10^{30}\) subsets. Front-ends need an answer in milliseconds, so they use a fast heuristic.</li>
+</ul>
+<p>Today's widget uses the simplest instance. A measurement is a point \((x_i, y_i)\), the unknown is a line \(y = ax + b\), and the constraint is \(C = |y_i - a x_i - b| \le \gamma\): the point lies within a vertical distance \(\gamma\) of the line.</p>
+
+<h3>3. The RANSAC loop</h3>
+<p><strong>RANdom SAmple Consensus (RANSAC)</strong> rests on one assumption: \(\mathbf{x}\) is low-dimensional and can be computed from a handful of measurements. The smallest number of measurements that determines \(\mathbf{x}\) is the size \(n\) of the <strong>minimal set</strong>, and a fast routine that computes \(\mathbf{x}\) from exactly \(n\) measurements is a <strong>minimal solver</strong>. <span class="src">§3.2.1 · p. 80</span></p>
+<div class="tbl"><table>
+  <tr><th>Problem</th><th>Unknown</th><th>Minimal set n</th><th>Minimal solver</th></tr>
+  <tr><td>Line through points (the widget)</td><td>Slope and intercept</td><td>2</td><td>The line through two points</td></tr>
+  <tr><td>Motion from 3D-3D correspondences</td><td>Relative pose</td><td>3</td><td>Horn's method (footnote 7, p. 82)</td></tr>
+  <tr><td>Motion from 2D-2D correspondences, calibrated</td><td>Relative pose up to scale</td><td>5</td><td>Nistér's 5-point method (p. 80)</td></tr>
+</table></div>
+<pre class="code"><code>best = empty set
+repeat:
+    1. sample n correspondences at random          (a minimal set)
+    2. x_hat = minimal_solver(sample)
+    3. S = { i in M : C(z_i, x_hat) &lt;= gamma }     (who agrees with x_hat?)
+       if |S| &gt; |best|:  best = S
+until |best| is large enough, or the iteration limit is reached
+return best, and the x_hat that produced it</code></pre>
+<p>The set kept at the end is the <strong>consensus set</strong>. <span class="src">§3.2.1 · pp. 80–81</span> The logic: if all \(n\) sampled measurements happen to be inliers, \(\hat{\mathbf{x}}\) is close to the truth and all the other inliers agree with it. If the sample contains an outlier, \(\hat{\mathbf{x}}\) is wrong and few measurements agree. So the size of the consensus set tells a good sample from a bad one, without knowing which measurements are inliers.</p>
+<p>Try it: press Step a few times, then Play. Hollow points are the true outliers, which the algorithm does not know.</p>
+<div class="viz" data-viz="w06_ransac"></div>
+<p class="cap">Notice: at the default settings the first sample includes an outlier and only 9 points agree with its line. The second sample is two inliers and its consensus set is all 24 inliers and nothing else. A least-squares fit to that set gives y = 0.51x + 0.94, while least squares on everything gives the dashed line y = 0.12x + 2.81. Now set Outliers to 70% and press Play: the largest agreeing group is the second "wall", and RANSAC returns it (20 points, all outliers).</p>
+<p>The last experiment is a warning. RANSAC finds the largest group that agrees, and that is the inliers only if the outliers do not form a bigger group of their own.</p>
+
+<h3>4. How many iterations?</h3>
+<p>Let \(\omega\) be the probability that a randomly drawn measurement is an inlier, which is the inlier fraction if sampling is uniform. The book states that the expected number of iterations to draw an all-inlier sample is \(1/\omega^n\). <span class="src">§3.2.1 · p. 81</span></p>
+<div class="box note"><h4>Filling the gap: the iteration count, derived</h4>
+<p><strong>One sample.</strong> Treat the \(n\) draws as independent (accurate when the set is much larger than \(n\)). The sample is all-inlier with probability \(q = \omega^n\).</p>
+<p><strong>Expected number of samples.</strong> Each iteration succeeds with probability \(q\), independently. Let \(E\) be the expected number of iterations up to and including the first success. Either the first one succeeds (probability \(q\), cost 1), or it fails and you are back at the start having spent one iteration:</p>
+\[ E = q \cdot 1 + (1-q)(1 + E) \quad\Longrightarrow\quad E = \frac{1}{q} = \frac{1}{\omega^n}. \]
+<p>For \(n = 5,\ \omega = 0.7\): \(\omega^n = 0.7^5 = 0.168\) and \(E = 5.95\), the book's "less than 10". For \(n = 10,\ \omega = 0.1\): \(E = 10^{10}\).</p>
+<p><strong>Iterations for a given confidence.</strong> An average is not a guarantee. The probability that \(k\) samples in a row are all contaminated is \((1-\omega^n)^k\). To make that at most \(1 - p\), so that at least one clean sample was drawn with probability \(p\), solve for \(k\):</p>
+\[ (1-\omega^n)^k \le 1 - p \quad\Longleftrightarrow\quad k \ge \frac{\log(1-p)}{\log(1-\omega^n)}. \]
+<p>The inequality flips because \(\log(1-\omega^n)\) is negative. This formula is not in the book. It is the standard stopping rule from the original RANSAC paper. For \(n = 5,\ \omega = 0.7,\ p = 0.99\): \(k \ge \log(0.01)/\log(0.832) = 25.03\), so 26 iterations.</p></div>
+<div class="tbl"><table>
+  <tr><th>Minimal set n</th><th>ω = 0.9</th><th>ω = 0.7</th><th>ω = 0.5</th><th>ω = 0.3</th></tr>
+  <tr><td>2</td><td>1.2 expected, 3 for 99%</td><td>2.0, 7</td><td>4.0, 17</td><td>11.1, 49</td></tr>
+  <tr><td>3</td><td>1.4, 4</td><td>2.9, 11</td><td>8.0, 35</td><td>37.0, 169</td></tr>
+  <tr><td>5</td><td>1.7, 6</td><td>5.9, 26</td><td>32.0, 146</td><td>411.5, 1893</td></tr>
+  <tr><td>8</td><td>2.3, 9</td><td>17.3, 78</td><td>256.0, 1177</td><td>15 242, 70 188</td></tr>
+</table></div>
+<p>Each cell gives the expected number of iterations \(1/\omega^n\), then the number needed for 99% confidence. Read across a row and the count explodes as inliers get rarer. Read down a column and it explodes as the minimal set grows. The exponent \(n\) is why so much research goes into solvers with the smallest possible sample.</p>
+
+<h3>5. When RANSAC is the right tool, and when it is not</h3>
+<p>RANSAC is the default for outlier rejection in landmark-based front-ends because minimal solvers are fast (hundreds of iterations in a few milliseconds), and because it returns an estimate \(\hat{\mathbf{x}}\), for example the camera motion, that serves as an initial guess for the back-end. <span class="src">§3.2.1 · p. 81</span></p>
+<p>It stops being practical in two situations. <span class="src">§3.2.1–3.2.2 · p. 81</span></p>
+<ul>
+<li><strong>Few inliers.</strong> The book's rule of thumb is that RANSAC works well below about 70% outliers. Strong perceptual aliasing can push the outlier rate far higher.</li>
+<li><strong>Large minimal sets.</strong> A pose graph with \(N\) poses needs at least \(N-1\) relative-pose measurements to determine every pose (a spanning tree), and \(N\) is in the thousands. There is no small sample to draw.</li>
+</ul>
+<p>Stopping RANSAC early in those cases does not give a slightly worse answer. It gives a wrong \(\hat{\mathbf{x}}\) and a wrong set of correspondences. Tomorrow's method avoids sampling altogether.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"RANSAC solves consensus maximization."</strong> It is a heuristic for (3.4). It returns the best set among the samples it happened to try, with no guarantee that it is the largest one.</li>
+<li><strong>"A larger sample gives a better model, so sample more than the minimum."</strong> Every extra point multiplies the chance of a clean sample by \(\omega\). Accuracy comes afterwards, from refitting to the whole consensus set.</li>
+<li><strong>"The threshold γ is a detail."</strong> Too small, and noisy inliers are rejected so that good samples score badly. Too large, and outliers near the model are accepted. Move γ in the widget to 0.10 and to 1.50 and watch the consensus set.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. Half of the points are inliers and you fit a line (n = 2). What is the expected number of RANSAC iterations until a sample contains only inliers?</p><div class="opts"><button type="button" class="opt">2</button><button type="button" class="opt">4</button><button type="button" class="opt">8</button><button type="button" class="opt">16</button></div><p class="exp" hidden>One sample is clean with probability 0.5² = 0.25, and the expected number of trials until the first success is 1/0.25 = 4.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. Same setting (ω = 0.5, n = 2). How many iterations make the probability of at least one all-inlier sample 99%?</p><div class="opts"><button type="button" class="opt">4</button><button type="button" class="opt">7</button><button type="button" class="opt">10</button><button type="button" class="opt">17</button></div><p class="exp" hidden>k ≥ log(0.01)/log(1 − 0.25) = (−4.605)/(−0.2877) = 16.01, so 17. The expected count of 4 is far from a guarantee: after 4 iterations the failure probability is still 0.75⁴ = 0.32.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. Why can the relative pose of two calibrated cameras be estimated from 5 correspondences, and not fewer?</p><div class="opts"><button type="button" class="opt">The epipolar constraint gives one equation per correspondence, and there are 5 unknowns: 3 for rotation and 2 for the direction of translation</button><button type="button" class="opt">A pose has 6 degrees of freedom and one is fixed by calibration</button><button type="button" class="opt">Each correspondence gives two equations and there are 10 unknowns</button><button type="button" class="opt">Five is the number of points needed to define a plane robustly</button></div><p class="exp" hidden>Equation (3.2) is one scalar equation per correspondence. It is unchanged when t is rescaled, so the length of t cannot be found, leaving 3 + 2 = 5 unknowns.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. In step 3 of RANSAC, a sample that contains one outlier usually produces a small consensus set. Why?</p><div class="opts"><button type="button" class="opt">The minimal solver refuses samples with outliers</button><button type="button" class="opt">The threshold γ is tightened for bad samples</button><button type="button" class="opt">The model computed from it is wrong, so the inliers do not satisfy the constraint for that model</button><button type="button" class="opt">Outliers are removed from M after each iteration</button></div><p class="exp" hidden>The solver cannot know a sample is contaminated. It returns a model that fits the n sampled points exactly and is far from the truth, so most inliers fail C(z, x̂) ≤ γ. The count is what reveals the bad sample.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Inliers satisfy a geometric constraint \(C(\mathbf{z}_i, \mathbf{x}) \le \gamma\) for one common \(\mathbf{x}\). For two calibrated views it is the epipolar constraint.</li>
+<li>Consensus maximization (3.4) asks for the largest subset that one \(\mathbf{x}\) explains. It is combinatorial.</li>
+<li>RANSAC samples a minimal set, solves for \(\hat{\mathbf{x}}\), counts who agrees, and keeps the best.</li>
+<li>Expected iterations: \(1/\omega^n\). For confidence \(p\): \(k \ge \log(1-p)/\log(1-\omega^n)\).</li>
+<li>It fails when inliers are rare or the minimal set is large, as in pose-graph optimization.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §3.2 opening and §3.2.1 "RANdom SAmple Consensus (RANSAC)", pp. 78–81, equations (3.2)–(3.4), Example 3.1.</li>
+<li>Fischler and Bolles, <em>Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and Automated Cartography</em>, 1981 (the algorithm and the iteration count for a given confidence).</li>
+<li>Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (derivation of the epipolar constraint; RANSAC sample counts).</li>
+</ol></div>
+<p class="next"></p>
+</section>

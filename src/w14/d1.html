@@ -1,0 +1,135 @@
+<section class="day" data-day="79" id="d79" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 14 · Day 1</span>
+  <h2>Radar sensors and FMCW: range from a beat frequency, speed from a phase</h2>
+  <p class="lead">After today you can name the two radar types used in robotics, compute the range of a target from the beat frequency of an FMCW chirp, and compute its radial velocity from the phase change between two chirps.</p>
+  <p class="meta">About 60 min · Read §9.1.1–9.1.2.3, pp. 250–256 (7 pages) · Needs Week 13 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §9.1.1–9.1.2.3, pp. 250–256</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>Figure 9.1 (p. 250): the front-end and back-end are the ones you know. Find the two boxes that are specific to radar.</li>
+<li>The main data product of each sensor type: the polar radargram and the radar datacube (p. 252).</li>
+<li>Equation (9.2) on p. 255, and what the slope \(S\) is.</li>
+<li>Equations (9.4) and (9.5) on p. 256, and where the limit \(v_{\max}\) comes from.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>An FMCW radar does not time an echo with a stopwatch. It transmits a tone whose frequency climbs steadily and compares the echo with what it is transmitting at that moment. The echo left earlier, so it is lower in frequency, and the size of that gap is proportional to the range. Velocity comes from a second comparison: how much the phase of the gap signal has turned between one chirp and the next.</p></div>
+
+<h3>1. Two kinds of radar</h3>
+<p><strong>Radar</strong> (radio detection and ranging) sends radio waves and listens for reflections. It works in smoke, dust, rain and darkness, reaches far, and can measure velocity directly, which is why its use in SLAM is growing. <span class="src">Ch. 9 intro · p. 250</span> Robotics uses <strong>millimeter-wave (mmWave)</strong> radar: wavelengths of 1–10 mm, frequencies of 30–300 GHz, and in practice mostly the 76–81 GHz band reserved for cars. <span class="src">§9.1.2 · p. 253</span> Wavelength and frequency are tied by \(\lambda = c/f\), so a 77 GHz radar has \(\lambda = 3\times10^{8}/77\times10^{9} \approx 3.9\) mm.</p>
+<p>Two sensor designs dominate. <span class="src">§9.1.1 · pp. 250–252</span></p>
+<div class="tbl"><table>
+  <tr><th>Property</th><th>Spinning radar</th><th>System-on-a-chip (SoC) radar</th></tr>
+  <tr><td>How it covers angles</td><td>One antenna, rotated mechanically</td><td>A fixed array of transmit and receive antennas whose signals are combined</td></tr>
+  <tr><td>Main data product</td><td><strong>Polar radargram</strong>: received power for every azimuth and range bin</td><td><strong>Radar datacube</strong></td></tr>
+  <tr><td>Dimensions</td><td>2D: azimuth and range, no elevation, although echoes come from the whole vertical beam</td><td>Azimuth, elevation, range and radial velocity: "3+1D" or "4D". With few vertical antennas: "2+1D"</td></tr>
+  <tr><td>Velocity</td><td>Often missing: one pulse per antenna angle is not enough. Recent work recovers it from neighbouring azimuths</td><td>Measured for every return</td></tr>
+  <tr><td>Strength</td><td>Full 360° view, objects detected beyond 100 m</td><td>Light, low power, no moving parts</td></tr>
+</table></div>
+<p>A spinning 3D radar with stacked beams, built like a 3D LiDAR, is not practical: radar antennas and their focusing hardware are far larger than laser diodes. <span class="src">§9.1.1.1 · p. 252</span></p>
+<p>How strongly an object answers is its <strong>radar cross section (RCS)</strong>: the size of an imaginary sphere that would reflect the same energy. It depends on material, size and shape. A truck or a concrete wall has a high RCS, a pedestrian a low one. The echo strength, called <strong>radar intensity</strong>, depends on the transmitted power and the RCS. <span class="src">§9.1.2.1 · p. 253</span> You will meet intensity again on Day 4, where it replaces the height that LiDAR descriptors use.</p>
+
+<h3>2. The chirp and the beat frequency</h3>
+<p><strong>FMCW</strong> stands for frequency-modulated continuous wave. The transmit antenna (TX) emits a <strong>chirp</strong>: a signal whose frequency rises linearly from \(f_m\) to \(f_M\) during a time \(T\). The <strong>bandwidth</strong> is \(B = f_M - f_m\) and the <strong>slope</strong> is \(S = B/T\). Repeating up chirps one after the other is called <strong>sawtooth modulation</strong>. <span class="src">§9.1.2.2 · pp. 253–255</span></p>
+<p>The echo from a target at distance \(d\) comes back after the round-trip time \(t_0\), which is equation (9.1) read backwards:</p>
+\[ t_0 = \frac{2d}{c} \qquad\Longleftrightarrow\qquad d = \frac{c}{2}\,t_0 . \tag{9.1} \]
+<p>The receiver mixes the echo with the chirp it is transmitting at that instant. The output is the <strong>intermediate frequency (IF) signal</strong>, also called the <strong>beat signal</strong>: a sine wave of constant frequency \(f_0\).</p>
+<figure class="fig"><svg viewBox="0 0 600 214" role="img" aria-label="Frequency against time for one chirp. The transmitted chirp is a straight line rising from f m at time zero to f M at time T. The echo is the same line shifted right by the delay t zero. At any time between t zero and T the vertical gap between the two lines is the beat frequency f zero.">
+  <rect x="160" y="26" width="270" height="164" fill="var(--soft)"/>
+  <line x1="70" y1="190" x2="566" y2="190" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="70" y1="190" x2="70" y2="24" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="70" y1="40" x2="430" y2="40" stroke="var(--line2)" stroke-dasharray="4 4"/>
+  <line x1="430" y1="40" x2="430" y2="190" stroke="var(--line2)" stroke-dasharray="4 4"/>
+  <line x1="160" y1="160" x2="160" y2="190" stroke="var(--line2)" stroke-dasharray="4 4"/>
+  <line x1="70" y1="160" x2="430" y2="40" stroke="var(--c5)" stroke-width="2.5"/>
+  <line x1="160" y1="160" x2="520" y2="40" stroke="var(--c2)" stroke-width="2.5"/>
+  <line x1="70" y1="160" x2="160" y2="160" stroke="var(--ink)" stroke-width="3"/>
+  <line x1="300" y1="83.3" x2="300" y2="113.3" stroke="var(--ink)" stroke-width="3"/>
+  <text x="306" y="104" font-size="13" fill="var(--ink)">f₀</text>
+  <text x="115" y="178" text-anchor="middle" font-size="13" fill="var(--ink)">t₀</text>
+  <text x="62" y="44" text-anchor="end" font-size="12" fill="var(--muted)">f<tspan baseline-shift="sub" font-size="10">M</tspan></text>
+  <text x="62" y="164" text-anchor="end" font-size="12" fill="var(--muted)">f<tspan baseline-shift="sub" font-size="10">m</tspan></text>
+  <text x="70" y="206" text-anchor="middle" font-size="12" fill="var(--muted)">0</text>
+  <text x="160" y="206" text-anchor="middle" font-size="12" fill="var(--muted)">t₀ = 2d/c</text>
+  <text x="430" y="206" text-anchor="middle" font-size="12" fill="var(--muted)">T</text>
+  <text x="566" y="206" text-anchor="end" font-size="12" fill="var(--muted)">time</text>
+  <text x="78" y="20" font-size="12" fill="var(--muted)">frequency</text>
+  <text x="250" y="60" text-anchor="end" font-size="12" fill="var(--c5)">transmitted chirp</text>
+  <text x="462" y="112" font-size="12" fill="var(--c2)">echo</text>
+</svg><figcaption>The echo is the transmitted chirp shifted right by t₀. Both lines have slope S, so between t₀ and T (shaded) the vertical gap is constant: f₀ = S·t₀. The delay is drawn far too large; in reality it is under 1% of T.</figcaption></figure>
+<p>Read the picture as geometry. At time \(t\) the transmitter is at frequency \(f_m + St\). The echo arriving at that moment left at time \(t - t_0\), so it has frequency \(f_m + S(t - t_0)\). The difference does not depend on \(t\):</p>
+\[ f_0 = S\,t_0 = \frac{B}{T}\cdot\frac{2d}{c} = \frac{2Bd}{Tc} = \frac{2Sd}{c} \qquad\Longrightarrow\qquad d = \frac{c\,f_0}{2S}. \tag{9.2} \]
+<p><strong>Worked example.</strong> Take \(B = 300\) MHz, \(T = 40\ \mu\text{s}\), and a target at \(d = 12\) m. The delay is \(t_0 = 24/(3\times10^{8}) = 80\) ns. The slope is \(S = 3\times10^{8}/(40\times10^{-6}) = 7.5\times10^{12}\) Hz/s. The beat frequency is \(f_0 = 7.5\times10^{12}\times 80\times10^{-9} = 600\) kHz. A delay of 80 billionths of a second, which is hard to time directly, has become a 600 kHz tone, which is easy to measure.</p>
+
+<div class="box note"><h4>Filling the gap: why mixing gives the difference frequency</h4>
+<p>The book says the echo is "mixed with" the transmitted chirp. A mixer multiplies two signals, and the product of two cosines is</p>
+\[ \cos a \,\cos b = \tfrac12\cos(a-b) + \tfrac12\cos(a+b). \]
+<p>The sum term oscillates at about twice 77 GHz and is removed by a low-pass filter. The difference term stays. To find it, write the phase of the transmitted chirp. Frequency is the rate of change of phase divided by \(2\pi\), so a frequency \(f_m + St\) integrates to the phase</p>
+\[ \varphi_{\text{TX}}(t) = 2\pi\left(f_m t + \tfrac12 S t^2\right). \]
+<p>The echo is a delayed copy with phase \(\varphi_{\text{TX}}(t - t_0)\). Subtract and expand \((t-t_0)^2 = t^2 - 2t\,t_0 + t_0^2\):</p>
+\[ \begin{aligned} \varphi_{\text{TX}}(t) - \varphi_{\text{TX}}(t-t_0) & = 2\pi\left(f_m t_0 + S t_0\, t - \tfrac12 S t_0^2\right) \\ & = 2\pi \underbrace{(S t_0)}_{f_0}\, t + \underbrace{2\pi f_m t_0 - \pi S t_0^2}_{\phi_0} . \end{aligned} \]
+<p>So the IF signal is a sinusoid with frequency \(f_0 = S t_0\) and a constant phase \(\phi_0\). The second part of \(\phi_0\) is smaller than the first by the factor \(S t_0/(2 f_m) = f_0/(2 f_m)\), about \(4\times10^{-6}\) in the example, and the book drops it. What is left is equation (9.3):</p>
+\[ \phi_0 = 2\pi f_m t_0 = 2\pi\,\frac{c}{\lambda}\cdot\frac{2d}{c} = \frac{4\pi d}{\lambda}. \tag{9.3} \]
+</div>
+
+<h3>3. From samples to a range</h3>
+<p>The radar samples the IF signal with an analog-to-digital converter and takes a Fourier transform (FFT) of the samples of one chirp. Each target is a tone, so each target is a peak in the spectrum, and equation (9.2) converts the frequency of the peak into a range. <span class="src">§9.1.2.2 · p. 255</span> With several targets the IF signal is a sum of tones and the spectrum has several peaks. That spectrum, for one antenna direction, is one row of a radargram.</p>
+<div class="box note"><h4>Filling the gap: range resolution and maximum range</h4>
+<p>The book does not say how close two targets may be before their peaks merge. A tone observed for a time \(T\) can be separated from another only if their frequencies differ by about \(1/T\), which is also the spacing of the FFT bins. Put \(\Delta f = 1/T\) into equation (9.2):</p>
+\[ \Delta d = \frac{c\,\Delta f}{2S} = \frac{c}{2ST} = \frac{c}{2B}. \]
+<p><strong>Range resolution depends only on the bandwidth.</strong> For \(B = 300\) MHz it is 0.5 m, for 1 GHz it is 15 cm.</p>
+<p>The spectrum also has an upper end. If the radar takes \(N\) complex samples per chirp, the sampling rate is \(N/T\), which is the highest beat frequency it can represent. That frequency corresponds to the range</p>
+\[ d_{\max} = \frac{c}{2S}\cdot\frac{N}{T} = N\,\frac{c}{2B} . \]
+<p>So \(N\) samples give \(N\) range bins of size \(c/(2B)\). For a fixed number of samples, more bandwidth means finer bins and a shorter reach.</p></div>
+<p>Try it: the widget simulates the beat signal for two chirps and estimates range and velocity from it. Press "Add a second target", then lower the bandwidth to 50 MHz and raise it to 600 MHz.</p>
+<div class="viz" data-viz="w14_fmcw"></div>
+<p class="cap">Notice: at the start the beat frequency is 600 kHz and the peak sits at about 12.05 m. With a second target 1.5 m behind, 300 MHz shows two peaks, while at 50 MHz a range bin is 3 m and the two merge into one. At 600 MHz the bins shrink to 0.25 m and the unambiguous range drops to 32 m. The extra 5 cm at the start is not noise: it grows when you raise the velocity. Day 2 explains it.</p>
+
+<h3>4. Speed from the phase between two chirps</h3>
+<p>Equation (9.3) says the phase of the beat signal is \(\phi_0 = 4\pi d/\lambda\). It turns through a full circle every time the range changes by \(\lambda/2\), about 1.95 mm at 77 GHz. That makes it useless for absolute range, because the radar cannot tell how many full turns happened. It makes it very good at measuring a small <em>change</em> in range. <span class="src">§9.1.2.3 · p. 255</span></p>
+<p>Send two up chirps a time \(T\) apart. A target with <strong>radial velocity</strong> \(v\) (the rate at which its range changes) moves by \(\Delta d = vT\) in between. The two beat signals have almost the same frequency, but their phases differ by</p>
+\[ \Delta\phi = \frac{4\pi\,\Delta d}{\lambda} = \frac{4\pi v T}{\lambda} . \tag{9.4} \]
+<p>Solve for the velocity:</p>
+\[ v = \frac{\lambda\,\Delta\phi}{4\pi T}. \tag{9.5} \]
+<p><span class="src">§9.1.2.3 · p. 256</span> The book uses \(T\) both for the length of a chirp and for the time between chirps; for back-to-back chirps they are the same.</p>
+<p><strong>Worked example.</strong> With \(T = 40\ \mu\text{s}\) and \(v = 5\) m/s the target moves \(\Delta d = 0.2\) mm between chirps, 2500 times less than the 0.5 m range bin, so the two spectra look identical. Yet \(\Delta\phi = 4\pi \times 2\times10^{-4}/3.896\times10^{-3} = 0.645\) rad, which is 37°, and that is easy to measure.</p>
+<p>A phase is only known up to full turns. The reading is unambiguous while \(|\Delta\phi| \lt \pi\), which gives the largest speed the pair of chirps can report:</p>
+\[ v_{\max} = \frac{\lambda}{4T}. \]
+<p>With the numbers above, \(v_{\max} = 3.896\times10^{-3}/(160\times10^{-6}) = 24.4\) m/s. In the widget, set the velocity to 28 m/s: the estimate jumps to about −20.6 m/s, which is \(28 - 2 v_{\max}\). This is <strong>velocity aliasing</strong>.</p>
+<div class="box kid"><h4>In plain words</h4><p>Imagine whistling a note that slides steadily upward while standing in front of a cliff. The echo you hear is the note from a moment ago, so it is a bit lower than the note you are whistling now. The farther the cliff, the older the echo and the bigger the gap in pitch. Range is the gap. To get speed, whistle the same slide twice and check whether the echo's wave has shifted by a fraction of one ripple in between.</p></div>
+<div class="box note"><h4>Going deeper (optional): many chirps and the datacube</h4>
+<p>Two chirps give a noisy velocity, as the widget shows (about 5.2 m/s for a true 5.0). Real sensors send a frame of \(N_c\) chirps. For one range bin, the phase advances by the same \(\Delta\phi\) from chirp to chirp, so the \(N_c\) complex values form a tone with frequency \(\Delta\phi/(2\pi T) = 2v/\lambda\), and a second FFT across the chirps finds it. This is what the book means by a series of FFTs over several chirps. <span class="src">§9.1.2.2 · p. 255</span> The frame lasts \(N_c T\), so by the argument of section 3 the frequency resolution is \(1/(N_c T)\) and the <strong>velocity resolution</strong> is</p>
+\[ \Delta v = \frac{\lambda}{2 N_c T}. \]
+<p>For \(N_c = 128\) and \(T = 40\ \mu\text{s}\) this is 0.38 m/s. Range FFT, then Doppler FFT, then a third transform across antennas for angle (Day 2): the result is the datacube of an SoC radar.</p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The radar measures the time of flight with a fast clock."</strong> FMCW measures a frequency difference. The chirp slope converts nanoseconds of delay into kilohertz of beat frequency.</li>
+<li><strong>"More bandwidth means more range."</strong> Bandwidth sets the size of a range bin, \(c/(2B)\). For a fixed number of samples, more bandwidth shortens the unambiguous range.</li>
+<li><strong>"The radar measures how fast the target moves."</strong> It measures only the radial part, the rate of change of range. A car crossing in front of the sensor at constant range has zero Doppler velocity.</li>
+<li><strong>"The phase gives a very precise range."</strong> It wraps every half wavelength. Only phase differences are used: between chirps for velocity, between antennas for angle.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A chirp has B = 600 MHz and T = 40 µs. The beat frequency of a target is 1 MHz. How far away is it? (Use c = 3 × 10⁸ m/s.)</p><div class="opts"><button type="button" class="opt">5 m</button><button type="button" class="opt">10 m</button><button type="button" class="opt">20 m</button><button type="button" class="opt">100 m</button></div><p class="exp" hidden>S = B/T = 1.5 × 10¹³ Hz/s. d = c·f₀/(2S) = (3 × 10⁸ × 10⁶)/(3 × 10¹³) = 10 m.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. What is the range resolution of a chirp with 1 GHz of bandwidth?</p><div class="opts"><button type="button" class="opt">15 cm</button><button type="button" class="opt">30 cm</button><button type="button" class="opt">1.5 m</button><button type="button" class="opt">3.9 mm</button></div><p class="exp" hidden>c/(2B) = 3 × 10⁸/(2 × 10⁹) = 0.15 m. It does not depend on the carrier frequency or on the chirp duration.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q3. A radar has λ = 4 mm and sends chirps 50 µs apart. The beat phase changes by π/2 between two chirps. What is the radial velocity?</p><div class="opts"><button type="button" class="opt">2.5 m/s</button><button type="button" class="opt">5 m/s</button><button type="button" class="opt">10 m/s</button><button type="button" class="opt">20 m/s</button></div><p class="exp" hidden>v = λΔφ/(4πT) = (0.004 × π/2)/(4π × 50 × 10⁻⁶) = 0.004/(8 × 50 × 10⁻⁶) = 10 m/s.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q4. Why do many spinning radars give no velocity for their returns?</p><div class="opts"><button type="button" class="opt">Their wavelength is too long for the Doppler effect</button><button type="button" class="opt">The rotation of the antenna cancels the Doppler shift</button><button type="button" class="opt">They have too little bandwidth</button><button type="button" class="opt">They send one pulse per antenna angle, and velocity needs at least two to compare</button></div><p class="exp" hidden>Velocity comes from the phase change between chirps aimed at the same target. With a single pulse per azimuth there is nothing to compare (p. 252).</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. You halve the time between chirps. What happens to the largest unambiguous velocity?</p><div class="opts"><button type="button" class="opt">It halves</button><button type="button" class="opt">It doubles</button><button type="button" class="opt">It stays the same</button><button type="button" class="opt">It grows four times</button></div><p class="exp" hidden>v_max = λ/(4T). Half the time means the target moves half as far between chirps, so twice the speed fits inside a phase change of π.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Spinning radars give a 2D polar radargram over 360° and long range. SoC radars use antenna arrays, have no moving parts, and give range, angles and radial velocity.</li>
+<li>An FMCW chirp rises in frequency with slope \(S = B/T\). The echo is delayed by \(t_0 = 2d/c\), so mixing gives a beat tone \(f_0 = S t_0\) and the range is \(d = c f_0/(2S)\).</li>
+<li>An FFT of one chirp turns each target into a peak. Bins are \(c/(2B)\) wide.</li>
+<li>The beat phase is \(4\pi d/\lambda\). Its change between chirps gives \(v = \lambda\Delta\phi/(4\pi T)\), unambiguous up to \(\lambda/(4T)\).</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Ch. 9 "Radar SLAM", §9.1.1 "Sensor Types" and §9.1.2.1–9.1.2.3, pp. 250–256, equations (9.1)–(9.5), Figures 9.1–9.4.</li>
+<li>Richards, <em>Fundamentals of Radar Signal Processing</em>, 2nd ed., 2014 (mixing and the beat signal, range resolution c/(2B), unambiguous range and velocity, velocity resolution).</li>
+<li>Skolnik, <em>Introduction to Radar Systems</em>, 3rd ed., 2001 (FMCW ranging).</li>
+</ol></div>
+<p class="next"></p>
+</section>

@@ -1,0 +1,113 @@
+<section class="day" data-day="1" id="d1" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 1 · Day 1</span>
+  <h2>What SLAM is, and how a SLAM system is put together</h2>
+  <p class="lead">After today you can state the SLAM problem, split a SLAM system into its front-end and back-end, and explain why loop closures stop drift.</p>
+  <p class="meta">About 60 min · Read §I.1–I.2, pp. 3–8 (6 pages) · No prerequisites</p>
+</header>
+
+<div class="box read"><h4>Read first: Prelude §I.1–I.2, pp. 3–8</h4>
+<p>While you read, look for three things:</p>
+<ul>
+<li>The two special cases that SLAM reduces to when you already know the map, or already know the pose (p. 3).</li>
+<li>What the front-end hands to the back-end in Example I.1 (visual) and Example I.2 (LiDAR), on pp. 7–8.</li>
+<li>The paragraph on p. 8 that says why loop closures matter.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>SLAM estimates two things at once, where the robot has been and what the world looks like, because each one is needed to compute the other. Every system in this book does it in two stages: a <strong>front-end</strong> turns raw sensor data into a small set of geometric constraints, and a <strong>back-end</strong> finds the trajectory and map that best satisfy all of them.</p></div>
+
+<h3>1. One problem, two unknowns</h3>
+<p>A robot in a place it has never seen needs a <strong>map</strong> (where the obstacles, objects, and landmarks are) and its own <strong>pose</strong> (position and orientation) inside that map. <strong>Simultaneous localization and mapping (SLAM)</strong> is the problem of building the map while estimating the pose with respect to it. <span class="src">§I.1 · p. 3</span></p>
+<p>The difficulty is circular. To place a new observation in the map you need to know where the robot was when it made it. To know where the robot is you need to compare what it sees with the map. If someone hands you one of the two, the problem collapses into an easier one:</p>
+<div class="tbl"><table>
+  <tr><th>You already know</th><th>You must estimate</th><th>The problem is called</th></tr>
+  <tr><td>The map</td><td>The pose</td><td>Localization</td></tr>
+  <tr><td>The pose (for example from motion capture or differential GPS)</td><td>The map</td><td>Mapping</td></tr>
+  <tr><td>Neither</td><td>Both</td><td>SLAM</td></tr>
+</table></div>
+<p>In practice "neither" is the normal case. Motion capture and differential GPS are expensive and cover small areas, consumer GPS is accurate only to meters and fails indoors, and a prior map is often missing, out of date, or too coarse. <span class="src">§I.1 · pp. 4–5</span> That is why the handbook treats SLAM, and not localization alone, as the core capability.</p>
+
+<h3>2. SLAM is an inverse problem</h3>
+<p>Sensors do not report poses or maps. They report numbers that <em>depend on</em> the poses and the map: a pixel coordinate, a range, an angular rate. Write the unknowns (all poses and all map parameters) as one long vector \(\mathbf{x}\), and each measurement as</p>
+\[ \mathbf{z}_i = h_i(\mathbf{x}) + \boldsymbol{\eta}_i , \]
+<p>where \(h_i\) is a <strong>measurement model</strong> that predicts what the sensor should read for a given \(\mathbf{x}\), and \(\boldsymbol{\eta}_i\) is noise. Going from \(\mathbf{x}\) to \(\mathbf{z}\) is easy: it is geometry. SLAM asks for the reverse: given all the \(\mathbf{z}_i\), find the \(\mathbf{x}\) that could have produced them. The book calls this an <strong>inverse problem</strong>. <span class="src">§I.2 · p. 5</span> You will write this equation properly in Week 2, where it becomes a least-squares problem.</p>
+<p>There are two ways to set it up. <strong>Indirect methods</strong> first compress the raw data into a few easy-to-model quantities, such as keypoints in an image, and only model those. <strong>Direct methods</strong> model the raw data itself, such as the brightness of every pixel. Indirect methods are cheaper and lead to simpler math. Direct methods use all the information and can be more accurate, at the cost of heavier computation and a harder optimization problem. <span class="src">§I.2 · pp. 5–6</span></p>
+
+<h3>3. Front-end and back-end</h3>
+<p>Indirect methods split a SLAM system in two. <span class="src">§I.2 · pp. 6–7</span></p>
+<figure class="fig"><svg viewBox="0 0 600 250" role="img" aria-label="Block diagram. Raw measurements enter the front-end, which does sensor processing and place recognition. It sends pseudo-measurements and loop-closure constraints to the back-end, which outputs the estimated poses and map.">
+  <defs><marker id="w01ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="150" y="18" width="190" height="200" rx="14" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="245" y="40" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">Front-end</text>
+  <rect x="166" y="54" width="158" height="62" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="245" y="80" text-anchor="middle" font-size="13" fill="var(--ink)">Sensor processing</text>
+  <text x="245" y="98" text-anchor="middle" font-size="11" fill="var(--muted)">features, scan matching</text>
+  <rect x="166" y="136" width="158" height="62" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="245" y="162" text-anchor="middle" font-size="13" fill="var(--ink)">Place recognition</text>
+  <text x="245" y="180" text-anchor="middle" font-size="11" fill="var(--muted)">have I been here before?</text>
+  <rect x="424" y="54" width="160" height="144" rx="14" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="504" y="110" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">Back-end</text>
+  <text x="504" y="130" text-anchor="middle" font-size="11" fill="var(--muted)">factor-graph</text>
+  <text x="504" y="145" text-anchor="middle" font-size="11" fill="var(--muted)">optimization</text>
+  <text x="8" y="80" font-size="13" fill="var(--ink)">Raw sensor data</text>
+  <text x="8" y="97" font-size="11" fill="var(--muted)">images, scans, IMU</text>
+  <line x1="118" y1="85" x2="162" y2="85" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w01ar)"/>
+  <line x1="130" y1="85" x2="130" y2="167" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="130" y1="167" x2="162" y2="167" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w01ar)"/>
+  <line x1="324" y1="85" x2="420" y2="85" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w01ar)"/>
+  <text x="372" y="70" text-anchor="middle" font-size="11" fill="var(--muted)">odometry,</text>
+  <text x="372" y="103" text-anchor="middle" font-size="11" fill="var(--muted)">landmarks</text>
+  <line x1="324" y1="167" x2="420" y2="167" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w01ar)"/>
+  <text x="372" y="158" text-anchor="middle" font-size="11" fill="var(--muted)">loop</text>
+  <text x="372" y="185" text-anchor="middle" font-size="11" fill="var(--muted)">closures</text>
+  <text x="504" y="225" text-anchor="middle" font-size="13" fill="var(--ink)">poses + map</text>
+  <line x1="504" y1="198" x2="504" y2="211" stroke="var(--muted)" stroke-width="1.5"/>
+</svg><figcaption>The front-end depends on the sensor. The back-end is the same estimation machinery for every sensor, which is why Part I of the book can teach it once.</figcaption></figure>
+<p>The <strong>front-end</strong> processes raw data into compact <strong>pseudo-measurements</strong>, detects when the robot returns to a known place, and supplies a rough initial guess. The <strong>back-end</strong> takes those pseudo-measurements and solves for the poses and map. The book's two running examples give the two standard problem shapes:</p>
+<div class="tbl"><table>
+  <tr><th>Model</th><th>Front-end produces</th><th>Back-end estimates</th><th>Back-end problem</th></tr>
+  <tr><td>Landmark-based (Example I.1, visual SLAM)</td><td>Observations of 3D landmarks: matched keypoints across images</td><td>Poses and landmark positions</td><td>Bundle adjustment (BA)</td></tr>
+  <tr><td>Pose-graph (Example I.2, LiDAR SLAM)</td><td>Relative poses: odometry between consecutive scans, loop closures between revisits</td><td>Poses only</td><td>Pose-graph optimization (PGO)</td></tr>
+</table></div>
+<p>Where you draw the line is a trade. Handing the back-end only relative poses makes it fast, but it has thrown away the raw observations, so the answer is slightly less accurate than bundle adjustment on the same data. <span class="src">§I.2 · p. 8</span></p>
+<div class="box kid"><h4>In plain words</h4><p>The front-end is the part that looks. It says things like "I moved about one meter forward" and "that corner is the same one I saw ten minutes ago". The back-end is the part that thinks. It takes all of those statements, which never agree perfectly, and finds the single story of where the robot went that contradicts them the least.</p></div>
+
+<h3>4. Drift, and why loop closures matter</h3>
+<p><strong>Odometry</strong> is the estimate of how the robot moved between two nearby moments. Chaining odometry steps gives a trajectory, but every step carries a small error and the errors add up. The accumulated error is called <strong>drift</strong>. A <strong>loop closure</strong> is a measurement that ties the current pose to a pose from much earlier, made when the robot recognizes a place it has visited before. <span class="src">§I.2 · p. 8</span></p>
+<p>Try it: the robot drives a 40-step square and should end exactly where it started. Raise the heading noise, then press "Close the loop".</p>
+<div class="viz" data-viz="w01_drift"></div>
+<p class="cap">Notice two things. Heading noise opens a much larger gap than distance noise does. And closing the loop reduces the error along the whole path, not only at the last pose.</p>
+
+<div class="box note"><h4>Filling the gap: how fast does drift grow?</h4>
+<p>The book says drift is "bound to" grow but does not say how fast. A one-line model shows it. Suppose each step moves the robot by \(u_k\) and odometry reports \(u_k + \epsilon_k\), with independent errors of variance \(\sigma^2\). After \(n\) steps the position error is the sum \(\epsilon_1 + \dots + \epsilon_n\), and variances of independent errors add:</p>
+\[ \operatorname{var}(\text{error after } n \text{ steps}) = n\,\sigma^2 \quad\Longrightarrow\quad \text{typical error} = \sigma\sqrt{n}. \]
+<p>So pure distance error grows like \(\sqrt{n}\): slowly, but without bound. Heading error is worse. A heading that is off by a small angle \(\theta\) displaces everything that follows sideways, and after driving a further distance \(L\) the position is off by about \(L\,\theta\). Heading errors therefore get multiplied by distance travelled, which is what you saw in the widget: 1° of heading noise per step matters far more than 3% of distance noise.</p>
+<p>A loop closure adds one equation that odometry alone can never supply: "pose 40 equals pose 0". The back-end then adjusts every pose a little so that all odometry steps and this new equation are satisfied as well as possible. In the widget, with equally trusted steps, that spreads the end gap evenly over the 40 steps.</p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"SLAM is localization plus mapping, run one after the other."</strong> The two are solved together. An error in a pose corrupts the map points seen from it, and the corrupted map then misleads later poses.</li>
+<li><strong>"A loop closure only fixes the pose where it happens."</strong> It is a constraint between two poses, and the back-end redistributes the error along the entire loop between them.</li>
+<li><strong>"Landmark-based SLAM has no loop closures."</strong> It has them implicitly: seeing an old landmark again is a loop closure. <span class="src">§I.2 · p. 8</span></li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A warehouse robot is given an accurate floor map and must work out where it is. Which problem is this?</p><div class="opts"><button type="button" class="opt">SLAM</button><button type="button" class="opt">Localization</button><button type="button" class="opt">Mapping</button><button type="button" class="opt">Bundle adjustment</button></div><p class="exp" hidden>With the map known, only the pose is unknown, which is localization. SLAM is needed when neither is known.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. In a LiDAR pose-graph system, what does the back-end receive from the front-end?</p><div class="opts"><button type="button" class="opt">Raw point clouds</button><button type="button" class="opt">3D landmark positions</button><button type="button" class="opt">Pixel brightness values</button><button type="button" class="opt">Relative poses from odometry and loop closures</button></div><p class="exp" hidden>Scan matching turns pairs of scans into relative-pose measurements. The back-end optimizes the trajectory from those alone (pose-graph optimization).</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. Each odometry step has an independent position error with standard deviation 2 cm. Roughly how large is the typical error after 100 steps?</p><div class="opts"><button type="button" class="opt">20 cm</button><button type="button" class="opt">2 cm</button><button type="button" class="opt">200 cm</button><button type="button" class="opt">It stays bounded at a few cm</button></div><p class="exp" hidden>Variances add, so the standard deviation grows like the square root of the number of steps: 2 cm × √100 = 20 cm.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Why is pose-graph optimization usually a little less accurate than bundle adjustment on the same data?</p><div class="opts"><button type="button" class="opt">It cannot use loop closures</button><button type="button" class="opt">It ignores the robot's orientation</button><button type="button" class="opt">Summarizing raw observations as relative poses approximates how the measurements are modeled</button><button type="button" class="opt">It uses a direct method</button></div><p class="exp" hidden>The relative poses are an abstraction of the original observations. The back-end is faster but no longer sees the raw measurements, so small modeling errors remain.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>SLAM estimates the robot's trajectory and the map together, because each is needed to compute the other.</li>
+<li>It is an inverse problem: measurements are functions of poses and map plus noise, and we solve for the poses and map.</li>
+<li>The front-end turns raw data into pseudo-measurements (landmark observations, odometry, loop closures). The back-end optimizes.</li>
+<li>Landmark-based models lead to bundle adjustment. Pose-graph models lead to pose-graph optimization.</li>
+<li>Odometry drifts without bound. Loop closures are what keep the error bounded and the map globally consistent.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Prelude to Part I, §I.1 "What is SLAM?" and §I.2 "Anatomy of a Modern SLAM System", pp. 3–8.</li>
+<li>The drift model in "Filling the gap" is the standard random-walk argument (variances of independent errors add).</li>
+</ol></div>
+<p class="next"></p>
+</section>

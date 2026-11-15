@@ -1,0 +1,116 @@
+<section class="day" data-day="46" id="d46" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 8 · Day 4</span>
+  <h2>Storing a map and filling it: arrays, hashes, trees, integrators</h2>
+  <p class="lead">After today you can work out what a dense voxel grid costs in memory, explain how hashing and octrees avoid that cost, and describe the two ways beams are integrated into a voxel map.</p>
+  <p class="meta">About 60 min · Read §5.3.3–5.4.4, pp. 132–141 (9 pages) · Needs Week 8 Day 3</p>
+</header>
+
+<div class="box read"><h4>Read first: §5.3.3 to §5.4.4, pp. 132–141</h4>
+<p>This is a longer stretch. Sections 5.4.1 to 5.4.3 (pp. 135–137) name many systems; read them for the strategies, not the names. While you read, look for:</p>
+<ul>
+<li>What the function \(f(\cdot)\) in Figure 5.9 does (p. 132).</li>
+<li>The three things to decide when a hash table stores a map (p. 133).</li>
+<li>How an octant is defined, and how an octree grows when data falls outside its root (pp. 133–134).</li>
+<li>The two measurement integrators and what each one needs to know about the sensor (pp. 139–140).</li>
+<li>The sentence on p. 140 that says how memory grows with volume and with resolution.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A room is mostly air, and the interesting part of a map is the thin layer around surfaces. A plain 3D array pays for every voxel of the bounding box. Hash tables and trees pay only for the voxels that hold something, in exchange for a more complicated lookup. Which one to use, and how to push thousands of beams per scan into it, decides whether a mapping system runs in real time.</p></div>
+
+<h3>1. The dense array and its bill</h3>
+<p>The simplest storage is one array, plus a function from a position to an array index. <span class="src">§5.3.3.1 · p. 132</span> For a grid with origin \((x_0, y_0, z_0)\), cell size \(\Delta\), and \(N_x \times N_y \times N_z\) cells, a point \((x, y, z)\) lies in the cell</p>
+\[ i = \left\lfloor \frac{x - x_0}{\Delta} \right\rfloor, \quad j = \left\lfloor \frac{y - y_0}{\Delta} \right\rfloor, \quad k = \left\lfloor \frac{z - z_0}{\Delta} \right\rfloor, \qquad n = i + N_x\,(j + N_y\,k), \]
+<p>where \(\lfloor\cdot\rfloor\) rounds down and \(n\) is the position in the array. Example: origin \((-10, -10, 0)\), \(\Delta = 0.25\) m, \(N_x = N_y = 80\). The point \((2.6, -3.1, 1.3)\) gives \(i = \lfloor 50.4 \rfloor = 50\), \(j = \lfloor 27.6 \rfloor = 27\), \(k = \lfloor 5.2 \rfloor = 5\), and \(n = 50 + 80 \times (27 + 80 \times 5) = 34{,}210\). A lookup is a handful of arithmetic operations, which is why this layout is fast.</p>
+<p>The cost is memory. Map a 100 m × 100 m × 10 m building at 5 cm: \(2000 \times 2000 \times 200 = 8 \times 10^{8}\) voxels. At 4 bytes each that is 3.2 GB. Halving the voxel size to 2.5 cm multiplies the count by \(2^3 = 8\), to 25.6 GB. Memory grows linearly with the mapped volume and with the cube of the resolution. <span class="src">§5.4.4.4 · p. 140</span> And when the robot drives out of the box, the whole array has to be copied into a larger one. <span class="src">§5.3.3.1 · p. 132</span></p>
+
+<h3>2. Hash tables and voxel blocks</h3>
+<p>A hash table keeps the fast lookup and drops the bounding box. Cut the map into pieces with integer coordinates (single voxels, or <strong>voxel blocks</strong> of, say, 8 × 8 × 8 voxels), and store only the pieces that contain data in a table. <span class="src">§5.3.3.2 · p. 133</span></p>
+<div class="box note"><h4>Filling the gap: what a hash table does</h4>
+<p>A <strong>hash function</strong> turns a key, here a block coordinate, into a slot number in a table of fixed size. To find block \((i, j)\) you compute its slot and look there; no search through the map is needed, so the cost does not depend on how large the map is. That is the \(O(1)\) of the book. Two different keys can land in the same slot, a <strong>collision</strong>. The table then stores both, for example in a short list hanging off the slot, and compares keys to pick the right one. A good hash function spreads neighbouring blocks over the table so that collisions stay rare.</p>
+<p>The figure uses the toy function \(\text{slot} = (7i + 13j) \bmod 16\). Block \((2, 2)\) goes to \((14 + 26) \bmod 16 = 8\).</p></div>
+<figure class="fig"><svg viewBox="0 0 600 236" role="img" aria-label="Left: a grid of 6 by 4 blocks crossed by a surface line; only the 9 blocks the line passes through are allocated. Right: a hash table with 16 slots in which the 9 block coordinates are stored at the slots given by the hash function, the other 7 slots staying empty.">
+  <text x="36" y="24" font-size="11" fill="var(--muted)">i =</text>
+  <text x="72" y="24" text-anchor="middle" font-size="11" fill="var(--muted)">0</text><text x="116" y="24" text-anchor="middle" font-size="11" fill="var(--muted)">1</text><text x="160" y="24" text-anchor="middle" font-size="11" fill="var(--muted)">2</text><text x="204" y="24" text-anchor="middle" font-size="11" fill="var(--muted)">3</text><text x="248" y="24" text-anchor="middle" font-size="11" fill="var(--muted)">4</text><text x="292" y="24" text-anchor="middle" font-size="11" fill="var(--muted)">5</text>
+  <text x="38" y="56" text-anchor="end" font-size="11" fill="var(--muted)">j = 0</text><text x="38" y="100" text-anchor="end" font-size="11" fill="var(--muted)">1</text><text x="38" y="144" text-anchor="end" font-size="11" fill="var(--muted)">2</text><text x="38" y="188" text-anchor="end" font-size="11" fill="var(--muted)">3</text>
+  <rect x="50" y="162" width="44" height="44" fill="var(--c1-soft)"/><rect x="94" y="162" width="44" height="44" fill="var(--c1-soft)"/><rect x="94" y="118" width="44" height="44" fill="var(--c1-soft)"/><rect x="138" y="118" width="44" height="44" fill="var(--c1-soft)"/><rect x="182" y="118" width="44" height="44" fill="var(--c1-soft)"/><rect x="182" y="74" width="44" height="44" fill="var(--c1-soft)"/><rect x="226" y="74" width="44" height="44" fill="var(--c1-soft)"/><rect x="270" y="74" width="44" height="44" fill="var(--c1-soft)"/><rect x="270" y="30" width="44" height="44" fill="var(--c1-soft)"/>
+  <path d="M50 30 H314 M50 74 H314 M50 118 H314 M50 162 H314 M50 206 H314 M50 30 V206 M94 30 V206 M138 30 V206 M182 30 V206 M226 30 V206 M270 30 V206 M314 30 V206" fill="none" stroke="var(--line2)" stroke-width="1"/>
+  <rect x="138" y="118" width="44" height="44" fill="none" stroke="var(--c1)" stroke-width="2.5"/>
+  <line x1="50" y1="195" x2="314" y2="63" stroke="var(--ink)" stroke-width="2.5"/>
+  <text x="182" y="226" text-anchor="middle" font-size="12" fill="var(--ink)">9 of 24 blocks hold a surface</text>
+  <text x="485" y="24" text-anchor="middle" font-size="12" fill="var(--ink)">slot = (7i + 13j) mod 16</text>
+  <path d="M380 40 H470 M380 60 H470 M380 80 H470 M380 100 H470 M380 120 H470 M380 140 H470 M380 160 H470 M380 180 H470 M380 200 H470 M380 40 V200 M470 40 V200 M500 40 H590 M500 60 H590 M500 80 H590 M500 100 H590 M500 120 H590 M500 140 H590 M500 160 H590 M500 180 H590 M500 200 H590 M500 40 V200 M590 40 V200" fill="none" stroke="var(--line2)" stroke-width="1"/>
+  <rect x="501" y="41" width="88" height="18" fill="var(--c1-soft)"/>
+  <text x="386" y="54" font-size="11" fill="var(--muted)">0</text><text x="386" y="74" font-size="11" fill="var(--muted)">1</text><text x="386" y="94" font-size="11" fill="var(--muted)">2</text><text x="386" y="114" font-size="11" fill="var(--muted)">3</text><text x="386" y="134" font-size="11" fill="var(--muted)">4</text><text x="386" y="154" font-size="11" fill="var(--muted)">5</text><text x="386" y="174" font-size="11" fill="var(--muted)">6</text><text x="386" y="194" font-size="11" fill="var(--muted)">7</text>
+  <text x="506" y="54" font-size="11" fill="var(--muted)">8</text><text x="506" y="74" font-size="11" fill="var(--muted)">9</text><text x="506" y="94" font-size="11" fill="var(--muted)">10</text><text x="506" y="114" font-size="11" fill="var(--muted)">11</text><text x="506" y="134" font-size="11" fill="var(--muted)">12</text><text x="506" y="154" font-size="11" fill="var(--muted)">13</text><text x="506" y="174" font-size="11" fill="var(--muted)">14</text><text x="506" y="194" font-size="11" fill="var(--muted)">15</text>
+  <text x="462" y="54" text-anchor="end" font-size="12" fill="var(--ink)">(5, 1)</text><text x="462" y="74" text-anchor="end" font-size="12" fill="var(--ink)">(1, 2)</text><text x="462" y="94" text-anchor="end" font-size="12" fill="var(--ink)">(3, 1)</text><text x="462" y="114" text-anchor="end" font-size="12" fill="var(--ink)">(5, 0)</text><text x="462" y="194" text-anchor="end" font-size="12" fill="var(--ink)">(0, 3)</text>
+  <text x="582" y="54" text-anchor="end" font-size="12" fill="var(--ink)">(2, 2)</text><text x="582" y="74" text-anchor="end" font-size="12" fill="var(--ink)">(4, 1)</text><text x="582" y="174" text-anchor="end" font-size="12" fill="var(--ink)">(1, 3)</text><text x="582" y="194" text-anchor="end" font-size="12" fill="var(--ink)">(3, 2)</text>
+  <text x="485" y="226" text-anchor="middle" font-size="12" fill="var(--ink)">table: slot number, block stored there</text>
+</svg><figcaption>Voxel-block hashing in 2D. Only blocks that the surface passes through exist in memory, and each is found through its slot. Inside a block the voxels are a small dense array, so the arithmetic of section 1 still applies there.</figcaption></figure>
+<p>The block size is a trade. Small blocks follow the surface closely and waste few empty voxels, but there are many of them, which makes the table large and slow to insert into. Large blocks are the reverse. <span class="src">§5.3.3.2 · p. 133; §5.4.4.2 · p. 139</span></p>
+
+<h3>3. Trees</h3>
+<p>An <strong>octree</strong> covers space with one cube, the root <strong>octant</strong>, given by a centre \(\mathbf{c}\) and an extent \(e\). Any octant can be split into eight children of extent \(e/2\), and only the children that contain data are created. <span class="src">§5.3.3.3 · pp. 133–134</span> After \(d\) splits the cell size is \(e/2^d\): a 102.4 m root reaches 10 cm cells at depth 10. If new data falls outside the root, a larger root is put on top and the old root becomes one of its children.</p>
+<p>What a tree adds over a hash table is hierarchy. Large uniform regions are stored as one big node, coarse versions of the map come for free, and searches such as "nearest neighbour" can discard whole branches. What it costs is that reaching a leaf takes one step per level, and that the parent-child links themselves use memory. <span class="src">§5.3.3.3 · p. 134</span></p>
+<p>Try it: a quadtree, the 2D octree, on this week's room. Set the depth to 1, then raise it one step at a time and compare how the two cell counts grow.</p>
+<div class="viz" data-viz="w08_quad"></div>
+<p class="cap">Notice that up to depth 3 the tree saves almost nothing: the squares are so large that nearly every one could touch a surface. From depth 5 on, each extra level about doubles the leaves (833, 1637, 3323) while the dense grid quadruples. At depth 7 the tree holds 10% of the cells of the grid.</p>
+<p>The reason is geometric. At depth \(d\) the cells have size \(e/2^d\). A curve of length \(L\) passes through roughly \(L \cdot 2^d / e\) of them, a number that doubles per level, while the full grid has \(4^d\) cells. In 3D a surface crosses a number of cells that grows like \(4^d\), against \(8^d\) for the full grid. Sparse structures store the surface, not the volume.</p>
+<p><strong>Hybrid</strong> structures combine the two. Hashed voxel blocks keep a dense array inside each block, which is simple and suits GPUs. The VDB structure hashes blocks and puts a small tree of fixed height inside each, so lookups take constant time and the map still has several resolutions. <span class="src">§5.3.3.4 · pp. 134–135</span></p>
+
+<h3>4. Building point, surfel, and mesh maps</h3>
+<p>Section 5.4 goes through the abstractions of Day 3 again, now asking how each map is built and kept small. <span class="src">§5.4.1–5.4.3 · pp. 135–137</span></p>
+<div class="tbl"><table>
+  <tr><th>Map</th><th>How it is kept manageable</th><th>Worth remembering</th></tr>
+  <tr><td>Points</td><td>A voxel grid or octree that keeps only a few points per cell. LOAM instead keeps only points on corners and flat surfaces.</td><td>The stored points are original measurements, not cell averages. The same grid gives the fast nearest-neighbour search that ICP scan registration needs.</td></tr>
+  <tr><td>Surfels</td><td>An octree with mean and covariance statistics at several levels, or a plain list that the GPU renders to find correspondences. Outdoors, submaps of 100 m × 100 m.</td><td>Loop closures are cheap to apply: ElasticFusion deforms the surfels directly; SuMa ties each surfel to a pose and lets pose-graph optimization move it.</td></tr>
+  <tr><td>Meshes, built directly</td><td>Delaunay triangulation of the points, keeping the triangles on the surface.</td><td>Adapts to the sampling density, but is sensitive to holes and irregular sampling. Suited to dense, accurate survey data.</td></tr>
+  <tr><td>Meshes, through an implicit surface</td><td>First fit an implicit surface (radial basis functions, moving least squares, Poisson reconstruction, or a TSDF), then extract its zero set.</td><td>The implicit step does the fusing and filtering. A TSDF is updated incrementally, so this route runs on a live sensor stream.</td></tr>
+</table></div>
+
+<h3>5. Voxel maps in practice</h3>
+<p><strong>What to estimate.</strong> Occupancy has the better recall, so few obstacles are missed, which suits collision avoidance. TSDFs give better surfaces where the world is smooth and lose thin objects (Day 2). A TSDF overestimates distances, which is unsafe for a planner, so systems such as voxblox compute a true ESDF from the TSDF with a wavefront (brushfire) algorithm, and FIESTA computes one from an occupancy map. <span class="src">§5.4.4.1 · p. 138</span></p>
+<p><strong>How to integrate a scan.</strong> The <strong>measurement integrator</strong> applies the sensor model to every voxel the scan observed. There are two designs. <span class="src">§5.4.4.3 · pp. 139–140</span></p>
+<div class="tbl"><table>
+  <tr><th>Integrator</th><th>Loop over</th><th>Needs</th><th>Strength and weakness</th></tr>
+  <tr><td>Ray tracing</td><td>Beams: walk each one from the sensor to its end point and update the voxels it crosses</td><td>Only the sensor's position</td><td>General. But voxels near the sensor are visited by many beams, which repeats work and makes parallel code collide on the same voxel.</td></tr>
+  <tr><td>Projection</td><td>Voxels: project each one into the sensor and read off the beam that sees it</td><td>The full pose and the projection model</td><td>Each voxel is written once, so it parallelizes well and dominates on GPUs. Hard to use with unorganized or motion-corrected clouds.</td></tr>
+</table></div>
+<p>The occupancy widget of Day 1 traces rays. The TSDF widget of Day 2 projects: it visits each cell, computes its bearing from the robot, and looks up the beam with that bearing.</p>
+<div class="box note"><h4>Filling the gap: which voxels does a ray cross?</h4>
+<p>Ray tracing needs the exact list of cells between two points. Sampling the ray at small steps can skip a cell that the ray only clips. The standard exact method, due to Amanatides and Woo, steps from cell to cell. For a ray \(\mathbf{o} + t\,\mathbf{d}\) with unit direction \(\mathbf{d}\), keep for each axis the ray length \(t\) at which the next cell boundary on that axis is crossed. The smallest of these tells which boundary comes first.</p>
+<pre class="code"><code>cell = floor(o / Δ)                      # cell that contains the origin
+for each axis a:
+    step[a]   = sign(d[a])               # +1 or -1: direction of travel
+    tMax[a]   = t at the first boundary crossed on axis a
+    tDelta[a] = Δ / |d[a]|               # t between two boundaries on axis a
+while cell is not the end cell:
+    a = axis with the smallest tMax
+    cell[a] += step[a]
+    tMax[a] += tDelta[a]
+    update(cell)</code></pre>
+<p>Each loop turn moves to exactly one neighbouring cell with two additions and one comparison per axis, and no cell is skipped or visited twice.</p></div>
+<p><strong>How to scale.</strong> Octomap stores occupancy in an octree and merges children whose values agree with their parent, so open space collapses into a few large nodes. It still integrates every beam at the finest resolution, so the update cost stays cubic. Later systems also lower the update resolution with distance, since beams spread out, and skip updates that would change nothing; wavemap does this on a wavelet encoding of the map, which stores differences between resolution levels. <span class="src">§5.4.4.4 · pp. 140–141</span></p>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A dense voxel grid takes 32 MB at 10 cm voxels. How much does the same volume take at 2.5 cm?</p><div class="opts"><button type="button" class="opt">128 MB</button><button type="button" class="opt">512 MB</button><button type="button" class="opt">About 2 GB</button><button type="button" class="opt">About 8 GB</button></div><p class="exp" hidden>The voxels are 4 times smaller along each of three axes, so there are 4³ = 64 times as many: 32 MB × 64 = 2048 MB.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A 2D grid has origin (−10, −10), 0.25 m cells, and 80 cells per row, with index n = i + 80 j. Which array element holds the point (2.6, −3.1)?</p><div class="opts"><button type="button" class="opt">2210</button><button type="button" class="opt">4027</button><button type="button" class="opt">2290</button><button type="button" class="opt">77</button></div><p class="exp" hidden>i = ⌊12.6 / 0.25⌋ = 50 and j = ⌊6.9 / 0.25⌋ = 27, so n = 50 + 80 × 27 = 2210. Swapping i and j gives 4027; rounding 27.6 up instead of down gives 2290.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. An octree's root octant has an extent of 51.2 m and its finest leaves are 10 cm. How many levels does a lookup descend?</p><div class="opts"><button type="button" class="opt">512</button><button type="button" class="opt">8</button><button type="button" class="opt">10</button><button type="button" class="opt">9</button></div><p class="exp" hidden>Each level halves the extent: 51.2 / 2⁹ = 0.1 m, so 9 levels. The lookup time grows with this height, which is the cost of a pure tree.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Why do GPU mapping systems prefer projection-based integration?</p><div class="opts"><button type="button" class="opt">It needs only the sensor position, not its orientation</button><button type="button" class="opt">It loops over voxels, so each voxel is written by one thread and no two updates collide</button><button type="button" class="opt">It works best on unorganized point clouds</button><button type="button" class="opt">It never touches free-space voxels</button></div><p class="exp" hidden>Looping over the map gives every voxel exactly one update per scan, with no race conditions and a predictable memory pattern. The price is that it needs the full sensor pose and projection model, which is the opposite of the first option.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>A dense array gives the fastest lookup, \(n = i + N_x(j + N_y k)\), and the largest memory bill: linear in volume, cubic in resolution.</li>
+<li>A hash table stores only the blocks that hold data and finds each in constant time. Voxel-block hashing keeps a small dense array in each block.</li>
+<li>An octree splits space only where there is data and gives several resolutions, at the cost of a lookup that takes one step per level. Sparse structures grow with the surface area, not the volume.</li>
+<li>Point and surfel maps are thinned with grids or trees. Meshes are built directly from points or, more robustly, from an implicit surface.</li>
+<li>Ray-tracing integrators loop over beams and need only the sensor position. Projection integrators loop over voxels, need the full sensor model, and parallelize well.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §5.3.3 "Data Structures and Storage", pp. 132–135, and §5.4.1–5.4.4 "Points", "Surfels", "Meshes", "Voxels", pp. 135–141.</li>
+<li>Amanatides and Woo, <em>A Fast Voxel Traversal Algorithm for Ray Tracing</em>, 1987 (the grid traversal in "Filling the gap").</li>
+<li>Cormen, Leiserson, Rivest, Stein, <em>Introduction to Algorithms</em>, 2009 (hash tables and collision resolution).</li>
+</ol></div>
+<p class="next"></p>
+</section>

@@ -1,0 +1,121 @@
+<section class="day" data-day="50" id="d50" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 9 · Day 2</span>
+  <h2>Shor's relaxation: from a QCQP to a semidefinite program</h2>
+  <p class="lead">After today you can lift a quadratically constrained quadratic program to a matrix problem, drop the rank constraint to get a semidefinite program, and say what its solution proves about the original problem.</p>
+  <p class="meta">About 60 min · Read §6.1.1, pp. 152–154 (3 pages) · Needs Week 9 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §6.1.1 "Shor's Relaxation", pp. 152–154</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The one identity, equation (6.1), that turns every quadratic expression into a linear one (p. 152).</li>
+<li>The single constraint that is thrown away between problem (6.4) and problem (SDP) on p. 153.</li>
+<li>Inequalities (6.5) and (6.6), and the footnote on p. 153 that explains the word "lift".</li>
+<li>What follows when the SDP solution has rank 1 (p. 154).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A quadratic function of a vector \(\mathbf{x}\) is a <em>linear</em> function of the matrix \(\mathbf{X}=\mathbf{x}\mathbf{x}\T\). Rewrite the problem in \(\mathbf{X}\) and all the non-convexity collects in one statement, "\(\mathbf{X}\) has rank 1". Delete that statement and what is left is a convex problem whose optimum bounds the original from below, and often equals it.</p></div>
+
+<h3>1. Quadratically constrained quadratic programs</h3>
+<p>A <strong>quadratically constrained quadratic program (QCQP)</strong> minimizes a quadratic function subject to quadratic equations. The book's generic form is <span class="src">§6.1.1 · p. 152</span></p>
+\[ p^\star = \min_{\mathbf{x}\in\R^n}\ \mathbf{x}\T\mathbf{C}\mathbf{x} \quad \text{s.t.}\quad \mathbf{x}\T\mathbf{A}_i\mathbf{x} = b_i,\quad i=1,\dots,m, \tag{QCQP} \]
+<p>where \(\mathbf{C},\mathbf{A}_1,\dots,\mathbf{A}_m\) are symmetric \(n\times n\) matrices (the book writes \(\mathbb{S}^n\) for that set) and \(p^\star\) is the optimal value. The constraints matter for SLAM because they can describe the sets SLAM variables live in:</p>
+<div class="tbl"><table>
+  <tr><th>Requirement</th><th>As quadratic equations</th><th>The matrices</th></tr>
+  <tr><td>\(\mathbf{x}\) is a unit vector</td><td>\(\mathbf{x}\T\mathbf{x}=1\)</td><td>\(\mathbf{A}=\mathbf{I}\), \(b=1\)</td></tr>
+  <tr><td>each \(x_i\) is \(+1\) or \(-1\)</td><td>\(x_i^2=1\) for every \(i\)</td><td>\(\mathbf{A}_i\) has a single 1 at position \((i,i)\), \(b_i=1\)</td></tr>
+  <tr><td>\(\begin{bmatrix}x_1 &amp; x_3\\ x_2 &amp; x_4\end{bmatrix}\) has orthonormal columns</td><td>\(x_1^2+x_2^2=1\), \(x_3^2+x_4^2=1\), \(x_1x_3+x_2x_4=0\)</td><td>for the last one, \(\mathbf{A}\) has \(\tfrac12\) at positions \((1,3),(3,1),(2,4),(4,2)\), \(b=0\)</td></tr>
+</table></div>
+<p>The third row is why QCQPs reach SLAM: the conditions that make a matrix a rotation are quadratic in its entries. Each of these feasible sets is curved or disconnected, so none is convex (<a href="#d49">Day 1</a>), and a QCQP is hard in general.</p>
+
+<h3>2. The trace trick and the lift</h3>
+<p>The <strong>trace</strong> \(\tr(\mathbf{M})\) of a square matrix is the sum of its diagonal entries. Two facts: a \(1\times1\) matrix equals its own trace, and \(\tr(\mathbf{A}\mathbf{B})=\tr(\mathbf{B}\mathbf{A})\) whenever both products are defined (the cyclic property; both sides equal \(\sum_{i,j}A_{ij}B_{ji}\)). Apply them to the number \(\mathbf{x}\T\mathbf{M}\mathbf{x}\), moving the leading \(\mathbf{x}\T\) to the back: <span class="src">eq. (6.1) · p. 152</span></p>
+\[ \mathbf{x}\T\mathbf{M}\mathbf{x} = \tr\bigl(\mathbf{x}\T\mathbf{M}\mathbf{x}\bigr) = \tr\bigl(\mathbf{M}\mathbf{x}\mathbf{x}\T\bigr) = \tr(\mathbf{M}\mathbf{X}), \qquad \mathbf{X}\triangleq\mathbf{x}\mathbf{x}\T. \]
+<p>The matrix \(\mathbf{X}\) holds all products \(X_{ij}=x_ix_j\), and \(\tr(\mathbf{M}\mathbf{X})=\sum_{i,j}M_{ij}X_{ij}\) is a weighted sum of them: linear in \(\mathbf{X}\). Check with numbers. For \(\mathbf{x}=(1,2)\) and \(\mathbf{M}=\begin{bmatrix}3 &amp; 1\\ 1 &amp; 0\end{bmatrix}\):</p>
+\[ \mathbf{x}\T\mathbf{M}\mathbf{x} = 3\cdot1 + 2\cdot(1\cdot1\cdot2) + 0\cdot4 = 7, \qquad \mathbf{X}=\begin{bmatrix}1 &amp; 2\\ 2 &amp; 4\end{bmatrix},\quad \tr(\mathbf{M}\mathbf{X}) = 3\cdot1+1\cdot2+1\cdot2+0\cdot4 = 7 . \]
+<p>Moving from \(\mathbf{x}\) to \(\mathbf{X}\) is called <strong>lifting</strong>. Every lifted matrix has three properties: it is symmetric, it is <strong>positive semidefinite</strong> (written \(\mathbf{X}\succeq0\)) because \(\mathbf{v}\T\mathbf{X}\mathbf{v}=(\mathbf{x}\T\mathbf{v})^2\ge0\), and it has rank 1 because every column is a multiple of \(\mathbf{x}\). The book states that the converse also holds: <span class="src">eq. (6.3) · p. 152</span></p>
+\[ \mathbf{X}\succeq0 \ \text{ and } \ \rank(\mathbf{X})=1 \quad\Longleftrightarrow\quad \mathbf{X}=\mathbf{x}\mathbf{x}\T \ \text{ for some } \mathbf{x}\in\R^n . \]
+
+<div class="box note"><h4>Filling the gap: why a rank-1 positive semidefinite matrix is an outer product</h4>
+<p>The book says this is "easily shown" by an eigendecomposition. Here it is. A symmetric matrix can be written \(\mathbf{X}=\sum_k\lambda_k\mathbf{u}_k\mathbf{u}_k\T\) with real eigenvalues \(\lambda_k\) and orthonormal eigenvectors \(\mathbf{u}_k\) (<a href="#d5">Week 1 · Day 5</a>). Its rank is the number of nonzero eigenvalues, and it is positive semidefinite exactly when no eigenvalue is negative. Rank 1 and \(\mathbf{X}\succeq0\) together leave one eigenvalue \(\lambda_1\gt0\) and the rest zero, so</p>
+\[ \mathbf{X}=\lambda_1\mathbf{u}_1\mathbf{u}_1\T = \mathbf{x}\mathbf{x}\T \quad\text{with}\quad \mathbf{x}=\sqrt{\lambda_1}\,\mathbf{u}_1 . \]
+<p>This is also the recipe for getting \(\mathbf{x}\) back from \(\mathbf{X}\). Note that \(-\mathbf{x}\) gives the same \(\mathbf{X}\); the sign is lost in the lift, and it does not matter because \(\mathbf{x}\T\mathbf{M}\mathbf{x}\) cannot see it either.</p></div>
+
+<h3>3. Drop the rank constraint</h3>
+<p>Using (6.1) on the objective and on every constraint, and (6.3) to say which \(\mathbf{X}\) are allowed, (QCQP) becomes the equivalent problem (6.4). Deleting its last line gives <strong>Shor's relaxation</strong>: <span class="src">eq. (6.4), (SDP) · p. 153</span></p>
+\[ \begin{aligned} p^\star = \min_{\mathbf{X}\in\mathbb{S}^n}\ &amp; \tr(\mathbf{C}\mathbf{X}) \\ \text{s.t.}\ &amp; \tr(\mathbf{A}_i\mathbf{X})=b_i,\ \ i=1,\dots,m, \\ &amp; \mathbf{X}\succeq0, \\ &amp; \rank(\mathbf{X})=1 \end{aligned} \qquad\longrightarrow\qquad \begin{aligned} d^\star = \min_{\mathbf{X}\in\mathbb{S}^n}\ &amp; \tr(\mathbf{C}\mathbf{X}) \\ \text{s.t.}\ &amp; \tr(\mathbf{A}_i\mathbf{X})=b_i,\ \ i=1,\dots,m, \\ &amp; \mathbf{X}\succeq0 . \end{aligned} \]
+<p>Look at what remains on the right. The objective is linear in \(\mathbf{X}\). The equality constraints are linear, so they cut out a flat (affine) set. The set \(\mathbf{X}\succeq0\) is convex (Day 1, section 4). An intersection of convex sets is convex, and a linear function is convex. So the right-hand problem is a convex problem. Problems of this shape are called <strong>semidefinite programs (SDPs)</strong> and can be solved in polynomial time. <span class="src">§6.1.1 · p. 153</span></p>
+<p>The price is size. \(\mathbf{x}\) has \(n\) entries; a symmetric \(\mathbf{X}\) has \(n(n+1)/2\) free entries (footnote 1 on p. 153). For \(n=3\) that is 6 instead of 3; for \(n=3000\) it is about 4.5 million.</p>
+
+<div class="box note"><h4>Filling the gap: see the relaxation for n = 2</h4>
+<p>Take the QCQP "minimize \(\mathbf{x}\T\mathbf{C}\mathbf{x}\) over unit vectors \(\mathbf{x}\in\R^2\)". Write \(\mathbf{X}=\begin{bmatrix}a &amp; b\\ b &amp; c\end{bmatrix}\). The constraint \(\tr(\mathbf{X})=1\) says \(a+c=1\). A symmetric \(2\times2\) matrix with positive trace is positive semidefinite exactly when its determinant is non-negative, \(ac-b^2\ge0\). Change coordinates to \(u=a-c\) and \(v=2b\). Then \(ac=\tfrac14\bigl((a+c)^2-(a-c)^2\bigr)=\tfrac14(1-u^2)\), and</p>
+\[ ac-b^2\ge0 \iff u^2+v^2\le1 . \]
+<p>So the feasible set of the SDP is a <em>disk</em>. Rank 1 means determinant zero, which is the boundary circle. A unit vector \(\mathbf{x}=(\cos t,\sin t)\) lifts to \(u=\cos^2t-\sin^2t=\cos2t\), \(v=2\sin t\cos t=\sin2t\): the point at angle \(2t\) on that circle. Shor's relaxation fills the circle in.</p>
+<p>The objective becomes \(\tr(\mathbf{C}\mathbf{X}) = \tfrac12(C_{11}+C_{22}) + \tfrac12(C_{11}-C_{22})\,u + C_{12}\,v\), a linear function on the disk. A linear function on a disk takes its smallest value at a boundary point, so here the SDP always has a rank-1 solution and \(d^\star=p^\star\). Example: \(\mathbf{C}=\begin{bmatrix}3 &amp; 2\\ 2 &amp; 0\end{bmatrix}\) gives \(1.5+1.5u+2v\), smallest at \((u,v)=-(1.5,2)/2.5=(-0.6,-0.8)\) with value \(1.5-2.5=-1\). Then \(a=0.2\), \(c=0.8\), \(b=-0.4\), which is \(\mathbf{x}\mathbf{x}\T\) for \(\mathbf{x}=(1,-2)/\sqrt5\). And \(-1\) is indeed the smallest eigenvalue of \(\mathbf{C}\).</p></div>
+<figure class="fig"><svg viewBox="0 0 600 250" role="img" aria-label="Left: the unit circle of feasible vectors x, with a point x and its opposite minus x marked. An arrow labelled lift leads to the right picture: a filled disk, the feasible set of the relaxation. Its boundary circle holds the rank-one matrices; x and minus x land on the same boundary point. A dashed straight level line of the cost touches the disk at one boundary point, the minimizer.">
+  <defs><marker id="w09ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <text x="140" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">QCQP: unit vectors x</text>
+  <circle cx="140" cy="130" r="80" fill="none" stroke="var(--c5)" stroke-width="3"/>
+  <circle cx="209" cy="90" r="5" fill="var(--c2)"/><text x="219" y="84" font-size="13" fill="var(--ink)">x</text>
+  <circle cx="71" cy="170" r="5" fill="var(--c2)"/><text x="42" y="186" font-size="13" fill="var(--ink)">−x</text>
+  <line x1="246" y1="110" x2="334" y2="110" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w09ar2)"/>
+  <text x="290" y="100" text-anchor="middle" font-size="12" fill="var(--muted)">lift: X = xxᵀ</text>
+  <text x="450" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Relaxation: matrices X ⪰ 0</text>
+  <circle cx="450" cy="130" r="80" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="3"/>
+  <circle cx="490" cy="61" r="5" fill="var(--c2)"/><text x="500" y="54" font-size="13" fill="var(--ink)">xxᵀ</text>
+  <text x="450" y="128" text-anchor="middle" font-size="12" fill="var(--ink)">rank 2 inside</text>
+  <text x="450" y="236" text-anchor="middle" font-size="12" fill="var(--ink)">rank 1 on the boundary</text>
+  <line x1="354" y1="101" x2="395" y2="214" stroke="var(--c3)" stroke-width="2" stroke-dasharray="6 4"/>
+  <circle cx="375" cy="157" r="5" fill="var(--c3)"/>
+  <text x="362" y="151" text-anchor="end" font-size="11" fill="var(--muted)">minimizer</text>
+</svg><figcaption>For unit vectors in the plane, the lift wraps the circle twice around the boundary of a disk and the relaxation adds the interior. A linear cost is minimized where its level line (dashed) last touches the disk, which is a rank-1 point.</figcaption></figure>
+
+<h3>4. What the relaxation tells you</h3>
+<p>Every feasible \(\mathbf{x}\) of (QCQP) lifts to a feasible \(\mathbf{X}=\mathbf{x}\mathbf{x}\T\) of (SDP) with the same cost, so the SDP minimizes the same objective over a larger set: <span class="src">eq. (6.5), (6.6) · p. 153</span></p>
+\[ d^\star\le p^\star, \qquad\text{and for any feasible } \hat{\mathbf{x}}:\quad f(\hat{\mathbf{x}})-p^\star \ \le\ f(\hat{\mathbf{x}})-d^\star, \qquad f(\mathbf{x})\triangleq\mathbf{x}\T\mathbf{C}\mathbf{x}. \]
+<p>The left side of the second inequality is the <strong>suboptimality</strong> of \(\hat{\mathbf{x}}\), which nobody can compute because \(p^\star\) is unknown. The right side can be computed. This is the altimeter of Day 1.</p>
+<div class="tbl"><table>
+  <tr><th>What you find</th><th>What it proves</th></tr>
+  <tr><td>The SDP minimizer \(\mathbf{X}^\star\) has rank 1</td><td>Factor it as \(\mathbf{x}^\star\mathbf{x}^{\star\mathsf{T}}\). Then \(\mathbf{x}^\star\) is feasible for (QCQP) and \(f(\mathbf{x}^\star)=d^\star\le p^\star\), so \(\mathbf{x}^\star\) is a global minimizer. The relaxation is <strong>exact</strong>. <span class="src">p. 154</span></td></tr>
+  <tr><td>Some feasible \(\hat{\mathbf{x}}\), from any method, has \(f(\hat{\mathbf{x}})=d^\star\)</td><td>\(\hat{\mathbf{x}}\) is a global minimizer, by (6.6).</td></tr>
+  <tr><td>\(\mathbf{X}^\star\) has rank above 1 and the best \(\hat{\mathbf{x}}\) you have costs more than \(d^\star\)</td><td>Only that \(p^\star\) lies in \([d^\star,f(\hat{\mathbf{x}})]\). The relaxation may not be tight.</td></tr>
+</table></div>
+<p>The disk example is always exact. Here is one that is not. Three variables, each \(\pm1\), every pair penalized for agreeing:</p>
+\[ \min\ 2(x_1x_2+x_1x_3+x_2x_3) \quad\text{s.t.}\quad x_1^2=x_2^2=x_3^2=1 . \]
+<p>Since \((x_1+x_2+x_3)^2 = 3+2(x_1x_2+x_1x_3+x_2x_3)\), the cost equals \((x_1+x_2+x_3)^2-3\). Three signs cannot sum to zero; the best is a sum of \(\pm1\), so \(p^\star=1-3=-2\). In the relaxation, \(\mathbf{X}\) is positive semidefinite with ones on its diagonal, and the cost is \(2(X_{12}+X_{13}+X_{23})=\mathbf{1}\T\mathbf{X}\mathbf{1}-3\), where \(\mathbf{1}\) is the vector of ones. Because \(\mathbf{X}\succeq0\), \(\mathbf{1}\T\mathbf{X}\mathbf{1}\ge0\), so the cost is at least \(-3\); and \(X_{12}=X_{13}=X_{23}=-\tfrac12\) reaches it with a matrix whose eigenvalues are \(0,\tfrac32,\tfrac32\). So \(d^\star=-3\lt p^\star=-2\), and \(\mathbf{X}^\star\) has rank 2.</p>
+<p>Try it: change the three couplings and compare the two optimal values.</p>
+<div class="viz" data-viz="w09_shor"></div>
+<p class="cap">Notice that at (1, 1, 1) the relaxed arrows sit 120° apart, d* = −3 is below p* = −2, and X* has eigenvalues 0, 1.5, 1.5. Press "Consistent (1, 1, −1)": now all three wishes can be met, the relaxed arrows line up, d* = p* = −6, and X* has rank 1.</p>
+<div class="box tip"><h4>Intuition</h4><p>Any positive semidefinite \(\mathbf{X}\) with ones on the diagonal is a table of dot products \(X_{ij}=\mathbf{y}_i\cdot\mathbf{y}_j\) of unit vectors. The QCQP forces those vectors onto a line, where a unit vector can only be \(+1\) or \(-1\). The relaxation lets them turn into extra dimensions. If the best arrangement still fits on a line, the relaxation is exact. For three variables a plane is always enough room, which is why the widget can draw the answer.</p></div>
+<p>One more practical remark from the book: general-purpose SDP software becomes slow and memory-hungry on large problems, so robotics uses specialized solvers such as SE-Sync. <span class="src">§6.1.1 · p. 154</span> That is Day 5.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The SDP solution is a better solution of the QCQP."</strong> If its rank is above 1 it is not a solution of the QCQP at all. Its value is a bound, not an achievable cost.</li>
+<li><strong>"A relaxation that is not tight is useless."</strong> The bound \(f(\hat{\mathbf{x}})-d^\star\) still limits how wrong any candidate can be. In the three-variable example it says "at most 1 above optimal".</li>
+<li><strong>"Lifting changes the problem."</strong> Problem (6.4) with the rank constraint is exactly (QCQP). Only deleting the rank constraint changes it.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. What is the lift X = xxᵀ of x = (2, −1)?</p><div class="opts"><button type="button" class="opt">[[4, 2], [2, 1]]</button><button type="button" class="opt">[[4, −2], [−2, 1]]</button><button type="button" class="opt">[[2, −1], [−1, 2]]</button><button type="button" class="opt">[[4, 0], [0, 1]]</button></div><p class="exp" hidden>The entries are the products x_i x_j: 2·2 = 4, 2·(−1) = −2, (−1)·(−1) = 1. Its determinant is 4 − 4 = 0, as it must be for rank 1.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. A QCQP has n = 4 unknowns. How many free numbers does the matrix variable of its Shor relaxation have?</p><div class="opts"><button type="button" class="opt">4</button><button type="button" class="opt">8</button><button type="button" class="opt">16</button><button type="button" class="opt">10</button></div><p class="exp" hidden>A symmetric 4 × 4 matrix has 4 diagonal and 6 off-diagonal free entries: n(n+1)/2 = 10.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. A local solver returns a feasible point with cost 12.0. The Shor relaxation of the same problem has optimal value 11.4. Which statement is certain?</p><div class="opts"><button type="button" class="opt">The global optimum costs between 11.4 and 12.0</button><button type="button" class="opt">The local solver found the global optimum</button><button type="button" class="opt">The local solver is stuck in a local minimum</button><button type="button" class="opt">The global optimum costs 11.4</button></div><p class="exp" hidden>d* ≤ p* ≤ f(x̂) gives 11.4 ≤ p* ≤ 12.0. Whether the point is optimal depends on whether the relaxation is tight, which these two numbers alone do not settle.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. An SDP solver returns X* with eigenvalues 5, 0, 0 and eigenvector u for the eigenvalue 5. What can you do with it?</p><div class="opts"><button type="button" class="opt">Nothing; an SDP solution never solves the QCQP</button><button type="button" class="opt">Use x = 5u as an approximate solution</button><button type="button" class="opt">Take x = √5 · u; it is a global minimizer of the QCQP</button><button type="button" class="opt">Round the eigenvalues and solve again</button></div><p class="exp" hidden>One positive eigenvalue means rank 1, so X* = xxᵀ with x = √5 · u. That x is feasible and attains the lower bound d*, so it is globally optimal.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>A QCQP has a quadratic objective and quadratic equality constraints; unit vectors, signs, and orthonormal columns all fit.</li>
+<li>\(\mathbf{x}\T\mathbf{M}\mathbf{x}=\tr(\mathbf{M}\mathbf{x}\mathbf{x}\T)\), so in the lifted variable \(\mathbf{X}=\mathbf{x}\mathbf{x}\T\) everything is linear.</li>
+<li>\(\mathbf{X}\) is an outer product exactly when it is positive semidefinite with rank 1. Shor's relaxation drops the rank condition and leaves an SDP, which is convex.</li>
+<li>\(d^\star\le p^\star\), and \(f(\hat{\mathbf{x}})-d^\star\) bounds the suboptimality of any feasible \(\hat{\mathbf{x}}\).</li>
+<li>If the SDP solution has rank 1, its factor is a global minimizer of the QCQP.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §6.1.1 "Shor's Relaxation", pp. 152–154, equations (QCQP), (6.1)–(6.6), (SDP).</li>
+<li>Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004: semidefinite programs and the convexity of the positive semidefinite cone.</li>
+<li>Pataki, <em>On the rank of extreme matrices in semidefinite programs and the multiplicity of optimal eigenvalues</em>, 1998: an SDP with m equality constraints has a solution of rank r with r(r+1)/2 ≤ m, which is why a plane suffices for the three-variable example.</li>
+<li>The disk picture and the three-variable example are our own worked instances of (QCQP) and (SDP).</li>
+</ol></div>
+<p class="next"></p>
+</section>

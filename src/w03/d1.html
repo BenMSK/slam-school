@@ -1,0 +1,138 @@
+<section class="day" data-day="13" id="d13" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 3 · Day 1</span>
+  <h2>Why SLAM is sparse: the Jacobian, the information matrix, and their graphs</h2>
+  <p class="lead">After today you can read the nonzero pattern of the Jacobian and of the information matrix straight off a factor graph, and explain why the variable ordering changes the cost of a factorization but not its answer.</p>
+  <p class="meta">About 60 min · Read §1.5, pp. 35–39 (4 pages) · Needs Week 2 Day 3</p>
+</header>
+
+<div class="box read"><h4>Read first: §1.5, from the bottom of p. 35 to p. 39</h4>
+<p>The top of p. 35 is the end of last week's dogleg method. Start at the heading "1.5 Factor Graphs and Sparsity". While you read, look for:</p>
+<ul>
+<li>The counting argument on p. 36: how many factors the simulated example could have, and how many it has.</li>
+<li>Figure 1.7 on p. 37. Match each block-row to one factor of the toy example and each block-column to one variable.</li>
+<li>Figure 1.8 on p. 37. Check that a block of \(\boldsymbol{\Lambda}\) is filled exactly where the graph next to it has an edge.</li>
+<li>The two numbers in Figure 1.9 on p. 39: 9399 and 4168 nonzeros for the same problem.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Each measurement in SLAM involves only a few variables, so almost every entry of the matrices we factor is zero. The factor graph is a drawing of those zeros: a factor is a block-row of \(\mathbf{A}\), a variable is a block-column, and two variables share a nonzero block of \(\boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A}\) exactly when they share a factor. Solvers that skip the zeros handle millions of unknowns, and how many zeros survive the factorization depends on the order of the variables.</p></div>
+
+<h3>1. Count the factors</h3>
+<p>The solvers of <a href="#d9">Week 2 · Day 3</a> treated \(\mathbf{A}\) as a full table of numbers. For the book's simulated example (Figure 1.5, about 100 poses and 20 landmarks) that already wastes most of the work. Count what could be there and what is: <span class="src">§1.5 · p. 36</span></p>
+<ul>
+<li><strong>Pose to pose.</strong> About 100 odometry factors in a chain, where 100² pairs would be possible.</li>
+<li><strong>Pose to landmark.</strong> About 400, where 100 × 20 = 2000 would be possible: a landmark is seen from nearby poses only.</li>
+<li><strong>Landmark to landmark.</strong> None. Nothing measures one landmark relative to another.</li>
+</ul>
+<p>The reason is physical: a sensor has a limited range and a robot moves a short distance per step, so one measurement can only relate things that are close in space or time. The book calls this structure typical of most SLAM problems.</p>
+<p>Ignoring it gets expensive fast. Dense Cholesky costs about \(n^3/3\) operations (Week 2). For the \(n = 333\) unknowns of Figure 1.9 that is 12 million operations and no trouble. For \(n = 10^5\) it is \(3.3 \times 10^{14}\), about four days at a billion operations per second, and a dense \(\boldsymbol{\Lambda}\) of \(10^{10}\) numbers would fill 80 GB. Real problems have "thousands or even millions of unknowns", <span class="src">§1.5 · p. 36</span> and they are solvable only because the zeros are never stored or touched.</p>
+
+<h3>2. The factor graph is the pattern of the Jacobian</h3>
+<p>Recall the linear problem inside every Gauss-Newton step, equation (1.40):</p>
+\[ \boldsymbol{\delta}^* = \argmin_{\boldsymbol{\delta}} \sum_i \norm{\mathbf{A}_i \boldsymbol{\delta}_i - \mathbf{b}_i}_2^2 . \]
+<p>Here \(\boldsymbol{\delta}_i\) holds only the variables that factor \(i\) touches. Stack the terms and you get one big matrix \(\mathbf{A}\) in which <strong>every factor is a block-row and every variable is a block-column</strong>. A block is nonzero only where the factor touches the variable. <span class="src">§1.5.1 · p. 36</span> The book then drops the \(\boldsymbol{\delta}\) and writes the unknowns as \(\mathbf{x}\), because nothing below depends on where the linear problem came from.</p>
+<div class="box note"><h4>Filling the gap: why the other blocks are exactly zero</h4>
+<p>A factor comes from a measurement model \(h_i\) that reads only its own variables. Factor \(\phi_8\) of the toy example predicts a measurement from \(\mathbf{p}_2\) and \(\boldsymbol{\ell}_1\) and from nothing else. Its row of the Jacobian holds the derivatives of that prediction with respect to all five variables, and the derivative with respect to a variable that does not appear in \(h_8\) is zero. No approximation is involved.</p>
+<p>The size of a block is (number of measured values) × (size of the variable). With planar poses (3 numbers) and point landmarks (2 numbers), \(\mathbf{A}\) for Figure 1.5 has \(3 \times 95 + 2 \times 24 = 333\) columns, and its 1126 rows are the scalar measurements. <span class="src">Fig. 1.9 · p. 39</span></p></div>
+<p>All week we use a version of the toy example of Figure 1.3 that you can compute by hand. Put the robot on a line, so every pose and landmark is one number, and give every measurement unit noise. The nine factors become nine rows:</p>
+<div class="tbl"><table>
+<tr><th>Factor</th><th>What it says</th><th>ℓ₁</th><th>ℓ₂</th><th>p₁</th><th>p₂</th><th>p₃</th><th>b</th></tr>
+<tr><td>ϕ₁ prior on p₁</td><td>p₁ = 0</td><td></td><td></td><td>1</td><td></td><td></td><td>0</td></tr>
+<tr><td>ϕ₂ odometry</td><td>p₂ − p₁ = 1</td><td></td><td></td><td>−1</td><td>1</td><td></td><td>1</td></tr>
+<tr><td>ϕ₃ odometry</td><td>p₃ − p₂ = 1</td><td></td><td></td><td></td><td>−1</td><td>1</td><td>1</td></tr>
+<tr><td>ϕ₄ prior on ℓ₁</td><td>ℓ₁ = 0.6</td><td>1</td><td></td><td></td><td></td><td></td><td>0.6</td></tr>
+<tr><td>ϕ₅ prior on ℓ₂</td><td>ℓ₂ = 2.4</td><td></td><td>1</td><td></td><td></td><td></td><td>2.4</td></tr>
+<tr><td>ϕ₆ absolute fix of p₁</td><td>p₁ = 0.2</td><td></td><td></td><td>1</td><td></td><td></td><td>0.2</td></tr>
+<tr><td>ϕ₇ p₁ sees ℓ₁</td><td>ℓ₁ − p₁ = 0.5</td><td>1</td><td></td><td>−1</td><td></td><td></td><td>0.5</td></tr>
+<tr><td>ϕ₈ p₂ sees ℓ₁</td><td>ℓ₁ − p₂ = −0.3</td><td>1</td><td></td><td></td><td>−1</td><td></td><td>−0.3</td></tr>
+<tr><td>ϕ₉ p₃ sees ℓ₂</td><td>ℓ₂ − p₃ = 0.5</td><td></td><td>1</td><td></td><td></td><td>−1</td><td>0.5</td></tr>
+</table></div>
+<p>The filled cells sit where Figure 1.7 has its blocks \(\mathbf{A}_{13}, \mathbf{A}_{23}, \mathbf{A}_{24}, \dots\) (first index the factor, second the column, with columns ordered \(\boldsymbol{\ell}_1, \boldsymbol{\ell}_2, \mathbf{p}_1, \mathbf{p}_2, \mathbf{p}_3\)). Only 14 of the 45 cells are filled, and no row has more than two.</p>
+
+<h3>3. The information matrix and its graph</h3>
+<p>Cholesky works on the <strong>information matrix</strong> \(\boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A}\), also called the Hessian. Strictly it is the Gauss-Newton approximation of the Hessian (<a href="#d10">Week 2 · Day 4</a>). It is symmetric, and positive definite when the MAP solution is unique. <span class="src">§1.5.2 · pp. 36–37</span> For the toy problem on a line, multiply out the table above:</p>
+\[ \boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A} = \begin{bmatrix} 3 & 0 & -1 & -1 & 0 \\ 0 & 2 & 0 & 0 & -1 \\ -1 & 0 & 4 & -1 & 0 \\ -1 & 0 & -1 & 3 & -1 \\ 0 & -1 & 0 & -1 & 2 \end{bmatrix} \qquad \text{rows and columns } \ell_1, \ell_2, p_1, p_2, p_3 . \]
+<p>Compare with Figure 1.8(a): the zeros are in the same places.</p>
+<div class="box note"><h4>Filling the gap: which blocks of \(\mathbf{A}\T\mathbf{A}\) are nonzero</h4>
+<p>Write \(\mathbf{A}_{ij}\) for the block of factor \(i\) in the column of variable \(j\). Block \((j,k)\) of the product is a sum over the rows:</p>
+\[ \boldsymbol{\Lambda}_{jk} = \sum_{i} \mathbf{A}_{ij}\T \mathbf{A}_{ik} . \]
+<p>A term survives only if factor \(i\) touches both variable \(j\) and variable \(k\). So \(\boldsymbol{\Lambda}_{jk} \neq \mathbf{0}\) needs at least one factor that contains both. In the toy example \(\boldsymbol{\Lambda}_{14} = \mathbf{A}_{81}\T\mathbf{A}_{84}\) comes from \(\phi_8\) alone (in numbers, \(1 \cdot (-1) = -1\)), and \(\boldsymbol{\Lambda}_{15} = \mathbf{0}\) because no factor joins \(\boldsymbol{\ell}_1\) and \(\mathbf{p}_3\).</p>
+<p>The diagonal block \(\boldsymbol{\Lambda}_{jj} = \sum_i \mathbf{A}_{ij}\T\mathbf{A}_{ij}\) collects every factor on variable \(j\): the 4 in the \(p_1\) position is \(\phi_1, \phi_2, \phi_6, \phi_7\), one unit each. A unary factor such as a prior adds to the diagonal and to nothing else.</p></div>
+<p>This gives a second graph. Draw one node per variable and join two variables if they ever appear in the same factor. Call it \(G\). At the block level, the nonzero pattern of \(\boldsymbol{\Lambda}\) is the adjacency matrix of \(G\). A factor on three or more variables joins all of them pairwise (a <strong>clique</strong>). <span class="src">§1.5.2 · p. 37</span> The book notes that \(G\) is the graph of a Markov random field and leaves it there; we will use \(G\) on Days 2 and 3 to predict where a factorization creates new nonzeros.</p>
+<figure class="fig"><svg viewBox="0 0 600 240" role="img" aria-label="Left: the factor graph of the toy example, five round variable nodes and nine small square factor nodes. Right: the graph G of the information matrix, the same five variables joined by five edges: l1 to p1, l1 to p2, p1 to p2, p2 to p3, and l2 to p3.">
+  <text x="10" y="18" font-size="13" font-weight="700" fill="var(--ink)">Factor graph: rows of A</text>
+  <text x="340" y="18" font-size="13" font-weight="700" fill="var(--ink)">Graph G: off-diagonal blocks of Λ</text>
+  <g stroke="var(--muted)" stroke-width="1.5">
+    <line x1="60" y1="175" x2="240" y2="175"/><line x1="60" y1="175" x2="105" y2="85"/><line x1="150" y1="175" x2="105" y2="85"/><line x1="240" y1="175" x2="240" y2="85"/>
+    <line x1="105" y1="85" x2="105" y2="48"/><line x1="240" y1="85" x2="240" y2="48"/><line x1="60" y1="175" x2="36" y2="212"/><line x1="60" y1="175" x2="84" y2="212"/>
+  </g>
+  <g fill="var(--ink)">
+    <rect x="101" y="171" width="8" height="8"/><rect x="191" y="171" width="8" height="8"/><rect x="78.5" y="126" width="8" height="8"/><rect x="123.5" y="126" width="8" height="8"/><rect x="236" y="126" width="8" height="8"/>
+    <rect x="101" y="40" width="8" height="8"/><rect x="236" y="40" width="8" height="8"/><rect x="32" y="208" width="8" height="8"/><rect x="80" y="208" width="8" height="8"/>
+  </g>
+  <g font-size="11" fill="var(--muted)">
+    <text x="105" y="196" text-anchor="middle">ϕ₂</text><text x="195" y="196" text-anchor="middle">ϕ₃</text><text x="62" y="128" text-anchor="end">ϕ₇</text><text x="140" y="128">ϕ₈</text><text x="252" y="134">ϕ₉</text>
+    <text x="117" y="48">ϕ₄</text><text x="252" y="48">ϕ₅</text><text x="24" y="216" text-anchor="end">ϕ₁</text><text x="96" y="216">ϕ₆</text>
+  </g>
+  <g fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5">
+    <circle cx="60" cy="175" r="15"/><circle cx="150" cy="175" r="15"/><circle cx="240" cy="175" r="15"/><circle cx="105" cy="85" r="15"/><circle cx="240" cy="85" r="15"/>
+  </g>
+  <g font-size="13" fill="var(--ink)" text-anchor="middle">
+    <text x="60" y="180">p₁</text><text x="150" y="180">p₂</text><text x="240" y="180">p₃</text><text x="105" y="90">ℓ₁</text><text x="240" y="90">ℓ₂</text>
+  </g>
+  <g stroke="var(--c5)" stroke-width="2.5">
+    <line x1="390" y1="175" x2="570" y2="175"/><line x1="390" y1="175" x2="435" y2="85"/><line x1="480" y1="175" x2="435" y2="85"/><line x1="570" y1="175" x2="570" y2="85"/>
+  </g>
+  <g fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="1.5">
+    <circle cx="390" cy="175" r="15"/><circle cx="480" cy="175" r="15"/><circle cx="570" cy="175" r="15"/><circle cx="435" cy="85" r="15"/><circle cx="570" cy="85" r="15"/>
+  </g>
+  <g font-size="13" fill="var(--ink)" text-anchor="middle">
+    <text x="390" y="180">p₁</text><text x="480" y="180">p₂</text><text x="570" y="180">p₃</text><text x="435" y="90">ℓ₁</text><text x="570" y="90">ℓ₂</text>
+  </g>
+  <text x="340" y="228" font-size="11" fill="var(--muted)">5 edges = 5 nonzero blocks above the diagonal</text>
+</svg><figcaption>To get G from the factor graph, delete the factor nodes and join the variables each one touched. The four unary factors leave no edge; they only strengthen the diagonal of Λ.</figcaption></figure>
+<div class="box kid"><h4>In plain words</h4><p>Think of each measurement as a short sentence that mentions two or three names. The Jacobian is the list of sentences. The information matrix is the table of who has been mentioned together with whom. In a town where everybody only talks about their neighbours, that table is almost empty.</p></div>
+
+<h3>4. Sparse factorization, fill-in, and the ordering</h3>
+<p>Both routes from Week 2 have sparse versions: Cholesky on \(\boldsymbol{\Lambda}\) and QR on \(\mathbf{A}\). They skip the zeros and so need far fewer operations than the dense counts. The book names the libraries most packages call (CHOLMOD and SuiteSparseQR) and reports that on sparse problems Cholesky or LDU beats QR by more than a constant factor. <span class="src">§1.5.3 · p. 38</span></p>
+<p>There is a catch. The triangular factor \(\mathbf{R}\), with \(\mathbf{R}\T\mathbf{R} = \boldsymbol{\Lambda}\), can have nonzeros where \(\boldsymbol{\Lambda}\) has zeros. These extra entries are called <strong>fill-in</strong>, and their number depends on the <strong>variable ordering</strong>, the order of the columns. In Figure 1.9 the natural order (poses, then landmarks) gives an \(\mathbf{R}\) with 9399 nonzeros. Reordering the columns with the <strong>COLAMD</strong> heuristic (column approximate minimum degree) gives 4168. Back-substitution returns the same estimate from both. <span class="src">§1.5.3 · p. 38</span></p>
+<p>Try it: the widget builds a small problem, draws \(\mathbf{A}\) and \(\boldsymbol{\Lambda}\), and computes the pattern of \(\mathbf{R}\) for the ordering you pick. Switch the ordering from "poses, then landmarks" to "minimum degree", then try the others.</p>
+<div class="viz" data-viz="w03_pattern"></div>
+<p class="cap">Notice that Λ has 91 nonzeros out of 361. With poses first, R has 109 nonzeros, 54 of them fill-in. Minimum degree brings that down to 70 with 15 fill-ins, and a random order lands in between. Nothing about the problem changed, only the order of the columns.</p>
+<div class="box note"><h4>Filling the gap: a four-variable example of fill-in</h4>
+<p>Take one "hub" variable tied to three others that are not tied to each other. Put the hub first and factor (work through the Cholesky recipe of <a href="#d5">Week 1 · Day 5</a>):</p>
+\[ \boldsymbol{\Lambda} = \begin{bmatrix} 4 & 1 & 1 & 1 \\ 1 & 4 & 0 & 0 \\ 1 & 0 & 4 & 0 \\ 1 & 0 & 0 & 4 \end{bmatrix} \;\Rightarrow\; \mathbf{R} = \begin{bmatrix} 2 & 0.5 & 0.5 & 0.5 \\ 0 & 1.936 & -0.129 & -0.129 \\ 0 & 0 & 1.932 & -0.138 \\ 0 & 0 & 0 & 1.927 \end{bmatrix} . \]
+<p>Three zeros of \(\boldsymbol{\Lambda}\) became nonzero: \(\mathbf{R}\) is completely full. Now move the hub to the last position, which only renames the variables:</p>
+\[ \boldsymbol{\Lambda}' = \begin{bmatrix} 4 & 0 & 0 & 1 \\ 0 & 4 & 0 & 1 \\ 0 & 0 & 4 & 1 \\ 1 & 1 & 1 & 4 \end{bmatrix} \;\Rightarrow\; \mathbf{R}' = \begin{bmatrix} 2 & 0 & 0 & 0.5 \\ 0 & 2 & 0 & 0.5 \\ 0 & 0 & 2 & 0.5 \\ 0 & 0 & 0 & 1.803 \end{bmatrix} . \]
+<p>No fill-in at all. Removing the hub first forces its three neighbours to account for each other; removing it last never does. Day 3 turns this into a rule you can apply to a graph.</p>
+<p><strong>Why the answer cannot change.</strong> Reordering is a permutation matrix \(\mathbf{P}\): \(\mathbf{A}\mathbf{x} = (\mathbf{A}\mathbf{P})(\mathbf{P}\T\mathbf{x})\), because \(\mathbf{P}\mathbf{P}\T = \mathbf{I}\). The cost \(\norm{\mathbf{A}\mathbf{x} - \mathbf{b}}^2\) is the same function, written with its unknowns in a different order, so its minimizer is the same vector with its entries shuffled.</p></div>
+<p>Finding the ordering with the least fill-in is NP-hard, so solvers use heuristics such as COLAMD. <span class="src">§1.5.3 · p. 38</span> The book also mentions iterative solvers (preconditioned conjugate gradient, and power iterations in visual SLAM) as alternatives, and says sparse factorization remains the method of choice for most SLAM problems.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Sparse means there are few measurements."</strong> It means each measurement involves few variables. Figure 1.9 has 1126 measurement rows and is still very sparse.</li>
+<li><strong>"A better ordering gives a better estimate."</strong> Every ordering gives the same MAP estimate. The ordering only changes how much work and memory the factorization needs.</li>
+<li><strong>"If Λ is sparse, its inverse is sparse too."</strong> The covariance \(\boldsymbol{\Lambda}^{-1}\) is usually completely full: every variable is correlated with every other through chains of measurements. Sparsity lives in the information matrix and its factor, which is why we solve with them and never form the inverse.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A problem has 50 planar poses (3 numbers each) and 30 point landmarks (2 numbers each). How many columns does A have?</p><div class="opts"><button type="button" class="opt">80</button><button type="button" class="opt">210</button><button type="button" class="opt">150</button><button type="button" class="opt">400</button></div><p class="exp" hidden>One column per unknown number: 50 × 3 + 30 × 2 = 210. The number of rows depends on the measurements, not on the variables.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q2. In the toy example, which block of Λ is zero?</p><div class="opts"><button type="button" class="opt">The block between ℓ₁ and p₁</button><button type="button" class="opt">The block between p₂ and p₃</button><button type="button" class="opt">The block between ℓ₁ and p₃</button><button type="button" class="opt">The block between ℓ₂ and p₃</button></div><p class="exp" hidden>No factor contains both ℓ₁ and p₃, so every term of the sum for that block vanishes. The other three pairs share ϕ₇, ϕ₃, and ϕ₉.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. You add one factor on three variables, ϕ(p₁, p₂, ℓ₂), to the toy example. How many new edges does G get?</p><div class="opts"><button type="button" class="opt">2</button><button type="button" class="opt">3</button><button type="button" class="opt">1</button><button type="button" class="opt">0</button></div><p class="exp" hidden>A ternary factor joins all three pairs. The pair p₁–p₂ is already joined by ϕ₂, so the new edges are p₁–ℓ₂ and p₂–ℓ₂.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q4. One variable shares factors with all others, which share none among themselves. Where should it go in the ordering to avoid fill-in?</p><div class="opts"><button type="button" class="opt">First</button><button type="button" class="opt">In the middle</button><button type="button" class="opt">It makes no difference</button><button type="button" class="opt">Last</button></div><p class="exp" hidden>This is the hub example. Eliminated first, the hub ties all its neighbours together and R fills completely. Eliminated last, it creates no new nonzero.</p></div></div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>SLAM is sparse because a measurement relates only things that are close in space or time. There are no landmark-to-landmark factors at all.</li>
+<li>Every factor is a block-row of A and every variable a block-column. A block is nonzero only where the factor touches the variable.</li>
+<li>\(\boldsymbol{\Lambda}_{jk} = \sum_i \mathbf{A}_{ij}\T\mathbf{A}_{ik}\) is nonzero only if some factor contains both variables. The pattern of Λ is the adjacency matrix of the graph G.</li>
+<li>The factor R can have fill-in: nonzeros where Λ has zeros. How much depends on the variable ordering.</li>
+<li>All orderings give the same estimate. Finding the best one is NP-hard, so solvers use heuristics such as COLAMD.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §1.5 "Factor Graphs and Sparsity", pp. 35–39, with Figures 1.7–1.9 and equation (1.40). The dense operation count is from §1.3.3, p. 31.</li>
+<li>Golub and Van Loan, <em>Matrix Computations</em>, 4th edition, 2013 (the Cholesky factorization used in the four-variable example).</li>
+<li>Davis, <em>Direct Methods for Sparse Linear Systems</em>, 2006 (fill-in, the hub example, minimum-degree orderings).</li>
+<li>The toy problem on a line and its numbers are this course's own construction, with the same graph as the book's Figure 1.3.</li>
+</ol></div>
+<p class="next"></p>
+</section>

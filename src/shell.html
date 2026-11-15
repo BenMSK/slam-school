@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SLAM School</title>
+<meta name="description" content="A 24-week companion course for reading the SLAM Handbook: daily lessons, the derivations the book skips, interactive widgets, and quizzes.">
+<meta name="theme-color" content="#F7F7FB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1117" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="SLAM School">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* ---------- skin: tokens (swap this block for another skin; see modules.md) ---------- */
+:root{
+  --bg:#F7F7FB; --surface:#FFFFFF; --soft:#EEEFF7; --ink:#1B1B2F; --muted:#5F6081; --line:#E2E3EE; --line2:#C9CBDE;
+  --acc:#4F46E5; --acc-ink:#3730A3; --acc-soft:#E8E7FD; --on-acc:#FFFFFF;
+  --c1:#0F9D8A; --c1-soft:#DDF5F0; --c2:#D97706; --c2-soft:#FEF1D6; --c3:#DB2777; --c3-soft:#FCE4EF; --c4:#7C3AED; --c4-soft:#EFE6FD; --c5:#0284C7; --c5-soft:#E0F2FE;
+  --hover:rgba(27,27,47,.06); --focus:#4F46E5;
+  --shadow:0 1px 2px rgba(20,20,60,.05),0 6px 20px rgba(20,20,60,.06);
+  --f-display:"Space Grotesk",Inter,system-ui,sans-serif;
+  --f-body:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --w-display:700;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1117; --surface:#171A23; --soft:#1F2330; --ink:#ECEDF5; --muted:#A0A3BC; --line:#2A2E3D; --line2:#3B4054;
+    --acc:#8B85FF; --acc-ink:#C0BDFF; --acc-soft:#262A4A; --on-acc:#0F1117;
+    --c1:#199E70; --c1-soft:#14302A; --c2:#C98500; --c2-soft:#33290F; --c3:#D55181; --c3-soft:#3A1E2C; --c4:#9085E9; --c4-soft:#2A2748; --c5:#1F9FB8; --c5-soft:#12303A;
+    --hover:rgba(255,255,255,.07); --focus:#8B85FF; --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1117; --surface:#171A23; --soft:#1F2330; --ink:#ECEDF5; --muted:#A0A3BC; --line:#2A2E3D; --line2:#3B4054;
+  --acc:#8B85FF; --acc-ink:#C0BDFF; --acc-soft:#262A4A; --on-acc:#0F1117;
+  --c1:#199E70; --c1-soft:#14302A; --c2:#C98500; --c2-soft:#33290F; --c3:#D55181; --c3-soft:#3A1E2C; --c4:#9085E9; --c4-soft:#2A2748; --c5:#1F9FB8; --c5-soft:#12303A;
+  --hover:rgba(255,255,255,.07); --focus:#8B85FF; --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35); color-scheme:dark;
+}
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-padding-top:120px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.7;font-variant-numeric:tabular-nums;padding-bottom:env(safe-area-inset-bottom,0px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+a{color:var(--acc-ink);text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:3px;overflow-wrap:anywhere}
+a:hover{text-decoration-color:var(--acc-ink)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:var(--w-display);line-height:1.25;text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:1.9rem}
+h2{font-size:1.7rem}
+h3{font-size:1.25rem;margin-block:1.9em .55em;color:var(--acc-ink)}
+h4{font-size:1.05rem;margin-block:1.3em .4em}
+p{margin:0 0 1em}
+ul,ol{margin:0 0 1.1em;padding-left:1.35em}
+li{margin:.3em 0}
+li::marker{color:var(--acc)}
+strong{font-weight:700}
+small,.small{font-size:.86rem}
+.muted{color:var(--muted)}
+.eyebrow{font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:var(--f-display);font-weight:var(--w-display)}
+.wrap{max-width:800px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+code{font-family:var(--f-mono);font-size:.86em;background:var(--soft);padding:.1em .35em;border-radius:5px;overflow-wrap:anywhere}
+pre.code{font-family:var(--f-mono);font-size:.82rem;line-height:1.55;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow-x:auto;margin:14px 0}
+pre.code code{background:none;padding:0;font-size:inherit}
+.math{font-family:var(--f-mono);font-size:.95rem;background:var(--soft);border-radius:10px;padding:10px 14px;text-align:center;overflow-x:auto}
+hr{border:0;border-top:1px solid var(--line);margin:28px 0}
+img,svg{max-width:100%}
+[hidden]{display:none!important}
+/* ---------- header ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;flex-direction:column;gap:8px;padding-block:10px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand .logo{width:42px;height:42px;flex:none}
+.brand .bt{min-width:0;flex:1}
+.brand h1{font-size:1.3rem;line-height:1.1}
+.brand .sub{font-size:.78rem;color:var(--muted);line-height:1.25;margin-top:2px}
+.brand .ver{font-family:var(--f-mono);color:var(--acc-ink);white-space:nowrap}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sp{flex:1}
+.tabs{display:flex;gap:4px;background:var(--soft);padding:4px;border-radius:999px}
+.tab{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-family:var(--f-display);font-weight:var(--w-display);font-size:.98rem;padding:8px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.btn{font:inherit;font-family:var(--f-display);font-weight:var(--w-display);font-size:.9rem;border:1px solid var(--line2);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;line-height:1.2}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent}
+.btn.on{background:var(--c1-soft);border-color:var(--c1);color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:default}
+select,input[type=text],input[type=search],textarea{font:inherit;font-size:.95rem;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:10px;padding:6px 10px;max-width:100%}
+textarea{width:100%;font-family:var(--f-mono);font-size:.85rem;line-height:1.5;resize:vertical}
+input[type=range]{width:100%;accent-color:var(--acc);margin:4px 0}
+/* ---------- main ---------- */
+main{padding-block:18px 60px}
+.pane>section,.pane>article{margin-block:0 28px}
+.hero{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px 22px 18px;box-shadow:var(--shadow);overflow:hidden}
+.hero::after{content:"";position:absolute;inset:auto -40px -60px auto;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,var(--acc-soft),transparent 70%);pointer-events:none}
+.hero .big{font-family:var(--f-display);font-size:2rem;line-height:1.12;font-weight:var(--w-display);letter-spacing:-.02em;margin-bottom:8px}
+.hero .lead{color:var(--muted);margin:0 0 12px;font-size:1rem}
+.pbar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:8px}
+.pbar i{display:block;height:100%;background:var(--c1);width:0;transition:width .3s;border-radius:4px}
+@media (prefers-reduced-motion:reduce){.pbar i{transition:none}}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+@media (max-width:560px){.facts{grid-template-columns:1fr 1fr}}
+.fact{background:var(--soft);border-radius:14px;padding:10px 12px;min-width:0}
+.fact .k{font-size:.72rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;font-family:var(--f-display);font-weight:var(--w-display)}
+.fact .v{font-family:var(--f-display);font-weight:var(--w-display);font-size:1.2rem;line-height:1.2;margin-top:2px;overflow-wrap:anywhere}
+/* day nav */
+.dnav{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 10px;margin:0 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.dnav::-webkit-scrollbar{display:none}
+.dchip{flex:none;border:1px solid var(--line2);background:var(--surface);color:var(--muted);font:inherit;font-family:var(--f-display);font-weight:var(--w-display);font-size:.85rem;padding:6px 12px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.dchip.on{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
+.dchip.done:not(.on){border-color:var(--c1);color:var(--ink)}
+.dchip.done::after{content:"✓";font-size:.8em;color:var(--c1)}
+.dchip.on::after{color:inherit}
+.dchip.wk{background:none;border:0;color:var(--muted);padding:6px 4px 6px 8px;cursor:default;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase}
+/* lesson and library-entry headers */
+.day-h{margin:6px 0 18px}
+.day-h h2{margin:4px 0 8px;font-size:1.85rem}
+.day-h .lead{font-size:1.08rem;color:var(--ink);margin:0 0 6px}
+.day-h .meta{font-size:.85rem;color:var(--muted);margin:0}
+.cap{font-size:.88rem;color:var(--muted);margin:-6px 0 18px;padding-left:2px}
+.next{font-family:var(--f-display);font-weight:var(--w-display);color:var(--muted);margin-top:22px}
+/* callouts */
+.box{border-radius:16px;padding:14px 18px;margin:16px 0;border:1px solid transparent;background:var(--soft)}
+.box>:first-child{margin-top:0}.box>:last-child{margin-bottom:0}
+.box h3,.box h4{margin-top:0;margin-bottom:.4em;display:flex;align-items:center;gap:.45em;color:var(--ink);font-size:1.05rem}
+.box h3::before,.box h4::before{font-size:1.05em;line-height:1}
+.key{background:var(--c2-soft);border-color:color-mix(in srgb,var(--c2) 40%,transparent)}
+.key h3::before,.key h4::before{content:"★";color:var(--c2)}
+.tip{background:var(--c5-soft);border-color:color-mix(in srgb,var(--c5) 35%,transparent)}
+.tip h3::before,.tip h4::before{content:"◎";color:var(--c5)}
+.kid{background:var(--c4-soft);border-color:color-mix(in srgb,var(--c4) 35%,transparent)}
+.kid h3::before,.kid h4::before{content:"☺";color:var(--c4)}
+.dont{background:var(--c3-soft);border-color:color-mix(in srgb,var(--c3) 35%,transparent)}
+.dont h3::before,.dont h4::before{content:"✕";color:var(--c3)}
+.dont li::marker{color:var(--c3)}
+.note{background:var(--soft);border-color:var(--line)}
+.note h3::before,.note h4::before{content:"▸";color:var(--muted)}
+.ok{background:var(--c1-soft);border-color:color-mix(in srgb,var(--c1) 35%,transparent)}
+.ok h3::before,.ok h4::before{content:"✓";color:var(--c1)}
+.ok li::marker{color:var(--c1)}
+.src{display:inline-block;font-size:.72rem;line-height:1.35;font-family:var(--f-display);font-weight:var(--w-display);color:var(--acc-ink);background:var(--acc-soft);border-radius:6px;padding:1px 6px;text-decoration:none;margin-left:3px;vertical-align:.12em;white-space:nowrap}
+.src:hover{text-decoration:underline}
+/* figures */
+.fig{margin:18px 0;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 12px 8px}
+.fig svg{width:100%;height:auto;display:block;font-family:var(--f-body)}
+.fig figcaption{font-size:.86rem;color:var(--muted);margin-top:8px;line-height:1.5}
+.fig.pimg>a{display:block}
+.fig.pimg img{width:100%;height:auto;display:block;background:#fff;border-radius:10px;padding:6px;box-sizing:border-box}
+/* tables (become cards on phones; the script labels each cell) */
+.tbl{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;line-height:1.5;min-width:420px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--soft);font-family:var(--f-display);font-weight:var(--w-display);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.c,th.c{text-align:center}
+tr[data-go]{cursor:pointer}
+tr[data-go]:hover td{background:var(--hover)}
+@media (max-width:640px){
+  .tbl{border:0;overflow:visible;background:none}
+  .tbl table{min-width:0;font-size:.93rem}
+  .tbl tr:first-child{display:none}
+  .tbl tr{display:block;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 0;margin-bottom:8px}
+  .tbl tr:last-child{margin-bottom:0}
+  .tbl td{display:block;border:0;padding:4px 12px}
+  .tbl td:empty{display:none}
+  .tbl td:first-child{font-weight:700}
+  .tbl td.c{text-align:left}
+  .tbl td::before{content:attr(data-label);display:block;font-size:.7rem;line-height:1.3;color:var(--muted);font-family:var(--f-display);font-weight:var(--w-display);letter-spacing:.04em;text-transform:uppercase}
+  .tbl td:not([data-label])::before{display:none}
+}
+/* quiz */
+.quiz{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:24px 0;box-shadow:var(--shadow)}
+.quiz h3{margin-top:0}
+.q{margin:14px 0 18px}
+.qq{font-weight:600;margin-bottom:8px}
+.opts{display:grid;gap:6px}
+.opt{text-align:left;font:inherit;font-size:.95rem;line-height:1.45;border:1px solid var(--line2);background:var(--surface);color:var(--ink);border-radius:12px;padding:9px 12px;cursor:pointer}
+.opt:hover{background:var(--hover)}
+.opt.ok{background:var(--c1-soft);border-color:var(--c1)}
+.opt.no{background:var(--c3-soft);border-color:var(--c3)}
+.opt:disabled{cursor:default}
+.exp{margin:8px 0 0;font-size:.92rem;color:var(--muted);border-left:3px solid var(--c1);padding-left:10px}
+/* refs */
+.refs{font-size:.88rem;color:var(--muted);margin-top:26px;border-top:1px solid var(--line);padding-top:12px}
+.refs h4{margin-top:0;color:var(--ink)}
+.refs ol{padding-left:1.4em}
+.refs li{margin:.35em 0;line-height:1.5}
+/* day footer */
+.dfoot{margin:30px 0 10px;display:flex;flex-direction:column;gap:12px}
+.dfoot .done-btn{align-self:flex-start}
+/* library tab (cards built by the script from article.entry) */
+.lib-filter{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 16px}
+.lib-filter .dchip{font-size:.78rem;padding:5px 10px}
+.lib-cards{display:grid;gap:10px}
+.pcard{display:block;width:100%;text-align:left;font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:16px;padding:14px 16px;cursor:pointer;box-shadow:var(--shadow)}
+.pcard:hover{border-color:var(--acc)}
+.pcard .t{font-family:var(--f-display);font-weight:var(--w-display);font-size:1.05rem;line-height:1.3}
+.pcard .l{font-size:.9rem;color:var(--muted);margin-top:4px}
+.pcard .tg{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.tag{font-size:.7rem;font-family:var(--f-display);font-weight:var(--w-display);letter-spacing:.04em;text-transform:uppercase;background:var(--soft);color:var(--muted);border-radius:6px;padding:2px 6px}
+.pback{margin:0 0 10px}
+/* legend of boxes (overview) */
+.legend{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:520px){.legend{grid-template-columns:1fr}}
+.legend .box{margin:0;padding:10px 12px;font-size:.9rem}
+/* ---------- widgets ---------- */
+.viz{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin:18px 0 10px;box-shadow:var(--shadow);position:relative}
+.viz .vt{font-family:var(--f-display);font-weight:var(--w-display);font-size:1rem;display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.viz .vt::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--acc);flex:none}
+.viz .vd{font-size:.88rem;color:var(--muted);margin:0 0 10px}
+.viz .ctl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;margin:8px 0}
+.viz label.rng{display:flex;flex-direction:column;flex:1 1 150px;min-width:140px;font-size:.82rem;color:var(--muted);font-family:var(--f-display);font-weight:var(--w-display)}
+.viz label.rng output{color:var(--ink);font-family:var(--f-mono);font-weight:400;margin-left:4px}
+.viz label.sel{display:flex;flex-direction:column;gap:3px;font-size:.82rem;color:var(--muted);font-family:var(--f-display);font-weight:var(--w-display)}
+.viz svg{width:100%;height:auto;display:block;font-family:var(--f-body)}
+.viz svg text:not([fill]){fill:var(--ink)}
+.viz svg .mut{fill:var(--muted)}
+.viz svg .grid{stroke:var(--line);stroke-width:1}
+.viz svg .axis{stroke:var(--line2);stroke-width:1}
+.viz .out{font-family:var(--f-mono);font-size:.9rem;line-height:1.9;min-height:1.8em;background:var(--soft);border-radius:10px;padding:6px 10px;margin:8px 0}
+.viz .tok{display:inline-block;background:var(--surface);border:1px solid var(--line2);border-radius:6px;padding:0 6px;margin:2px 3px 2px 0;line-height:1.6;font-family:var(--f-mono);font-size:.86rem}
+.viz .tok.hot{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
+.viz .bars{display:grid;gap:4px;margin:8px 0}
+.viz .bar{display:grid;grid-template-columns:minmax(70px,auto) 1fr auto;gap:8px;align-items:center;font-size:.85rem;font-family:var(--f-mono)}
+.viz .bar .bb{height:14px;background:var(--soft);border-radius:4px;overflow:hidden}
+.viz .bar .bb i{display:block;height:100%;background:var(--acc);border-radius:4px}
+.viz .bar .bv{white-space:nowrap;min-width:48px;text-align:right;color:var(--muted)}
+.viz .bar.hot .bb i{background:var(--c2)}
+.viz .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0}
+.viz .stat{background:var(--soft);border-radius:12px;padding:8px 10px}
+.viz .stat .k{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-family:var(--f-display);font-weight:var(--w-display)}
+.viz .stat .v{font-family:var(--f-mono);font-size:1rem;overflow-wrap:anywhere}
+.viz .stat .s{font-size:.75rem;color:var(--muted)}
+.viz .panel{background:var(--soft);border-radius:12px;padding:10px 12px;font-size:.9rem;margin-top:8px}
+.viz .panel>:last-child{margin-bottom:0}
+.viz .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin:6px 0 0;grid-template-columns:none}
+.viz .legend span{display:inline-flex;align-items:center;gap:5px}
+.viz .legend i{width:12px;height:3px;border-radius:2px;display:inline-block}
+.viz .tt{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:.78rem;line-height:1.35;padding:6px 8px;border-radius:8px;transform:translate(-50%,calc(-100% - 10px));white-space:nowrap;z-index:5;box-shadow:var(--shadow)}
+.viz .chart{position:relative}
+.viz .steps{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0 10px}
+.viz .steps .dchip{font-size:.78rem;padding:5px 10px}
+.viz .warn{font-size:.8rem;color:var(--c3);font-weight:600}
+.viz table{min-width:0;font-size:.84rem}
+/* ---------- SLAM School additions ---------- */
+#wnav{margin-bottom:0;padding-bottom:6px}
+.read{background:var(--acc-soft);border-color:color-mix(in srgb,var(--acc) 35%,transparent)}
+.read h3::before,.read h4::before{content:"▤";color:var(--acc)}
+details.sol{border:1px solid var(--line);border-radius:12px;background:var(--surface);margin:8px 0 16px}
+details.sol summary{cursor:pointer;padding:9px 14px;font-family:var(--f-display);font-weight:var(--w-display);font-size:.92rem;color:var(--acc-ink)}
+details.sol[open] summary{border-bottom:1px solid var(--line)}
+details.sol>div{padding:10px 14px}
+details.sol>div>:last-child{margin-bottom:0}
+ol.probs>li{margin:1em 0}
+.wkd{border:1px solid var(--line);border-radius:14px;background:var(--surface);margin:8px 0}
+.wkd summary{cursor:pointer;padding:10px 14px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 10px;align-items:baseline;list-style:none}
+.wkd summary::-webkit-details-marker{display:none}
+.wkd .wn{font-family:var(--f-display);font-weight:var(--w-display);color:var(--acc-ink);font-size:.85rem;white-space:nowrap}
+.wkd .wt{font-weight:700}
+.wkd .wb{grid-column:2;font-size:.82rem;color:var(--muted)}
+.wkd .wkc{grid-column:3;grid-row:1;font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.wkd .tbl{margin:0 10px 10px}
+.parth{margin:1.4em 0 .5em;font-size:1.05rem;color:var(--muted)}
+.katex{font-size:1.06em}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:6px 2px;margin:.9em 0}
+.viz canvas{width:100%;height:auto;display:block;border-radius:10px}
+.viz .ctl .btn{flex:none}
+span.src{cursor:default}
+span.src:hover{text-decoration:none}
+/* footer */
+.foot{color:var(--muted);font-size:.85rem;padding-block:20px 30px;border-top:1px solid var(--line);margin-top:20px}
+@media (max-width:520px){
+  body{font-size:16.5px}
+  .brand h1{font-size:1.15rem}.brand .sub{font-size:.72rem}.btn .lbl{display:none}.top .wrap{gap:6px;padding-block:8px}
+  .hero{padding:18px 16px 14px}.hero .big{font-size:1.6rem}
+  .day-h h2{font-size:1.55rem}
+  h2{font-size:1.45rem}h3{font-size:1.15rem}
+  .box{padding:12px 14px}
+  .viz{padding:12px 12px}
+}
+@media print{.top,.dfoot,.dnav{display:none}}
+</style>
+<style>/*KATEX_CSS*/</style>
+</head>
+<body>
+<noscript><p class="wrap">SLAM School needs JavaScript for navigation, quizzes, and the interactive widgets.</p></noscript>
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <!-- logo: a four-pose graph with one loop closure; tools/makeicon.js draws the same glyph into the PNG icons -->
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect x="4" y="4" width="56" height="56" rx="16" fill="var(--acc)"/><path d="M18 45 L21 21 L44 18 L47 43" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M47 43 L18 45" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="1 6" stroke-linecap="round"/><circle cx="18" cy="45" r="6" fill="#fff"/><circle cx="21" cy="21" r="6" fill="#fff"/><circle cx="44" cy="18" r="6" fill="#fff"/><circle cx="47" cy="43" r="6" fill="#fff"/></svg>
+    <div class="bt"><h1>SLAM School</h1><div class="sub">The SLAM Handbook, in 24 weeks · <span class="ver">v1.0 (2026-11-15)</span></div></div>
+    <button class="btn" id="theme" type="button" aria-label="Switch color theme"><span class="em">☾</span><span class="lbl">Dark</span></button>
+  </div>
+  <!-- one tab per .pane; data-tab must equal the pane's data-pane. "course" is required. -->
+  <nav class="tabs" role="tablist" aria-label="Sections"><button class="tab" role="tab" data-tab="course" type="button">Course · 24 weeks</button></nav>
+</div></header>
+
+<main class="wrap">
+<div class="pane" data-pane="course">
+<nav class="dnav" id="wnav" aria-label="Weeks"></nav>
+<nav class="dnav" id="dnav" aria-label="Days of this week" hidden></nav>
+
+<section class="day" data-day="0" id="d0">
+  <div class="hero">
+    <span class="eyebrow">A 24-week reading companion</span>
+    <div class="big">Read the SLAM Handbook, and actually understand it.</div>
+    <p class="lead">One hour a day, five days a week: a few pages of the book, then a lesson here that fills in the steps the book skips, something to play with, and a quiz. Every sixth day is a review.</p>
+    <div class="row"><button class="btn primary" type="button" id="continue">Start</button><span class="small muted" id="prog-txt"></span></div>
+    <div class="pbar" id="prog"><i></i></div>
+    <div class="facts">
+      <div class="fact"><div class="k">Lessons</div><div class="v">120 + 24 reviews</div></div>
+      <div class="fact"><div class="k">Widgets</div><div class="v"><span id="nviz">0</span> interactive</div></div>
+      <div class="fact"><div class="k">The book</div><div class="v">18 chapters · 550 pp.</div></div>
+    </div>
+  </div>
+
+  <h3>How to use this course</h3>
+  <ol>
+    <li><strong>Have the book open.</strong> Each day starts with a "Read first" box naming the sections and pages of the <em>SLAM Handbook</em> (Carlone, Kim, Barfoot, Cremers, Dellaert, eds., Cambridge University Press). Read those pages before the lesson, or right after it if the pages feel hard.</li>
+    <li><strong>Then do the lesson.</strong> It restates the idea in plain words, works through the derivation steps the book leaves out, and uses the book's own notation so you can go back and forth.</li>
+    <li><strong>Play with every widget.</strong> They are small real computations (a Gauss-Newton solver, an ICP loop, a belief-propagation pass), not pictures.</li>
+    <li><strong>Take the quiz, then mark the day done.</strong> Progress is saved on this device only.</li>
+    <li><strong>Day 6 of each week is a review:</strong> a formula sheet, a mixed quiz, and pen-and-paper problems with worked solutions.</li>
+    <li><strong>Check the page chips.</strong> A chip such as <span class="src">§1.3.2 · p. 30</span> tells you where in the book a statement comes from.</li>
+  </ol>
+
+  <h3>The map</h3>
+  <p>The course follows the book in order: Part I is the estimation machinery (Weeks 1–10), Part II is the sensors (Weeks 11–18), Part III is where the field is heading (Weeks 19–24). Tap a week to see its days.</p>
+  <div id="syllabus"></div>
+
+  <h3>What the colored boxes mean</h3>
+  <div class="legend">
+    <div class="box read"><h4>Read first</h4>Today's pages in the book, and what to look for.</div>
+    <div class="box key"><h4>Today's big idea</h4>The one thing to remember.</div>
+    <div class="box kid"><h4>In plain words</h4>The same idea with no jargon.</div>
+    <div class="box tip"><h4>Intuition</h4>A picture to hang the idea on.</div>
+    <div class="box note"><h4>Filling the gap</h4>A derivation step or background fact the book assumes.</div>
+    <div class="box dont"><h4>Common mistakes</h4>Misreadings, and why they are wrong.</div>
+    <div class="box ok"><h4>Recap</h4>What to remember.</div>
+  </div>
+
+  <h3>About the sources</h3>
+  <p>The course is written against the edition of the handbook compiled on April 21, 2026, and page numbers refer to that edition. The lessons explain the material in their own words and do not reproduce the book's text or figures, so you need the book itself. Background math that the book assumes (linear algebra, probability, optimization, Lie groups) is standard textbook material; each lesson names the reference it follows.</p>
+</section>
+
+<!--DAYS-->
+</div>
+</main>
+
+<footer class="foot"><div class="wrap">SLAM School · <span class="ver">v1.0 (2026-11-15)</span> · A reading companion to the SLAM Handbook · Progress is saved on this device only.</div></footer>
+
+<script>/*KATEX_JS*/</script>
+<!-- optional data for widgets: read with DATA.name -->
+<script id="data" type="application/json">{}</script>
+<script>
+(()=>{
+"use strict";
+// ---------- config (per school) ----------
+const LS="slam-school";     // localStorage key
+const PER=6;                // days per week: five lessons + one review. Day id n = (week-1)*PER + k
+const LOCALE="en-US";
+const WEEKS=/*WEEKS*/[];    // filled by tools/build.js from src/weeks.json: [{t,book,pp,part}]
+const MACROS=/*MACROS*/{};  // KaTeX macros, the same set the build checks against
+const ERRS=[]; window.addEventListener("error",e=>ERRS.push(String(e.message||e)));
+const wk=n=>Math.ceil(n/PER), dk=n=>(n-1)%PER+1;
+const dname=n=>dk(n)===PER?"Review":"Day "+dk(n);
+const dl=n=>"Week "+wk(n)+" · "+dname(n);
+const T={ start:"Start", overview:"Overview", back:"← All entries", dark:"Dark", light:"Light",
+  markDone:n=>"Mark "+dl(n)+" done", doneOn:(n,d)=>dl(n)+" done ✓ "+d+" · tap to undo", progress:(n,N)=>n+" of "+N+" days done",
+  begin:n=>"Start "+dl(n), cont:n=>"Continue with "+dl(n), allDone:"All done · back to Week 1", next:(n,t)=>"Next: "+dl(n)+" — "+t,
+  cols:["Day","Lesson","You will be able to…"], all:n=>"All ("+n+")", noViz:n=>"(widget "+n+" not available)", vizFail:m=>"This widget failed to load: "+m };
+
+const $=(s,el=document)=>el.querySelector(s), $$=(s,el=document)=>Array.from(el.querySelectorAll(s));
+let ST={}; try{ ST=JSON.parse(localStorage.getItem(LS))||{}; }catch(e){} ST.lessons=ST.lessons||{};
+const save=()=>{ try{ localStorage.setItem(LS,JSON.stringify(ST)); }catch(e){} };
+let DATA={}; try{ DATA=JSON.parse($("#data").textContent)||{}; }catch(e){}
+
+// ---------- tiny DOM helpers ----------
+const h=(t,a={},...k)=>{ const e=document.createElement(t); for(const [q,v] of Object.entries(a)){ if(v==null||v===false) continue; if(q==="class") e.className=v; else if(q.startsWith("on")) e.addEventListener(q.slice(2),v); else if(q==="html") e.innerHTML=v; else e.setAttribute(q,v); } for(const c of k) if(c!=null) e.append(c); return e; };
+const sv=(t,a={},...k)=>{ const e=document.createElementNS("http://www.w3.org/2000/svg",t); for(const [q,v] of Object.entries(a)) e.setAttribute(q,v); for(const c of k) if(c!=null) e.append(c); return e; };
+const txt=(x,y,s,a={})=>sv("text",Object.assign({x,y,"font-size":13},a),s);
+const range=(label,min,max,step,val,on,fmt=v=>v)=>{ const i=h("input",{type:"range",min,max,step,value:val}); const o=h("output",{},fmt(val)); i.addEventListener("input",()=>{ o.textContent=fmt(+i.value); on(+i.value); }); return {el:h("label",{class:"rng"},h("span",{},label+" ",o),i), input:i}; };
+const select=(label,opts,on)=>{ const s=h("select",{},...opts.map(([v,t])=>h("option",{value:v},t))); s.addEventListener("change",()=>on(s.value)); return {el:h("label",{class:"sel"},label,s), input:s}; };
+const stat=(k,v,s)=>h("div",{class:"stat"},h("div",{class:"k"},k),h("div",{class:"v"},v),s?h("div",{class:"s"},s):null);
+const COL=["var(--c1)","var(--c2)","var(--c3)","var(--c4)","var(--c5)"];
+
+// ---------- theme ----------
+const docEl=document.documentElement, themeBtn=$("#theme");
+const sysDark=()=>{ try{ return matchMedia("(prefers-color-scheme: dark)").matches; }catch(e){ return false; } };
+const curTheme=()=>{ const t=docEl.getAttribute("data-theme"); return t==="dark"||t==="light"? t : (sysDark()?"dark":"light"); };
+const applyTheme=t=>{ if(t==="dark"||t==="light") docEl.setAttribute("data-theme",t); else docEl.removeAttribute("data-theme"); const d=curTheme()==="dark"; $(".em",themeBtn).textContent=d?"☀":"☾"; $(".lbl",themeBtn).textContent=d?T.light:T.dark; document.dispatchEvent(new Event("themechange")); };
+applyTheme(ST.theme);
+try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>applyTheme(ST.theme)); }catch(e){}
+themeBtn.addEventListener("click",()=>{ ST.theme= curTheme()==="dark"?"light":"dark"; save(); applyTheme(ST.theme); });
+
+// ---------- course: week nav, day nav, syllabus, footers ----------
+const dayEl=n=>$('.day[data-day="'+n+'"]');
+const DAYLIST=$$(".day[data-day]").map(s=>+s.dataset.day).filter(n=>n>0).sort((a,b)=>a-b);
+const DAYS=DAYLIST.length, WKLIST=[...new Set(DAYLIST.map(wk))];
+const daysOf=w=>DAYLIST.filter(n=>wk(n)===w);
+const dayTitle=n=>{ const s=dayEl(n); return s? $("h2",s).textContent.trim() : dl(n); };
+const wnav=$("#wnav"), dnav=$("#dnav"), ROMAN=["","I","II","III"], PARTS=["","Part I · Foundations of SLAM","Part II · SLAM in practice","Part III · From SLAM to Spatial AI"];
+wnav.append(h("button",{class:"dchip",type:"button","data-go":0},T.start));
+{ let part=0; const syl=$("#syllabus");
+  WKLIST.forEach(w=>{ const W=WEEKS[w-1]||{};
+    if(W.part&&W.part!==part){ part=W.part; wnav.append(h("span",{class:"dchip wk"},"Part "+ROMAN[part])); if(syl) syl.append(h("h4",{class:"parth"},PARTS[part])); }
+    wnav.append(h("button",{class:"dchip",type:"button","data-week":w,title:W.t||""},"W"+w));
+    if(syl){ const t=h("table",{},h("tr",{},...T.cols.map(c=>h("th",{},c))));
+      daysOf(w).forEach(i=>{ const lead=$(".lead",dayEl(i)); t.append(h("tr",{"data-go":i},h("td",{},dname(i)),h("td",{},h("strong",{},dayTitle(i))),h("td",{},lead?lead.textContent.trim():""))); });
+      syl.append(h("details",{class:"wkd"},h("summary",{},h("span",{class:"wn"},"Week "+w),h("span",{class:"wt"},W.t||""),h("span",{class:"wb"},(W.book||"")+(W.pp?" · pp. "+W.pp:"")),h("span",{class:"wkc","data-week":w})),h("div",{class:"tbl"},t))); } }); }
+$$(".day").forEach(s=>{ const n=+s.dataset.day; if(!n) return; const k=DAYLIST.indexOf(n), pv=DAYLIST[k-1], nx=DAYLIST[k+1]; const nxt=$(".next",s); if(nxt&&nx) nxt.textContent=T.next(nx,dayTitle(nx));
+  s.append(h("div",{class:"dfoot"}, h("button",{class:"btn done-btn",type:"button","data-day":n},T.markDone(n)),
+    h("div",{class:"row"}, h("button",{class:"btn ghost",type:"button","data-go":pv||0},"← "+(pv?dl(pv):T.overview)), h("span",{class:"sp"}), nx? h("button",{class:"btn ghost",type:"button","data-go":nx},dl(nx)+" →") : null))); });
+{ const nv=$("#nviz"); if(nv) nv.textContent=$$(".viz[data-viz]").length; }
+
+function renderProgress(){ let n=0;
+  DAYLIST.forEach(i=>{ const ts=ST.lessons["d"+i]; if(ts) n++; $$('.dchip[data-go="'+i+'"]').forEach(c=>c.classList.toggle("done",!!ts)); const b=$('.done-btn[data-day="'+i+'"]'); if(b){ b.classList.toggle("on",!!ts); b.textContent= ts? T.doneOn(i,new Date(ts).toLocaleDateString(LOCALE)) : T.markDone(i); } });
+  WKLIST.forEach(w=>{ const ds=daysOf(w), k=ds.filter(i=>ST.lessons["d"+i]).length; $$('.dchip[data-week="'+w+'"]').forEach(c=>c.classList.toggle("done",k===ds.length)); const c=$('.wkc[data-week="'+w+'"]'); if(c) c.textContent=k+"/"+ds.length; });
+  $("#prog i").style.width=(DAYS? n/DAYS*100 : 0)+"%"; $("#prog-txt").textContent=T.progress(n,DAYS);
+  const next=DAYLIST.find(i=>!ST.lessons["d"+i]), cb=$("#continue"); cb.textContent= next==null? T.allDone : n===0? T.begin(next) : T.cont(next); cb.dataset.go= next==null? (DAYLIST[0]||0) : next; }
+
+// ---------- panes and library ----------
+let curDay=0;
+const remember=v=>{ ST.view=v; save(); if(history.replaceState) history.replaceState(null,"","#"+v); window.scrollTo(0,0); fitText(dayEl(curDay)||$("main")); };
+function setTab(t){ $$(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t?"true":"false")); $$(".pane").forEach(p=>p.hidden=p.dataset.pane!==t); }
+function showDay(n){ if(!dayEl(n)) n=0; curDay=n; setTab("course"); $$(".day").forEach(s=>s.hidden=+s.dataset.day!==n);
+  const w=n?wk(n):0; $$("#wnav .dchip").forEach(c=>c.classList.toggle("on", n? +c.dataset.week===w : c.dataset.go==="0"));
+  dnav.innerHTML=""; dnav.hidden=!n; if(n) daysOf(w).forEach(i=>dnav.append(h("button",{class:"dchip"+(i===n?" on":"")+(ST.lessons["d"+i]?" done":""),type:"button","data-go":i,title:dayTitle(i)},dname(i))));
+  const on=$("#wnav .dchip.on"); if(on&&n) wnav.scrollLeft=Math.max(0,on.offsetLeft-wnav.offsetLeft-wnav.clientWidth/2+on.offsetWidth/2);
+  if(n) ready(dayEl(n)); remember("d"+n); }
+function showPane(p,id){ setTab(p); const pane=$('.pane[data-pane="'+p+'"]'); if(pane.hasAttribute("data-lib")){ $$("article.entry",pane).forEach(a=>a.hidden=a.id!==id); $(".lib-list",pane).hidden=!!id; } remember(id||p); }
+$$(".pane[data-lib]").forEach(pane=>{ const items=$$("article.entry",pane).sort((a,b)=>(+a.dataset.year||0)-(+b.dataset.year||0)); const tagsOf=a=>(a.dataset.tags||"").split(",").map(s=>s.trim()).filter(Boolean);
+  const tags=[...new Set(items.flatMap(tagsOf))]; let f="all";
+  const render=()=>{ const fil=$(".lib-filter",pane), cards=$(".lib-cards",pane); fil.innerHTML=""; cards.innerHTML="";
+    if(tags.length>1) ["all",...tags].forEach(t=>fil.append(h("button",{class:"dchip"+(t===f?" on":""),type:"button",onclick:()=>{ f=t; render(); }},t==="all"?T.all(items.length):t)));
+    items.forEach(a=>{ const tg=tagsOf(a); if(f!=="all"&&!tg.includes(f)) return; const lead=$(".lead",a), eb=$(".eyebrow",a);
+      cards.append(h("button",{class:"pcard",type:"button","data-entry":a.id}, eb?h("div",{class:"eyebrow"},eb.textContent):null, h("div",{class:"t"},$("h2",a).textContent), lead?h("div",{class:"l"},lead.textContent):null, h("div",{class:"tg"},...tg.map(t=>h("span",{class:"tag"},t))))); }); };
+  items.forEach(a=>a.prepend(h("div",{class:"pback"},h("button",{class:"btn ghost",type:"button","data-tab":pane.dataset.pane},T.back))));
+  render(); });
+
+// ---------- routing: #dN, #course, #<pane>, #<entry id> ----------
+function route(){ const v=decodeURIComponent(location.hash.slice(1))||ST.view||"d0"; let m, el;
+  if((m=/^d(\d+)$/.exec(v))) return showDay(+m[1]);
+  if(v==="course") return showDay(curDay);
+  if($('.pane[data-pane="'+v+'"]')) return showPane(v);
+  if((el=document.getElementById(v)) && el.matches("article.entry")) return showPane(el.closest(".pane").dataset.pane,v);
+  showDay(0); }
+window.addEventListener("hashchange",route);
+
+// ---------- events ----------
+document.addEventListener("click",ev=>{ const t=ev.target.closest("button,tr[data-go]"); if(!t) return;
+  if(t.dataset.tab){ if(t.dataset.tab==="course") showDay(curDay); else showPane(t.dataset.tab); return; }
+  if(t.dataset.go!=null){ showDay(+t.dataset.go); return; }
+  if(t.dataset.week){ const ds=daysOf(+t.dataset.week); showDay(ds.find(i=>!ST.lessons["d"+i])||ds[0]); return; }
+  if(t.dataset.entry){ showPane(t.closest(".pane").dataset.pane,t.dataset.entry); return; }
+  if(t.classList.contains("done-btn")){ const k="d"+t.dataset.day; if(ST.lessons[k]) delete ST.lessons[k]; else ST.lessons[k]=Date.now(); save(); renderProgress(); return; }
+  if(t.classList.contains("opt")){ const q=t.closest(".q"); if(!q||q.dataset.done) return; const opts=$$(".opt",q), a=+q.dataset.a, i=opts.indexOf(t); opts.forEach((o,j)=>{ o.classList.toggle("ok",j===a); o.classList.toggle("no",j===i&&i!==a); o.disabled=true; }); const ex=$(".exp",q); if(ex) ex.hidden=false; q.dataset.done="1"; return; }
+});
+// phones: label each cell with its column header so a table row can be shown as a card
+$$("table").forEach(t=>{ const ths=$$("tr:first-child th",t).map(th=>th.textContent.trim()); if(!ths.length) return; $$("tr",t).slice(1).forEach(tr=>Array.from(tr.children).forEach((td,j)=>{ if(ths[j]) td.setAttribute("data-label",ths[j]); })); });
+$$('a[href^="http"]').forEach(a=>{ a.target="_blank"; a.rel="noopener"; });
+
+// ---------- widget helpers ----------
+// lineChart opts: {w,h,aria,x:{min,max,log,ticks:[[v,label]],label},y:{min,max,ticks,label},series:[{name,color,dots,points:[{x,y,label,fmt}]}],marker:{x,y}}
+function lineChart(o){ const W=o.w||600, H=o.h||300, P={l:46,r:16,t:18,b:44}; const s=sv("svg",{viewBox:"0 0 "+W+" "+H,role:"img","aria-label":o.aria||"chart"});
+  const xs=v=>{ const a=o.x.log?Math.log10(v):v, lo=o.x.log?Math.log10(o.x.min):o.x.min, hi=o.x.log?Math.log10(o.x.max):o.x.max; return P.l+(a-lo)/(hi-lo)*(W-P.l-P.r); };
+  const ys=v=>H-P.b-(v-o.y.min)/(o.y.max-o.y.min)*(H-P.t-P.b);
+  (o.y.ticks||[]).forEach(([v,l])=>{ s.append(sv("line",{class:"grid",x1:P.l,x2:W-P.r,y1:ys(v),y2:ys(v)})); s.append(txt(P.l-6,ys(v)+4,l,{"text-anchor":"end",class:"mut","font-size":11})); });
+  (o.x.ticks||[]).forEach(([v,l])=>{ s.append(sv("line",{class:"grid",y1:P.t,y2:H-P.b,x1:xs(v),x2:xs(v)})); s.append(txt(xs(v),H-P.b+16,l,{"text-anchor":"middle",class:"mut","font-size":11})); });
+  s.append(sv("line",{class:"axis",x1:P.l,x2:W-P.r,y1:H-P.b,y2:H-P.b}));
+  if(o.y.label) s.append(txt(P.l-36,P.t+4,o.y.label,{class:"mut","font-size":11,transform:"rotate(-90 "+(P.l-36)+" "+(P.t+4)+")","text-anchor":"end"}));
+  if(o.x.label) s.append(txt((P.l+W-P.r)/2,H-5,o.x.label,{class:"mut","font-size":11,"text-anchor":"middle"}));
+  const pts=[]; o.series.forEach((se,si)=>{ const col=se.color||COL[si%5]; const d=se.points.map((p,i)=>(i?"L":"M")+xs(p.x).toFixed(1)+" "+ys(p.y).toFixed(1)).join(" "); s.append(sv("path",{d,fill:"none",stroke:col,"stroke-width":2,"stroke-linejoin":"round"}));
+    if(se.dots!==false) se.points.forEach(p=>{ s.append(sv("circle",{cx:xs(p.x),cy:ys(p.y),r:4,fill:col,stroke:"var(--surface)","stroke-width":2})); pts.push({px:xs(p.x),py:ys(p.y),p,se}); }); });
+  if(o.marker) s.append(sv("circle",{cx:xs(o.marker.x),cy:ys(o.marker.y),r:7,fill:"var(--acc)",stroke:"var(--surface)","stroke-width":2}));
+  const wrapEl=h("div",{class:"chart"},s); if(pts.length){ const tt=h("div",{class:"tt",hidden:""}); wrapEl.append(tt);
+    const move=ev=>{ const r=s.getBoundingClientRect(), x=(ev.clientX-r.left)*W/r.width, y=(ev.clientY-r.top)*H/r.height; let best=null,bd=1e9; pts.forEach(q=>{ const d=Math.hypot(q.px-x,q.py-y); if(d<bd){bd=d;best=q;} }); if(best&&bd<28){ tt.hidden=false; tt.textContent=(best.p.label||best.se.name)+": "+(best.p.fmt||(v=>v))(best.p.y); tt.style.left=(best.px*r.width/W)+"px"; tt.style.top=(best.py*r.height/H)+"px"; } else tt.hidden=true; };
+    s.addEventListener("pointermove",move); s.addEventListener("pointerdown",move); s.addEventListener("pointerleave",()=>tt.hidden=true); }
+  if(o.series.length>1) wrapEl.append(h("div",{class:"legend"},...o.series.map((se,si)=>h("span",{},h("i",{style:"background:"+(se.color||COL[si%5])}),se.name))));
+  return wrapEl; }
+// stepper: steps=[{t:"title",c:"html string" or ()=>Element}]
+const stepper=(el,steps,title,desc)=>{ let i=0; const chips=h("div",{class:"steps"}), body=h("div",{class:"panel"}); const prev=h("button",{class:"btn ghost",type:"button"},"← Back"), next=h("button",{class:"btn primary",type:"button"},"Next →");
+  const go=n=>{ i=Math.max(0,Math.min(steps.length-1,n)); chips.innerHTML=""; steps.forEach((s,j)=>chips.append(h("button",{class:"dchip"+(j===i?" on":""),type:"button",onclick:()=>go(j)},(j+1)+". "+s.t))); body.innerHTML=""; body.append(h("h4",{},steps[i].t)); const c=steps[i].c; body.append(typeof c==="function"?c():h("div",{html:c})); prev.disabled=i===0; next.disabled=i===steps.length-1; };
+  el.append(h("div",{class:"vt"},title),h("p",{class:"vd"},desc),chips,body,h("div",{class:"ctl"},prev,h("span",{class:"sp"}),next)); prev.onclick=()=>go(i-1); next.onclick=()=>go(i+1); go(0); };
+
+// ---------- widgets: one function per name, mounted the first time its day is opened ----------
+const VIZ={};
+const cssv=n=>getComputedStyle(docEl).getPropertyValue(n).trim();                 // a token's current value, for <canvas> drawing
+const tex=(s,display)=>{ const e=h("span"); try{ katex.render(s,e,{displayMode:!!display,macros:Object.assign({},MACROS),throwOnError:false,strict:"ignore"}); }catch(_){ e.textContent=s; } return e; };
+const button=(label,on,cls)=>h("button",{class:"btn"+(cls?" "+cls:""),type:"button",onclick:on},label);
+// seeded random numbers: const r=rng(7); r.u() is uniform in [0,1), r.n() is standard normal
+const rng=seed=>{ let a=seed>>>0; const u=()=>{ a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; };
+  const n=()=>{ let x=0; while(x===0) x=u(); return Math.sqrt(-2*Math.log(x))*Math.cos(2*Math.PI*u()); }; return {u,n}; };
+// small dense matrices as arrays of rows
+const M={
+  zeros:(r,c)=>Array.from({length:r},()=>new Array(c).fill(0)),
+  eye:n=>Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>+(i===j))),
+  T:A=>A[0].map((_,j)=>A.map(r=>r[j])),
+  mul:(A,B)=>A.map(r=>B[0].map((_,j)=>{ let s=0; for(let k=0;k<r.length;k++) s+=r[k]*B[k][j]; return s; })),
+  mv:(A,x)=>A.map(r=>{ let s=0; for(let k=0;k<r.length;k++) s+=r[k]*x[k]; return s; }),
+  add:(A,B)=>A.map((r,i)=>r.map((v,j)=>v+B[i][j])), sub:(A,B)=>A.map((r,i)=>r.map((v,j)=>v-B[i][j])), scale:(A,s)=>A.map(r=>r.map(v=>v*s)),
+  solve:(A,b)=>{ const n=b.length, a=A.map((r,i)=>[...r,b[i]]);        // Gaussian elimination with partial pivoting; null if singular
+    for(let c=0;c<n;c++){ let p=c; for(let r=c+1;r<n;r++) if(Math.abs(a[r][c])>Math.abs(a[p][c])) p=r; if(Math.abs(a[p][c])<1e-12) return null; [a[c],a[p]]=[a[p],a[c]];
+      for(let r=c+1;r<n;r++){ const f=a[r][c]/a[c][c]; if(f) for(let k=c;k<=n;k++) a[r][k]-=f*a[c][k]; } }
+    const x=new Array(n).fill(0); for(let i=n-1;i>=0;i--){ let s=a[i][n]; for(let k=i+1;k<n;k++) s-=a[i][k]*x[k]; x[i]=s/a[i][i]; } return x; },
+  inv:A=>{ const n=A.length, I=M.eye(n), cols=[]; for(let j=0;j<n;j++){ const x=M.solve(A,I.map(r=>r[j])); if(!x) return null; cols.push(x); } return M.T(cols); },
+  chol:A=>{ const n=A.length, L=M.zeros(n,n);                           // lower-triangular L with A = L Lᵀ; null if not positive definite
+    for(let i=0;i<n;i++) for(let j=0;j<=i;j++){ let s=A[i][j]; for(let k=0;k<j;k++) s-=L[i][k]*L[j][k]; if(i===j){ if(s<=0) return null; L[i][i]=Math.sqrt(s); } else L[i][j]=s/L[j][j]; } return L; },
+  eigSym:A=>{ const n=A.length, a=A.map(r=>[...r]), v=M.eye(n);         // Jacobi rotations for a symmetric matrix: {val ascending, vec columns}
+    for(let sweep=0;sweep<60;sweep++){ let off=0; for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) off+=a[i][j]*a[i][j]; if(off<1e-22) break;
+      for(let p=0;p<n;p++) for(let q=p+1;q<n;q++){ if(Math.abs(a[p][q])<1e-300) continue; const th=(a[q][q]-a[p][p])/(2*a[p][q]), t=(th<0?-1:1)/(Math.abs(th)+Math.sqrt(th*th+1)), c=1/Math.sqrt(t*t+1), s=t*c;
+        for(let k=0;k<n;k++){ const x=a[k][p], y=a[k][q]; a[k][p]=c*x-s*y; a[k][q]=s*x+c*y; }
+        for(let k=0;k<n;k++){ const x=a[p][k], y=a[q][k]; a[p][k]=c*x-s*y; a[q][k]=s*x+c*y; }
+        for(let k=0;k<n;k++){ const x=v[k][p], y=v[k][q]; v[k][p]=c*x-s*y; v[k][q]=s*x+c*y; } } }
+    const idx=a.map((_,i)=>i).sort((i,j)=>a[i][i]-a[j][j]); return {val:idx.map(i=>a[i][i]), vec:v.map(r=>idx.map(i=>r[i]))}; }
+};
+// k-sigma ellipse of a 2x2 covariance S, in screen coordinates (y down: negate S[0][1] if your math frame has y up); scale = pixels per unit
+const covEllipse=(S,cx,cy,k=1,scale=1,attrs={})=>{ const a=S[0][0], b=S[0][1], d=S[1][1], tr=a+d, q=Math.sqrt(Math.max(0,tr*tr/4-(a*d-b*b))), l1=tr/2+q, l2=Math.max(0,tr/2-q), ang=Math.atan2(l1-a,b||1e-12)*180/Math.PI;
+  return sv("ellipse",Object.assign({cx,cy,rx:k*scale*Math.sqrt(l1),ry:k*scale*Math.sqrt(l2),transform:"rotate("+ang.toFixed(2)+" "+cx+" "+cy+")",fill:"none",stroke:"var(--acc)","stroke-width":2},attrs)); };
+// drag an SVG element with mouse or touch: on(x,y) receives viewBox coordinates
+const drag=(svg,el,on)=>{ const pt=ev=>{ const r=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal; return [vb.x+(ev.clientX-r.left)*vb.width/r.width, vb.y+(ev.clientY-r.top)*vb.height/r.height]; };
+  el.style.cursor="grab"; el.style.touchAction="none";
+  el.addEventListener("pointerdown",ev=>{ ev.preventDefault(); try{ el.setPointerCapture(ev.pointerId); }catch(_){} const mv=e=>on(...pt(e)), up=()=>{ el.removeEventListener("pointermove",mv); el.removeEventListener("pointerup",up); el.removeEventListener("pointercancel",up); };
+    el.addEventListener("pointermove",mv); el.addEventListener("pointerup",up); el.addEventListener("pointercancel",up); }); };
+
+/*VIZ*/
+
+const mount=el=>{ const f=VIZ[el.dataset.viz]; if(!f){ el.append(h("p",{class:"muted small"},T.noViz(el.dataset.viz))); ERRS.push("no widget "+el.dataset.viz); return; } try{ f(el); }catch(e){ el.append(h("p",{class:"warn"},T.vizFail(e.message))); ERRS.push(el.dataset.viz+": "+e.message); if(window.console) console.error(el.dataset.viz,e); } };
+function renderMath(el){ if(!window.renderMathInElement) return; try{ renderMathInElement(el,{delimiters:[{left:"\\[",right:"\\]",display:true},{left:"\\(",right:"\\)",display:false}],macros:Object.assign({},MACROS),throwOnError:false,strict:"ignore",ignoredTags:["script","noscript","style","textarea","pre","code","option","svg"],ignoredClasses:["viz"]}); }catch(e){ ERRS.push("math: "+e.message); } }
+function ready(s){ if(!s||s.dataset.ready) return; s.dataset.ready="1"; $$(".viz[data-viz]",s).forEach(mount); renderMath(s); }
+
+// ---------- modules (paste opt-in blocks from modules.md here) ----------
+
+// ---------- fit SVG labels: shrink a label that overflows its box or the canvas (to 70% at most), or shift it inside the edge ----------
+// Fonts differ by device, so this runs whenever a section is shown and whenever a widget redraws. Hidden SVGs measure 0 and are skipped.
+function fitText(root){ $$("svg[viewBox]",root).forEach(svg=>{ const vb=svg.viewBox.baseVal; if(!vb||!vb.width||svg.closest(".logo")) return;
+  const boxes=$$("rect",svg).map(r=>r.getBBox()).filter(b=>b.width>30&&b.height>14&&b.width<vb.width*0.95);
+  $$("text",svg).forEach(t=>{ if(t.transform.baseVal.length&&!t.dataset.fit) return; let b=t.getBBox(); if(!b.width) return;
+    const cx=b.x+b.width/2, cy=b.y+b.height/2, host=boxes.filter(r=>cx>r.x&&cx<r.x+r.width&&cy>r.y&&cy<r.y+r.height).sort((p,q)=>p.width*p.height-q.width*q.height)[0];
+    const anchor=getComputedStyle(t).textAnchor, L=host?host.x+6:vb.x+2, R=host?host.x+host.width-6:vb.x+vb.width-2;
+    const room=anchor==="middle"? 2*Math.min(cx-L,R-cx) : anchor==="end"? b.x+b.width-L : R-b.x, k=Math.min(room,vb.width-4)/b.width;
+    if(k<1&&k>=0.7){ t.style.fontSize=(parseFloat(getComputedStyle(t).fontSize)*k).toFixed(1)+"px"; b=t.getBBox(); }
+    const l=vb.x+2, r=vb.x+vb.width-2, dx=b.x<l? l-b.x : b.x+b.width>r? r-b.x-b.width : 0;
+    if(dx&&b.width<=r-l){ t.setAttribute("transform","translate("+dx.toFixed(1)+",0)"); t.dataset.fit="1"; }
+    // a label outside every box (arrow labels, notes), or one that a later box covers: paint it on top with a halo in the background colour
+    const all=$$("text,rect",t.parentNode), later=all.slice(all.indexOf(t)+1).filter(e=>e.tagName==="rect");
+    if(!t.dataset.top&&(!host&&!t.closest("[transform*=rotate]")||later.some(q=>{ const z=q.getBBox(), w=Math.min(b.x+b.width,z.x+z.width)-Math.max(b.x,z.x), hh=Math.min(b.y+b.height,z.y+z.height)-Math.max(b.y,z.y);
+        return z.width>=8&&z.height>=8&&w>1&&hh>2&&!(cx>z.x&&cx<z.x+z.width&&cy>z.y&&cy<z.y+z.height)&&getComputedStyle(q).fill!=="none"; }))){
+      t.dataset.top="1"; Object.assign(t.style,{paintOrder:"stroke",stroke:"var(--surface)",strokeWidth:"4px",strokeLinejoin:"round"}); t.parentNode.append(t); } }); }); }
+if(document.fonts) document.fonts.ready.then(()=>fitText(dayEl(curDay)||$("main")));   // first fit used fallback-font widths
+{ let pending=0; new MutationObserver(()=>{ if(!pending) pending=requestAnimationFrame(()=>{ pending=0; fitText(dayEl(curDay)||$("main")); }); }).observe($("main"),{childList:true,subtree:true}); }
+
+// ---------- boot ----------
+renderProgress(); route(); window.addEventListener("load",()=>setTimeout(()=>window.scrollTo(0,0),0));   // a #dN deep link must not hide the week nav under the header
+// self-test used by tools/build.js: open the page with ?check to mount every day, poke every control, and report errors
+if(/[?&]check\b/.test(location.search)){ $$(".day").forEach(s=>{ s.hidden=false; ready(s); });
+  $$(".viz").forEach(v=>{ try{
+    $$("input[type=range]",v).forEach(i=>{ const v0=i.value; [i.max,i.min,v0].forEach(x=>{ i.value=x; i.dispatchEvent(new Event("input",{bubbles:true})); }); });
+    $$("select",v).forEach(sel=>{ const v0=sel.value; [...sel.options].forEach(o=>{ sel.value=o.value; sel.dispatchEvent(new Event("change",{bubbles:true})); }); sel.value=v0; sel.dispatchEvent(new Event("change",{bubbles:true})); });
+    $$("input[type=checkbox]",v).forEach(c=>{ c.click(); c.click(); });
+    $$("button",v).slice(0,14).forEach(b=>{ if(!b.disabled) b.click(); });
+  }catch(e){ ERRS.push((v.dataset.viz||"viz")+" (poke): "+e.message); } });
+  setTimeout(()=>{ document.body.setAttribute("data-check",JSON.stringify({errors:ERRS, mathErrors:$$(".katex-error").map(e=>(e.getAttribute("title")||"").slice(0,140)), days:DAYS, widgets:$$(".viz[data-viz]").length, emptyWidgets:$$(".viz[data-viz]").filter(v=>!v.children.length).map(v=>v.dataset.viz)})); },1500); }
+})();
+</script>
+</body>
+</html>

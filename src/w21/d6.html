@@ -1,0 +1,59 @@
+<section class="day" data-day="126" id="d126" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 21 · Review</span>
+  <h2>Week 21 review: SLAM in a world that changes</h2>
+  <p class="lead">After today you can classify a changing scene, write the factors that track a moving object, clear and compare maps with free-space evidence, update an object's persistence, and say what makes deformable SLAM solvable.</p>
+  <p class="meta">About 60 min · No new pages</p>
+</header>
+
+<div class="box key"><h3>The week in one paragraph</h3><p>Chapter 15 drops the static-world assumption. Motion in view is short-term: it can be rejected as outliers, tracked as rigid bodies in the factor graph, or reconstructed densely. Change out of view is long-term: it needs re-identification, maps that record free space so that "gone" differs from "not looked at", and per-object persistence estimates. When nothing is static, one camera leaves the problem under-constrained (\(3NF\) unknowns, \(2NF\) equations), and deformation priors make it solvable.</p></div>
+
+<h3>1. Formula sheet</h3>
+<div class="tbl"><table>
+  <tr><th>What it is</th><th>Formula</th><th>Where</th></tr>
+  <tr><td>Motion between two observations</td><td>\(d = v / f\), against the spacing of confusable things</td><td>§15.1.1, p. 419 · <a href="#d121">Day 1</a></td></tr>
+  <tr><td>Reprojection error, point on moving object \(k\)</td><td>\(\mathbf{e}^{i,j,k}_{\text{reproj}} = \mathbf{z}^i_j - \pi\big( (\mathbf{T}^w_i)^{-1} \mathbf{T}^w_{k,i} \tilde{\mathbf{x}}^k_j \big)\)</td><td>(15.1), p. 427 · <a href="#d122">Day 2</a></td></tr>
+  <tr><td>Constant velocity</td><td>\(\mathbf{e}^{i,k}_{\text{vcte}} = \begin{bmatrix} \mathbf{v}^k_{i+1} - \mathbf{v}^k_i \\ \boldsymbol{\omega}^k_{i+1} - \boldsymbol{\omega}^k_i \end{bmatrix}\)</td><td>(15.2), p. 427 · Day 2</td></tr>
+  <tr><td>Pose-velocity coupling</td><td>\(h^{-1}\big( ( \mathbf{T}^w_{k,i+1} - \mathbf{T}^w_{k,i} \Delta\mathbf{T} ) \tilde{\mathbf{x}}^k_j \big)\), \(\Delta\mathbf{T} = \begin{bmatrix} \Exp(\boldsymbol{\omega}^k_i \Delta t) &amp; \mathbf{v}^k_i \Delta t \\ \mathbf{0} &amp; 1 \end{bmatrix}\)</td><td>(15.3)–(15.4), p. 428 · Day 2</td></tr>
+  <tr><td>Occupancy update along a beam</td><td>end cell \(l \leftarrow l + l_{\text{hit}}\); crossed cells \(l \leftarrow l - l_{\text{miss}}\)</td><td>§15.3.2.1, p. 436 · <a href="#d123">Day 3</a></td></tr>
+  <tr><td>Persistence, in odds \(o = p/(1-p)\)</td><td>detected: \(o \leftarrow o\,P_D/P_F\); in view, missed: \(o \leftarrow o\,(1-P_D)/(1-P_F)\); not in view: unchanged</td><td>§15.3.3, p. 443 · <a href="#d124">Day 4</a></td></tr>
+  <tr><td>As-rigid-as-possible energy</td><td>\(\sum_i \sum_{j \in \mathcal{N}(i)} \norm{ (\mathbf{p}_i - \mathbf{p}_j) - \mathbf{R}_i (\mathbf{q}_i - \mathbf{q}_j) }^2\)</td><td>§15.4.2, p. 449 · <a href="#d125">Day 5</a></td></tr>
+</table></div>
+
+<h3>2. Mixed quiz</h3>
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. What decides whether a robot experiences a change as short-term or long-term?</p><div class="opts"><button type="button" class="opt">How many seconds the change takes</button><button type="button" class="opt">The scene's rate of change relative to the robot's rate of observation</button><button type="button" class="opt">Whether the object is rigid</button><button type="button" class="opt">The sensor type</button></div><p class="exp" hidden>Fast motion sampled fast enough is short-term; a small rearrangement while the robot looked away is long-term.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. A 5 Hz radar watches drones flying at 20 m/s, 2 m apart. Can nearest-neighbour matching between scans be trusted?</p><div class="opts"><button type="button" class="opt">Yes: 5 Hz is a high rate</button><button type="button" class="opt">Yes: d = 0.25 m</button><button type="button" class="opt">No: d = 100 m</button><button type="button" class="opt">No: d = 4 m, twice the spacing</button></div><p class="exp" hidden>d = 20 / 5 = 4 m, so the nearest detection is usually another drone.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. A visual SLAM system masks every pixel labelled "car". What goes wrong in a full car park?</p><div class="opts"><button type="button" class="opt">It discards useful static structure</button><button type="button" class="opt">The masks make RANSAC fail</button><button type="button" class="opt">Parked cars create ghost trails</button><button type="button" class="opt">Nothing: masking is always safe</button></div><p class="exp" hidden>Labels mark potentially dynamic classes; combine them with geometric checks.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Which variables does the coupling factor (15.3) connect?</p><div class="opts"><button type="button" class="opt">Two camera poses</button><button type="button" class="opt">A camera pose, an object pose, and a point</button><button type="button" class="opt">Two consecutive object poses, a velocity, and a point</button><button type="button" class="opt">Two consecutive velocities only</button></div><p class="exp" hidden>It compares the point under the pose at i+1 with the point under the pose at i advanced by (15.4). No camera appears.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. A long-free grid cell sits at the lower clamp, log-odds −2. A hit adds 0.7. How many hits make it solid (above 0)?</p><div class="opts"><button type="button" class="opt">2</button><button type="button" class="opt">3</button><button type="button" class="opt">4</button><button type="button" class="opt">1</button></div><p class="exp" hidden>−2 → −1.3 → −0.6 → +0.1: three hits.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q6. After a second visit the map shows half a table floating in the room. What happened, and what is the usual remedy?</p><div class="opts"><button type="button" class="opt">A registration error; align the sessions rigidly</button><button type="button" class="opt">A moving object; use RANSAC</button><button type="button" class="opt">Only half of the removed table's place was observed; detect change per object</button><button type="button" class="opt">Sensor noise; average more scans</button></div><p class="exp" hidden>Semantic consistency: scenes change in units, the robot sees parts.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q7. During a visit, a mapped object is outside the camera's field of view. With no forgetting, how does its persistence probability change?</p><div class="opts"><button type="button" class="opt">Not at all</button><button type="button" class="opt">Down by the factor (1 − recall)</button><button type="button" class="opt">Down to 0.5</button><button type="button" class="opt">Up, because nothing contradicted it</button></div><p class="exp" hidden>No observation, no update: absence of evidence.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q8. Why is deformable SLAM much easier with a depth camera than with a monocular one?</p><div class="opts"><button type="button" class="opt">Depth cameras do not see deformation</button><button type="button" class="opt">The scene becomes rigid</button><button type="button" class="opt">No regularizer is needed</button><button type="button" class="opt">Each observation gives three numbers per point</button></div><p class="exp" hidden>3NF equations for 3NF unknowns; the priors no longer have to supply the depth.</p></div>
+</div>
+
+<h3>3. Pen-and-paper problems</h3>
+<ol class="probs">
+  <li><p>A security robot has a 10 Hz LiDAR. People walk at 1.2 m/s and stay at least 0.8 m apart. (a) How far does a person move between scans, as a fraction of the spacing? (b) The robot passes each corridor once every 5 minutes. How far can a person move between passes?</p>
+      <details class="sol"><summary>Solution</summary><div><p>(a) \(d = 1.2/10 = 0.12\) m, 15% of the spacing: short-term, track from scan to scan. (b) \(1.2 \times 300 = 360\) m: long-term, nothing can be tracked across the gap.</p></div></details></li>
+  <li><p>A planar object is at position \((2, 1)\) m with heading 0. In its own frame \(\mathbf{v} = (1.5, 0)\) m/s and \(\omega = 1\) rad/s; \(\Delta t = 0.1\) s. (a) Give the increment (15.4) and the predicted pose. (b) Where does the model put the object point \((0, 1)\)? (c) The estimate of the next pose is position \((2.20, 1.00)\), heading 0.1 rad. Evaluate (15.3) for that point.</p>
+      <details class="sol"><summary>Solution</summary><div><p>(a) Rotation by 0.1 rad, translation \((0.15, 0)\). The heading is 0, so the predicted pose is position \((2.15, 1)\), heading 0.1 rad. (b) \((0,1)\) rotated by 0.1 rad is \((-\sin 0.1, \cos 0.1) = (-0.100, 0.995)\); adding the position gives \((2.050, 1.995)\). (c) The estimate has the same heading, so it puts the point at \((2.100, 1.995)\). The residual is \((0.050, 0)\) m.</p></div></details></li>
+  <li><p>An occupancy grid uses \(l_{\text{hit}} = 0.85\), \(l_{\text{miss}} = 0.40\), and clamps log-odds to \([-2, 3.5]\). A forklift parks on a long-free cell, is hit in 10 consecutive scans, and drives away. (a) What is the cell's log-odds when it leaves? (b) How many scans until the cell is free again? (c) How many without the upper clamp?</p>
+      <details class="sol"><summary>Solution</summary><div><p>(a) \(-2 + 10 \times 0.85 = 6.5\), clamped to 3.5 (reached at the seventh hit). (b) \(3.5 - 0.40\,n \le 0\) needs \(n \ge 8.75\): 9 scans. (c) \(6.5/0.40 = 16.25\): 17 scans. The clamp bounds how long the map takes to accept a change.</p></div></details></li>
+  <li><p>(Stretch.) A fixed camera tracks \(N = 100\) points on a deforming surface through \(F = 50\) frames. (a) Count unknowns and equations with no prior. (b) Assume every frame's shape is a weighted sum of \(K = 3\) basis shapes shared by all frames, \(\mathbf{S}_f = \sum_{k} c_{f,k} \mathbf{B}_k\). Count again. (c) What is the largest \(K\) with no more unknowns than equations, and why is a larger \(K\) not simply better?</p>
+      <details class="sol"><summary>Solution</summary><div><p>(a) \(3NF = 15000\) unknowns, \(2NF = 10000\) equations. (b) \(3NK + KF = 900 + 150 = 1050\) unknowns for the same 10000 equations. (c) \(3NK + KF \le 2NF\) gives \(K \le 10000/350 = 28.6\), so \(K = 28\). The basis is the prior: few basis shapes allow only a small family of deformations, which is what fixes the depths. At \(K = F\) every frame can have its own shape and the prior says nothing. This is the low-dimensional basis of early NRSfM (p. 448).</p></div></details></li>
+</ol>
+
+<div class="box ok"><h4>You are ready for next week if you can</h4><ul>
+<li>Decide from speed, sensor rate, and spacing whether an object can be tracked.</li>
+<li>Write equations (15.1)–(15.4) and say which variables each factor connects.</li>
+<li>Update a persistence probability for a detection, a miss, and a visit without a view.</li>
+<li>Say why monocular deformable SLAM needs priors and what the as-rigid-as-possible energy penalizes.</li>
+</ul></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 15 "Dynamic and Deformable SLAM", pp. 417–453.</li>
+<li>Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005; Sorkine and Alexa, <em>As-Rigid-As-Possible Surface Modeling</em>, 2007.</li>
+</ol></div>
+<p class="next"></p>
+</section>

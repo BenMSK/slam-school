@@ -1,0 +1,102 @@
+<section class="day" data-day="135" id="d135" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 23 · Day 3</span>
+  <h2>Open-vocabulary maps: features on points, then features on objects</h2>
+  <p class="lead">After today you can fuse per-pixel features into map elements with a confidence-weighted average, answer a text query by cosine similarity, and build an object map by associating masks.</p>
+  <p class="meta">About 60 min · Read §17.3 up to "Language Descriptions" in §17.3.2, pp. 499–506 (7 pages) · Needs Week 23 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §17.3 opening, §17.3.1, and §17.3.2 up to "Language Descriptions", pp. 499–506</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The definition of a map element \(m_k \triangleq \{\mathbf{p}_k, \mathbf{f}_k\}\) (p. 501).</li>
+<li>The four bullets that build a pixel-level feature in ConceptFusion (pp. 501–502), and the update (17.2)–(17.3) on p. 502.</li>
+<li>Equation (17.4) and the sentence saying the prompt list need not be known when the map is built (p. 503).</li>
+<li>The two similarity scores used to match a mask to an object, and the fusion update (p. 505).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Replace the class label stored in each map element by a feature vector from a foundation model. Building the map is then averaging: every view contributes a feature for each element it sees. Using the map is comparing: encode the question, take inner products with the stored features, and keep the elements that score high. Storing one vector per object instead of per point makes the map thousands of times smaller.</p></div>
+
+<h3>1. Swap the label for a feature</h3>
+<p>A class label is a coarse description. The book's toolbox example makes the point: "tool" is true but useless, "hammer" is better, and colour, material, use, or the sound an object makes do not fit in one label at all. Rare objects are missing from any list. <span class="src">§17.3 · pp. 499–500</span> So an open-vocabulary map keeps the geometry of <a href="#d45">Week 8</a> and changes what is attached to it. The map is a set \(\mathcal{M} \triangleq \{m_k\}\) of <strong>map elements</strong></p>
+\[ m_k \triangleq \{\mathbf{p}_k, \mathbf{f}_k\}, \]
+<p>where \(\mathbf{p}_k\) is the geometric part (a 3D point, a voxel location, a mesh face) and \(\mathbf{f}_k\) is a feature vector. The geometry comes from an upstream SLAM system. <span class="src">§17.3.1 · p. 501</span> The book assumes posed RGB-D frames of a static scene, processed one after another. <span class="src">§17.3 · p. 500</span> The features can sit on the cells of a 2D grid (VLMaps, which suits navigation), on an unordered set of 3D points (ConceptFusion, OpenScene), or in a TSDF volume (Open-Fusion; see <a href="#d44">Week 8 · Day 2</a>). <span class="src">§17.3.1 · p. 501</span></p>
+
+<h3>2. A feature for every pixel</h3>
+<p>CLIP describes a whole image with one vector, but a map needs a vector per pixel. There are two routes. <span class="src">§17.3.1 · p. 501</span></p>
+<p><strong>Route A: a model that outputs dense features.</strong> Fine-tune a model like CLIP on a segmentation dataset so that it emits pixel-level features (LSeg, used by OpenScene and VLMaps) or region-level ones (SEEM, used by Open-Fusion for speed). The cost: evidence suggests these fine-tuned features lose some of the rare, long-tail concepts the original CLIP features hold.</p>
+<p><strong>Route B: keep CLIP untouched and do arithmetic.</strong> ConceptFusion combines whole-image context with object crops: <span class="src">§17.3.1 · pp. 501–502</span></p>
+<ol>
+<li><strong>Global feature</strong> \(\mathbf{f}^G = f(\mathbf{I})\): encode the entire image.</li>
+<li><strong>Local features</strong>: run \(\texttt{Seg}(\mathbf{I})\), turn each mask into a bounding box, crop the image to it, and encode the crop: \(\mathbf{f}^L_i = f(\mathbf{I}_i)\).</li>
+<li><strong>Merge per mask</strong>: \(\mathbf{f}^P_i = w_i \mathbf{f}^G + (1 - w_i)\,\mathbf{f}^L_i\) with \(w_i \in [0,1]\). The weights are set to emphasize local features that differ from the global one and from the other local ones.</li>
+<li><strong>Per pixel</strong>: \(\mathbf{f}^P_{u,v}\) is the sum of the mask features over all masks with \(\mathbf{Z}_i[u,v] = 1\), scaled to unit length.</li>
+</ol>
+<p>(On p. 502 this last bullet prints \(\mathbf{f}^L_i\) in the sum; its own description means \(\mathbf{f}^P_i\).) Back-project each pixel with its depth, as in <a href="#d43">Week 8 · Day 1</a>, and you have a point cloud in which every point carries a feature. The book calls this a <strong>range-feature observation</strong>. <span class="src">§17.3.1 · p. 502</span></p>
+
+<h3>3. Fusing many views into one feature</h3>
+<p>The same 3D point is seen in many frames, so its features must be combined. VLMaps simply averages all features that fall in the same grid cell. ConceptFusion keeps a feature \(\mathbf{f}_k\) and a <strong>confidence</strong> \(c_k\) per point and updates both with each new pixel feature: <span class="src">§17.3.1 · p. 502</span></p>
+\[ \mathbf{f}_k \leftarrow \frac{c_k \mathbf{f}_k + \alpha\, \mathbf{f}^P_{u,v}}{c_k + \alpha} \tag{17.2} \]
+\[ c_k \leftarrow c_k + \alpha \tag{17.3} \]
+<p>with \(\alpha = e^{-\gamma^2/2\sigma^2}\), where \(\gamma\) is the radial distance to the camera center and \(\sigma\) a scale. Small \(\gamma\) gives \(\alpha\) near 1; large \(\gamma\) gives a small \(\alpha\).</p>
+<p><strong>Numbers</strong> (two dimensions, to keep it readable). A point has \(c_k = 2\), \(\mathbf{f}_k = (1, 0)\). A new view gives \(\mathbf{f}^P = (0, 1)\) at \(\gamma = \sigma\), so \(\alpha = e^{-1/2} = 0.607\). Then \(\mathbf{f}_k \leftarrow (2 \cdot (1,0) + 0.607 \cdot (0,1))/2.607 = (0.767, 0.233)\) and \(c_k \leftarrow 2.607\).</p>
+
+<div class="box note"><h4>Filling the gap: the update is a weighted mean, and averaging removes noise</h4>
+<p><strong>Unrolling.</strong> Start a point at \(c_k = 0\) and feed it features \(\mathbf{f}_1, \dots, \mathbf{f}_n\) with weights \(\alpha_1, \dots, \alpha_n\). Claim: after \(n\) updates \(c_k = \sum_t \alpha_t\) and \(c_k \mathbf{f}_k = \sum_t \alpha_t \mathbf{f}_t\). It holds after one update. If it holds after \(n-1\), then (17.2) times its denominator reads \(c_k^{\text{new}} \mathbf{f}_k^{\text{new}} = c_k \mathbf{f}_k + \alpha_n \mathbf{f}_n = \sum_{t \le n} \alpha_t \mathbf{f}_t\). So</p>
+\[ \mathbf{f}_k = \frac{\sum_{t=1}^{n} \alpha_t \mathbf{f}_t}{\sum_{t=1}^{n} \alpha_t} . \]
+<p>The map never stores the individual views, only this running weighted mean and the sum of weights. It is the same trick as the TSDF weight in <a href="#d44">Week 8 · Day 2</a>.</p>
+<p><strong>Why average.</strong> Model each view's feature as the true one plus an independent error, \(\mathbf{f}_t = \mathbf{f} + \mathbf{e}_t\), each of the \(d\) components of \(\mathbf{e}_t\) having variance \(s^2\). With equal weights the mean's error has variance \(s^2/n\) per component, so its squared length is about \(d s^2 / n\). That error is mostly perpendicular to \(\mathbf{f}\) (length 1), so</p>
+\[ \cos(\mathbf{f}_k, \mathbf{f}) \approx \frac{1}{\sqrt{1 + d s^2 / n}} . \]
+<p>For \(d = 8\), \(s = 0.6\): one view gives \(1/\sqrt{3.88} = 0.51\), twenty views give \(1/\sqrt{1.144} = 0.93\).</p>
+<p><strong>One caution.</strong> A mean of unit vectors is shorter than 1 (the example above has length 0.80). The arg max in (17.4) below does not care, but a threshold on \(\langle \mathbf{f}_k, \mathbf{f}_T \rangle\) does: normalize \(\mathbf{f}_k\) first.</p></div>
+
+<p>Averaging is not the only choice. To avoid averaging high-dimensional vectors and to resist outliers, the book lists alternatives: keep a buffer of features per element and store its <strong>medoid</strong> (the member closest to all the others); cluster the buffer and keep a few centroids, or the member nearest the centroid of the majority cluster; or, in Open-Fusion, store in each voxel only a key into a dictionary of features. <span class="src">§17.3.1 · pp. 502–503</span></p>
+
+<h3>4. Asking the map a question</h3>
+<p>To label the map with classes chosen today, encode a prompt list \(\mathsf{C}\) with the text encoder and give each element its best-matching prompt: <span class="src">§17.3.1 · p. 503</span></p>
+\[ y_k = \argmax_{C \in \mathsf{C}} \; \langle \mathbf{f}_k, \mathbf{f}_C \rangle, \qquad \mathbf{f}_C = f_{\text{text}}(C). \tag{17.4} \]
+<p>This is yesterday's classifier (17.1) with a map feature in place of an image feature. \(\mathsf{C}\) plays no part in building the map and can be changed at will. The main use, though, is the open-ended <strong>query</strong>: encode any text \(T\), score every element by \(\langle \mathbf{f}_k, \mathbf{f}_T \rangle\), keep those above a threshold, and cluster the kept points in space to separate instances.</p>
+<p>Try it: the query is "a comfy place to sit" with one noisy view. Slide "Views fused" up to 20. Then try the other queries and move the threshold.</p>
+<div class="viz" data-viz="w23_query"></div>
+<p class="cap">Notice that with one view only 4 cells pass the threshold, one of them wrong, and 11 are missed. With 20 views all 14 sofa and armchair cells are retrieved and nothing else, and the mean cosine to the clean features rises from 0.49 to 0.93, as the formula above predicts.</p>
+<p>The query need not be text. Any modality with an aligned encoder works; ConceptFusion shows a click on a map point (use that point's own \(\mathbf{f}_k\)), an image, and an audio clip. A map built from vision-only features such as DINO loses text queries but still supports image and click queries. <span class="src">§17.3.1 · pp. 503–504</span></p>
+
+<h3>5. One feature per object</h3>
+<p>Dense feature maps scale poorly because the vectors are large. Count it: a million points, each with a 768-number feature (the size the book quotes for one CLIP model on p. 510) at 4 bytes per number, is about 3 GB. Nearby points usually belong to the same object and share semantics, so store the feature once per object. <span class="src">§17.3.2 · p. 504</span> Two hundred objects need 200 × 768 × 4 bytes, about 0.6 MB.</p>
+<p>The <strong>object map</strong> is a set \(\mathsf{V}_O = \{o_j\}_{j=1}^{J}\). Each object has a point cloud \(\mathsf{P}_{o_j}\), a feature \(\mathbf{f}_{o_j}\), and a detection count \(n_{o_j}\). For each new frame: <span class="src">§17.3.2 · pp. 504–505</span></p>
+<ol>
+<li><strong>Extract.</strong> For each mask from \(\texttt{Seg}(\mathbf{I})\), encode its crop to get \(\mathbf{f}^M_i\) and back-project its pixels to a point cloud \(\mathsf{P}^M_i\) in the map frame.</li>
+<li><strong>Associate.</strong> Compare each mask with existing objects. Geometric similarity \(\phi_{geo} \in [0,1]\) is the fraction of mask points that have a neighbour in the object's cloud within a distance \(\delta_{nn}\). Semantic similarity is \(\phi_{sim} = \tfrac{1}{2}(\langle \mathbf{f}_i, \mathbf{f}_{o_j} \rangle + 1) \in [0,1]\). Combine or threshold them. An unmatched mask starts a new object.</li>
+<li><strong>Fuse.</strong> On a match, \(\mathbf{f}_{o_j} \leftarrow (n_{o_j}\mathbf{f}_{o_j} + \mathbf{f}_i)/(n_{o_j}+1)\), \(\mathsf{P}_{o_j} \leftarrow \mathsf{P}_{o_j} \cup \mathsf{P}^M_i\), \(n_{o_j} \leftarrow n_{o_j}+1\). This is (17.2) with \(\alpha = 1\) and the count as confidence.</li>
+<li><strong>Clean up.</strong> Now and then merge duplicate objects, and drop those with a low count.</li>
+</ol>
+<p><strong>Numbers.</strong> A mask cloud has 200 points; 150 have an object point within \(\delta_{nn}\), so \(\phi_{geo} = 0.75\). The features have inner product 0.6, so \(\phi_{sim} = 0.8\). If both pass your thresholds and the object had \(n = 4\), its feature becomes \((4\mathbf{f}_o + \mathbf{f}_i)/5\) and \(n = 5\).</p>
+<p>Queries now return whole objects: \(o^* = \argmax_{o \in \mathsf{V}_O} \langle \mathbf{f}_o, \mathbf{f}_T \rangle\). In the book's example, "something to drink" scores high on a soda can, whose point cloud can go straight to a motion planner. <span class="src">§17.3.2 · p. 506</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The prompt list must be chosen before mapping."</strong> Neither \(\mathsf{C}\) nor the query enters the map. Only features do.</li>
+<li><strong>"A retrieved element is a detection."</strong> Arg max always returns something, and a threshold is a setting you chose. Neither says the object exists.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A point has c = 3 and f = (0.8, 0.6). A new pixel feature (0, 1) arrives with α = 1. What does (17.2)–(17.3) give?</p><div class="opts"><button type="button" class="opt">f = (0.4, 0.8), c = 4</button><button type="button" class="opt">f = (0.8, 1.6), c = 3</button><button type="button" class="opt">f = (0.6, 0.7), c = 4</button><button type="button" class="opt">f = (0, 1), c = 1</button></div><p class="exp" hidden>f = (3·(0.8, 0.6) + 1·(0, 1))/4 = (2.4, 2.8)/4 = (0.6, 0.7), and c = 3 + 1 = 4.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. With equal weights, how many views must you average to halve the per-component noise of a fused feature?</p><div class="opts"><button type="button" class="opt">4</button><button type="button" class="opt">2</button><button type="button" class="opt">8</button><button type="button" class="opt">It cannot be halved by averaging</button></div><p class="exp" hidden>The variance of a mean of n independent errors is s²/n, so the standard deviation is s/√n. Halving it needs n = 4.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A mask has 40 back-projected points, 10 of which have a neighbour in object A within δ. The inner product of the features is 0.9. What are the two similarities?</p><div class="opts"><button type="button" class="opt">geometric 0.75, semantic 0.9</button><button type="button" class="opt">geometric 0.25, semantic 0.9</button><button type="button" class="opt">geometric 0.75, semantic 0.95</button><button type="button" class="opt">geometric 0.25, semantic 0.95</button></div><p class="exp" hidden>Geometric: 10/40 = 0.25. Semantic: ½(0.9 + 1) = 0.95.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Why does ConceptFusion mix a global image feature with features of mask crops instead of using a fine-tuned pixel-level model?</p><div class="opts"><button type="button" class="opt">Fine-tuned models cannot produce unit-norm features</button><button type="button" class="opt">To keep the original CLIP features, which hold more long-tail concepts than fine-tuned dense features</button><button type="button" class="opt">Because SAM needs a global feature as its prompt</button><button type="button" class="opt">Because pixel-level models require LiDAR</button></div><p class="exp" hidden>The book reports evidence that dense features from fine-tuned models capture fewer long-tail concepts than unaltered CLIP features.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>A map element is geometry plus a feature: \(m_k = \{\mathbf{p}_k, \mathbf{f}_k\}\).</li>
+<li>Per-pixel features come from a fine-tuned dense model, or from mixing global and mask-crop CLIP features.</li>
+<li>Equations (17.2)–(17.3) keep a running confidence-weighted mean; averaging \(n\) views cuts feature noise by \(\sqrt{n}\).</li>
+<li>Labels (17.4) and queries are inner products with encoded text, chosen after the map is built.</li>
+<li>Object maps store one feature per object, built by mask association (\(\phi_{geo}\), \(\phi_{sim}\)) and fusion.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §17.3 opening, §17.3.1 "Dense Representations", and §17.3.2 "Object Maps and 3D Scene Graphs" up to the Inference paragraph, pp. 499–506, equations (17.2)–(17.4).</li>
+<li>The unrolling of the running mean and the variance of an average are standard; see Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005. The cosine estimate and the memory figures are our own.</li>
+<li>The widget's map and 8-dimensional features are hand-built and are not outputs of CLIP.</li>
+</ol></div>
+<p class="next"></p>
+</section>

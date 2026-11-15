@@ -1,0 +1,110 @@
+<section class="day" data-day="129" id="d129" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 22 · Day 3</span>
+  <h2>Discrete and continuous unknowns together: hybrid solvers</h2>
+  <p class="lead">After today you can write metric-semantic SLAM as a discrete-continuous factor graph, explain why alternating between associations and geometry is tractable, and compute hard, max-mixture, and EM association weights by hand.</p>
+  <p class="meta">About 60 min · Read §16.2.2, pp. 466–471 (5 pages) · Needs Week 6 Day 5</p>
+</header>
+
+<div class="box read"><h4>Read first: §16.2.2 "Hybrid Solvers for Sparse Metric-Semantic SLAM", pp. 466–471</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The four ways discrete variables enter the problem (p. 466).</li>
+<li>The condition (16.20) on p. 469 under which the discrete problem falls apart into small ones.</li>
+<li>What the E-step and the M-step each hold fixed (p. 470).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Semantic SLAM has unknowns you can differentiate (poses, shapes) and unknowns you can only enumerate (classes, associations). Fix either kind and the other becomes easy: least squares for the continuous ones, a small choice per measurement for the discrete ones. Hybrid solvers alternate, with hard choices or soft weights.</p></div>
+
+<h3>1. Where the discrete unknowns come from</h3>
+<p>Discrete variables enter in four ways: the <strong>class</strong> \(\sigma\) of each object, which is tied to its shape; <strong>symmetries</strong> (a square table looks the same every 90°); several <strong>pose hypotheses</strong> from a learned front-end; and <strong>data association</strong>, the question of which mapped object produced a detection (<a href="#d31">Week 6 · Day 1</a>). <span class="src">§16.2.2 · p. 466</span></p>
+<p>Put together, the estimation problem is a MAP problem over robot poses \(X\), landmarks \(L\), and associations \(D\), given all measurements \(Z\): <span class="src">§16.2.2 · p. 467</span></p>
+\[ \hat{X}, \hat{L}, \hat{D} = \argmax_{X, L, D}\; p(X, L, D \mid Z). \tag{16.16} \]
+<p>Classes and associations belong in one problem because they inform each other: a detection labelled "table" is unlikely to be a chair. The price is a search space that is combinatorial as well as nonconvex. If 6 detections can each come from any of 6 objects there are \(6^6 = 46{,}656\) assignments, and in the worst case each needs its own continuous optimization. <span class="src">§16.2.2 · p. 468</span></p>
+
+<h3>2. The hybrid factor graph</h3>
+<p>Group the continuous variables into \(\Theta\) and the discrete ones into \(D\). The posterior factors as before, and taking the negative logarithm turns the product into a sum: <span class="src">§16.2.2 · p. 468</span></p>
+\[ p(\Theta, D \mid Z) \propto \prod_k \phi_k(V_k), \qquad \Theta^*, D^* = \argmin_{\Theta, D} \underbrace{\sum_k -\log \phi_k(V_k)}_{\mathcal{L}(\Theta, D)}. \tag{16.17, 16.18} \]
+<p>\(V_k\) is the set of variables factor \(k\) touches. There are three kinds of factor: discrete \(\phi_k(D_k)\), continuous \(\phi_k(\Theta_k)\), and <strong>discrete-continuous</strong> \(\phi_k(\Theta_k, D_k)\). The last kind is assumed to be a squared residual once the discrete value is fixed: <span class="src">§16.2.2 · p. 469</span></p>
+\[ -\log \phi_k(\Theta_k, D_k) = \norm{r_k(\Theta_k, D_k)}_2^2 . \tag{16.19} \]
+<p>A detection factor is the typical case. Its discrete variable \(d_k \in \{1, \dots, J\}\) picks which landmark the residual is computed against: \(r_k = \boldsymbol{\Sigma}^{-1/2}\left(\mathbf{z}_k - h(\mathbf{T}, \boldsymbol{\ell}_{d_k})\right)\).</p>
+<figure class="fig"><svg viewBox="0 0 600 200" role="img" aria-label="A hybrid factor graph. A robot pose T1 and two object landmarks l1 and l2 are circles. Two association variables d1 and d2 are squares. Each of two detection factors, drawn as dots, connects the pose, both landmarks, and one association variable. A further dot on the pose is an odometry factor.">
+<g transform="translate(110 0)">
+  <path d="M28 100 L80 100 L210 66 L340 52 M80 100 L210 134 L340 148 M210 66 L340 148 M210 134 L340 52" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  <path d="M210 66 V24 M210 134 V176" fill="none" stroke="var(--c3)" stroke-width="1.5"/>
+  <g fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="2"><circle cx="80" cy="100" r="20"/><circle cx="340" cy="52" r="20"/><circle cx="340" cy="148" r="20"/></g>
+  <g fill="var(--c3-soft)" stroke="var(--c3)" stroke-width="2"><rect x="194" y="2" width="32" height="26" rx="4"/><rect x="194" y="172" width="32" height="26" rx="4"/></g>
+  <g fill="var(--ink)"><rect x="204" y="60" width="12" height="12"/><rect x="204" y="128" width="12" height="12"/><rect x="22" y="94" width="12" height="12"/></g>
+  <text x="80" y="105" text-anchor="middle" font-size="13" fill="var(--ink)">T₁</text><text x="340" y="57" text-anchor="middle" font-size="13" fill="var(--ink)">ℓ₁</text><text x="340" y="153" text-anchor="middle" font-size="13" fill="var(--ink)">ℓ₂</text><text x="210" y="20" text-anchor="middle" font-size="13" fill="var(--ink)">d₁</text><text x="210" y="190" text-anchor="middle" font-size="13" fill="var(--ink)">d₂</text>
+  <text x="200" y="104" text-anchor="end" font-size="11" fill="var(--muted)">detections</text>
+  <text x="14" y="128" font-size="11" fill="var(--muted)">odometry</text>
+</g>
+</svg><figcaption>Circles are continuous variables, squares discrete ones, dots factors. Each detection factor touches the pose, every landmark it might have seen, and one association variable. Fixing \(d_1\) and \(d_2\) deletes all but one landmark edge per factor and leaves an ordinary SLAM graph.</figcaption></figure>
+
+<h3>3. Alternating minimization: fix one kind, solve the other</h3>
+<p>Two observations make a local method possible. <span class="src">§16.2.2 · p. 469</span></p>
+<ul>
+<li>With \(D\) fixed, only continuous variables remain, and the Gauss-Newton tools of <a href="#d10">Week 2 · Day 4</a> apply.</li>
+<li>With \(\Theta\) fixed, what remains is a discrete factor graph. If the discrete variables split into small groups \(D_j\) that are conditionally independent given \(\Theta\),
+\[ p(D \mid \Theta, Z) \propto \prod_j p(D_j \mid \Theta, Z) \quad\Longrightarrow\quad \max_D\, p(D \mid \Theta, Z) \propto \prod_j \Big[\max_{D_j} p(D_j \mid \Theta, Z)\Big], \tag{16.20, 16.21} \]
+each group can be optimized on its own.</li>
+</ul>
+<p>DC-SAM turns this into a loop, repeated until \(\mathcal{L}\) stops decreasing: <span class="src">§16.2.2 · p. 470</span></p>
+\[ D^{(i+1)} = \argmin_D\, \mathcal{L}(\Theta^{(i)}, D), \qquad \Theta^{(i+1)} = \argmin_\Theta\, \mathcal{L}(\Theta, D^{(i+1)}). \tag{16.22} \]
+
+<div class="box note"><h4>Filling the gap: why the maximum of a product splits, and what it saves</h4>
+<p>Take two groups. Each factor is non-negative and depends on its own group only, so</p>
+\[ \max_{D_1, D_2}\, f_1(D_1)\, f_2(D_2) = \max_{D_1}\Big[f_1(D_1)\,\max_{D_2} f_2(D_2)\Big] = \Big[\max_{D_1} f_1(D_1)\Big]\Big[\max_{D_2} f_2(D_2)\Big]. \]
+<p>The inner maximum is a non-negative constant as far as \(D_1\) is concerned, so it comes out of the outer one. For data association, one group is one detection's variable \(d_k\): with poses and landmarks fixed, what detection 1 saw says nothing more about detection 2. The discrete step then costs \(K \times J\) likelihood evaluations (36 for 6 detections and 6 objects) in place of \(J^K\) (46,656).</p>
+<p>Neither step of (16.22) can increase \(\mathcal{L}\), so the loop settles, but at a <em>local</em> minimum: a wrong association can pull the geometry to where that association still looks best.</p>
+<p><strong>Max-mixture factors</strong> are the same idea folded into the factor. Maximize over \(d_k\) inside it:</p>
+\[ \phi_k(\Theta) = \max_j\; w_{kj}\, \N\!\big(\mathbf{z}_k;\, h(\Theta, \boldsymbol{\ell}_j),\, \boldsymbol{\Sigma}\big) \quad\Longrightarrow\quad -\log\phi_k = \min_j \Big[\tfrac12 \norm{\mathbf{z}_k - h(\Theta, \boldsymbol{\ell}_j)}^2_{\boldsymbol{\Sigma}} - \log w_{kj}\Big] + \text{const}. \]
+<p>At every iteration the solver keeps the smallest branch at the current estimate and linearizes it like any Gaussian factor. Semantics enter through \(w_{kj}\), the probability of the reported label if the object were \(j\).</p></div>
+
+<h3>4. Expectation-maximization: soft associations</h3>
+<p>Bowman et al. keep a probability for every candidate where alternating minimization commits to one. <span class="src">§16.2.2 · p. 470</span></p>
+<ul>
+<li><strong>E-step.</strong> Fix poses and landmarks. For each detection \(k\) compute the probability that it came from object \(j\):
+\[ w_{kj} = \frac{\pi_{kj}\; \N\!\big(\mathbf{z}_k;\, h(\Theta, \boldsymbol{\ell}_j),\, \boldsymbol{\Sigma}\big)}{\sum_{j'} \pi_{kj'}\; \N\!\big(\mathbf{z}_k;\, h(\Theta, \boldsymbol{\ell}_{j'}),\, \boldsymbol{\Sigma}\big)}, \qquad \pi_{kj} = p(\text{label of } k \mid \text{class of } j). \]</li>
+<li><strong>M-step.</strong> Fix the weights. Optimize poses and landmarks with every detection-object pair counted in proportion to its weight:
+\[ \Theta \leftarrow \argmin_\Theta \sum_k \sum_j w_{kj}\, \norm{\mathbf{z}_k - h(\Theta, \boldsymbol{\ell}_j)}^2_{\boldsymbol{\Sigma}} + (\text{other factors}). \]</li>
+</ul>
+<p>The loop converges gradually to a local optimum. The E-step probabilities can be computed exactly through a matrix permanent, or more cheaply by approximating it. <span class="src">§16.2.2 · p. 470</span></p>
+
+<div class="box note"><h4>Filling the gap: one detection, three answers</h4>
+<p>A robot in a corridor believes it is at \(p = 2.5\) m. The map has a table at \(4.0\) m and a chair at \(5.2\) m. A detection says "a chair, \(z = 2.0\) m ahead", which puts the object at \(4.5\) m: \(0.5\) m from the table and \(0.7\) m from the chair. Take \(\sigma = 0.3\) m, and a detector whose label is right 90% of the time.</p>
+<p>The geometry term \(e^{-d^2/2\sigma^2}\) is \(e^{-1.389} = 0.249\) for the table and \(e^{-2.722} = 0.066\) for the chair. The label term \(\pi\) is \(0.1\) for the table and \(0.9\) for the chair. The products are \(0.0249\) and \(0.0592\), which normalize to weights \(0.30\) and \(0.70\).</p>
+<ul>
+<li><strong>Nearest neighbour</strong> looks at distance only and picks the table. The detection then says the robot is at \(4.0 - 2.0 = 2.0\) m.</li>
+<li><strong>Max-mixture</strong> picks the largest product, the chair: \(5.2 - 2.0 = 3.2\) m.</li>
+<li><strong>EM</strong> uses both: \(0.30 \times 2.0 + 0.70 \times 3.2 = 2.84\) m. Without the label the weights would be \(0.79\) and \(0.21\), and the answer \(2.25\) m.</li>
+</ul>
+<p>Why the M-step is a weighted least squares: EM maximizes the log-likelihood averaged over the associations, \(\sum_k\sum_j w_{kj} \log\big[\pi_{kj}\,\N(\mathbf{z}_k; h(\Theta, \boldsymbol{\ell}_j), \boldsymbol{\Sigma})\big]\), and its only part that depends on \(\Theta\) is \(-\tfrac12\sum_k\sum_j w_{kj}\norm{\mathbf{z}_k - h(\Theta, \boldsymbol{\ell}_j)}^2_{\boldsymbol{\Sigma}}\). It is the "weights, then weighted least squares" loop of IRLS (<a href="#d34">Week 6 · Day 4</a>) with probabilities as weights.</p></div>
+
+<h3>5. The three methods on one problem</h3>
+<p>Try it: a robot returns to a mapped room with four chairs and two tables. Its odometry has drifted 0.8 m, more than half the spacing of the row. Press Step three times. Then switch the class labels off and repeat. Then try EM with the labels still off.</p>
+<div class="viz" data-viz="w22_assoc"></div>
+<p class="cap">Notice that with max-mixture and labels, three steps take the error from 0.62 to 0.23 to 0.03 m and the wrong associations from 3 to 1 to 0, although detection z4 carries a wrong label. Without labels the same method stays at 0.82 m with four wrong associations, and so does nearest neighbour. EM without labels still escapes, in about six steps, because each wrong pairing leaves some weight on the right object. At \(\sigma = 0.15\) m all three are stuck: an overconfident noise model turns soft weights into hard ones. At \(\sigma = 0.8\) m the wrong label on z4 outvotes the geometry.</p>
+<p>The book names three more families. <strong>Multi-hypothesis</strong> solvers (MH-iSAM2, iMHS) keep several assignments alive and prune the search. <strong>Continuous relaxations</strong> replace a label by a probability vector on the simplex and optimize it as a continuous variable. <strong>Marginalization</strong> sums the discrete variables out, which leaves a non-Gaussian mixture over \(\Theta\) for specialized solvers. <span class="src">§16.2.2 · pp. 470–471</span></p>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. Ten detections can each come from one of four mapped objects. How many likelihood evaluations does one discrete step of (16.22) need when (16.20) holds, and how many joint assignments exist?</p><div class="opts"><button type="button" class="opt">14 and 40</button><button type="button" class="opt">40 and about one million</button><button type="button" class="opt">40 and 10,000</button><button type="button" class="opt">About one million and 40</button></div><p class="exp" hidden>Each detection is decided on its own: 10 × 4 = 40 evaluations. The joint space has 4¹⁰ = 1,048,576 assignments.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. A detection is at distance 0.3 m from candidate A and 0.6 m from candidate B, with σ = 0.3 m and no label information. What is the EM weight of A?</p><div class="opts"><button type="button" class="opt">0.50</button><button type="button" class="opt">0.67</button><button type="button" class="opt">1.00</button><button type="button" class="opt">0.82</button></div><p class="exp" hidden>Geometry terms: exp(−0.09/0.18) = 0.607 for A and exp(−0.36/0.18) = 0.135 for B. Weight of A = 0.607/(0.607 + 0.135) = 0.82.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. In the same situation the detection is labelled "table", A is a chair, B is a table, and the label is right 90% of the time. Which candidate does a max-mixture factor select?</p><div class="opts"><button type="button" class="opt">B, because 0.9 × 0.135 is larger than 0.1 × 0.607</button><button type="button" class="opt">A, because it is nearer</button><button type="button" class="opt">Both, with weights 0.33 and 0.67</button><button type="button" class="opt">Neither; the factor is dropped</button></div><p class="exp" hidden>Products: A 0.1 × 0.607 = 0.061, B 0.9 × 0.135 = 0.122. Max-mixture keeps the single largest, B. EM would keep both, with weights 0.33 and 0.67.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Why can alternating minimization end with wrong associations even though every step lowers the cost?</p><div class="opts"><button type="button" class="opt">The continuous step is inexact</button><button type="button" class="opt">The discrete step is NP-hard even when (16.20) holds</button><button type="button" class="opt">Each step is optimal only given the other block, so the loop can stop at a local minimum</button><button type="button" class="opt">The cost has no lower bound</button></div><p class="exp" hidden>Block coordinate descent stops when neither block can improve alone, as in the widget with labels off.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Classes, symmetries, pose hypotheses, and associations are discrete unknowns. With poses and shapes they form the MAP problem (16.16), a hybrid factor graph with cost \(\mathcal{L}(\Theta, D)\).</li>
+<li>Fixing \(D\) leaves least squares. Fixing \(\Theta\) leaves a discrete problem that splits into conditionally independent groups.</li>
+<li>Alternating minimization and max-mixtures make hard choices, re-made every iteration. EM keeps weights \(w_{kj}\) and solves a weighted least squares.</li>
+<li>All of them are local. Labels and a sensible noise model decide whether the local answer is the right one.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §16.2.2 "Hybrid Solvers for Sparse Metric-Semantic SLAM", pp. 466–471.</li>
+<li>Dempster, Laird, Rubin, <em>Maximum Likelihood from Incomplete Data via the EM Algorithm</em>, 1977; Bishop, <em>Pattern Recognition and Machine Learning</em>, 2006, Chapter 9 (the E-step weights and the weighted M-step).</li>
+<li>Olson and Agarwal, <em>Inference on Networks of Mixtures for Robust Robot Mapping</em>, 2013 (max-mixture factors).</li>
+</ol></div>
+<p class="next"></p>
+</section>

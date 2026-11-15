@@ -1,0 +1,140 @@
+<section class="day" data-day="116" id="d116" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 20 · Day 2</span>
+  <h2>NeRF: turning density along a ray into a pixel</h2>
+  <p class="lead">After today you can derive the discrete volume rendering formula from the continuous integral and compute a pixel's colour, opacity, and expected depth from samples of density along its ray.</p>
+  <p class="meta">About 60 min · Read §14.2 opening and §14.2.1, pp. 401–403 (3 pages) · Needs Week 20 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §14.2 opening and §14.2.1, pp. 401–403</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The inputs and outputs of the NeRF function \(f_\Theta\), and the three factors under the integral in equation (14.1), p. 402.</li>
+<li>The definition of the accumulated transmittance \(T(t)\), in the line below (14.1).</li>
+<li>Equation (14.2) and the definitions of \(\delta_i\) and \(\alpha_i\) at the top of p. 403. The sentence that defines \(\delta_i\) is misprinted: it is the distance between neighbouring samples, \(\delta_i = t_{i+1} - t_i\).</li>
+<li>The loss (14.3), and the last sentence of §14.2.1 about depth.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>NeRF describes a scene by two fields: a density that says how much matter is at each point, and a colour. A pixel is the average of the colours along its ray, each weighted by the probability that the ray gets that far and is stopped there. With samples, that weight is \(w_i = T_i\,\alpha_i\): what survives the samples in front, times what sample \(i\) blocks. Every step is a smooth function of the densities and colours, so the pixel is differentiable.</p></div>
+
+<h3>1. The radiance field and the camera ray</h3>
+<p>A <strong>radiance field</strong> is the function</p>
+\[ f_\Theta(\mathbf{x}, \mathbf{d}) \to (\mathbf{c}, \sigma) , \]
+<p>with MLP weights \(\Theta\), a 3D position \(\mathbf{x} = (x, y, z)\), a viewing direction \(\mathbf{d} = (\theta, \phi)\), a colour \(\mathbf{c} = (r, g, b)\), and a <strong>volume density</strong> \(\sigma \ge 0\). <span class="src">§14.2.1 · p. 402</span> The colour may depend on the direction you look from, which is how a shiny surface can look different from two sides. The density depends on position only.</p>
+<p>Each pixel defines a <strong>camera ray</strong> \(\mathbf{r}(t) = \mathbf{o} + t\,\mathbf{d}\): start at the camera centre \(\mathbf{o}\) and travel a distance \(t\) in direction \(\mathbf{d}\). Only the part between a near bound \(t_n\) and a far bound \(t_f\) is rendered. Along one ray the fields become two ordinary functions of \(t\): \(\sigma(t)\) and \(\mathbf{c}(t)\).</p>
+<p>What does \(\sigma\) mean? Read it as a stopping rate: over a very short step \(ds\), the ray is blocked with probability \(\sigma\,ds\). Its unit is one over length, and it can be far larger than 1. Air has \(\sigma = 0\). A wall is a thin region where \(\sigma\) is huge.</p>
+
+<h3>2. Transmittance and the rendering integral</h3>
+<p>The <strong>accumulated transmittance</strong> \(T(t)\) is the probability that the ray travels from \(t_n\) to \(t\) without being stopped. The book states it; here is where it comes from.</p>
+<div class="box note"><h4>Filling the gap: why the transmittance is an exponential</h4>
+<p>To survive to \(t + dt\), the ray must survive to \(t\) and then not be stopped in the next step:</p>
+\[ T(t + dt) = T(t)\,\bigl(1 - \sigma(t)\,dt\bigr) \quad\Longrightarrow\quad \frac{dT}{dt} = -\sigma(t)\,T(t) . \]
+<p>Divide by \(T\): \(\frac{d}{dt}\ln T = -\sigma(t)\). Integrate from \(t_n\), where \(T = 1\):</p>
+\[ T(t) = \exp\!\Bigl(-\int_{t_n}^{t} \sigma(s)\,ds\Bigr) . \]
+<p>Example: fog of constant density \(\sigma = 0.5\) per metre, 2 m thick. The integral is \(0.5 \times 2 = 1\), so \(T = e^{-1} = 0.368\). About 37% of the light gets through and 63% is stopped by the fog.</p></div>
+<p>Now the pixel. The probability that the ray reaches \(t\) and is stopped in the next \(dt\) is \(T(t)\,\sigma(t)\,dt\). When it is stopped at \(t\) the pixel receives the colour there. The expected colour is the sum over all the places it could stop:</p>
+\[ C(\mathbf{r}) = \int_{t_n}^{t_f} T(t)\,\sigma(\mathbf{r}(t))\,\mathbf{c}(\mathbf{r}(t), \mathbf{d})\,dt . \tag{14.1} \]
+<p><span class="src">§14.2.1 · p. 402</span> For the fog above, with one colour \(\mathbf{c}_f\) throughout, \(C = \mathbf{c}_f \int_0^2 e^{-0.5t}\,0.5\,dt = (1 - e^{-1})\,\mathbf{c}_f = 0.632\,\mathbf{c}_f\). The integral treats whatever lies beyond \(t_f\) as black.</p>
+
+<h3>3. From the integral to a sum</h3>
+<p>A computer cannot evaluate \(\sigma\) everywhere. NeRF divides \([t_n, t_f]\) into \(N\) equal bins, draws one sample position at random inside each bin, and queries the MLP there. <span class="src">§14.2.1 · p. 402</span> The result is equation (14.2):</p>
+\[ \hat{C}(\mathbf{r}) = \sum_{i=1}^{N} \alpha_i\,T_i\,\mathbf{c}_i , \qquad T_i = \exp\!\Bigl(-\sum_{j=1}^{i-1} \sigma_j \delta_j\Bigr) , \qquad \alpha_i = 1 - \exp(-\sigma_i \delta_i) . \tag{14.2} \]
+<figure class="fig"><svg viewBox="0 0 600 180" role="img" aria-label="A camera ray drawn left to right and cut at sample positions t1 to t4 into segments of length delta. Segment 1 holds thin fog, segment 3 a dense wall, the others are empty. Below, the transmittance starts at 1.00, falls to 0.82 across segment 1, stays there across the empty segment 2, and falls to 0.04 across segment 3.">
+  <rect x="6" y="52" width="14" height="16" rx="3" fill="var(--muted)"/><path d="M20 56 l8 -4 v16 l-8 -4 z" fill="var(--muted)"/>
+  <text x="6" y="84" font-size="11" fill="var(--muted)">camera</text>
+  <rect x="120" y="42" width="100" height="36" fill="var(--c3-soft)" stroke="var(--c3)"/>
+  <rect x="220" y="42" width="100" height="36" fill="var(--surface)" stroke="var(--line2)"/>
+  <rect x="320" y="42" width="100" height="36" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="2"/>
+  <rect x="420" y="42" width="100" height="36" fill="var(--surface)" stroke="var(--line2)"/>
+  <line x1="30" y1="60" x2="118" y2="60" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="522" y1="60" x2="585" y2="60" stroke="var(--muted)" stroke-width="1.5"/>
+  <text x="120" y="34" text-anchor="middle" font-size="13" fill="var(--ink)">t₁</text>
+  <text x="220" y="34" text-anchor="middle" font-size="13" fill="var(--ink)">t₂</text>
+  <text x="320" y="34" text-anchor="middle" font-size="13" fill="var(--ink)">t₃</text>
+  <text x="420" y="34" text-anchor="middle" font-size="13" fill="var(--ink)">t₄</text>
+  <text x="170" y="65" text-anchor="middle" font-size="12" fill="var(--ink)">σ₁ = 0.2</text>
+  <text x="270" y="65" text-anchor="middle" font-size="12" fill="var(--muted)">σ₂ = 0</text>
+  <text x="370" y="65" text-anchor="middle" font-size="12" fill="var(--ink)">σ₃ = 3</text>
+  <text x="470" y="65" text-anchor="middle" font-size="12" fill="var(--muted)">empty</text>
+  <text x="170" y="94" text-anchor="middle" font-size="11" fill="var(--muted)">δ₁</text>
+  <text x="270" y="94" text-anchor="middle" font-size="11" fill="var(--muted)">δ₂</text>
+  <text x="370" y="94" text-anchor="middle" font-size="11" fill="var(--muted)">δ₃</text>
+  <path d="M40 172 L40 136 L120 136 L220 142.5 L320 142.5 L345 158.1 L370 165.4 L395 168.9 L420 170.5 L585 170.5 L585 172 Z" fill="var(--acc-soft)" stroke="var(--acc)" stroke-width="1.5"/>
+  <text x="76" y="128" text-anchor="middle" font-size="11" fill="var(--ink)">T₁ = 1.00</text>
+  <text x="222" y="132" text-anchor="middle" font-size="11" fill="var(--ink)">T₂ = 0.82</text>
+  <text x="322" y="132" text-anchor="middle" font-size="11" fill="var(--ink)">T₃ = 0.82</text>
+  <text x="452" y="160" text-anchor="middle" font-size="11" fill="var(--ink)">T₄ = 0.04</text>
+  <text x="585" y="128" text-anchor="end" font-size="11" fill="var(--muted)">light still travelling, T</text>
+</svg><figcaption>The quadrature treats density and colour as constant between one sample and the next. The numbers are those of the worked example below, with every δ equal to 1.</figcaption></figure>
+
+<div class="box note"><h4>Filling the gap: deriving equation (14.2) from (14.1)</h4>
+<p>Assume \(\sigma\) and \(\mathbf{c}\) are constant on each segment \([t_i, t_{i+1}]\), with values \(\sigma_i, \mathbf{c}_i\) and length \(\delta_i = t_{i+1} - t_i\). Split the integral (14.1) into one piece per segment.</p>
+<p><strong>Step 1: transmittance at the start of segment \(i\).</strong> The integral of a piecewise-constant \(\sigma\) is a sum, so \(T_i = T(t_i) = \exp\bigl(-\sum_{j \lt i} \sigma_j\delta_j\bigr)\).</p>
+<p><strong>Step 2: transmittance inside segment \(i\).</strong> At distance \(s\) into the segment, \(T(t_i + s) = T_i\,e^{-\sigma_i s}\).</p>
+<p><strong>Step 3: integrate over the segment.</strong></p>
+\[ \int_{0}^{\delta_i} T_i\,e^{-\sigma_i s}\,\sigma_i\,\mathbf{c}_i\,ds = T_i\,\mathbf{c}_i\,\Bigl[-e^{-\sigma_i s}\Bigr]_0^{\delta_i} = T_i\,\bigl(1 - e^{-\sigma_i\delta_i}\bigr)\,\mathbf{c}_i = T_i\,\alpha_i\,\mathbf{c}_i . \]
+<p>Summing over segments gives (14.2). The quantity \(\alpha_i\) is the <strong>opacity</strong> of segment \(i\): the fraction of the light entering it that it stops. Two useful consequences:</p>
+<ul>
+<li>Since \(e^{-\sigma_j\delta_j} = 1 - \alpha_j\), the transmittance is a product: \(T_i = \prod_{j \lt i} (1 - \alpha_j)\). This form returns on Day 4.</li>
+<li>The <strong>weight</strong> \(w_i = T_i\alpha_i\) equals \(T_i - T_{i+1}\), the light lost in segment \(i\). So the weights telescope: \(\sum_{i=1}^{N} w_i = 1 - T_{N+1}\). They add up to 1 only if nothing gets through.</li>
+</ul></div>
+
+<p>A worked example with three samples, all \(\delta_i = 1\), grey levels in place of colours:</p>
+<div class="tbl"><table>
+  <tr><th>Sample \(i\)</th><th>Position \(t_i\)</th><th>Density \(\sigma_i\)</th><th>Opacity \(\alpha_i\)</th><th>Transmittance \(T_i\)</th><th>Weight \(w_i\)</th><th>Grey level \(c_i\)</th></tr>
+  <tr><td>1 (fog)</td><td>1</td><td>0.2</td><td>\(1 - e^{-0.2} = 0.181\)</td><td>1</td><td>0.181</td><td>0.9</td></tr>
+  <tr><td>2 (air)</td><td>2</td><td>0</td><td>0</td><td>0.819</td><td>0</td><td>0.5</td></tr>
+  <tr><td>3 (wall)</td><td>3</td><td>3</td><td>\(1 - e^{-3} = 0.950\)</td><td>0.819</td><td>0.778</td><td>0.2</td></tr>
+</table></div>
+<p>The pixel is \(\hat{C} = 0.181 \times 0.9 + 0.778 \times 0.2 = 0.319\). The light that gets through everything is \(T_4 = 0.819 \times (1 - 0.950) = 0.041\), and \(0.181 + 0.778 + 0.041 = 1\) as it must.</p>
+<p>Try it: the widget does this computation for a ray that crosses pink fog and a blue wall. Lower "Samples N" to 8, raise it again, then turn on random sample positions.</p>
+<div class="viz" data-viz="w20_ray"></div>
+<p class="cap">Notice that with 16 samples the pixel is fog 0.39, wall 0.56, background 0.04, close to the exact 0.39, 0.59, 0.02. At N = 8 the wall almost disappears (weight 0.08) because the two nearest samples straddle it, while the wide fog is still measured correctly. Thin, dense structures are only seen if a sample lands on them, which is one reason sample positions are randomized during training.</p>
+
+<h3>4. The loss, depth, and what the gradient looks like</h3>
+<p>Training compares rendered pixels with the pixels of the real images. With \(R\) the batch of rays being rendered and \(C_{gt}(\mathbf{r})\) the true colour of the pixel that ray \(\mathbf{r}\) belongs to, the loss is the squared <strong>photometric error</strong></p>
+\[ L = \sum_{\mathbf{r} \in R} \norm{\hat{C}(\mathbf{r}) - C_{gt}(\mathbf{r})}_2^2 . \tag{14.3} \]
+<p><span class="src">§14.2.1 · p. 403</span> For SLAM the book adds that depth is often rendered too, by the same alpha blending, and compared with a depth sensor or a predicted depth. In symbols, the weights that average colours can average distances:</p>
+\[ \hat{D}(\mathbf{r}) = \sum_{i=1}^{N} w_i\,t_i . \]
+<p>In the example above \(\hat{D} = 0.181 \times 1 + 0.778 \times 3 = 2.52\), a little in front of the wall because the fog pulls it forward.</p>
+
+<div class="box note"><h4>Filling the gap: the derivative of a pixel with respect to one density</h4>
+<p>Colours are easy: \(\partial\hat{C}/\partial\mathbf{c}_i = w_i\). A density \(\sigma_k\) appears in two places: in its own opacity, \(\partial\alpha_k/\partial\sigma_k = \delta_k(1 - \alpha_k)\), and in the transmittance of every later sample, \(\partial T_i/\partial\sigma_k = -\delta_k T_i\) for \(i \gt k\). Add the two effects and use \(T_k(1 - \alpha_k) = T_{k+1}\):</p>
+\[ \frac{\partial \hat{C}}{\partial \sigma_k} = \delta_k \Bigl( T_{k+1}\,\mathbf{c}_k \;-\; \sum_{i \gt k} w_i\,\mathbf{c}_i \Bigr) . \]
+<p>In words: more matter at sample \(k\) adds its own colour, in proportion to the light that currently passes it, and dims everything behind it. For the empty sample 2 of the example: \(1 \times (0.819 \times 0.5 - 0.778 \times 0.2) = 0.254\). It is not zero, which is the property Day 1 called "gradients before the surface is found".</p></div>
+
+<div class="box kid"><h4>In plain words</h4><p>Look through a foggy window at a wall. Some of what you see is the fog, some is the wall behind it, and a sliver might be whatever is past the wall. The pixel is that mixture. The recipe walks outward from your eye and, at each step, asks two things: how much light is still travelling, and how much of it this step catches.</p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"αᵢ is the density."</strong> Opacity depends on density <em>and</em> segment length: \(\alpha_i = 1 - e^{-\sigma_i\delta_i}\). The same fog sampled with shorter steps has smaller α per step and the same total effect.</li>
+<li><strong>"σ is a probability."</strong> It is a rate per unit length. \(\sigma = 12\) is fine. α and T are the quantities between 0 and 1.</li>
+<li><strong>"Tᵢ includes sample i."</strong> The sum in (14.2) stops at \(i - 1\): \(T_i\) is what arrives at sample \(i\).</li>
+<li><strong>"The weights always sum to 1."</strong> They sum to \(1 - T_{N+1}\). A ray that crosses only thin fog has weights that add up to much less.</li>
+</ul></div>
+
+<div class="box note"><h4>Going deeper (optional): two ideas from the NeRF paper</h4>
+<p>The book mentions positional encoding in one phrase (p. 400). In the original NeRF paper each input coordinate \(p\) is replaced by the list \(\bigl(\sin(2^0\pi p), \cos(2^0\pi p), \dots, \sin(2^{L-1}\pi p), \cos(2^{L-1}\pi p)\bigr)\) before entering the MLP. A plain MLP tends to produce smooth functions, and the fast-varying inputs let it express sharp detail.</p>
+<p>The same paper also uses the weights a second time. Normalized, the \(w_i\) form a probability distribution over where the ray stops, so a second batch of samples can be drawn from it, concentrated where the first batch found matter. The widget shows why that helps: a thin wall needs samples near it, not evenly spread.</p></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A segment has density σ = 2 and length δ = 0.5. What is its opacity α?</p><div class="opts"><button type="button" class="opt">1.0</button><button type="button" class="opt">0.632</button><button type="button" class="opt">0.368</button><button type="button" class="opt">0.5</button></div><p class="exp" hidden>α = 1 − exp(−σδ) = 1 − e⁻¹ = 0.632. The value 0.368 is the fraction that gets through, and 1.0 would be σδ itself, which is only a good approximation when σδ is small.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. Two samples along a ray have opacities α₁ = 0.5 and α₂ = 0.8. What is the weight of the second sample?</p><div class="opts"><button type="button" class="opt">0.8</button><button type="button" class="opt">0.9</button><button type="button" class="opt">0.1</button><button type="button" class="opt">0.4</button></div><p class="exp" hidden>w₂ = T₂α₂ = (1 − 0.5) × 0.8 = 0.4. The first sample has weight 0.5, and 0.5 × 0.2 = 0.1 of the light passes both.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. Those two samples are at t = 2 and t = 4 (weights 0.5 and 0.4). What expected depth does alpha blending give?</p><div class="opts"><button type="button" class="opt">2.6</button><button type="button" class="opt">3.0</button><button type="button" class="opt">2.89</button><button type="button" class="opt">4.0</button></div><p class="exp" hidden>D = 0.5 × 2 + 0.4 × 4 = 2.6. Dividing by the total weight 0.9 would give 2.89, but the formula blends with the weights as they are.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. A segment of constant density σ and length δ is split into two halves, each with density σ and length δ/2. How does the light that gets through both halves compare with the light that got through the original segment?</p><div class="opts"><button type="button" class="opt">Half as much gets through</button><button type="button" class="opt">Twice as much gets through</button><button type="button" class="opt">Exactly the same</button><button type="button" class="opt">It depends on the colours</button></div><p class="exp" hidden>Each half passes exp(−σδ/2), and the product is exp(−σδ), the same as before. This is why α must include δ: the rendered result should not depend on how finely a uniform region is sampled.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>NeRF is a function from position and viewing direction to colour and density, queried along camera rays \(\mathbf{r}(t) = \mathbf{o} + t\mathbf{d}\).</li>
+<li>Transmittance \(T(t) = \exp(-\int\sigma)\) is the chance of reaching \(t\). The pixel is \(\int T\sigma\mathbf{c}\,dt\), equation (14.1).</li>
+<li>With piecewise-constant samples this becomes \(\hat{C} = \sum_i T_i\alpha_i\mathbf{c}_i\) with \(\alpha_i = 1 - e^{-\sigma_i\delta_i}\) and \(T_i = \prod_{j \lt i}(1 - \alpha_j)\), equation (14.2).</li>
+<li>The weights \(w_i = T_i\alpha_i\) also render depth, and they sum to \(1 - T_{N+1}\).</li>
+<li>The loss (14.3) is the squared difference between rendered and real pixels, and its gradient reaches every density on the ray, including empty ones.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §14.2 opening and §14.2.1 "Method Overview", pp. 401–403, equations (14.1)–(14.3), Figure 14.5.</li>
+<li>Mildenhall, Srinivasan, Tancik, Barron, Ramamoorthi, Ng, <em>NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis</em>, 2020 (the reading of density as a stopping rate, positional encoding, and sampling from the weights).</li>
+<li>Max, <em>Optical Models for Direct Volume Rendering</em>, 1995 (the derivation of the transmittance and of the piecewise-constant quadrature).</li>
+</ol></div>
+<p class="next"></p>
+</section>

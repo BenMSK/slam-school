@@ -1,0 +1,124 @@
+<section class="day" data-day="105" id="d105" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 18 · Day 3</span>
+  <h2>Motion estimation: body motion from a planted foot</h2>
+  <p class="lead">After today you can turn the joint readings of a stance leg into a relative pose or a body velocity, write the leg-odometry measurement equations (12.17) and (12.21), and predict how encoder noise and slip make the estimate drift.</p>
+  <p class="meta">About 60 min · Read §12.2, pp. 342–345 (3 pages) · Needs Week 18 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §12.2, pp. 342–345</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The two halves of Figure 12.5 (p. 343): the same motion seen from the ground and seen from the body.</li>
+<li>The two reasons the state is enlarged on pp. 343–344, and what is added in (12.11) and (12.12).</li>
+<li>The three terms of equation (12.21) on p. 345. One of them is easy to forget.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Motion estimation rests on one assumption: a contact frame, once formed, stays where it is for a while. Under that assumption a stance leg gives two kinds of measurement. Compare forward kinematics at two times and you get a <strong>relative pose</strong>. Use the Jacobian at one time and you get the body's <strong>velocity</strong>. Both are exact when the foot is truly fixed, and both are wrong by exactly as much as the foot moves.</p></div>
+
+<h3>1. Relative pose from one stance foot</h3>
+<p>Let the base be at \(\mathcal{F}^b\) at one instant and at \(\mathcal{F}^{b'}\) a moment later, with joint angles \(\mathbf{q}\) and \(\mathbf{q}'\). A foot stays planted throughout, so its contact frame \(\mathcal{F}^k\) is the same at both instants. Go from the first base frame to the contact frame and back up to the second, using the chain and inverse rules of <a href="#d103">Day 1</a>: <span class="src">§12.2.1 · p. 343</span></p>
+\[ \mathbf{T}^b_{b'} = \mathbf{T}^b_k\,\mathbf{T}^k_{b'} = \mathbf{T}^b_k\,(\mathbf{T}^{b'}_k)^{-1}, \qquad \mathbf{T}^b_k = \mathbf{fk}(\mathbf{q}), \quad \mathbf{T}^{b'}_k = \mathbf{fk}(\mathbf{q}') . \tag{12.10} \]
+<p>The right-hand side contains nothing but encoder readings. In words: the body moved forward by as much as the foot, seen from the body, moved backward.</p>
+<div class="box note"><h4>Filling the gap: (12.10) in the plane, and a note on its last step</h4>
+<p>Take the planar leg of <a href="#d104">Day 2</a> and a body that stays upright. Then every \(\mathbf{T}\) is a pure translation, and (12.10) reduces to a subtraction: the body's displacement is</p>
+\[ \mathbf{t}' - \mathbf{t} = \mathbf{f}_p(\mathbf{q}) - \mathbf{f}_p(\mathbf{q}') . \]
+<p>Example: at touchdown the foot is at \(\mathbf{f}_p(\mathbf{q}) = (0.15,\ -0.65)\) m in the base frame, 15 cm ahead of the hip. At the end of the step it is at \(\mathbf{f}_p(\mathbf{q}') = (-0.15,\ -0.65)\) m. The body moved \((0.15 - (-0.15),\ 0) = (0.30,\ 0)\) m.</p>
+<p>The book's line (12.10) continues through the right half of Figure 12.5 and ends with the product written as \(\mathbf{fk}(\mathbf{q}')^{-1}\mathbf{fk}(\mathbf{q})\). In the figure's example nothing rotates, so the two matrices commute and both orders give the same answer. When rotations are involved the order matters; the form \(\mathbf{fk}(\mathbf{q})\,\mathbf{fk}(\mathbf{q}')^{-1}\) above is the one you get by cancelling indices.</p></div>
+<p>Chaining these relative poses is dead reckoning from the joints alone, which is how the earliest leg odometry worked. It has two limits. It works only while that foot is in stance. And a point foot fixes a position, not an orientation, so a robot with point feet would need at least three feet on the ground at all times, which rules out most quadruped gaits. <span class="src">§12.2.1 · p. 343</span></p>
+<div class="box tip"><h4>Intuition: why three point feet</h4><p>Pin a rigid body to the ground at one point and it can still rotate about that point in three ways. Pin it at two points and it can still swing about the line through them. Only a third point, off that line, removes the last freedom. A flat humanoid foot is already a small patch of many points, which is why one foot is enough for a biped.</p></div>
+
+<h3>2. A bigger state, and the measurement equations</h3>
+<p>The standard remedy for quadrupeds is to stop eliminating the contact point and estimate it instead: add to the state the world position \(\mathbf{c}_i = \mathbf{t}^w_k \in \R^3\) of the contact frame of each leg. Humanoids, which have ankles, also add its orientation \(\mathbf{B}_i = \mathbf{R}^w_k \in \SO(3)\). And because some gaits have moments with too few feet on the ground (a gallop has all four in the air), an IMU is assumed: the gyroscope measures \(\boldsymbol{\omega}\) directly, so \(\boldsymbol{\omega}\) leaves the state and the IMU biases of <a href="#d91">Week 16</a> enter it. <span class="src">§12.2.1 · pp. 343–344</span></p>
+\[ \begin{aligned} \text{quadruped:}\quad \mathbf{x}_k & = \begin{bmatrix} \mathbf{t}_k & \mathbf{R}_k & \mathbf{v}_k & \mathbf{b}^a_k & \mathbf{b}^\omega_k & \mathbf{c}_1 & \mathbf{c}_2 & \mathbf{c}_3 & \mathbf{c}_4 \end{bmatrix}\T & \quad (12.11) \\ \text{humanoid:}\quad \mathbf{x}_k & = \begin{bmatrix} \mathbf{t}_k & \mathbf{R}_k & \mathbf{v}_k & \mathbf{b}^a_k & \mathbf{b}^\omega_k & \mathbf{c}_1 & \mathbf{c}_2 & \mathbf{B}_1 & \mathbf{B}_2 \end{bmatrix}\T & \quad (12.12) \end{aligned} \]
+<p>Now write the base pose as \(\mathbf{T} = \begin{bmatrix} \mathbf{R} & \mathbf{t} \\ \mathbf{0} & 1 \end{bmatrix}\) and the contact pose of leg \(i\) as \(\mathbf{C}_i = \begin{bmatrix} \mathbf{B}_i & \mathbf{c}_i \\ \mathbf{0} & 1 \end{bmatrix}\), both in the world. The pose of the contact seen from the base is what forward kinematics measures: \(\mathbf{fk}(\mathbf{q}) = \mathbf{T}^{-1}\mathbf{C}_i\), equation (12.13). Multiply out with the inverse rule:</p>
+\[ \mathbf{T}^{-1}\mathbf{C}_i = \begin{bmatrix} \mathbf{R}\T & -\mathbf{R}\T\mathbf{t} \\ \mathbf{0} & 1 \end{bmatrix} \begin{bmatrix} \mathbf{B}_i & \mathbf{c}_i \\ \mathbf{0} & 1 \end{bmatrix} = \begin{bmatrix} \mathbf{R}\T\mathbf{B}_i & \mathbf{R}\T\mathbf{c}_i - \mathbf{R}\T\mathbf{t} \\ \mathbf{0} & 1 \end{bmatrix} \tag{12.16} \]
+<p>and compare with the blocks of \(\mathbf{fk}(\mathbf{q})\) in (12.2): <span class="src">§12.2.1 · p. 344</span></p>
+\[ \mathbf{f}_p(\mathbf{q}) = \mathbf{R}\T(\mathbf{c}_i - \mathbf{t}) \quad (12.17), \qquad\qquad \mathbf{f}_R(\mathbf{q}) = \mathbf{R}\T\mathbf{B}_i \quad (12.18). \]
+<p>These two lines are the leg-odometry measurement model. The left sides come from the encoders; the right sides contain only state variables. Quadrupeds use (12.17) alone.</p>
+<div class="box tip"><h4>Intuition: a planted foot is a landmark</h4><p>Equation (12.17) has the form of every landmark observation in this book: take a point fixed in the world, \(\mathbf{c}_i\), and express it in the sensor's frame, \(\mathbf{R}\T(\mathbf{c}_i - \mathbf{t})\). A camera does this to a 3-D point before projecting it (<a href="#d63">Week 11 · Day 3</a>). Here the "sensor" is the leg, the "landmark" is the spot the foot stands on, and the landmark exists only for the length of one stance.</p></div>
+
+<h3>3. Walking on it</h3>
+<figure class="fig"><svg viewBox="0 0 600 215" role="img" aria-label="A ground line with three contact points c1, c2, c3. Above it, four body positions: start, two foot switches, and end. From each contact point two lines rise to the body positions at the beginning and end of that stance, so the body path is reconstructed as a chain of triangles standing on successive contact points.">
+  <line x1="20" y1="170" x2="580" y2="170" stroke="var(--line2)" stroke-width="2"/>
+  <line x1="60" y1="60" x2="540" y2="60" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <line x1="120" y1="170" x2="60" y2="60" stroke="var(--c5)" stroke-width="2.5"/>
+  <line x1="120" y1="170" x2="210" y2="60" stroke="var(--c5)" stroke-width="2.5"/>
+  <line x1="300" y1="170" x2="210" y2="60" stroke="var(--c2)" stroke-width="2.5"/>
+  <line x1="300" y1="170" x2="390" y2="60" stroke="var(--c2)" stroke-width="2.5"/>
+  <line x1="480" y1="170" x2="390" y2="60" stroke="var(--c5)" stroke-width="2.5"/>
+  <line x1="480" y1="170" x2="540" y2="60" stroke="var(--c5)" stroke-width="2.5"/>
+  <circle cx="120" cy="170" r="6" fill="var(--c5)"/><circle cx="300" cy="170" r="6" fill="var(--c2)"/><circle cx="480" cy="170" r="6" fill="var(--c5)"/>
+  <rect x="53" y="53" width="14" height="14" rx="3" fill="var(--ink)"/><rect x="203" y="53" width="14" height="14" rx="3" fill="var(--ink)"/><rect x="383" y="53" width="14" height="14" rx="3" fill="var(--ink)"/><rect x="533" y="53" width="14" height="14" rx="3" fill="var(--ink)"/>
+  <text x="60" y="40" text-anchor="middle" font-size="12" fill="var(--ink)">start</text>
+  <text x="210" y="40" text-anchor="middle" font-size="12" fill="var(--ink)">switch feet</text>
+  <text x="390" y="40" text-anchor="middle" font-size="12" fill="var(--ink)">switch feet</text>
+  <text x="540" y="40" text-anchor="middle" font-size="12" fill="var(--ink)">end</text>
+  <text x="120" y="192" text-anchor="middle" font-size="12" fill="var(--ink)">c₁: leg A planted</text>
+  <text x="300" y="192" text-anchor="middle" font-size="12" fill="var(--ink)">c₂: leg B planted</text>
+  <text x="480" y="192" text-anchor="middle" font-size="12" fill="var(--ink)">c₃: leg A planted</text>
+  <text x="300" y="209" text-anchor="middle" font-size="11" fill="var(--muted)">squares: body positions; slanted lines: fₚ(q) of the stance leg at the start and end of its stance</text>
+</svg><figcaption>Dead reckoning on legs. During a stance the body is at "contact point minus leg vector". At a switch, the new contact point is placed at "body plus the new leg's vector".</figcaption></figure>
+<p>With an upright body (\(\mathbf{R} = \mathbf{I}\)), equation (12.17) reads \(\mathbf{t} = \mathbf{c}_i - \mathbf{f}_p(\mathbf{q})\). The widget below runs exactly this on a walking biped. It is given the starting position and, after that, only the encoder readings.</p>
+<p>Try it: press Play to watch the walk. Then set the slip slider to 10%.</p>
+<div class="viz" data-viz="w18_walk"></div>
+<p class="cap">Notice, with the default 0.3° of encoder noise and no slip, that the blue curve is a staircase: flat during each stance, with a jump at each footstep. After 3.6 m the estimate is 1.4 cm off. With 10% slip the error grows by 3 cm every step, always in the same direction, and reaches 37 cm.</p>
+<div class="box note"><h4>Filling the gap: how the error grows</h4>
+<p>The book says leg odometry drifts but does not say how. The widget's two curves show two different laws.</p>
+<p><strong>Encoder noise.</strong> During one stance the estimate is \(\hat{\mathbf{t}} = \hat{\mathbf{c}} - \mathbf{f}_p(\tilde{\mathbf{q}})\). A noisy reading \(\tilde{\mathbf{q}} = \mathbf{q} + \boldsymbol{\eta}\) shifts the estimate by about \(-\mathbf{J}_v\boldsymbol{\eta}\) at that instant only. The next reading has fresh noise, so nothing accumulates: the pink curve jitters around the blue one. Accumulation happens at touchdown, when the new contact point is set to \(\hat{\mathbf{c}}_{\text{new}} = \hat{\mathbf{t}} + \mathbf{f}_p(\tilde{\mathbf{q}}_{\text{new leg}})\). That freezes two forward-kinematics errors (old leg and new leg) into \(\hat{\mathbf{c}}\) for the whole next stance. Each footstep adds one independent error, so after \(n\) footsteps the error is a random walk (<a href="#d1">Week 1 · Day 1</a>):</p>
+\[ \sigma_n \approx \sigma_{\text{step}}\sqrt{n} . \]
+<p>In the widget the rows of \(\mathbf{J}_v\) that map joint noise to \(x\) have lengths 0.71 and 0.75 m/rad for the two legs at a switch. With \(\sigma_q = 0.3^\circ = 0.0052\) rad they give 3.7 mm and 3.9 mm, which combine to \(\sigma_{\text{step}} = \sqrt{3.7^2 + 3.9^2} = 5.4\) mm, and \(5.4\sqrt{11} = 18\) mm after the 11 switches of a 12-step walk. Press "New noise" a few times: final errors of 1 to 4 cm are typical.</p>
+<p><strong>Slip.</strong> If the stance foot slides back by \(s\) during every stance, the body truly advances \(s\) less than the leg geometry says, every time, with the same sign. The error after \(n\) steps is \(n\,s\): linear, not square-root. With \(s = 3\) cm it overtakes the 5.4 mm random walk by the first step. Slip is a bias, and no amount of averaging removes it.</p></div>
+
+<h3>4. Velocity from one stance foot</h3>
+<p>The second route skips positions altogether. Start from the same fact, written for the contact point's world position, \(\mathbf{c} = \mathbf{t} + \mathbf{R}\,\mathbf{f}_p(\mathbf{q})\), and state that it does not move: \(\mathbf{v}^w_k = \mathbf{0}\), equation (12.19). Differentiating gives three terms, <span class="src">§12.2.2 · p. 345</span></p>
+\[ \mathbf{0} = \mathbf{v}^w_b + \boldsymbol{\omega}^w_b \times \mathbf{f}_p(\mathbf{q}) + \mathbf{J}_v(\mathbf{q})\,\dot{\mathbf{q}} \quad\Longrightarrow\quad \mathbf{v}^w_b = -\boldsymbol{\omega}^w_b \times \mathbf{f}_p(\mathbf{q}) - \mathbf{J}_v(\mathbf{q})\,\dot{\mathbf{q}} . \tag{12.21} \]
+<p>The last term is yesterday's: the foot moves backward relative to the body, so the body moves forward. The middle one is the <strong>lever-arm</strong> term: if the body rotates, a point at the end of the leg is carried along even with the joints locked, and that motion must be subtracted too.</p>
+<div class="box note"><h4>Filling the gap: the derivative, in body coordinates</h4>
+<p>The book writes (12.21) with world superscripts and then says that body-coordinate velocities are obtained "by using the robot orientation". Here is that step. Differentiate \(\mathbf{c} = \mathbf{t} + \mathbf{R}\,\mathbf{f}_p(\mathbf{q})\) with \(\dot{\mathbf{c}} = \mathbf{0}\), using the product rule, \(\dot{\mathbf{f}}_p = \mathbf{J}_v\dot{\mathbf{q}}\), and the rotation kinematics \(\dot{\mathbf{R}}\,\mathbf{a} = \mathbf{R}\,(\boldsymbol{\omega} \times \mathbf{a})\) of <a href="#d93">Week 16 · Day 3</a>, where \(\boldsymbol{\omega}\) is the gyroscope's body-frame angular velocity:</p>
+\[ \mathbf{0} = \dot{\mathbf{t}} + \mathbf{R}\left( \boldsymbol{\omega} \times \mathbf{f}_p(\mathbf{q}) + \mathbf{J}_v(\mathbf{q})\,\dot{\mathbf{q}} \right) . \]
+<p>Here \(\dot{\mathbf{t}}\) is the base velocity in world coordinates. The state stores it in base coordinates, \(\mathbf{v} = \mathbf{R}\T\dot{\mathbf{t}}\), so multiply by \(\mathbf{R}\T\):</p>
+\[ \mathbf{v} = -\boldsymbol{\omega} \times \mathbf{f}_p(\mathbf{q}) - \mathbf{J}_v(\mathbf{q})\,\dot{\mathbf{q}} . \]
+<p>Every quantity on the right is in the base frame and comes from a sensor: \(\boldsymbol{\omega}\) from the gyroscope, \(\mathbf{q}\) and \(\dot{\mathbf{q}}\) from the encoders. This is the form used as a measurement on <a href="#d107">Day 5</a>, equation (12.35).</p>
+<p>Numbers, in 3-D with axes \((x, y, z)\): the foot is at \(\mathbf{f}_p = (0, 0, -0.693)\) m and \(\mathbf{J}_v\dot{\mathbf{q}} = (-0.693, 0, 0)\) m/s, as on Day 2. If the body does not rotate, \(\mathbf{v} = (0.693, 0, 0)\) m/s. If it also pitches forward at \(\boldsymbol{\omega} = (0, 0.5, 0)\) rad/s, then \(\boldsymbol{\omega} \times \mathbf{f}_p = (0.5 \times (-0.693),\ 0,\ 0) = (-0.347, 0, 0)\) and</p>
+\[ \mathbf{v} = (0.347, 0, 0) + (0.693, 0, 0) = (1.04, 0, 0) \text{ m/s}. \]
+<p>The hip sits 0.69 m above the pivot, so pitching at 0.5 rad/s carries it forward at an extra 0.35 m/s.</p></div>
+<div class="tbl"><table>
+  <tr><th></th><th>Relative pose, (12.17)–(12.18)</th><th>Velocity, (12.21)</th></tr>
+  <tr><td>Uses</td><td>Joint angles at two times</td><td>Joint angles and rates at one time, plus the gyroscope</td></tr>
+  <tr><td>Extra state</td><td>Contact positions (and orientations)</td><td>None</td></tr>
+  <tr><td>Strength</td><td>No differentiation of encoder readings</td><td>Easy to integrate or preintegrate; keeps no history that could build up position error</td></tr>
+  <tr><td>Weakness</td><td>Larger state; switching feet must be handled</td><td>Joint rates come from numerical differentiation, which adds noise</td></tr>
+  <tr><td>Typical use</td><td>Quadrupeds (position only) and humanoids (position and orientation)</td><td>Widely on quadrupeds, less often on bipeds</td></tr>
+</table></div>
+<p><span class="src">§12.2.2 · pp. 344–345</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Every encoder sample adds drift."</strong> Within one stance the position estimate hangs from the same contact point, so sample noise does not pile up. Drift is added per footstep, and by slip.</li>
+<li><strong>"Body velocity is minus the foot velocity."</strong> Only if the body is not rotating. Otherwise the lever-arm term \(\boldsymbol{\omega} \times \mathbf{f}_p\) must be included.</li>
+<li><strong>"One foot on the ground fixes the body's pose."</strong> A flat foot does. A point foot fixes one position and leaves the orientation to the IMU.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A planar robot keeps its body upright. Its stance foot is at (0.20, −0.60) m in the base frame, and a moment later at (−0.10, −0.60) m. How did the body move?</p><div class="opts"><button type="button" class="opt">0.30 m backward</button><button type="button" class="opt">0.10 m forward</button><button type="button" class="opt">0.30 m forward</button><button type="button" class="opt">It cannot be known without the IMU</button></div><p class="exp" hidden>Displacement = f_p(q) − f_p(q′) = (0.20 − (−0.10), 0) = (0.30, 0): the foot went 30 cm backward relative to the body, so the body went 30 cm forward.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. With R = I, t = (3.0, 0, 0.5) m and a contact point at c = (3.2, 0.1, 0) m, what should forward kinematics report for f_p(q), by (12.17)?</p><div class="opts"><button type="button" class="opt">(0.2, 0.1, −0.5) m</button><button type="button" class="opt">(−0.2, −0.1, 0.5) m</button><button type="button" class="opt">(6.2, 0.1, 0.5) m</button><button type="button" class="opt">(3.2, 0.1, 0) m</button></div><p class="exp" hidden>f_p = Rᵀ(c − t) = (3.2 − 3.0, 0.1 − 0, 0 − 0.5) = (0.2, 0.1, −0.5): the contact point as seen from the base.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A stance foot is at f_p = (0, 0, −0.5) m and J_v q̇ = (−0.4, 0, 0) m/s. The gyroscope reads ω = (0, 1, 0) rad/s. What is the body velocity v from (12.21), in base coordinates?</p><div class="opts"><button type="button" class="opt">(0.4, 0, 0) m/s</button><button type="button" class="opt">(−0.1, 0, 0) m/s</button><button type="button" class="opt">(0.1, 0, 0) m/s</button><button type="button" class="opt">(0.9, 0, 0) m/s</button></div><p class="exp" hidden>ω × f_p = (1 × (−0.5), 0, 0) = (−0.5, 0, 0). Then v = −(−0.5, 0, 0) − (−0.4, 0, 0) = (0.9, 0, 0) m/s. Leaving out the lever-arm term would give 0.4.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. A robot takes 20 steps. Its leg geometry says each step is 25 cm, but the stance foot slides back 1 cm during every stance. With perfect encoders, what does leg odometry report, and what is true?</p><div class="opts"><button type="button" class="opt">Reports 4.8 m, true 5.0 m</button><button type="button" class="opt">Reports 5.0 m, true 4.8 m</button><button type="button" class="opt">Reports 5.0 m, true 5.2 m</button><button type="button" class="opt">Both 5.0 m: slip averages out</button></div><p class="exp" hidden>Odometry assumes the foot is fixed, so it reports 20 × 25 cm = 5.0 m. The body really advances 24 cm per step: 4.8 m. The 20 cm error is a bias that grows linearly with the number of steps.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q5. Why do the states (12.11) and (12.12) contain IMU biases but no angular velocity?</p><div class="opts"><button type="button" class="opt">Angular velocity cannot be estimated for legged robots</button><button type="button" class="opt">The legs measure angular velocity better than a gyroscope</button><button type="button" class="opt">An IMU is assumed, so the gyroscope measures angular velocity directly and its biases must be estimated</button><button type="button" class="opt">The biases replace the contact positions</button></div><p class="exp" hidden>Legs cannot be relied on at every instant (some gaits have flight phases), so an IMU is assumed. Its gyroscope supplies ω, and using an IMU means estimating its biases (Week 16).</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>While a foot is planted, \(\mathbf{T}^b_{b'} = \mathbf{fk}(\mathbf{q})\,\mathbf{fk}(\mathbf{q}')^{-1}\): body motion from encoder readings alone.</li>
+<li>Adding contact positions \(\mathbf{c}_i\) (and orientations \(\mathbf{B}_i\)) to the state gives the measurement equations \(\mathbf{f}_p(\mathbf{q}) = \mathbf{R}\T(\mathbf{c}_i - \mathbf{t})\) and \(\mathbf{f}_R(\mathbf{q}) = \mathbf{R}\T\mathbf{B}_i\).</li>
+<li>The stance foot's zero velocity gives \(\mathbf{v} = -\boldsymbol{\omega} \times \mathbf{f}_p(\mathbf{q}) - \mathbf{J}_v(\mathbf{q})\,\dot{\mathbf{q}}\).</li>
+<li>Encoder noise makes position drift like a random walk with one step per footstep; slip adds a bias that grows linearly.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §12.2 "Motion Estimation", pp. 342–345.</li>
+<li>Lynch and Park, <em>Modern Robotics: Mechanics, Planning, and Control</em>, 2017 (composition of transformations; velocity of a point on a rotating body).</li>
+<li>Barfoot, <em>State Estimation for Robotics</em>, 2017 (rotation kinematics; random-walk growth of dead-reckoning error).</li>
+<li>The per-footstep error analysis in "Filling the gap" is our own, for the planar walker in the widget.</li>
+</ol></div>
+<p class="next"></p>
+</section>

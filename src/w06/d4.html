@@ -1,0 +1,123 @@
+<section class="day" data-day="34" id="d34" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 6 · Day 4</span>
+  <h2>M-estimation: robust losses, IRLS, and Black-Rangarajan duality</h2>
+  <p class="lead">After today you can compare robust losses by their influence functions, derive the IRLS weight and run IRLS by hand, and rewrite a robust loss as weighted least squares plus an outlier process.</p>
+  <p class="meta">About 60 min · Read §3.3 opening to §3.3.2, pp. 85–92 (8 pages, 2 of them figures) · Needs Week 6 Day 1 and Week 2 Day 4</p>
+</header>
+
+<div class="box read"><h4>Read first: §3.3 opening, §3.3.1, §3.3.2, pp. 85–92</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>Equation (3.9) on p. 86, and the requirement placed on \(\rho\) just below it.</li>
+<li>The six loss shapes in Figure 3.5 (p. 87). Which ones go flat?</li>
+<li>The weight rule (3.12) on p. 89 and the two gradients it comes from.</li>
+<li>How (3.14) on p. 90 turns a \(\min\) of two numbers into a minimization over a weight, and the outlier process (3.18) on p. 92.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Replace the square in the cost by a function that grows more slowly for large residuals, so an outlier's pull is bounded or vanishes. The new problem is no longer least squares, but it can be solved as a <em>sequence</em> of weighted least-squares problems: weight each measurement by how believable its current residual is, solve, and repeat.</p></div>
+
+<h3>1. M-estimation and the influence function</h3>
+<p>Front-end rejection misses some outliers, so the back-end must tolerate them. <span class="src">§3.3 · p. 85</span> <strong>M-estimation</strong> ("maximum-likelihood-type estimation") keeps the residuals \(r_i(\mathbf{x})\) of Day 1 and changes only what is done to them:</p>
+\[ \mathbf{x}_{\text{MAP}} = \argmin_{\mathbf{x}} \sum_i r_i(\mathbf{x})^2 \quad\Longrightarrow\quad \mathbf{x}_{\text{MEST}} = \argmin_{\mathbf{x}} \sum_i \rho\big(r_i(\mathbf{x})\big). \tag{3.9} \]
+<p>The <strong>robust loss</strong> \(\rho\) must be non-negative and grow less than quadratically for large residuals. <span class="src">§3.3 · p. 86</span> To see why that is the right requirement, take the gradient of the cost \(f(\mathbf{x}) = \sum_i \rho(r_i(\mathbf{x}))\) with the chain rule:</p>
+\[ \frac{\partial f}{\partial \mathbf{x}} = \sum_i \frac{\partial \rho(r_i)}{\partial r_i}\cdot\frac{\partial r_i(\mathbf{x})}{\partial \mathbf{x}}. \tag{3.10} \]
+<p>The second factor says in which direction measurement \(i\) wants to move the estimate. The first factor says how hard it pulls. That factor is the <strong>influence function</strong> \(\psi(r) := \partial\rho(r)/\partial r\). <span class="src">§3.3 · p. 86</span> For the quadratic loss \(\psi(r) = 2r\): the pull grows without bound, which is Day 1's problem restated. A robust loss has \(\psi(r) \ll 2r\) for large \(r\), and ideally \(\psi(r)\to 0\).</p>
+
+<h3>2. The menu of losses</h3>
+<p>Figure 3.5 shows the common choices as curves. <span class="src">§3.3 · pp. 86–87</span> Here they are as formulas, each with one parameter \(\beta\) that marks where inliers end. The book gives the formulas for the truncated quadratic (3.13) and Geman-McClure (3.17). Huber and Tukey are the standard definitions, scaled like the book's so that every loss equals \(r^2\) for small \(r\). The last column, \(w = \psi/(2r)\), is explained in Section 3.</p>
+<div class="tbl"><table>
+  <tr><th>Loss</th><th>ρ(r)</th><th>Influence ψ(r)</th><th>Weight w(r)</th></tr>
+  <tr><td>Quadratic</td><td>\(r^2\)</td><td>\(2r\)</td><td>\(1\)</td></tr>
+  <tr><td>Huber</td><td>\(r^2\) if \(|r|\le\beta\), else \(2\beta|r|-\beta^2\)</td><td>\(2r\) if \(|r|\le\beta\), else \(\pm 2\beta\)</td><td>\(1\) if \(|r|\le\beta\), else \(\beta/|r|\)</td></tr>
+  <tr><td>Geman-McClure</td><td>\(\dfrac{\beta^2 r^2}{\beta^2+r^2}\)</td><td>\(\dfrac{2\beta^4 r}{(\beta^2+r^2)^2}\)</td><td>\(\left(\dfrac{\beta^2}{\beta^2+r^2}\right)^{2}\)</td></tr>
+  <tr><td>Tukey's biweight</td><td>\(\tfrac{\beta^2}{3}\big[1-(1-r^2/\beta^2)^3\big]\) if \(|r|\le\beta\), else \(\tfrac{\beta^2}{3}\)</td><td>\(2r(1-r^2/\beta^2)^2\) if \(|r|\le\beta\), else \(0\)</td><td>\((1-r^2/\beta^2)^2\) if \(|r|\le\beta\), else \(0\)</td></tr>
+  <tr><td>Truncated quadratic</td><td>\(\min\{r^2,\beta^2\}\)</td><td>\(2r\) if \(|r|\lt\beta\), else \(0\)</td><td>\(1\) if \(|r|\lt\beta\), else \(0\)</td></tr>
+</table></div>
+<p>Try it: pick a loss and move the residual slider. Watch the middle panel.</p>
+<div class="viz" data-viz="w06_loss"></div>
+<p class="cap">Notice: for Huber with β = 1, a residual of 2.5 costs 4.00 where the quadratic charges 6.25, and its influence is capped at 2.00 where the quadratic's is 5.00. Capped is not zero: an outlier keeps pulling. Switch to Geman-McClure and the influence rises, peaks, and falls back toward zero. For the truncated quadratic and Tukey it is exactly zero beyond β.</p>
+<p>How to choose: <span class="src">§3.3 · pp. 86–87</span></p>
+<ul>
+<li><strong>Huber</strong> is convex, so the optimization behaves well. It is common in bundle adjustment. The price is the non-zero influence you just saw.</li>
+<li>Losses that go flat (Geman-McClure, Tukey, truncated quadratic) give distant outliers little or no influence, but they are non-convex, so the optimizer can stop in a bad local minimum.</li>
+<li>A hard cut-off (truncated quadratic) suits problems where the largest error an inlier can have is known.</li>
+<li>The <strong>maximum consensus loss</strong>, 0 for small residuals and 1 for large ones, simply counts outliers. Minimizing it is consensus maximization (3.4) from Day 2. Its influence is zero everywhere, so gradients are useless and it is optimized by sampling: that is RANSAC.</li>
+</ul>
+<div class="box note"><h4>Going deeper (optional): a robust loss is still MAP</h4>
+<p>Switching to \(\rho\) does not abandon probability. A loss is the negative log of a noise density, and losses that grow slowly correspond to heavy-tailed densities. <span class="src">§3.3 · pp. 88–89</span> Take the density proportional to \(\max\{e^{-r^2},\ e^{-\beta^2}\}\): Gaussian near zero, a constant floor (a uniform density over the sensor's range) far away. Its negative log is \(\min\{r^2, \beta^2\}\), the truncated quadratic. The floor says "with some small probability this measurement is unrelated to the state".</p></div>
+
+<h3>3. Iteratively reweighted least squares</h3>
+<p>Problem (3.9) has two costs. The fast solvers of <a href="#d10">Week 2 · Day 4</a>, Gauss-Newton and Levenberg-Marquardt, need a sum of squares. And non-convex costs make any local solver depend on its starting point. <span class="src">§3.3.1 · p. 89</span> Plain gradient descent does work on some problems (Figure 3.6) but takes thousands of iterations. <span class="src">§3.3 · p. 88</span></p>
+<p><strong>Iteratively reweighted least squares (IRLS)</strong> gets the solvers back. At each iteration it solves a <em>weighted</em> least-squares problem whose weights come from the previous estimate:</p>
+\[ \mathbf{x}^{(t+1)} = \argmin_{\mathbf{x}} \sum_i w_i\big(\mathbf{x}^{(t)}\big)\, r_i^2(\mathbf{x}), \qquad w_i\big(\mathbf{x}^{(t)}\big) = \frac{\psi\big(r_i(\mathbf{x}^{(t)})\big)}{2\,r_i(\mathbf{x}^{(t)})}. \tag{3.11, 3.12} \]
+<p><span class="src">§3.3.1 · p. 89</span></p>
+<div class="box note"><h4>Filling the gap: why this weight, and why the iteration lands in the right place</h4>
+<p>Freeze the weights at \(w_i\) and differentiate the weighted cost \(\sum_i w_i\,r_i^2(\mathbf{x})\):</p>
+\[ \frac{\partial}{\partial\mathbf{x}}\sum_i w_i\,r_i^2(\mathbf{x}) = \sum_i 2\,w_i\,r_i(\mathbf{x})\,\frac{\partial r_i(\mathbf{x})}{\partial\mathbf{x}}. \]
+<p>Compare with (3.10), \(\sum_i \psi(r_i)\,\partial r_i/\partial\mathbf{x}\). The two sums agree term by term if \(2\,w_i\,r_i = \psi(r_i)\), that is \(w_i = \psi(r_i)/(2r_i)\). That is (3.12).</p>
+<p>Now suppose the iteration has converged: \(\mathbf{x}^{(t+1)} = \mathbf{x}^{(t)} = \mathbf{x}^\star\). Then \(\mathbf{x}^\star\) minimizes the weighted problem built with its own weights, so the weighted gradient is zero at \(\mathbf{x}^\star\). By the matching, the gradient (3.10) of the robust cost is zero there too. A fixed point of IRLS is a stationary point of the M-estimation problem. For a non-convex \(\rho\) it may be a poor local minimum, which is tomorrow's topic.</p>
+<p><strong>By hand.</strong> Estimate one number \(x\) from \(z = \{1, 2, 3, 14\}\), with \(r_i = z_i - x\) and the Huber loss, \(\beta = 2\). A weighted least-squares fit of a constant is the weighted mean \(x = \sum w_i z_i / \sum w_i\).</p>
+<div class="tbl"><table>
+  <tr><th>Iteration</th><th>Residuals at the current x</th><th>Weights (1 if |r| ≤ 2, else 2/|r|)</th><th>New x</th></tr>
+  <tr><td>start: all weights 1</td><td></td><td>1, 1, 1, 1</td><td>5.000 (the mean)</td></tr>
+  <tr><td>1</td><td>−4, −3, −2, 9</td><td>0.500, 0.667, 1, 0.222</td><td>7.944 / 2.389 = 3.326</td></tr>
+  <tr><td>2</td><td>−2.326, −1.326, −0.326, 10.674</td><td>0.860, 1, 1, 0.187</td><td>2.784</td></tr>
+  <tr><td>3</td><td>−1.784, −0.784, 0.216, 11.216</td><td>1, 1, 1, 0.178</td><td>2.673</td></tr>
+  <tr><td>limit</td><td></td><td>1, 1, 1, 0.176</td><td>8/3 = 2.667</td></tr>
+</table></div>
+<p>The good measurements alone average 2. Least squares says 5. Huber settles at 2.667: much better, and still pulled, because the outlier keeps a weight of 0.176. You can check the limit directly from \(\sum_i\psi(r_i) = 0\): with the first three residuals in the quadratic zone and the fourth beyond \(\beta\), \(2(1-x)+2(2-x)+2(3-x)+2\beta = 0\) gives \(x = 8/3\).</p></div>
+<p>In SLAM the "solve" inside each iteration is one Gauss-Newton or Levenberg-Marquardt step on the weighted problem. <span class="src">§3.3.1 · p. 89</span> Try it on the line fit of Day 2: 40% of the points are outliers, most of them on a second line.</p>
+<div class="viz" data-viz="w06_irls"></div>
+<p class="cap">Notice: with Huber (β = 0.5), IRLS moves from the least-squares line y = 0.12x + 2.81 to y = 0.37x + 1.44 in about 28 steps and stays there, still dragged by the outliers. Geman-McClure reaches y = 0.51x + 0.94, next to the true line, in about 12 steps. The truncated quadratic stops after 2 steps at y = 0.09x + 2.86: it kept the points that happened to lie near the bad starting line and gave all the others weight zero for good.</p>
+<p>The book's experiments agree in outline (Figure 3.7): IRLS converges in tens of iterations and is much faster than gradient descent (under 1.5 s against about 5 s for the Huber loss on M3500), at a slight loss of accuracy, and with non-convex losses it can end in a wrong solution. <span class="src">§3.3.1 · pp. 89–91</span></p>
+
+<h3>4. Black-Rangarajan duality: weights as variables</h3>
+<p>Rule (3.12) was obtained by matching gradients, and it is undefined where \(\rho\) has a corner, such as \(|r| = \beta\) for the truncated quadratic. <strong>Black-Rangarajan (B-R) duality</strong> gives the same algorithm a cleaner footing by making the weights unknowns of the optimization. <span class="src">§3.3.2 · p. 90</span></p>
+<p>Start with the truncated quadratic, \(\rho(r_i) = \min\{r_i^2, \beta_i^2\}\) (3.13). The book rewrites it as</p>
+\[ \rho\big(r_i(\mathbf{x})\big) = \min_{w_i\in[0,1]}\ w_i\,r_i^2(\mathbf{x}) + (1-w_i)\,\beta_i^2. \tag{3.14} \]
+<div class="box note"><h4>Filling the gap: checking (3.14), and the Geman-McClure case in full</h4>
+<p><strong>Truncated quadratic.</strong> The expression in (3.14) is linear in \(w_i\): it equals \(\beta_i^2 + w_i\,(r_i^2 - \beta_i^2)\). A linear function on \([0,1]\) is smallest at an end. If \(r_i^2 \lt \beta_i^2\) the slope is negative, so \(w_i = 1\) and the value is \(r_i^2\). If \(r_i^2 \gt \beta_i^2\) the slope is positive, so \(w_i = 0\) and the value is \(\beta_i^2\). Either way the result is \(\min\{r_i^2, \beta_i^2\}\). Example: \(r = 3,\ \beta = 2\) gives \(4 + 5w\), minimized at \(w = 0\) with value 4.</p>
+<p><strong>Geman-McClure.</strong> Example 3.5 claims that \(\rho(r) = \beta^2 r^2/(\beta^2+r^2)\) (3.17) equals \(\min_{w\in[0,1]}\ w\,r^2 + \Phi_\rho(w)\) with \(\Phi_\rho(w) = \beta^2(\sqrt{w}-1)^2\) (3.18), and leaves the algebra out. Differentiate \(g(w) = w\,r^2 + \beta^2(\sqrt{w}-1)^2\):</p>
+\[ g'(w) = r^2 + \beta^2\cdot 2(\sqrt{w}-1)\cdot\frac{1}{2\sqrt{w}} = r^2 + \beta^2 - \frac{\beta^2}{\sqrt{w}}. \]
+<p>Setting \(g'(w) = 0\) gives \(\sqrt{w} = \beta^2/(r^2+\beta^2)\), so</p>
+\[ w^\star = \left(\frac{\beta^2}{r^2+\beta^2}\right)^{2}, \tag{3.20} \]
+<p>which lies in \([0,1]\), and is a minimum because \(g''(w) = \tfrac12\beta^2 w^{-3/2} \gt 0\). Substitute back, using \(\sqrt{w^\star} - 1 = -r^2/(r^2+\beta^2)\):</p>
+\[ g(w^\star) = \frac{\beta^4 r^2}{(r^2+\beta^2)^2} + \frac{\beta^2 r^4}{(r^2+\beta^2)^2} = \frac{\beta^2 r^2\,(\beta^2 + r^2)}{(r^2+\beta^2)^2} = \frac{\beta^2 r^2}{\beta^2+r^2}. \]
+<p>That is (3.17). Notice also that \(w^\star\) is the Geman-McClure weight in Section 2's table: B-R duality and rule (3.12) give the same number.</p></div>
+<p>Substituting (3.14) for every measurement turns M-estimation into a joint problem over the state and one weight per measurement:</p>
+\[ \min_{\mathbf{x},\ w_i\in[0,1]}\ \sum_{i} \Big[\, w_i\,r_i^2(\mathbf{x}) + (1-w_i)\,\beta_i^2 \,\Big]. \tag{3.15} \]
+<p>The first term is weighted least squares. The second charges \(\beta_i^2\) for every measurement that is switched off, so the optimizer cannot simply discard everything. At the solution, \(w_i = 1\) marks an inlier and \(w_i = 0\) an outlier. <span class="src">§3.3.2 · p. 90</span></p>
+<p>Theorem 3.4 extends this to a family of losses. Write \(\phi(z) := \rho(\sqrt{z})\), the loss as a function of the squared residual. If \(\phi'(z)\to1\) as \(z\to0\), \(\phi'(z)\to0\) as \(z\to\infty\), and \(\phi''(z)\lt0\), then M-estimation (3.9) is equivalent to</p>
+\[ \min_{\mathbf{x},\ w_i\in[0,1]}\ \sum_{i=1}^{N} \Big[\, w_i\,r_i^2(\mathbf{x}) + \Phi_\rho(w_i) \,\Big], \tag{3.16} \]
+<p>where the penalty \(\Phi_\rho\), called the <strong>outlier process</strong>, depends on the loss. <span class="src">§3.3.2 · pp. 90–92</span> For Geman-McClure the conditions are easy to check: \(\phi(z) = \beta^2 z/(\beta^2+z)\), \(\phi'(z) = \beta^4/(\beta^2+z)^2\), which is 1 at \(z = 0\) and tends to 0, and \(\phi''(z) = -2\beta^4/(\beta^2+z)^3 \lt 0\). Tomorrow you solve (3.16) by alternating between \(\mathbf{x}\) and the weights.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"A robust loss removes outliers."</strong> It reduces their influence. With Huber the influence never reaches zero, as the worked example shows.</li>
+<li><strong>"The IRLS weights are tuning parameters."</strong> They are computed from the residuals by \(w = \psi(r)/(2r)\). The only parameter is \(\beta\).</li>
+<li><strong>"IRLS finds the minimum of the robust cost."</strong> It finds a stationary point that depends on where it starts. The widget's truncated-quadratic run stops at a cost of 8.04, while the line next to the true one costs about 4.3 under the same loss.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. With the Huber loss and β = 1, what IRLS weight does a measurement with residual r = 4 receive?</p><div class="opts"><button type="button" class="opt">0</button><button type="button" class="opt">0.25</button><button type="button" class="opt">0.5</button><button type="button" class="opt">1</button></div><p class="exp" hidden>Beyond β the weight is β/|r| = 1/4. Check with w = ψ/(2r): ψ = 2β = 2, and 2/(2 × 4) = 0.25.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. For the Geman-McClure loss with β = 2, what are the loss and the weight at r = 2?</p><div class="opts"><button type="button" class="opt">ρ = 4, w = 1</button><button type="button" class="opt">ρ = 4, w = 0.5</button><button type="button" class="opt">ρ = 2, w = 0.5</button><button type="button" class="opt">ρ = 2, w = 0.25</button></div><p class="exp" hidden>ρ = β²r²/(β² + r²) = 16/8 = 2, half of the quadratic loss r² = 4. The weight is (β²/(β² + r²))² = (4/8)² = 0.25.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. One IRLS iteration with the truncated quadratic loss, β = 3.5, on the scalar data z = {0, 1, 2, 9}, starting from the mean x = 3. What is the new estimate?</p><div class="opts"><button type="button" class="opt">1.0</button><button type="button" class="opt">2.0</button><button type="button" class="opt">3.0</button><button type="button" class="opt">1.5</button></div><p class="exp" hidden>Residuals z − x are −3, −2, −1, 6. Those with |r| below 3.5 get weight 1 and the last gets 0. The weighted mean is (0 + 1 + 2)/3 = 1.0.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Which loss leaves an outlier with a pull that does not shrink as its residual grows?</p><div class="opts"><button type="button" class="opt">Geman-McClure</button><button type="button" class="opt">Truncated quadratic</button><button type="button" class="opt">Huber</button><button type="button" class="opt">Tukey's biweight</button></div><p class="exp" hidden>Huber's influence is constant at ±2β beyond β. Geman-McClure's decays toward zero, and the other two are exactly zero beyond β. Huber accepts this in exchange for convexity.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. In problem (3.15), why does the optimizer not set every weight to zero and make the first term vanish?</p><div class="opts"><button type="button" class="opt">The weights are constrained to sum to N</button><button type="button" class="opt">Each weight set to zero costs β² through the second term</button><button type="button" class="opt">Weights below 0.5 are not allowed</button><button type="button" class="opt">The residuals would become infinite</button></div><p class="exp" hidden>The outlier process (1 − w)β² charges β² for discarding a measurement. Discarding pays only when the residual squared exceeds β².</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>M-estimation replaces \(r^2\) by a robust loss \(\rho(r)\) that grows sub-quadratically (3.9).</li>
+<li>The influence function \(\psi = \rho'\) is how hard a measurement pulls. Huber caps it. Geman-McClure, Tukey, and the truncated quadratic send it to zero and pay with non-convexity.</li>
+<li>IRLS solves weighted least squares repeatedly with \(w_i = \psi(r_i)/(2r_i)\) (3.12). Its fixed points are stationary points of the robust cost.</li>
+<li>B-R duality writes \(\rho(r) = \min_{w\in[0,1]} w\,r^2 + \Phi_\rho(w)\). For the truncated quadratic \(\Phi_\rho = (1-w)\beta^2\). For Geman-McClure \(\Phi_\rho = \beta^2(\sqrt{w}-1)^2\).</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §3.3 opening, §3.3.1 "Iteratively Reweighted Least Squares", §3.3.2 "Black-Rangarajan Duality", pp. 85–92, equations (3.9)–(3.20), Theorem 3.4, Example 3.5, Figures 3.5–3.7.</li>
+<li>Huber, <em>Robust Statistics</em>, 1981 (M-estimators, the Huber loss, influence functions, Tukey's biweight).</li>
+<li>Barfoot, <em>State Estimation for Robotics</em>, 2017 (robust cost functions and IRLS in the estimation setting).</li>
+<li>Black and Rangarajan, <em>On the Unification of Line Processes, Outlier Rejection, and Robust Statistics with Applications in Early Vision</em>, 1996 (the duality).</li>
+</ol></div>
+<p class="next"></p>
+</section>

@@ -1,0 +1,132 @@
+<section class="day" data-day="104" id="d104" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 18 · Day 2</span>
+  <h2>Forward kinematics, the leg Jacobian, and joint sensing</h2>
+  <p class="lead">After today you can compute where a foot is and how fast it moves from joint angles and rates, read the floating-base dynamics equation term by term, and say what encoders, force sensors, and contact sensors each measure.</p>
+  <p class="meta">About 60 min · Read §12.1.4–12.1.6, pp. 336–342 (7 pages, 3 of them on sensors) · Needs Week 18 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §12.1.4–12.1.6, pp. 336–342</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>What the forward kinematics function takes in and gives out, equation (12.2) on p. 337, and why point feet use only half of it.</li>
+<li>Why most of the Jacobian in (12.4), p. 338, is zero.</li>
+<li>Which term of the dynamics equation (12.5), p. 338, contains the forces from the ground.</li>
+<li>The difference between an absolute and an incremental encoder (Figure 12.3, p. 340).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Encoders measure the joint angles \(\mathbf{q}\). <strong>Forward kinematics</strong> turns \(\mathbf{q}\) into the pose of each foot relative to the body, and its derivative, the <strong>Jacobian</strong>, turns joint rates into foot velocity. All of leg odometry is built from these two functions. The Jacobian's transpose also links forces at the foot to torques at the joints, which is how a robot can feel the ground without a sensor in its foot.</p></div>
+
+<h3>1. Forward kinematics</h3>
+<p>The book models a legged robot as one rigid body with legs attached, each leg a chain of revolute joints. Its two standard cases are a biped with 6 actuated joints per leg and flat feet, and a quadruped with 3 joints per leg and point feet. Either way there are \(N = 12\) joint angles, stacked into \(\mathbf{q} \in \R^{12}\). <span class="src">§12.1.4 · p. 336</span></p>
+<p>For each foot \(f\), the <strong>forward kinematics</strong> function maps the joint angles to the pose of that foot in the base frame: <span class="src">§12.1.4 · p. 337</span></p>
+\[ \mathbf{T}^b_f = \mathbf{fk}(\mathbf{q}) = \begin{bmatrix} \mathbf{f}_R(\mathbf{q}) & \mathbf{f}_p(\mathbf{q}) \\ \mathbf{0} & 1 \end{bmatrix} \tag{12.2} \]
+<p>\(\mathbf{f}_R\) is the foot's orientation and \(\mathbf{f}_p\) its position. A point foot can pivot on the ground without any joint moving, so its orientation carries no information and quadrupeds use \(\mathbf{f}_p\) only.</p>
+<div class="box note"><h4>Filling the gap: forward kinematics of a planar two-link leg</h4>
+<p>The book never writes \(\mathbf{fk}\) out. Here it is for the smallest leg that walks: a thigh of length \(l_1\) and a shank of length \(l_2\), moving in the vertical plane with \(x\) forward and \(z\) up, hip at the origin of the base frame. Let \(q_1\) be the hip angle, measured from straight down and positive when the thigh swings forward, and \(q_2\) the knee angle, measured from the thigh's own direction.</p>
+<figure class="fig"><svg viewBox="0 0 600 265" role="img" aria-label="A two-link leg hanging from a hip. The thigh makes angle q1 with the downward vertical. The shank makes angle q2 with the extension of the thigh; here q2 is negative, so the knee points forward and the foot ends up directly below the hip.">
+  <defs><marker id="w18ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <line x1="180" y1="70" x2="300" y2="70" stroke="var(--line2)" stroke-width="10" stroke-linecap="round"/>
+  <text x="235" y="54" text-anchor="middle" font-size="12" fill="var(--muted)">base</text>
+  <line x1="300" y1="70" x2="396" y2="70" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w18ar2)"/>
+  <text x="404" y="74" font-size="12" fill="var(--muted)">x (forward)</text>
+  <line x1="300" y1="70" x2="300" y2="18" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w18ar2)"/>
+  <text x="308" y="24" font-size="12" fill="var(--muted)">z (up)</text>
+  <line x1="300" y1="70" x2="300" y2="150" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <line x1="350" y1="156.6" x2="375" y2="199.9" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <line x1="300" y1="70" x2="350" y2="156.6" stroke="var(--ink)" stroke-width="6" stroke-linecap="round"/>
+  <line x1="350" y1="156.6" x2="300" y2="243.2" stroke="var(--ink)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M300 110 A40 40 0 0 0 320 104.6" fill="none" stroke="var(--c5)" stroke-width="2"/>
+  <text x="305" y="130" font-size="13" fill="var(--c5)">q₁</text>
+  <path d="M365 182.6 A30 30 0 0 1 335 182.6" fill="none" stroke="var(--c4)" stroke-width="2"/>
+  <text x="350" y="206" text-anchor="middle" font-size="13" fill="var(--c4)">q₂</text>
+  <circle cx="300" cy="70" r="6" fill="var(--ink)"/>
+  <circle cx="350" cy="156.6" r="6" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+  <circle cx="300" cy="243.2" r="6" fill="var(--c3)"/>
+  <text x="286" y="90" text-anchor="end" font-size="12" fill="var(--muted)">hip</text>
+  <text x="364" y="150" font-size="12" fill="var(--muted)">knee</text>
+  <text x="340" y="112" font-size="13" fill="var(--ink)">l₁</text>
+  <text x="308" y="204" text-anchor="end" font-size="13" fill="var(--ink)">l₂</text>
+  <text x="314" y="248" font-size="12" fill="var(--ink)">foot, at fₚ(q) = (x, z)</text>
+</svg><figcaption>The leg used all week, drawn at q₁ = 30° and q₂ = −60°. A negative q₂ bends the knee forward, as in a human leg.</figcaption></figure>
+<p>The thigh points along \((\sin q_1,\ -\cos q_1)\). The shank is turned by a further \(q_2\), so it points along \((\sin(q_1{+}q_2),\ -\cos(q_1{+}q_2))\). Add the two links:</p>
+\[ \mathbf{f}_p(\mathbf{q}) = \begin{bmatrix} x \\ z \end{bmatrix} = \begin{bmatrix} l_1 \sin q_1 + l_2 \sin(q_1 + q_2) \\ -l_1 \cos q_1 - l_2 \cos(q_1 + q_2) \end{bmatrix} . \]
+<p>With \(l_1 = l_2 = 0.4\) m, \(q_1 = 30^\circ\), \(q_2 = -60^\circ\): \(x = 0.4(0.5) + 0.4(-0.5) = 0\) and \(z = -0.4(0.866) - 0.4(0.866) = -0.693\) m. The foot is 69 cm straight below the hip.</p></div>
+
+<h3>2. The Jacobian: from joint rates to foot velocity</h3>
+<p>Differentiate (12.2) with respect to time. The result is linear in the joint velocities \(\dot{\mathbf{q}}\): <span class="src">§12.1.4 · p. 337</span></p>
+\[ \begin{bmatrix} \mathbf{v}^b_f \\ \boldsymbol{\omega}^b_f \end{bmatrix} = \mathbf{J}(\mathbf{q})\,\dot{\mathbf{q}} = \begin{bmatrix} \mathbf{J}_v(\mathbf{q}) \\ \mathbf{J}_\omega(\mathbf{q}) \end{bmatrix} \dot{\mathbf{q}} \tag{12.3} \]
+<p>\(\mathbf{J} \in \R^{6 \times 12}\) is the <strong>Jacobian</strong> of foot \(f\). Its top three rows \(\mathbf{J}_v\) give the foot's linear velocity relative to the base, its bottom three \(\mathbf{J}_\omega\) the angular velocity. (The book warns that some references stack the angular block first.) A foot does not care about the joints of the other legs, so 6 of the 12 columns (9 of 12 on a quadruped) are zero. The book writes the non-zero block as \(\bar{\mathbf{J}}\); for the second leg of a humanoid, \(\mathbf{J}_2 = \begin{bmatrix} \mathbf{0}_6 & \bar{\mathbf{J}}_2 \end{bmatrix}\) with \(\bar{\mathbf{J}}_2 \in \R^{6 \times 6}\), equation (12.4). <span class="src">§12.1.4 · pp. 337–338</span></p>
+<p>For the planar leg, \(\bar{\mathbf{J}}_v\) is the \(2 \times 2\) matrix of partial derivatives of \(\mathbf{f}_p\):</p>
+\[ \mathbf{J}_v(\mathbf{q}) = \begin{bmatrix} \partial x / \partial q_1 & \partial x / \partial q_2 \\ \partial z / \partial q_1 & \partial z / \partial q_2 \end{bmatrix} = \begin{bmatrix} l_1 \cos q_1 + l_2 \cos(q_1 + q_2) & l_2 \cos(q_1 + q_2) \\ l_1 \sin q_1 + l_2 \sin(q_1 + q_2) & l_2 \sin(q_1 + q_2) \end{bmatrix} . \]
+<p>Each column is the foot velocity produced by one joint turning at 1 rad/s while the other is held. Compare with \(\mathbf{f}_p\): the first column is \((-z,\ x)\), the hip-to-foot vector turned by \(90^\circ\), because turning the hip swings the whole leg about the hip. At \(q = (30^\circ, -60^\circ)\):</p>
+\[ \mathbf{J}_v = \begin{bmatrix} 0.693 & 0.346 \\ 0 & -0.2 \end{bmatrix} \text{ m/rad}, \qquad \dot{\mathbf{q}} = \begin{bmatrix} -1 \\ 0 \end{bmatrix} \text{ rad/s} \ \Longrightarrow\ \mathbf{v}^b_f = \begin{bmatrix} -0.693 \\ 0 \end{bmatrix} \text{ m/s}. \]
+<p>The foot moves backward relative to the body at 0.69 m/s. If that foot is planted, it is the body that moves, forward, at the same speed. That one sentence is tomorrow's lesson.</p>
+<p>Try it: the widget starts at this example. Move the knee slider to 0° and watch the two thin arrows.</p>
+<div class="viz" data-viz="w18_leg"></div>
+<p class="cap">Notice that at q₂ = 0° the two columns of the Jacobian become parallel and its determinant, \(l_1 l_2 \sin q_2\), drops to zero. With a straight leg no combination of joint rates can move the foot along the leg: the leg is at a <strong>singularity</strong>.</p>
+<div class="box note"><h4>Filling the gap: joint velocities are differences, and differences are noisy</h4>
+<p>Encoders measure angles, not rates. The book says \(\dot{\mathbf{q}}\) is "typically estimated by numerical differentiation", and later warns that this can degrade the velocity estimate. <span class="src">§12.1.4 · p. 337; §12.2.2 · p. 345</span> Here is the size of the effect. Take two readings \(\Delta t\) apart, each with an independent error of standard deviation \(\sigma_q\). The rate estimate \((q_k - q_{k-1})/\Delta t\) has variance \(2\sigma_q^2/\Delta t^2\), so</p>
+\[ \sigma_{\dot q} = \frac{\sqrt{2}\,\sigma_q}{\Delta t} . \]
+<p>With \(\sigma_q = 0.01^\circ\) and readings every millisecond, \(\sigma_{\dot q} = 1.41 \times 0.01 / 0.001 = 14^\circ\)/s. Sampling faster makes it worse. This is why joint rates are filtered, and why the Jacobian route to velocity is noisier than its formula suggests.</p></div>
+
+<h3>3. The dynamics equation, term by term</h3>
+<p>The legs also carry forces. The equations of motion of a floating base with \(N = 12\) actuated joints are: <span class="src">§12.1.5 · p. 338</span></p>
+\[ \mathbf{M}(\mathbf{q}) \begin{bmatrix} \dot{\mathbf{v}} \\ \dot{\boldsymbol{\omega}} \\ \ddot{\mathbf{q}} \end{bmatrix} + \mathbf{h}(\mathbf{q}, \dot{\mathbf{q}}) = \begin{bmatrix} \mathbf{J}_b\T \\ \mathbf{J}_q\T \end{bmatrix} \mathbf{f} + \begin{bmatrix} \mathbf{0}_6 \\ \boldsymbol{\tau} \end{bmatrix} \tag{12.5} \]
+<div class="tbl"><table>
+  <tr><th>Term</th><th>Size</th><th>What it is</th></tr>
+  <tr><td>\(\mathbf{M}(\mathbf{q})\) times accelerations</td><td>18 rows: 6 for the base, 12 for the joints</td><td>Mass matrix times the base's linear and angular acceleration and the joint accelerations: "mass times acceleration" for the whole robot</td></tr>
+  <tr><td>\(\mathbf{h}(\mathbf{q}, \dot{\mathbf{q}})\)</td><td>\(\R^{18}\)</td><td>Coriolis, centrifugal, and gravity terms</td></tr>
+  <tr><td>\(\boldsymbol{\tau}\) under \(\mathbf{0}_6\)</td><td>\(\R^{12}\)</td><td>Motor torques. The zeros say that no motor acts on the base directly: it is <strong>underactuated</strong></td></tr>
+  <tr><td>\(\mathbf{f}\)</td><td>\(\R^{dc}\)</td><td>Forces (and, for flat feet, torques) from the ground on the \(c\) legs in contact; \(d = 3\) per quadruped leg, \(d = 6\) per humanoid leg</td></tr>
+  <tr><td>\(\mathbf{J}_q\)</td><td>\(dc \times 12\)</td><td>The foot Jacobians of (12.3) for the legs in contact, stacked</td></tr>
+  <tr><td>\(\mathbf{J}_b\)</td><td>\(dc \times 6\)</td><td>Maps the base's twist to foot velocities</td></tr>
+</table></div>
+<p>Examples: a humanoid on both feet has \(\mathbf{J}_q = [\mathbf{J}_1;\ \mathbf{J}_2]\), which is \(12 \times 12\), and \(\mathbf{f}\) holds a force and a torque per foot. A quadruped standing on legs 1, 3, and 4 stacks \(\mathbf{J}_{1,v}, \mathbf{J}_{3,v}, \mathbf{J}_{4,v}\) into a \(9 \times 12\) matrix, and \(\mathbf{f}\) holds three 3-D forces. <span class="src">(12.6)–(12.9) · pp. 338–339</span></p>
+<div class="box note"><h4>Filling the gap: why the transpose of the Jacobian appears</h4>
+<p>Hold the base still and let the ground push on the foot with force \(\mathbf{f}\). The power it delivers is force times foot velocity, \(\mathbf{f}\T \mathbf{v}_f = \mathbf{f}\T \mathbf{J}_v \dot{\mathbf{q}} = (\mathbf{J}_v\T \mathbf{f})\T \dot{\mathbf{q}}\). Joint torques \(\boldsymbol{\tau}_{\text{eq}}\) deliver power \(\boldsymbol{\tau}_{\text{eq}}\T \dot{\mathbf{q}}\). For the two to be equal for every \(\dot{\mathbf{q}}\),</p>
+\[ \boldsymbol{\tau}_{\text{eq}} = \mathbf{J}_v\T\,\mathbf{f} . \]
+<p>So a force at the foot acts on the joints exactly like the torques \(\mathbf{J}_v\T \mathbf{f}\). Example with today's leg: the ground pushes straight up with \(\mathbf{f} = (0,\ 100)\) N. Then</p>
+\[ \mathbf{J}_v\T \mathbf{f} = \begin{bmatrix} 0.693 & 0 \\ 0.346 & -0.2 \end{bmatrix} \begin{bmatrix} 0 \\ 100 \end{bmatrix} = \begin{bmatrix} 0 \\ -20 \end{bmatrix} \ \text{N}\cdot\text{m}. \]
+<p>To stand still, the motors must cancel this: \(\boldsymbol{\tau} = -\mathbf{J}_v\T\mathbf{f} = (0,\ 20)\) N·m, which is (12.5) with all accelerations zero and \(\mathbf{h}\) ignored. Check it with levers: the force passes through the hip (zero hip torque) and 0.2 m behind the knee (0.2 m × 100 N = 20 N·m). Read backwards, this is a force sensor: measure the knee torque and you know the ground force. <a href="#d106">Day 4</a> uses exactly that.</p></div>
+
+<h3>4. Joint sensing</h3>
+<div class="tbl"><table>
+  <tr><th>Sensor</th><th>Measures</th><th>How it works</th><th>Used in leg odometry for</th></tr>
+  <tr><td>Absolute optical encoder</td><td>Joint angle; the same pose always gives the same reading</td><td>Light shines through a coded disc onto an array of detectors; \(n\) tracks give an \(n\)-bit word in Gray code</td><td>\(\mathbf{q}\), hence \(\mathbf{fk}(\mathbf{q})\)</td></tr>
+  <tr><td>Incremental optical encoder</td><td>Change of angle since power-on</td><td>A slotted disc and two detectors, A and B, \(90^\circ\) out of phase; the order of their edges gives the direction, and a counter adds or subtracts</td><td>\(\mathbf{q}\), once the starting angle is known</td></tr>
+  <tr><td>Force/torque sensor</td><td>Force or torque, up to all 6 axes</td><td>Strain gauges: resistors glued to a part that deforms slightly under load. On backdrivable motors, torque can instead be estimated from motor current</td><td>The ground reaction force, to find stance legs</td></tr>
+  <tr><td>Contact sensor</td><td>One bit: touching or not</td><td>An optical gap that closes when the sole deforms, or a push-button inside the sole</td><td>Stance or swing, directly</td></tr>
+</table></div>
+<p><span class="src">§12.1.6 · pp. 339–342</span> An \(n\)-bit absolute encoder resolves \(360^\circ / 2^n\): 8 bits give \(360/256 = 1.41^\circ\), the book's example. To see what that means, multiply by the lever arm. An error of \(1.41^\circ = 0.0246\) rad at the hip of our 0.8 m leg moves the computed foot position by about \(0.8 \times 0.0246 = 2\) cm; with 12 bits (\(0.088^\circ\)) it is 1.2 mm.</p>
+<p>The <strong>Gray code</strong> orders binary words so that neighbours differ in one bit. In plain binary, going from 7 to 8 changes four bits (0111 to 1000); if the detectors do not switch at the same instant, the encoder can briefly report a wildly wrong angle. In Gray code the same step is 0100 to 1100, one bit. Contact sensors are cheap but respond more slowly than force sensors, and both need cables down the leg and take every impact, so the book notes they are found mostly on small indoor quadrupeds. <span class="src">§12.1.6 · pp. 340–342</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The Jacobian of a foot is a small square matrix."</strong> In the book it is \(6 \times 12\), one column per joint of the whole robot, mostly zeros. The small square matrix is its non-zero block \(\bar{\mathbf{J}}\).</li>
+<li><strong>"A straight leg is just another pose."</strong> It is singular. Joint rates cannot move the foot along the leg, and a force along the leg produces no joint torque, so torque sensing cannot see it.</li>
+<li><strong>"An incremental encoder knows the joint angle."</strong> It knows the change since it was switched on. Something else must supply the starting angle.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A planar leg has l₁ = l₂ = 0.5 m, q₁ = 0°, q₂ = −90°. Where is the foot in the base frame, as (x, z)?</p><div class="opts"><button type="button" class="opt">(0.5, −0.5) m</button><button type="button" class="opt">(−0.5, −0.5) m</button><button type="button" class="opt">(0, −1.0) m</button><button type="button" class="opt">(−0.5, 0.5) m</button></div><p class="exp" hidden>x = 0.5 sin 0° + 0.5 sin(−90°) = −0.5 and z = −0.5 cos 0° − 0.5 cos(−90°) = −0.5. The thigh hangs straight down and the shank points backward.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. With J_v = [0.693, 0.346; 0, −0.2] m/rad, the hip is held still and the knee turns at +1 rad/s. What is the foot velocity relative to the base?</p><div class="opts"><button type="button" class="opt">(0.693, 0) m/s</button><button type="button" class="opt">(1.039, −0.2) m/s</button><button type="button" class="opt">(0, −0.2) m/s</button><button type="button" class="opt">(0.346, −0.2) m/s</button></div><p class="exp" hidden>With joint rates (0, 1), the product J_v q̇ is the second column of the Jacobian: (0.346, −0.2) m/s.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. A quadruped stands on three legs. What size is J_q in equation (12.5)?</p><div class="opts"><button type="button" class="opt">9 × 12</button><button type="button" class="opt">12 × 12</button><button type="button" class="opt">18 × 12</button><button type="button" class="opt">3 × 12</button></div><p class="exp" hidden>Point feet contribute only the linear block J_v, 3 rows per leg in contact, and there are 12 joints: dc × 12 = (3 × 3) × 12.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. What is the angular resolution of a 10-bit absolute encoder?</p><div class="opts"><button type="button" class="opt">36°</button><button type="button" class="opt">1.41°</button><button type="button" class="opt">0.35°</button><button type="button" class="opt">0.035°</button></div><p class="exp" hidden>360° / 2¹⁰ = 360 / 1024 = 0.35°.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. Encoder readings have a noise of 0.02° (1σ) and arrive every 2 ms. What is the noise of a joint rate computed from two consecutive readings?</p><div class="opts"><button type="button" class="opt">About 10°/s</button><button type="button" class="opt">About 14°/s</button><button type="button" class="opt">About 0.03°/s</button><button type="button" class="opt">About 20°/s</button></div><p class="exp" hidden>σ = √2 × 0.02° / 0.002 s = 14.1°/s. The difference of two independent readings has √2 times the noise of one, and dividing by a small time step amplifies it.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>\(\mathbf{fk}(\mathbf{q})\) gives each foot's pose in the base frame; point feet use only the position \(\mathbf{f}_p(\mathbf{q})\).</li>
+<li>\(\mathbf{J}(\mathbf{q})\,\dot{\mathbf{q}}\) gives the foot's velocity relative to the base. For the planar leg \(\det \mathbf{J}_v = l_1 l_2 \sin q_2\), zero when the leg is straight.</li>
+<li>In the dynamics (12.5) the ground forces enter through \(\mathbf{J}\T\): a force \(\mathbf{f}\) at the foot acts on the joints like torques \(\mathbf{J}_v\T\mathbf{f}\).</li>
+<li>Encoders give \(\mathbf{q}\) (and, by differencing, a noisy \(\dot{\mathbf{q}}\)); force/torque and contact sensors tell which feet are loaded.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §12.1.4 "Legged Robot Kinematics", §12.1.5 "Legged Robot Dynamics", §12.1.6 "Joint Sensing", pp. 336–342.</li>
+<li>Siciliano, Sciavicco, Villani, Oriolo, <em>Robotics: Modelling, Planning and Control</em>, 2009 (two-link planar arm kinematics, the geometric Jacobian, singularities, and the force–torque duality \(\boldsymbol{\tau} = \mathbf{J}\T\mathbf{f}\)).</li>
+<li>Lynch and Park, <em>Modern Robotics: Mechanics, Planning, and Control</em>, 2017 (forward kinematics, statics of open chains).</li>
+<li>The finite-difference noise formula is the variance of a difference of two independent readings.</li>
+</ol></div>
+<p class="next"></p>
+</section>

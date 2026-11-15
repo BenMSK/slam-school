@@ -1,0 +1,119 @@
+<section class="day" data-day="118" id="d118" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 20 · Day 4</span>
+  <h2>3D Gaussian splatting: project, sort, blend</h2>
+  <p class="lead">After today you can project a Gaussian's covariance into the image through the camera Jacobian and compute a pixel by front-to-back alpha blending of the projected Gaussians.</p>
+  <p class="meta">About 60 min · Read §14.3 opening and §14.3.1, pp. 409–410 (2 pages) · Needs Week 20 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §14.3 opening and §14.3.1, pp. 409–410</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>What 3DGS takes as input besides the images, and the four things that parameterize one Gaussian (p. 409).</li>
+<li>Equation (14.4): the covariance is not stored directly but built from two other matrices.</li>
+<li>Equation (14.5) on p. 410, and which block of \(\boldsymbol{\Sigma}'\) is used.</li>
+<li>Equations (14.6) and (14.7), then the three sentences on sorting, tiles, and frustum culling.</li>
+<li>The loss (14.8) and the closing sentence on densification and pruning.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>3DGS keeps the blending sum of Day 2 and changes where the opacities come from. The scene is a list of semi-transparent Gaussian blobs. To render, flatten each blob onto the image, sort the blobs by depth, and blend the ones that cover a pixel from front to back. No samples are spent on empty space, and every step is differentiable, so the blobs can be fitted to photos by gradient descent.</p></div>
+
+<h3>1. What one Gaussian stores</h3>
+<p>Each primitive has a mean position \(\boldsymbol{\mu} \in \R^3\), a covariance matrix \(\boldsymbol{\Sigma} \in \R^{3\times 3}\) that sets its size, shape, and orientation, an opacity \(o\), and a colour \(\mathbf{c}\) that can vary with viewing direction, stored as spherical-harmonic (SH) coefficients. The input is a set of colour images with poses from structure from motion (SfM), together with the sparse point cloud SfM produced, which seeds the initial Gaussians. <span class="src">§14.3 · p. 409</span></p>
+<p>The blob's strength at a point \(\mathbf{x}\) is the Gaussian function without its normalizing constant, so that it equals 1 at the centre:</p>
+\[ G(\mathbf{x}) = \exp\!\Bigl(-\tfrac{1}{2}\,(\mathbf{x} - \boldsymbol{\mu})\T\,\boldsymbol{\Sigma}^{-1}(\mathbf{x} - \boldsymbol{\mu})\Bigr) . \]
+<p>The covariance is built from a diagonal <strong>scaling matrix</strong> \(\mathbf{S}\) (the blob's three radii) and a rotation \(\mathbf{R} \in \SO(3)\):</p>
+\[ \boldsymbol{\Sigma} = \mathbf{R}\,\mathbf{S}\,\mathbf{S}\T\mathbf{R}\T . \tag{14.4} \]
+<div class="box note"><h4>Filling the gap: why factor the covariance?</h4>
+<p>A covariance must be symmetric and positive semi-definite: \(\mathbf{v}\T\boldsymbol{\Sigma}\mathbf{v} \ge 0\) for every \(\mathbf{v}\). If gradient descent adjusted the six free entries of \(\boldsymbol{\Sigma}\) directly, a step could leave that set and the "Gaussian" would stop being one. The factored form cannot fail: with \(\mathbf{A} = \mathbf{R}\mathbf{S}\), \(\mathbf{v}\T\mathbf{A}\mathbf{A}\T\mathbf{v} = \norm{\mathbf{A}\T\mathbf{v}}^2 \ge 0\) for any \(\mathbf{S}\) and \(\mathbf{R}\).</p>
+<p>A 2D example. Radii \(2\) and \(0.5\), rotated by 30°: \(\cos^2 = 0.75\), \(\sin^2 = 0.25\), \(\cos\sin = 0.433\), and \(\mathbf{S}\mathbf{S}\T = \diag(4, 0.25)\).</p>
+\[ \boldsymbol{\Sigma} = \begin{bmatrix} 0.75 \cdot 4 + 0.25 \cdot 0.25 &amp; 0.433\,(4 - 0.25) \\ 0.433\,(4 - 0.25) &amp; 0.25 \cdot 4 + 0.75 \cdot 0.25 \end{bmatrix} = \begin{bmatrix} 3.06 &amp; 1.62 \\ 1.62 &amp; 1.19 \end{bmatrix} . \]
+<p>Check: the trace is \(4.25 = 4 + 0.25\) and the determinant is \(3.0625 \times 1.1875 - 1.6238^2 = 1.00 = 4 \times 0.25\), as rotation must preserve both.</p></div>
+
+<h3>2. Projecting a Gaussian onto the image</h3>
+<p>The book gives the covariance of the projected Gaussian in one line:</p>
+\[ \boldsymbol{\Sigma}' = \mathbf{J}\,\mathbf{W}\,\boldsymbol{\Sigma}\,\mathbf{W}\T\mathbf{J}\T , \tag{14.5} \]
+<p>where \(\mathbf{W}\) is the viewing transformation and \(\mathbf{J}\) is the Jacobian of the projective transformation, and it calls the projection "approximated". <span class="src">§14.3.1 · pp. 409–410</span> Here is what each factor does and where the approximation is.</p>
+<figure class="fig"><svg viewBox="0 0 600 222" role="img" aria-label="Top view. A camera on the left looks along the depth axis. A tilted elliptical Gaussian with mean mu and covariance Sigma sits in front of it. Rays from the camera to the edges of the ellipse cut the image line at depth 1 and mark out a short footprint with mean mu prime and covariance Sigma prime.">
+  <line x1="40" y1="130" x2="585" y2="130" stroke="var(--line2)" stroke-width="1" stroke-dasharray="5 4"/>
+  <rect x="22" y="121" width="16" height="18" rx="3" fill="var(--muted)"/><path d="M38 125 l10 -5 v20 l-10 -5 z" fill="var(--muted)"/>
+  <text x="40" y="160" text-anchor="middle" font-size="11" fill="var(--muted)">camera</text>
+  <text x="585" y="146" text-anchor="end" font-size="11" fill="var(--muted)">depth z</text>
+  <line x1="200" y1="40" x2="200" y2="196" stroke="var(--ink)" stroke-width="2"/>
+  <text x="200" y="213" text-anchor="middle" font-size="11" fill="var(--muted)">image line z = 1</text>
+  <ellipse cx="440" cy="70" rx="60" ry="18" transform="rotate(-25 440 70)" fill="var(--c3-soft)" stroke="var(--c3)" stroke-width="1.5"/>
+  <circle cx="440" cy="70" r="3.5" fill="var(--c3)"/>
+  <line x1="48" y1="128.3" x2="470" y2="41.3" stroke="var(--c3)" stroke-width="1" stroke-dasharray="3 3"/>
+  <line x1="48" y1="129.2" x2="470" y2="89.7" stroke="var(--c3)" stroke-width="1" stroke-dasharray="3 3"/>
+  <line x1="200" y1="97" x2="200" y2="115" stroke="var(--c3)" stroke-width="7"/>
+  <text x="440" y="24" text-anchor="middle" font-size="12" fill="var(--ink)">3D Gaussian: mean μ, covariance Σ</text>
+  <text x="188" y="76" text-anchor="end" font-size="12" fill="var(--ink)">footprint:</text>
+  <text x="188" y="92" text-anchor="end" font-size="12" fill="var(--ink)">mean μ′, covariance Σ′</text>
+  <text x="400" y="190" text-anchor="middle" font-size="13" fill="var(--ink)">Σ′ = J W Σ Wᵀ Jᵀ</text>
+</svg><figcaption>Splatting in a 2D world with a 1D image, the setting of today's widget. The footprint is treated as a Gaussian on the image line.</figcaption></figure>
+
+<div class="box note"><h4>Filling the gap: deriving equation (14.5)</h4>
+<p><strong>Step 1: into the camera frame.</strong> A world point becomes \(\mathbf{x}_c = \mathbf{W}\mathbf{x} + \mathbf{t}\) in camera coordinates, with \(\mathbf{W}\) the rotation part of the world-to-camera transform. A linear map of a Gaussian is again a Gaussian, with covariance \(\cov(\mathbf{A}\mathbf{x} + \mathbf{b}) = \mathbf{A}\boldsymbol{\Sigma}\mathbf{A}\T\). So in the camera frame the mean is \(\boldsymbol{\mu}_c = \mathbf{W}\boldsymbol{\mu} + \mathbf{t}\) and the covariance is \(\mathbf{W}\boldsymbol{\Sigma}\mathbf{W}\T\). This step is exact.</p>
+<p><strong>Step 2: onto the plane \(z = 1\).</strong> Perspective projection (<a href="#d63">Week 11 · Day 3</a>) is \(\pi(x, y, z) = (x/z,\; y/z)\). It divides by \(z\), so it is not linear and the true image of a Gaussian is not a Gaussian. Replace \(\pi\) by its first-order Taylor expansion around the mean, exactly as measurement functions were linearized in <a href="#d9">Week 2 · Day 3</a>:</p>
+\[ \pi(\boldsymbol{\mu}_c + \mathbf{e}) \approx \pi(\boldsymbol{\mu}_c) + \mathbf{J}\,\mathbf{e}, \qquad \mathbf{J} = \frac{\partial \pi}{\partial \mathbf{x}_c}\bigg|_{\boldsymbol{\mu}_c} = \begin{bmatrix} 1/z &amp; 0 &amp; -x/z^2 \\ 0 &amp; 1/z &amp; -y/z^2 \end{bmatrix} , \]
+<p>with \((x, y, z) = \boldsymbol{\mu}_c\). The approximate map is linear, so the same covariance rule applies again: \(\boldsymbol{\Sigma}' = \mathbf{J}(\mathbf{W}\boldsymbol{\Sigma}\mathbf{W}\T)\mathbf{J}\T\), a \(2 \times 2\) matrix, centred at \(\boldsymbol{\mu}' = \pi(\boldsymbol{\mu}_c)\). The book speaks of the upper-left \(2 \times 2\) block because the usual derivation carries a third row in \(\mathbf{J}\), which makes \(\boldsymbol{\Sigma}'\) a \(3 \times 3\) matrix whose image part is that block. To get pixel units, multiply \(\mathbf{J}\) by the focal length.</p>
+<p><strong>Numbers</strong>, in a 2D world (sideways \(x\), depth \(z\)) with the camera at the origin and \(\mathbf{W} = \mathbf{I}\). Here \(\mathbf{J}\) is the single row \([\,1/z \;\; -x/z^2\,]\). A Gaussian at \((x, z) = (1, 2)\) with \(\boldsymbol{\Sigma} = \diag(0.25, 0.04)\):</p>
+\[ \mu' = \tfrac{1}{2} = 0.5, \qquad \mathbf{J} = [\,0.5 \;\; -0.25\,], \qquad \sigma'^2 = 0.5^2 \cdot 0.25 + 0.25^2 \cdot 0.04 = 0.065, \qquad \sigma' = 0.255 . \]
+<p>Move it twice as far along the same ray, to \((2, 4)\): \(\mathbf{J} = [\,0.25 \;\; -0.125\,]\), \(\sigma'^2 = 0.0156 + 0.0006 = 0.0163\), \(\sigma' = 0.127\). Twice the depth, half the footprint, as perspective requires.</p></div>
+
+<h3>3. Alpha blending, front to back</h3>
+<p>At a pixel \(\mathbf{x}_{2D} = [u, v]\T\), Gaussian \(i\) has the opacity</p>
+\[ \alpha_i = o_i\,G_{2D}(\mathbf{x}_{2D}), \qquad G_{2D}(\mathbf{x}) = \exp\!\Bigl(-\tfrac{1}{2}(\mathbf{x} - \boldsymbol{\mu}'_i)\T\boldsymbol{\Sigma}_i'^{-1}(\mathbf{x} - \boldsymbol{\mu}'_i)\Bigr) , \tag{14.7} \]
+<p>its stored opacity times the value of its footprint at that pixel. With the Gaussians along the pixel's ray sorted by depth, nearest first, the pixel colour is</p>
+\[ C = \sum_{i \in \mathcal{N}} \mathbf{c}_i\,\alpha_i \prod_{j=1}^{i-1} (1 - \alpha_j) . \tag{14.6} \]
+<p><span class="src">§14.3.1 · p. 410</span> Compare with equation (14.2) of <a href="#d116">Day 2</a>, where \(T_i = \prod_{j \lt i}(1 - \alpha_j)\). The sum is the same. NeRF gets \(\alpha_i = 1 - e^{-\sigma_i\delta_i}\) from samples of a field along the ray. 3DGS gets \(\alpha_i\) from the primitives that happen to cover the pixel.</p>
+
+<div class="box note"><h4>Filling the gap: compositing as a loop</h4>
+<p>Equation (14.6) is computed with two running quantities, the colour so far \(C\) and the transmittance \(T\). Start with \(C = 0\), \(T = 1\), and for each Gaussian from the nearest outward:</p>
+\[ C \leftarrow C + T\,\alpha_i\,\mathbf{c}_i , \qquad T \leftarrow T\,(1 - \alpha_i) . \]
+<p>Whatever \(T\) remains at the end goes to the background. The same picture results from painting back to front with the "over" rule \(C \leftarrow \alpha_i\mathbf{c}_i + (1 - \alpha_i)\,C\): for two layers over a background \(\mathbf{b}\), both give \(\alpha_1\mathbf{c}_1 + (1 - \alpha_1)\alpha_2\mathbf{c}_2 + (1 - \alpha_1)(1 - \alpha_2)\mathbf{b}\). Front to back has one advantage: once \(T\) is close to zero, nothing farther away can change the pixel and the loop can stop.</p>
+<p>Three Gaussians with \(\alpha = 0.311,\ 0.397,\ 0.708\), nearest first: the weights are \(0.311\); \(0.689 \times 0.397 = 0.274\); \(0.689 \times 0.603 \times 0.708 = 0.294\); and \(0.689 \times 0.603 \times 0.292 = 0.121\) is left for the background. They sum to 1.</p></div>
+
+<p>Try it: three Gaussians seen from above, a camera at the bottom, and the 1D image it renders. Drag the pink Gaussian sideways and then away from the camera. Change its opacity and rotation. Move the "Pixel u" slider and read the table.</p>
+<div class="viz" data-viz="w20_splat"></div>
+<p class="cap">Notice that at the default pixel u = 0.10 the table shows α = 0.311, 0.397, 0.708 and weights 0.311, 0.274, 0.294, with 0.121 left over: the calculation above. Drag a Gaussian away from the camera and its footprint on the image line shrinks. Drag the green one in front of the pink one and the table rows swap, because each weight depends on everything in front of it.</p>
+
+<h3>4. Making it fast, and making it learn</h3>
+<p><strong>Sorting and culling.</strong> Blending needs the Gaussians in depth order from the viewpoint. The image is divided into tiles and the sort is done per tile with a GPU radix sort. Gaussians outside the camera's view frustum are skipped (<strong>frustum culling</strong>). <span class="src">§14.3.1 · p. 410</span></p>
+<p><strong>The loss.</strong> The parameters of all Gaussians are fitted by minimizing</p>
+\[ \mathcal{L} = (1 - \lambda)\,\mathcal{L}_1 + \lambda\,\mathcal{L}_{\text{SSIM}} \tag{14.8} \]
+<p>between the rendered and the real image, with a weight \(\lambda\). <span class="src">§14.3.1 · p. 410</span> \(\mathcal{L}_1\) is the mean absolute difference of pixel values. SSIM, the structural similarity index, compares small patches of the two images by their local brightness, contrast, and pattern, so the second term rewards getting local structure right and not only each pixel on its own.</p>
+<p><strong>Changing the number of Gaussians.</strong> Gradient descent can move, reshape, and recolour Gaussians, but it cannot create one. During optimization, <strong>adaptive densification and pruning</strong> adjust the count based on the Gaussians' gradients and opacities. <span class="src">§14.3.1 · p. 410 · Fig. 14.14</span> In the original method, a large gradient signals a region the current Gaussians cannot explain, where more are added, and a Gaussian whose opacity has fallen to almost nothing is removed.</p>
+<p>Go back to the widget. Its lower strip is a goal image, rendered from a layout you cannot see. Press "Reset", then "10 gradient steps toward the goal" a few times.</p>
+<p>The loss falls from 0.0382 to 0.0006 after ten steps and to about 0.0001 after twenty, and the two strips match. The widget's loss is the mean squared difference between the two images, with each Gaussian's colour as its own channel, not equation (14.8). Now open the Rotation slider for each Gaussian: the goal was drawn with pink at 29° and blue at −20°, and yours need not have ended there. A single 1D image does not pin down a 2D scene, which is why training uses many views.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The opacity o is the α in the blend."</strong> \(\alpha_i = o_i\,G_{2D}\) also includes the footprint's falloff. They are equal only at the footprint's centre.</li>
+<li><strong>"A sum does not care about order."</strong> Each term carries the product of \((1 - \alpha_j)\) over everything in front. Swap two Gaussians and their weights change.</li>
+<li><strong>"The projected footprint is exact."</strong> It comes from linearizing the projection at the mean. The error grows for Gaussians that are large compared with their distance from the camera.</li>
+<li><strong>"3DGS traces rays through the Gaussians."</strong> It loops over Gaussians and writes each to the pixels its footprint covers. That is rasterization.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="3"><p class="qq">Q1. In a 2D world, a Gaussian sits on the optical axis at (x, z) = (0, 4) with Σ = diag(0.16, 0.09). The camera is at the origin. What is the standard deviation σ′ of its footprint on the image line z = 1?</p><div class="opts"><button type="button" class="opt">0.4</button><button type="button" class="opt">0.025</button><button type="button" class="opt">0.075</button><button type="button" class="opt">0.1</button></div><p class="exp" hidden>J = [1/z, −x/z²] = [0.25, 0]. σ′² = 0.25² × 0.16 = 0.01, so σ′ = 0.1. On the axis the depth variance 0.09 has no first-order effect.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q2. At one pixel a red Gaussian in front has α = 0.6 and a blue one behind it has α = 0.5. What is the weight of the blue Gaussian?</p><div class="opts"><button type="button" class="opt">0.5</button><button type="button" class="opt">0.2</button><button type="button" class="opt">0.3</button><button type="button" class="opt">0.1</button></div><p class="exp" hidden>Blue's weight is its α times the transmittance in front of it: 0.5 × (1 − 0.6) = 0.2. Red has 0.6, and 0.4 × 0.5 = 0.2 reaches the background.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. A Gaussian has opacity o = 0.8 and a 1D footprint with standard deviation σ′. What is its α at a pixel that lies 2σ′ from the footprint's centre?</p><div class="opts"><button type="button" class="opt">0.108</button><button type="button" class="opt">0.8</button><button type="button" class="opt">0.4</button><button type="button" class="opt">0.294</button></div><p class="exp" hidden>G = exp(−½ · 2²) = e⁻² = 0.135, so α = 0.8 × 0.135 = 0.108.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Why is the covariance stored as R S Sᵀ Rᵀ and not as a free symmetric matrix?</p><div class="opts"><button type="button" class="opt">It uses fewer numbers</button><button type="button" class="opt">It makes the projection to the image exact</button><button type="button" class="opt">Any values of R and S give a valid (positive semi-definite) covariance, so gradient steps cannot break it</button><button type="button" class="opt">It removes the need to sort by depth</button></div><p class="exp" hidden>vᵀΣv = ‖SᵀRᵀv‖² ≥ 0 for every v, whatever the optimizer does to the scales and the rotation.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. Equations (14.2) and (14.6) are the same blending sum. What differs?</p><div class="opts"><button type="button" class="opt">3DGS blends back to front, NeRF front to back</button><button type="button" class="opt">Where αᵢ comes from: samples of a density field along the ray in NeRF, projected primitives covering the pixel in 3DGS</button><button type="button" class="opt">NeRF's weights sum to 1 and 3DGS's do not</button><button type="button" class="opt">Only NeRF's sum is differentiable</button></div><p class="exp" hidden>Both are front-to-back alpha blending with transmittance ∏(1 − αⱼ). NeRF spends samples everywhere on the ray. 3DGS only visits the primitives that land on the pixel.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>A 3D Gaussian stores a mean, a covariance \(\boldsymbol{\Sigma} = \mathbf{R}\mathbf{S}\mathbf{S}\T\mathbf{R}\T\), an opacity, and a view-dependent colour.</li>
+<li>Its footprint in the image has covariance \(\boldsymbol{\Sigma}' = \mathbf{J}\mathbf{W}\boldsymbol{\Sigma}\mathbf{W}\T\mathbf{J}\T\): rotate into the camera frame, then linearize the projection at the mean.</li>
+<li>A pixel is \(\sum_i \mathbf{c}_i\alpha_i\prod_{j \lt i}(1 - \alpha_j)\) with \(\alpha_i = o_i G_{2D}\), over the depth-sorted Gaussians that cover it.</li>
+<li>Tiles, a per-tile sort, and frustum culling make this fast. An L1 plus SSIM loss, with densification and pruning, makes it learn.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §14.3 opening and §14.3.1 "Method Overview", pp. 409–410, equations (14.4)–(14.8), Figures 14.13–14.14.</li>
+<li>Zwicker, Pfister, van Baar, Gross, <em>EWA Volume Splatting</em>, 2001 (projecting a 3D Gaussian by linearizing the perspective projection).</li>
+<li>Kerbl, Kopanas, Leimkühler, Drettakis, <em>3D Gaussian Splatting for Real-Time Radiance Field Rendering</em>, 2023 (the factored covariance, and the triggers for densification and pruning).</li>
+<li>Porter and Duff, <em>Compositing Digital Images</em>, 1984 (the "over" rule). Wang, Bovik, Sheikh, Simoncelli, <em>Image Quality Assessment: From Error Visibility to Structural Similarity</em>, 2004 (SSIM).</li>
+</ol></div>
+<p class="next"></p>
+</section>

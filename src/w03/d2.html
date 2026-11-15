@@ -1,0 +1,142 @@
+<section class="day" data-day="14" id="d14" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 3 · Day 2</span>
+  <h2>Variable elimination: from a factor graph to a Bayes net</h2>
+  <p class="lead">After today you can eliminate a variable from a factor graph by hand, on the graph and as a partial QR step on the matrix, and say what the resulting conditional and new factor mean.</p>
+  <p class="meta">About 60 min · Read §1.6.1–1.6.2, pp. 40–44 (5 pages) · Needs Week 3 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §1.6.1–1.6.2, pp. 40–44 (stop at the heading 1.6.3 on p. 45)</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The three objects in equation (1.43) on p. 40: the product factor \(\psi\), the conditional \(p(\mathbf{x}_j \mid \mathbf{s}_j)\), and the new factor \(\tau(\mathbf{s}_j)\).</li>
+<li>Figure 1.10 on p. 41. In each of the five panels, find the shaded variable, the arrows that now point at it, and the red factor that was created.</li>
+<li>Equation (1.47) on p. 42: which three block-rows of Figure 1.7 were taken out, and why those.</li>
+<li>Equations (1.48)–(1.49) and Figure 1.11 on pp. 42–43: the one row above the line, and the red rows below it.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Elimination removes one variable at a time. Collect the factors that touch the variable, multiply them, and split the product into a conditional density of that variable given its neighbours and a new factor on the neighbours alone. When every variable is gone, the factor graph has become a Bayes net that hands you the MAP estimate by back-substitution. For linear-Gaussian factors each split is a small QR factorization, and the whole procedure is sparse QR.</p></div>
+
+<h3>1. Where we are going: a product of small conditionals</h3>
+<p>A factor graph stores the unnormalized posterior as a product of factors, \(\phi(\mathbf{x}) = \phi(\mathbf{x}_1, \dots, \mathbf{x}_n)\), equation (1.41). The <strong>variable elimination algorithm</strong> rewrites it, for a chosen ordering \(\mathbf{x}_1, \dots, \mathbf{x}_n\), as equation (1.42):</p>
+\[ p(\mathbf{x}) = p(\mathbf{x}_1 \mid \mathbf{s}_1)\, p(\mathbf{x}_2 \mid \mathbf{s}_2) \cdots p(\mathbf{x}_n) = \prod_j p(\mathbf{x}_j \mid \mathbf{s}_j) . \]
+<p>A product of conditionals in which each variable depends only on variables that come later is a <strong>Bayes net</strong>: a directed graph with an arrow into \(\mathbf{x}_j\) from each variable it is conditioned on. The set \(\mathbf{s}_j\) of those variables is the <strong>separator</strong> of \(\mathbf{x}_j\). <span class="src">§1.6.1 · p. 40</span> The \(p(\mathbf{x})\) here is the posterior \(p(\mathbf{x} \mid \mathbf{z})\) of Week 2; the measurements are fixed numbers inside the factors, so the book stops writing them.</p>
+<p>Any density can be written as a chain, \(p(x_1 \mid x_2, \dots, x_n)\, p(x_2 \mid x_3, \dots, x_n) \cdots p(x_n)\), by the chain rule of probability, but in general the first conditional depends on all the other variables. A sparse factor graph gives small separators: in the toy example no conditional depends on more than two variables.</p>
+<p>Why want this form? The last conditional \(p(\mathbf{x}_n)\) depends on nothing, so you can maximize it alone. Then \(p(\mathbf{x}_{n-1} \mid \mathbf{s}_{n-1})\) has all its parents known, and so on backwards. The book adds that sampling and marginalization are easy in this form too.</p>
+
+<h3>2. Eliminating one variable</h3>
+<p>The algorithm keeps a factor graph on the variables not yet eliminated, and repeats one step. <span class="src">§1.6.1 · p. 40</span></p>
+<pre class="code"><code>for each variable x_j, in the chosen order:
+    1. remove every factor that touches x_j
+       separator s_j = all the other variables in those factors
+    2. multiply them into one product factor   psi(x_j, s_j)
+    3. split it:   psi(x_j, s_j) = p(x_j | s_j) * tau(s_j)      (1.43)
+    4. keep p(x_j | s_j) for the Bayes net
+       put the new factor tau(s_j) back into the graph</code></pre>
+<div class="box note"><h4>Filling the gap: what the split in step 3 is</h4>
+<p>It is the product rule \(p(a, b) = p(a \mid b)\,p(b)\), applied to a function that is not normalized. Define the new factor by integrating the eliminated variable out, and the conditional as what is left:</p>
+\[ \tau(\mathbf{s}_j) = \int \psi(\mathbf{x}_j, \mathbf{s}_j)\, d\mathbf{x}_j , \qquad p(\mathbf{x}_j \mid \mathbf{s}_j) = \frac{\psi(\mathbf{x}_j, \mathbf{s}_j)}{\tau(\mathbf{s}_j)} . \]
+<p>By construction the conditional integrates to 1 over \(\mathbf{x}_j\) for every value of \(\mathbf{s}_j\), so it is a proper density, and the product of the two pieces is \(\psi\) again. Nothing is lost or approximated. The factor \(\tau\) is a summary: everything the removed factors implied about the separator once \(\mathbf{x}_j\) itself is no longer asked about.</p>
+<p>Only the factors touching \(\mathbf{x}_j\) are involved. Every other factor is a constant as far as \(\mathbf{x}_j\) is concerned and stays in the graph untouched. This locality is the whole reason elimination is cheap on a sparse graph.</p></div>
+<p>For the toy example and the ordering \(\boldsymbol{\ell}_1, \boldsymbol{\ell}_2, \mathbf{p}_1, \mathbf{p}_2, \mathbf{p}_3\), the five steps of Figure 1.10 are:</p>
+<div class="tbl"><table>
+<tr><th>Step</th><th>Factors removed</th><th>Separator</th><th>Conditional kept</th><th>New factor</th></tr>
+<tr><td>1. Eliminate ℓ₁</td><td>ϕ₄, ϕ₇, ϕ₈</td><td>p₁, p₂</td><td>p(ℓ₁ | p₁, p₂)</td><td>τ(p₁, p₂)</td></tr>
+<tr><td>2. Eliminate ℓ₂</td><td>ϕ₅, ϕ₉</td><td>p₃</td><td>p(ℓ₂ | p₃)</td><td>τ(p₃)</td></tr>
+<tr><td>3. Eliminate p₁</td><td>ϕ₁, ϕ₂, ϕ₆ and τ(p₁, p₂) from step 1</td><td>p₂</td><td>p(p₁ | p₂)</td><td>τ(p₂)</td></tr>
+<tr><td>4. Eliminate p₂</td><td>ϕ₃ and τ(p₂) from step 3</td><td>p₃</td><td>p(p₂ | p₃)</td><td>τ(p₃)</td></tr>
+<tr><td>5. Eliminate p₃</td><td>τ(p₃) from step 2 and τ(p₃) from step 4</td><td>empty</td><td>p(p₃), a prior</td><td>none</td></tr>
+</table></div>
+<p>Multiply the fourth column and you have equation (1.44): \(p(\boldsymbol{\ell}_1 \mid \mathbf{p}_1, \mathbf{p}_2)\, p(\boldsymbol{\ell}_2 \mid \mathbf{p}_3)\, p(\mathbf{p}_1 \mid \mathbf{p}_2)\, p(\mathbf{p}_2 \mid \mathbf{p}_3)\, p(\mathbf{p}_3)\). <span class="src">§1.6.1 · p. 41</span> Notice step 3: the separator of \(\mathbf{p}_1\) is found in the graph as it is at that moment, including the factor made in step 1.</p>
+<p>Try it: with the book's ordering selected, press "Eliminate next" five times and compare each state with the matching panel of Figure 1.10. The numbers are those of the toy problem on a line from <a href="#d13">Day 1</a>.</p>
+<div class="viz" data-viz="w03_elim"></div>
+<p class="cap">Notice that each step deletes the factors around one variable and leaves at most one new factor (pink) on its neighbours. With the book's ordering no new edge is ever needed, so the fill-in stays at 0, and after five steps the estimate reads p₁ = 0.076, p₂ = 0.984, p₃ = 1.956, ℓ₁ = 0.620, ℓ₂ = 2.428.</p>
+
+<h3>3. With Gaussian factors, the product factor is a small least-squares problem</h3>
+<p>So far nothing assumed Gaussians. Now let every factor be \(\phi_i(\mathbf{x}_i) = \exp\!\left(-\tfrac12 \norm{\mathbf{A}_i\mathbf{x}_i - \mathbf{b}_i}_2^2\right)\), which is what linearization gives. Multiplying exponentials adds their exponents, and a sum of squared norms is the squared norm of the stacked vector. That is all of equation (1.45):</p>
+\[ \psi(\mathbf{x}_j, \mathbf{s}_j) = \prod_{i \in \mathcal{N}_j} \phi_i(\mathbf{x}_i) = \exp\!\left(-\tfrac12 \sum_i \norm{\mathbf{A}_i\mathbf{x}_i - \mathbf{b}_i}_2^2\right) = \exp\!\left(-\tfrac12 \norm{\bar{\mathbf{A}}_j [\mathbf{x}_j; \mathbf{s}_j] - \bar{\mathbf{b}}_j}_2^2\right) . \]
+<p>\(\mathcal{N}_j\) is the set of factors adjacent to \(\mathbf{x}_j\), \(\bar{\mathbf{A}}_j\) stacks their rows, and \([\mathbf{x}_j; \mathbf{s}_j]\) stacks the eliminated variable on top of its separator. <span class="src">§1.6.2 · p. 42</span> In matrix terms: pull out of \([\mathbf{A} \mid \mathbf{b}]\) the rows that have a nonzero in column \(j\).</p>
+<p>For \(\boldsymbol{\ell}_1\) in the toy problem these are the rows of \(\phi_4, \phi_7, \phi_8\), equation (1.47). On a line, with columns \(\ell_1, p_1, p_2\):</p>
+\[ \bar{\mathbf{A}}_1 = \begin{bmatrix} 1 & 0 & 0 \\ 1 & -1 & 0 \\ 1 & 0 & -1 \end{bmatrix}, \qquad \bar{\mathbf{b}}_1 = \begin{bmatrix} 0.6 \\ 0.5 \\ -0.3 \end{bmatrix} . \]
+
+<h3>4. Partial QR does the split</h3>
+<p>Equation (1.48) factorizes the stacked matrix, with its right-hand side attached, as</p>
+\[ [\bar{\mathbf{A}}_j \mid \bar{\mathbf{b}}_j] = \mathbf{Q} \begin{bmatrix} \mathbf{R}_j & \mathbf{T}_j & \mathbf{d}_j \\ \mathbf{0} & \tilde{\mathbf{A}}_\tau & \tilde{\mathbf{b}}_\tau \end{bmatrix} , \]
+<p>with \(\mathbf{Q}\) orthogonal and \(\mathbf{R}_j\) upper-triangular. It is called <em>partial</em> because only the columns of \(\mathbf{x}_j\) are made triangular; the separator columns are carried along. <span class="src">§1.6.2 · p. 42</span></p>
+<div class="box note"><h4>Filling the gap: why this factors \(\psi\), and the toy step by hand</h4>
+<p>An orthogonal matrix does not change lengths: \(\norm{\mathbf{Q}\T\mathbf{v}}^2 = \mathbf{v}\T\mathbf{Q}\mathbf{Q}\T\mathbf{v} = \norm{\mathbf{v}}^2\). Apply \(\mathbf{Q}\T\) inside the norm of the exponent and read off the two block-rows of (1.48):</p>
+\[ \norm{\bar{\mathbf{A}}_j [\mathbf{x}_j; \mathbf{s}_j] - \bar{\mathbf{b}}_j}^2 = \norm{\mathbf{R}_j\mathbf{x}_j + \mathbf{T}_j\mathbf{s}_j - \mathbf{d}_j}^2 + \norm{\tilde{\mathbf{A}}_\tau\mathbf{s}_j - \tilde{\mathbf{b}}_\tau}^2 . \]
+<p>The exponential of a sum is a product, so \(\psi\) splits into a term that contains \(\mathbf{x}_j\) and a term that does not. The second is \(\tau(\mathbf{s}_j)\). The first is a Gaussian in \(\mathbf{x}_j\) whose width does not depend on \(\mathbf{s}_j\), so it integrates to the same constant for every \(\mathbf{s}_j\): it is the conditional \(p(\mathbf{x}_j \mid \mathbf{s}_j)\) up to that constant. This is equation (1.49).</p>
+<p>Now the numbers. We need an orthonormal basis whose first vector points along the first column of \(\bar{\mathbf{A}}_1\), which is \((1,1,1)\). One choice is</p>
+\[ \mathbf{q}_1 = \tfrac{1}{\sqrt3}(1, 1, 1), \qquad \mathbf{q}_2 = \tfrac{1}{\sqrt2}(0, 1, -1), \qquad \mathbf{q}_3 = \tfrac{1}{\sqrt6}(2, -1, -1) . \]
+<p>Check that they are orthogonal to each other and have length 1. The rows of \(\mathbf{Q}\T[\bar{\mathbf{A}}_1 \mid \bar{\mathbf{b}}_1]\) are the three vectors applied to the three rows, for example \(\mathbf{q}_1\): \(\tfrac{1}{\sqrt3}(1+1+1,\; -1,\; -1 \mid 0.6+0.5-0.3)\). All three:</p>
+\[ \mathbf{Q}\T[\bar{\mathbf{A}}_1 \mid \bar{\mathbf{b}}_1] = \left[\begin{array}{ccc|c} 1.732 & -0.577 & -0.577 & 0.462 \\ 0 & -0.707 & 0.707 & 0.566 \\ 0 & 0.408 & 0.408 & 0.408 \end{array}\right] . \]
+<p>Read each row as a sentence:</p>
+<ul>
+<li><strong>Row 1, the conditional.</strong> \(1.732\,\ell_1 - 0.577\,p_1 - 0.577\,p_2 = 0.462\). Divide by 1.732: \(\ell_1 = (0.8 + p_1 + p_2)/3\). That is the average of the three things said about \(\ell_1\): it is at 0.6, at \(p_1 + 0.5\), and at \(p_2 - 0.3\). Its precision is \(1.732^2 = 3\), three unit measurements.</li>
+<li><strong>Row 2, new factor.</strong> Multiply by \(\sqrt2\): \(p_2 - p_1 = 0.8\), with variance 2. Two sightings of the same landmark, subtracted, act like an odometry measurement: \((\ell_1 - p_1) - (\ell_1 - p_2) = 0.5 - (-0.3)\).</li>
+<li><strong>Row 3, new factor.</strong> Multiply by \(\sqrt6\): \(p_1 + p_2 = 1.0\), with variance 6. It comes from \(2\ell_1 - (\ell_1 - p_1) - (\ell_1 - p_2)\), which is \(2(0.6) - 0.5 + 0.3\).</li>
+</ul>
+<p>The landmark is gone from rows 2 and 3, and what it told us about the two poses is still there. Any other orthonormal \(\mathbf{q}_2, \mathbf{q}_3\) gives a different-looking pair of rows that describes the same factor. The widget makes them triangular as well, so it shows \((0.82, -0.41 \mid -0.29)\) and \((0, 0.71 \mid 0.64)\). Both pairs have the same \(\tilde{\mathbf{A}}_\tau\T\tilde{\mathbf{A}}_\tau\) and \(\tilde{\mathbf{A}}_\tau\T\tilde{\mathbf{b}}_\tau\).</p></div>
+<figure class="fig"><svg viewBox="0 0 600 170" role="img" aria-label="One elimination step as a matrix operation. Left: the three stacked rows of the factors that touch landmark l1, with columns l1, p1, p2 and the right-hand side b. An arrow labelled multiply by Q transpose leads to the result: a first row, the conditional of l1 given p1 and p2, and two more rows with a zero in the l1 column, which form the new factor on p1 and p2.">
+  <defs><marker id="w03ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <g font-size="12" fill="var(--muted)" text-anchor="middle">
+    <text x="42" y="34">ℓ₁</text><text x="87" y="34">p₁</text><text x="132" y="34">p₂</text><text x="183" y="34">b</text>
+    <text x="302" y="34">ℓ₁</text><text x="347" y="34">p₁</text><text x="392" y="34">p₂</text><text x="443" y="34">d, b</text>
+  </g>
+  <rect x="16" y="44" width="192" height="100" rx="8" fill="var(--soft)" stroke="var(--line2)"/>
+  <rect x="276" y="44" width="192" height="33" rx="8" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <rect x="276" y="79" width="192" height="65" rx="8" fill="var(--c3-soft)" stroke="var(--c3)"/>
+  <line x1="158" y1="50" x2="158" y2="138" stroke="var(--line2)" stroke-width="1"/>
+  <line x1="418" y1="50" x2="418" y2="138" stroke="var(--line2)" stroke-width="1"/>
+  <g font-size="13" fill="var(--ink)" text-anchor="middle">
+    <text x="42" y="66">1</text><text x="87" y="66">0</text><text x="132" y="66">0</text><text x="183" y="66">0.6</text>
+    <text x="42" y="99">1</text><text x="87" y="99">−1</text><text x="132" y="99">0</text><text x="183" y="99">0.5</text>
+    <text x="42" y="132">1</text><text x="87" y="132">0</text><text x="132" y="132">−1</text><text x="183" y="132">−0.3</text>
+    <text x="302" y="66">1.73</text><text x="347" y="66">−0.58</text><text x="392" y="66">−0.58</text><text x="443" y="66">0.46</text>
+    <text x="302" y="99">0</text><text x="347" y="99">−0.71</text><text x="392" y="99">0.71</text><text x="443" y="99">0.57</text>
+    <text x="302" y="132">0</text><text x="347" y="132">0.41</text><text x="392" y="132">0.41</text><text x="443" y="132">0.41</text>
+  </g>
+  <line x1="216" y1="94" x2="268" y2="94" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w03ar1)"/>
+  <text x="242" y="84" text-anchor="middle" font-size="12" fill="var(--muted)">Qᵀ ×</text>
+  <text x="478" y="58" font-size="12" fill="var(--ink)">p(ℓ₁ | p₁, p₂)</text>
+  <text x="478" y="73" font-size="11" fill="var(--muted)">a row of the final R</text>
+  <text x="478" y="108" font-size="12" fill="var(--ink)">τ(p₁, p₂)</text>
+  <text x="478" y="123" font-size="11" fill="var(--muted)">back into the graph</text>
+  <text x="16" y="162" font-size="11" fill="var(--muted)">rows of ϕ₄, ϕ₇, ϕ₈</text>
+</svg><figcaption>The step of Figure 1.11 with the numbers of the toy problem on a line. Three rows go in. One comes out finished, and two come out as a factor that no longer mentions ℓ₁.</figcaption></figure>
+<div class="box kid"><h4>In plain words</h4><p>To remove a landmark from the problem, first write down how you would compute it if someone told you the poses (the conditional). Then write down what the landmark's measurements imply about the poses alone (the new factor). Put the first note aside for later and keep working with the second.</p></div>
+
+<h3>5. Do it for every variable and you have sparse QR</h3>
+<p>Each step moves one finished row \([\mathbf{R}_j \;\, \mathbf{T}_j \mid \mathbf{d}_j]\) to the top part of the matrix and returns the rows \([\tilde{\mathbf{A}}_\tau \mid \tilde{\mathbf{b}}_\tau]\) to the pool. Figure 1.12 shows the remaining four steps. At the end the finished rows form an upper-triangular \(\mathbf{R}\) with the same pattern as the Bayes net: row \(j\) has a nonzero in column \(k\) exactly when \(\mathbf{x}_k\) is in the separator of \(\mathbf{x}_j\). The elimination algorithm with partial QR <em>is</em> sparse QR factorization, and the book states that sparse Cholesky is a special case of the same algorithm. <span class="src">§1.6.2 · pp. 42–44</span> Tomorrow's Schur complement is its Cholesky form.</p>
+<p>Because each variable here is a block of several numbers (a pose, a landmark), every step eliminates a group of scalar columns at once. The book identifies this as <strong>multi-frontal QR</strong>, and notes that sparse linear algebra libraries form such groups on their own for speed; in SLAM the groups come for free from the meaning of the variables. <span class="src">§1.6.2 · pp. 44–45</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Eliminating a variable discards it."</strong> Its conditional is kept, and \(\psi = p(\mathbf{x}_j \mid \mathbf{s}_j)\,\tau(\mathbf{s}_j)\) holds exactly. Elimination reorganizes the information; it loses none.</li>
+<li><strong>"The new factor is an extra measurement."</strong> It is a summary of measurements that were already there. In the worked step, "p₂ − p₁ = 0.8" was implied by ϕ₇ and ϕ₈ all along.</li>
+<li><strong>"The separator is the set of neighbours in the original graph."</strong> It is the set of neighbours at the moment of elimination. Factors created by earlier steps count, which is how new edges (fill-in) appear.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. With the ordering ℓ₁, ℓ₂, p₁, p₂, p₃, which factors are multiplied together when p₁ is eliminated?</p><div class="opts"><button type="button" class="opt">ϕ₁, ϕ₂, ϕ₆, ϕ₇</button><button type="button" class="opt">ϕ₁, ϕ₂, ϕ₆ and the factor τ(p₁, p₂) created when ℓ₁ was eliminated</button><button type="button" class="opt">ϕ₁ and ϕ₆ only</button><button type="button" class="opt">ϕ₂ and ϕ₃</button></div><p class="exp" hidden>ϕ₇ was used up when ℓ₁ was eliminated. What remains around p₁ is its two unary factors, the odometry factor ϕ₂, and the new factor on (p₁, p₂).</p></div>
+  <div class="q" data-a="2"><p class="qq">Q2. Eliminate ℓ₂ from the two rows "ℓ₂ = 2.4" and "ℓ₂ − p₃ = 0.5" (unit noise). What is R for ℓ₂?</p><div class="opts"><button type="button" class="opt">2</button><button type="button" class="opt">1</button><button type="button" class="opt">1.414</button><button type="button" class="opt">0.707</button></div><p class="exp" hidden>The ℓ₂ column of the stacked rows is (1, 1), and R is its length, √2 = 1.414. Its square, 2, is the precision of ℓ₂ given p₃: two unit measurements.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. In the same step, what does the new factor τ(p₃) say?</p><div class="opts"><button type="button" class="opt">p₃ = 1.9, with variance 2</button><button type="button" class="opt">p₃ = 1.9, with variance 1</button><button type="button" class="opt">p₃ = 2.9, with variance 2</button><button type="button" class="opt">Nothing: a factor on one variable carries no information</button></div><p class="exp" hidden>Apply q₂ = (1, −1)/√2 to both rows: 0.707 p₃ = (2.4 − 0.5)/√2. So p₃ = 1.9, the prior on ℓ₂ minus the sighting, and the variances of the two add to 2.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Suppose you eliminate p₂ first in the toy graph. What is its separator?</p><div class="opts"><button type="button" class="opt">p₁ and p₃</button><button type="button" class="opt">ℓ₁, p₁ and p₃</button><button type="button" class="opt">ℓ₁ only</button><button type="button" class="opt">All four other variables</button></div><p class="exp" hidden>p₂ appears in ϕ₂ (with p₁), ϕ₃ (with p₃) and ϕ₈ (with ℓ₁). The new factor then ties those three together, which creates two edges that were not in the graph. Check it in the widget with the "p₂ first" ordering.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Elimination turns the product of factors \(\phi(\mathbf{x})\) into a Bayes net \(\prod_j p(\mathbf{x}_j \mid \mathbf{s}_j)\), one variable at a time.</li>
+<li>One step: remove the factors touching \(\mathbf{x}_j\), multiply them into \(\psi(\mathbf{x}_j, \mathbf{s}_j)\), split it as \(p(\mathbf{x}_j \mid \mathbf{s}_j)\,\tau(\mathbf{s}_j)\), and return \(\tau\) to the graph.</li>
+<li>With linear-Gaussian factors, \(\psi\) is a small stacked least-squares term and the split is a partial QR factorization.</li>
+<li>The first row block \([\mathbf{R}_j \; \mathbf{T}_j \mid \mathbf{d}_j]\) is the conditional. The remaining rows are the new factor on the separator.</li>
+<li>Repeating the step for all variables is sparse (multi-frontal) QR, and the finished rows form \(\mathbf{R}\).</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §1.6.1 "Variable Elimination Algorithm" and §1.6.2 "Linear-Gaussian Elimination", pp. 40–45, equations (1.41)–(1.49), Figures 1.10–1.12.</li>
+<li>Koller and Friedman, <em>Probabilistic Graphical Models</em>, 2009 (variable elimination and the definition of the new factor as a marginal).</li>
+<li>Dellaert and Kaess, <em>Factor Graphs for Robot Perception</em>, 2017 (elimination of Gaussian factor graphs by partial QR).</li>
+<li>Golub and Van Loan, <em>Matrix Computations</em>, 4th edition, 2013 (QR factorization and orthogonal invariance of the 2-norm).</li>
+</ol></div>
+<p class="next"></p>
+</section>

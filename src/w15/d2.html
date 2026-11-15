@@ -1,0 +1,124 @@
+<section class="day" data-day="86" id="d86" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 15 · Day 2</span>
+  <h2>Why events are hard to use, and a map of the methods</h2>
+  <p class="lead">After today you can explain with the linearized event generation model why events depend on the motion, and place an event-based SLAM method on the three axes of the book's taxonomy.</p>
+  <p class="meta">About 60 min · Read §10.2–10.3, pp. 286–289 (4 pages) · Needs Week 15 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §10.2–10.3, pp. 286–289</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The three challenges at the end of p. 286 and the top of p. 287.</li>
+<li>The four questions on p. 287 that the authors say drive the research.</li>
+<li>The two classes of methods by "how many events are processed simultaneously", and what the second class has to choose (p. 287).</li>
+<li>How data association is usually handled (bottom of p. 287, top of p. 288).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>An event stream is not a fast video. It is sparse, it has no frames, each event is a single bit, and the same scene produces different events when the camera moves differently. Algorithms built for images therefore do not apply as they are. The book sorts the new algorithms along three independent axes: how many events are processed at once, whether the method is designed or learned, and whether it works on features or on all events.</p></div>
+
+<h3>1. Three challenges</h3>
+<p>The book names three properties of the data that every method has to face. <span class="src">§10.2 · pp. 286–287</span></p>
+<div class="tbl"><table>
+  <tr><th>Challenge</th><th>What it means</th><th>Consequence</th></tr>
+  <tr><td>Space-time output</td><td>Events are <strong>asynchronous</strong> (each has its own time) and <strong>spatially sparse</strong>; images are synchronous and dense</td><td>Visual SLAM written for image sequences cannot be applied directly</td></tr>
+  <tr><td>Motion-dependent data</td><td>An event is one bit (brighter or darker), and whether it fires depends on the relative motion as well as on the scene texture</td><td>The "appearance" of a place is not fixed, which makes matching hard</td></tr>
+  <tr><td>Noise and dynamic effects</td><td>Photon shot noise, transistor noise, dependence on the amount of light, circuit non-idealities</td><td>Some events are spurious and some are missing, so no single event can be trusted</td></tr>
+</table></div>
+<p>The first row you saw on Day 1. The third is a property of the circuit. The second is the least obvious, and one short derivation makes it exact.</p>
+
+<h3>2. Why events depend on motion</h3>
+<div class="box note"><h4>Filling the gap: the linearized event generation model</h4>
+<p>On p. 287 the book mentions "the event generation model (10.1) (or its linearized version)" and gives a reference instead of the formula. Here it is, in three steps.</p>
+<p><strong>Step 1: a short time interval.</strong> Equation (10.1) is \(L(\mathbf{x}, t) - L(\mathbf{x}, t - \Delta t) = p\,C\). If \(\Delta t\) is small, a first-order Taylor expansion in time gives</p>
+\[ L(\mathbf{x}, t) - L(\mathbf{x}, t - \Delta t) \approx \frac{\partial L}{\partial t}(\mathbf{x}, t)\, \Delta t . \]
+<p><strong>Step 2: brightness constancy.</strong> Assume the light is constant, so a point of the scene keeps its brightness while its image moves. If the point is at \(\mathbf{x}(t)\) and moves over the image plane with velocity \(\mathbf{v} = \mathrm{d}\mathbf{x}/\mathrm{d}t\) (pixels per second), then \(L(\mathbf{x}(t), t)\) is constant in time. Differentiate with the chain rule:</p>
+\[ \frac{\mathrm{d}}{\mathrm{d}t} L(\mathbf{x}(t), t) = \nabla L \cdot \mathbf{v} + \frac{\partial L}{\partial t} = 0 \quad\Longrightarrow\quad \frac{\partial L}{\partial t} = -\nabla L \cdot \mathbf{v}, \]
+<p>where \(\nabla L = (\partial L/\partial x, \partial L/\partial y)\) is the spatial gradient of the log image: it points from dark to bright, across an edge.</p>
+<p><strong>Step 3: combine.</strong></p>
+\[ \Delta L \approx -\nabla L \cdot \mathbf{v}\, \Delta t = p\, C . \]
+<p>Read three facts off this line.</p>
+<ul>
+<li><strong>Rate.</strong> The time between two events at a pixel is \(\Delta t \approx C / |\nabla L \cdot \mathbf{v}|\), so the pixel fires about \(|\nabla L \cdot \mathbf{v}| / C\) events per second. Strong edges and fast motion give many events.</li>
+<li><strong>Polarity.</strong> \(p = \operatorname{sign}(-\nabla L \cdot \mathbf{v})\). Reverse the motion and every ON becomes an OFF.</li>
+<li><strong>Blind direction.</strong> If \(\mathbf{v}\) is perpendicular to \(\nabla L\), the motion runs along the edge, \(\nabla L \cdot \mathbf{v} = 0\), and no event fires. Only the component of \(\mathbf{v}\) along the gradient is seen.</li>
+</ul></div>
+<figure class="fig"><svg viewBox="0 0 600 196" role="img" aria-label="Three panels, each showing a vertical edge with a dark region on the left and a bright region on the right. The gradient arrow points right in all three. In the first panel the image velocity points left, across the edge, and events fire along the edge. In the second the velocity points up, along the edge, and no events fire. In the third the velocity is oblique and fewer events fire.">
+  <defs>
+    <marker id="w15arA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--c4)"/></marker>
+    <marker id="w15arB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--c1)"/></marker>
+  </defs>
+  <text x="105" y="18" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">Across the edge</text>
+  <text x="300" y="18" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">Along the edge</text>
+  <text x="495" y="18" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">Oblique</text>
+  <rect x="15" y="28" width="90" height="122" fill="var(--soft)" stroke="var(--line2)"/><rect x="105" y="28" width="90" height="122" fill="var(--c2-soft)" stroke="var(--line2)"/>
+  <rect x="210" y="28" width="90" height="122" fill="var(--soft)" stroke="var(--line2)"/><rect x="300" y="28" width="90" height="122" fill="var(--c2-soft)" stroke="var(--line2)"/>
+  <rect x="405" y="28" width="90" height="122" fill="var(--soft)" stroke="var(--line2)"/><rect x="495" y="28" width="90" height="122" fill="var(--c2-soft)" stroke="var(--line2)"/>
+  <text x="23" y="44" font-size="11" fill="var(--muted)">dark</text><text x="187" y="44" text-anchor="end" font-size="11" fill="var(--muted)">bright</text>
+  <text x="218" y="44" font-size="11" fill="var(--muted)">dark</text><text x="382" y="44" text-anchor="end" font-size="11" fill="var(--muted)">bright</text>
+  <text x="413" y="44" font-size="11" fill="var(--muted)">dark</text><text x="577" y="44" text-anchor="end" font-size="11" fill="var(--muted)">bright</text>
+  <line x1="75" y1="62" x2="135" y2="62" stroke="var(--c4)" stroke-width="2" marker-end="url(#w15arA)"/><text x="141" y="66" font-size="12" fill="var(--c4)">∇L</text>
+  <line x1="270" y1="62" x2="330" y2="62" stroke="var(--c4)" stroke-width="2" marker-end="url(#w15arA)"/><text x="336" y="66" font-size="12" fill="var(--c4)">∇L</text>
+  <line x1="465" y1="62" x2="525" y2="62" stroke="var(--c4)" stroke-width="2" marker-end="url(#w15arA)"/><text x="531" y="66" font-size="12" fill="var(--c4)">∇L</text>
+  <line x1="150" y1="112" x2="78" y2="112" stroke="var(--c1)" stroke-width="2" marker-end="url(#w15arB)"/><text x="156" y="116" font-size="12" fill="var(--c1)">v</text>
+  <line x1="340" y1="136" x2="340" y2="88" stroke="var(--c1)" stroke-width="2" marker-end="url(#w15arB)"/><text x="348" y="116" font-size="12" fill="var(--c1)">v</text>
+  <line x1="540" y1="136" x2="476" y2="96" stroke="var(--c1)" stroke-width="2" marker-end="url(#w15arB)"/><text x="546" y="140" font-size="12" fill="var(--c1)">v</text>
+  <circle cx="105" cy="80" r="4" fill="var(--c3)"/><circle cx="105" cy="94" r="4" fill="var(--c3)"/><circle cx="105" cy="128" r="4" fill="var(--c3)"/><circle cx="105" cy="142" r="4" fill="var(--c3)"/>
+  <circle cx="495" cy="84" r="4" fill="var(--c3)"/><circle cx="495" cy="140" r="4" fill="var(--c3)"/>
+  <text x="105" y="168" text-anchor="middle" font-size="11" fill="var(--ink)">−∇L·v &gt; 0: ON events</text>
+  <text x="300" y="168" text-anchor="middle" font-size="11" fill="var(--ink)">∇L·v = 0: no events</text>
+  <text x="495" y="168" text-anchor="middle" font-size="11" fill="var(--ink)">only the part of v along</text>
+  <text x="495" y="183" text-anchor="middle" font-size="11" fill="var(--ink)">∇L counts: fewer events</text>
+</svg><figcaption>The same edge under three image motions. The gradient ∇L points from dark to bright. In the first panel the bright side moves onto dark pixels, so they fire ON events. An edge that slides along itself is invisible to an event camera.</figcaption></figure>
+<p><strong>A check against Day 1.</strong> In the Day 1 simulator (\(v = 0.5\) px/ms, \(C = 0.3\)) the first two ON events of a pixel arrive 0.41 ms apart. The model says the edge is that steep there: \(|\partial L/\partial x| \approx C / (v\,\Delta t) = 0.3 / (0.5 \times 0.41) = 1.46\) per pixel. The exact slope of the simulated edge at that point is 1.49. Two timestamps were enough to measure a local image gradient.</p>
+<p><strong>A 2-D example.</strong> A vertical edge has \(\nabla L = (0.5, 0)\) per pixel, and the image moves with \(\mathbf{v} = (-200, 100)\) px/s. Then \(-\nabla L \cdot \mathbf{v} = -(0.5 \times (-200) + 0 \times 100) = +100\) per second. With \(C = 0.25\) each pixel on the edge fires \(100/0.25 = 400\) ON events per second, one every 2.5 ms. The vertical part of the motion, 100 px/s, contributes nothing.</p>
+<div class="box tip"><h4>Intuition</h4><p>Run a fingertip over a ruler with raised marks. Crossing the marks, you feel each one. Sliding along a mark, you feel nothing, however fast you go. An event camera feels the image the same way, which is why the book calls a moving event camera an asynchronous edge detector. <span class="src">§10.4 · p. 289</span></p></div>
+
+<h3>3. The questions this raises</h3>
+<p>The challenges turn into four research questions: how to extract information from events for pose and depth estimation, which map and trajectory representations fit data that is nearly continuous in time and sparse in space, how to find correspondences when the data depends on motion, and how to do all of it without rebuilding the bottlenecks of frame-based processing. <span class="src">§10.2 · p. 287</span></p>
+<p>Event-based SLAM has grown together with two neighbouring tasks. <strong>Image reconstruction</strong> recovers absolute intensity from events; by the model above, the events hold samples of \(\nabla L \cdot \mathbf{v}\), so with a known motion they constrain the image, and with a known image they constrain the motion. <strong>Optical flow estimation</strong> recovers the image velocity \(\mathbf{v}\) itself. The first event-based SLAM systems already estimated an intensity image along with the motion. <span class="src">§10.2 · p. 287</span></p>
+
+<h3>4. Three axes for classifying methods</h3>
+<p>The book's taxonomy has three axes, and they are independent of each other. <span class="src">§10.3 · p. 287</span></p>
+<div class="tbl"><table>
+  <tr><th>Axis</th><th>Option A</th><th>Option B</th></tr>
+  <tr><td>How many events at once</td><td><strong>Event-by-event</strong>: the state (map and trajectory) can change when a single event arrives; minimum latency</td><td><strong>Packets</strong> (also called groups, batches, or slices) of events; some latency, and a packet size to choose</td></tr>
+  <tr><td>How the method is obtained</td><td><strong>Model-based</strong>: designed from the sensor model and geometry</td><td><strong>Data-driven</strong>: learned from data</td></tr>
+  <tr><td>What is extracted</td><td><strong>Indirect</strong>: first turn events into features (event corners, lines, normal flow), then run a geometric SLAM pipeline; geometric objective</td><td><strong>Direct</strong>: one step from all events to motion and scene parameters; photometric objective, a function of the event polarity or of the event rate</td></tr>
+</table></div>
+<p>The last axis mirrors the indirect and direct methods of frame-based visual SLAM (<a href="#d64">Week 11 · Day 4</a>). For direct methods the event generation model (10.1), or the linearized version you just derived, is the starting point of the design. <span class="src">§10.3 · p. 287</span></p>
+<p><strong>Choosing the packet size.</strong> The book lists three kinds of rule: a fixed number of events, a fixed duration, and hybrid criteria. Day 1 tells you what each does, because the event rate follows the motion. Take a packet of 20,000 events. If the camera moves slowly and produces 100,000 events per second, the packet spans 200 ms. If it moves fast and produces 2,000,000 per second, the packet spans 10 ms. A fixed count therefore updates more often exactly when the motion is fast, but waits indefinitely when nothing moves. A fixed duration of 10 ms gives a predictable update rate, but the slow case then has only 1,000 events to work with.</p>
+
+<h3>5. Data association, and the road so far</h3>
+<p><strong>Data association</strong> means deciding which events belong to the same scene point or feature. It is a central problem, because single events carry no descriptor to match. The usual answer exploits the high temporal resolution: events that are close in time and close in pixel position are taken to come from the same edge. Both <strong>hard association</strong> (each event is assigned to one thing) and <strong>soft association</strong> (an event contributes to several things with weights) have been used. <span class="src">§10.3 · pp. 287–288</span></p>
+<p>The field approached the full problem by raising the difficulty step by step along several axes: the number of unknowns (degrees of freedom), the type of motion (from pure rotation or planar scenes to full 6-DoF motion), the scene (from simple high-contrast patterns to natural texture), and whether the scene is static or contains independently moving objects. Early work was model-based; more recent work also explores deep learning. Because events come from moving edges, the maps these systems recover are usually edge maps: sparse or semi-dense 3D points. <span class="src">§10.3 · pp. 288–289, Figure 10.3</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The same scene always produces the same events."</strong> The events sample \(\nabla L \cdot \mathbf{v}\). Change the direction of motion and different edges fire, with different polarities.</li>
+<li><strong>"Direct means event-by-event."</strong> The axes are independent. Many direct methods work on packets, and some indirect methods update with every event.</li>
+<li><strong>"A pixel with no events sees a uniform surface."</strong> It may be looking at an edge that is parallel to the motion.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="0"><p class="qq">Q1. At a pixel, ∇L = (0.4, 0) per pixel and the image velocity is v = (250, −500) px/s. With C = 0.2, what does the linearized model predict?</p><div class="opts"><button type="button" class="opt">500 events per second, OFF</button><button type="button" class="opt">500 events per second, ON</button><button type="button" class="opt">1118 events per second, OFF</button><button type="button" class="opt">No events</button></div><p class="exp" hidden>∇L·v = 0.4 × 250 = 100 per second. The rate is 100 / 0.2 = 500 per second, and the polarity is the sign of −100, so OFF. The speed |v| = 559 px/s is not what matters; only the component along ∇L does.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q2. A camera pans horizontally in front of a static scene. Which edges produce the fewest events?</p><div class="opts"><button type="button" class="opt">Vertical edges</button><button type="button" class="opt">Diagonal edges</button><button type="button" class="opt">Horizontal edges</button><button type="button" class="opt">All edges fire equally</button></div><p class="exp" hidden>The image moves horizontally. A horizontal edge has a vertical gradient, so ∇L·v = 0: it slides along itself and fires nothing.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A method uses packets of 10,000 events. The event rate rises from 200,000 to 1,000,000 events per second. How does the time span of a packet change?</p><div class="opts"><button type="button" class="opt">It stays at 50 ms</button><button type="button" class="opt">From 10 ms to 50 ms</button><button type="button" class="opt">From 20 ms to 100 ms</button><button type="button" class="opt">From 50 ms to 10 ms</button></div><p class="exp" hidden>10,000 / 200,000 = 0.05 s and 10,000 / 1,000,000 = 0.01 s. A fixed count shortens the packet when the motion speeds up.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. A system detects corners in the event stream, tracks them, and passes the tracks to a classical pipeline that minimizes reprojection error. The corner detector is hand-designed. How is it classified?</p><div class="opts"><button type="button" class="opt">Model-based, direct</button><button type="button" class="opt">Model-based, indirect</button><button type="button" class="opt">Data-driven, direct</button><button type="button" class="opt">Data-driven, indirect</button></div><p class="exp" hidden>Features first and a geometric objective second make it indirect. Nothing is learned from data, so it is model-based.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Event data is asynchronous and sparse, depends on motion, and is noisy. Image-based SLAM does not transfer directly.</li>
+<li>Linearized event generation model: \(-\nabla L \cdot \mathbf{v}\,\Delta t \approx p\,C\). Rate \(|\nabla L \cdot \mathbf{v}|/C\), polarity \(\operatorname{sign}(-\nabla L \cdot \mathbf{v})\), and no events for motion along an edge.</li>
+<li>Methods are classified by events per update (single or packets), by design (model-based or learned), and by what they use (indirect features or direct use of all events).</li>
+<li>Data association relies on closeness in time and in pixel position, with hard or soft assignments.</li>
+<li>Research moved from rotation-only and simple scenes toward 6-DoF motion in natural scenes, and the maps are mostly edge maps.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §10.2 "Challenges and Applications" and §10.3 "Overview and Taxonomy of Event-based SLAM Methods", pp. 286–289.</li>
+<li>The linearized event generation model follows Gallego et al., <em>Event-based Vision: A Survey</em>, 2022 (the book's reference [361]).</li>
+<li>Brightness constancy and the optical-flow constraint: Horn and Schunck, <em>Determining Optical Flow</em>, 1981.</li>
+<li>The packet-size comparison is our own arithmetic from the event rates of Day 1.</li>
+</ol></div>
+<p class="next"></p>
+</section>

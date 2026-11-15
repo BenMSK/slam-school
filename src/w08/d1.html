@@ -1,0 +1,136 @@
+<section class="day" data-day="43" id="d43" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 8 · Day 1</span>
+  <h2>Range sensors, point clouds, and occupancy grids</h2>
+  <p class="lead">After today you can turn a range measurement into a 3D point and update an occupancy grid cell with the log-odds rule, starting from Bayes' rule.</p>
+  <p class="meta">About 60 min · Read §5.1–5.2.1, pp. 119–124 (6 pages) · Needs Week 1 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §5.1 to §5.2.1, pp. 119–124</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The time-of-flight formula (5.1) and the two ways a scan is stored, as a point cloud or as a range image (p. 120).</li>
+<li>Equations (5.2)–(5.4) and Figure 5.2: from where each of the two angles is measured (p. 121).</li>
+<li>The three questions Q1–Q3 that organize the chapter (pp. 122–123).</li>
+<li>The two independence assumptions stated just before equation (5.6) (p. 124).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A range sensor reports distances along known directions. Each beam says two things: the space it crossed is empty, and something solid sits where it ended. An <strong>occupancy grid</strong> keeps, for every cell, the probability that the cell is occupied, and the log-odds form reduces each new beam to one addition per cell.</p></div>
+
+<p>Weeks 2 to 7 were about the back-end: estimating the trajectory. This chapter assumes that job is done. The poses are known, and the question is how to build a <strong>dense map</strong> from them, one that describes all the geometry the sensor saw and not only a few landmarks. Planning, obstacle avoidance, and manipulation need that detail. <span class="src">Ch. 5 intro · p. 119</span></p>
+
+<h3>1. Range from time of flight</h3>
+<p>A LiDAR emits a laser pulse, waits for the reflection, and measures the delay. Light travels to the surface and back, so the range is half the round trip: <span class="src">§5.1.1 · p. 120</span></p>
+\[ r = \frac{c\,(t_{\text{detect}} - t_{\text{emit}})}{2}. \tag{5.1} \]
+<p>With \(c \approx 3\times10^{8}\) m/s, a delay of 200 ns gives \(r = 3\times10^{8} \times 200\times10^{-9} / 2 = 30\) m. Turn it around: to resolve 1 cm in range the electronics must resolve \(2 \times 0.01 / (3\times10^{8}) \approx 67\) picoseconds.</p>
+<p>One beam gives one distance. Sweep an array of \(B\) beams through a full turn with \(M\) steps and you get a <strong>range image</strong> \(\mathbf{R} \in \R^{B\times M}\): one range per beam and per step. An <strong>RGB-D camera</strong> returns the same kind of data on a pixel grid, a <strong>depth map</strong> \(\mathbf{I}_D \in \R^{H\times W}\) next to the colour image. Early RGB-D cameras project an infrared pattern and read depth from its distortion, which sunlight washes out, so they are indoor sensors. <span class="src">§5.1.1 · pp. 120–121</span></p>
+
+<h3>2. From ranges to points</h3>
+<p>A range is only useful with its direction. The sensor's calibration gives each beam two angles: the <strong>azimuth</strong> \(\phi\), measured around the vertical axis, and the <strong>inclination</strong> \(\theta\), measured up from the horizontal plane. The point hit by the beam, in the sensor's own frame, is <span class="src">§5.1.2 · p. 121</span></p>
+\[ x = r\cos\theta\cos\phi, \qquad y = r\cos\theta\sin\phi, \qquad z = r\sin\theta. \tag{5.2–5.4} \]
+<figure class="fig"><svg viewBox="0 0 600 232" role="img" aria-label="Two right triangles. Left, top view: the beam's ground projection of length r cos theta makes the azimuth angle phi with the x axis, giving x and y. Right, side view: the beam of length r makes the inclination angle theta with the ground, giving the ground distance r cos theta and the height z equals r sin theta.">
+  <line x1="50" y1="180" x2="270" y2="180" stroke="var(--line2)" stroke-width="1.5"/>
+  <line x1="50" y1="180" x2="50" y2="30" stroke="var(--line2)" stroke-width="1.5"/>
+  <text x="276" y="184" font-size="13" fill="var(--muted)">x</text>
+  <text x="34" y="38" font-size="13" fill="var(--muted)">y</text>
+  <line x1="50" y1="180" x2="205.6" y2="71" stroke="var(--c5)" stroke-width="2.5"/>
+  <line x1="205.6" y1="71" x2="205.6" y2="180" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="4 4"/>
+  <circle cx="205.6" cy="71" r="5" fill="var(--c3)"/>
+  <path d="M90 180 A40 40 0 0 0 82.8 157.1" fill="none" stroke="var(--ink)" stroke-width="1.2"/>
+  <text x="97" y="170" font-size="13" fill="var(--ink)">φ</text>
+  <text x="118" y="112" text-anchor="end" font-size="13" fill="var(--c5)">r cos θ</text>
+  <text x="128" y="199" text-anchor="middle" font-size="12" fill="var(--ink)">r cos θ cos φ</text>
+  <text x="213" y="132" font-size="12" fill="var(--ink)">r cos θ sin φ</text>
+  <text x="160" y="224" text-anchor="middle" font-size="12" fill="var(--muted)">Top view: azimuth φ</text>
+  <line x1="370" y1="180" x2="585" y2="180" stroke="var(--line2)" stroke-width="1.5"/>
+  <line x1="370" y1="180" x2="370" y2="30" stroke="var(--line2)" stroke-width="1.5"/>
+  <text x="354" y="38" font-size="13" fill="var(--muted)">z</text>
+  <line x1="370" y1="180" x2="542.2" y2="99.7" stroke="var(--c5)" stroke-width="2.5"/>
+  <line x1="542.2" y1="99.7" x2="542.2" y2="180" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="4 4"/>
+  <circle cx="542.2" cy="99.7" r="5" fill="var(--c3)"/>
+  <path d="M416 180 A46 46 0 0 0 411.7 160.6" fill="none" stroke="var(--ink)" stroke-width="1.2"/>
+  <text x="423" y="175" font-size="13" fill="var(--ink)">θ</text>
+  <text x="440" y="126" font-size="13" fill="var(--c5)">r</text>
+  <text x="456" y="199" text-anchor="middle" font-size="12" fill="var(--ink)">r cos θ</text>
+  <text x="536" y="152" text-anchor="end" font-size="12" fill="var(--ink)">r sin θ</text>
+  <text x="470" y="224" text-anchor="middle" font-size="12" fill="var(--muted)">Side view: inclination θ</text>
+</svg><figcaption>Two right triangles give the three formulas. The side view splits the range into a height and a ground distance; the top view splits the ground distance into x and y.</figcaption></figure>
+<p>Example: \(r = 10\) m, \(\theta = 30^\circ\), \(\phi = 60^\circ\). The ground distance is \(10\cos 30^\circ = 8.66\) m, so \(x = 8.66 \times 0.5 = 4.33\), \(y = 8.66 \times 0.866 = 7.50\), \(z = 10 \times 0.5 = 5.00\) m. Check: \(4.33^2 + 7.50^2 + 5.00^2 = 100\). A planar 2D LiDAR is the case \(\theta = 0\): \((x, y) = (r\cos\phi,\; r\sin\phi)\).</p>
+
+<div class="box note"><h4>Filling the gap: back-projecting a depth pixel</h4>
+<p>For an RGB-D camera the book writes the conversion in one line, \(\mathbf{p} = \mathbf{K}^{\dagger}\mathbf{x}\), equation (5.5). Unpacked for the usual pinhole camera, it reads as follows. A camera with focal lengths \(f_x, f_y\) (in pixels) and principal point \((c_x, c_y)\) projects a point \((X, Y, Z)\) in its own frame to the pixel</p>
+\[ u = f_x \frac{X}{Z} + c_x, \qquad v = f_y \frac{Y}{Z} + c_y . \]
+<p>A colour image loses \(Z\), so one pixel corresponds to a whole ray. A depth map stores \(Z\) at each pixel, and then the two equations can be solved for the other two coordinates:</p>
+\[ X = \frac{(u - c_x)\,Z}{f_x}, \qquad Y = \frac{(v - c_y)\,Z}{f_y}, \qquad Z = \mathbf{I}_D(u, v). \]
+<p>Example: \(f_x = f_y = 500\), \((c_x, c_y) = (320, 240)\), pixel \((420, 240)\), depth 2 m. Then \(X = 100 \times 2 / 500 = 0.4\) m, \(Y = 0\), \(Z = 2\) m.</p></div>
+
+<p>The result is a <strong>point cloud</strong> \(\mathsf{P} = \{\mathbf{p}_1, \dots, \mathbf{p}_N\}\) in the sensor frame. A cloud from a depth map is <strong>organized</strong>: neighbours in the image are neighbours in the list, so finding the points next to a given one is an index lookup. A cloud from a moving LiDAR is not that simple. The sensor travels during the sweep, so each beam is fired from a slightly different pose. To undistort the cloud you need the motion during the sweep (from an IMU or odometry) and the firing time of each beam. <span class="src">§5.1.2 · pp. 121–122</span></p>
+
+<h3>3. What should a dense map store?</h3>
+<p>The chapter is built on three questions: which quantity to estimate, which geometric abstraction to use, and which data structure to store it in. <span class="src">§5.2 · pp. 122–123</span> For the first question there are two common answers, <strong>occupancy</strong> (today) and <strong>distance</strong> to the nearest surface (tomorrow).</p>
+<p>An occupancy grid cuts space into cells \(m_k\). Each cell is either occupied or empty, we do not know which, and the map stores the probability \(p(m_k \mid \mathbf{z}_{1:t}, \mathbf{x}_{1:t})\) that it is occupied given all measurements \(\mathbf{z}_{1:t}\) and all sensor poses \(\mathbf{x}_{1:t}\). A value near 1 means occupied, near 0 means free, and 0.5 means the data say nothing. Mapping is then a binary classification problem, solved once per cell. <span class="src">§5.2.1 · pp. 123–124</span></p>
+
+<h3>4. The log-odds update</h3>
+<p>The book states the update rule directly, in terms of the <strong>odds</strong> \(o = p / (1 - p)\) and the <strong>log-odds</strong> \(l = \log o\): <span class="src">§5.2.1 · p. 124</span></p>
+\[ l(m_k \mid \mathbf{z}_{1:t}) = l(m_k \mid \mathbf{z}_{1:t-1}) + l(m_k \mid \mathbf{z}_t). \tag{5.6} \]
+<div class="tbl"><table>
+  <tr><th>Probability p</th><th>Odds p / (1 − p)</th><th>Log-odds l</th></tr>
+  <tr><td>0.1</td><td>0.11</td><td>−2.20</td></tr>
+  <tr><td>0.4</td><td>0.67</td><td>−0.41</td></tr>
+  <tr><td>0.5 (unknown)</td><td>1</td><td>0</td></tr>
+  <tr><td>0.7</td><td>2.33</td><td>+0.85</td></tr>
+  <tr><td>0.9</td><td>9</td><td>+2.20</td></tr>
+</table></div>
+<div class="box note"><h4>Filling the gap: where equation (5.6) comes from</h4>
+<p>Fix one cell \(m_k\) and drop the poses from the notation, as the book does. Bayes' rule (<a href="#d2">Week 1 · Day 2</a>), applied to the newest measurement \(\mathbf{z}_t\), gives</p>
+\[ p(m_k \mid \mathbf{z}_{1:t}) = \frac{p(\mathbf{z}_t \mid m_k, \mathbf{z}_{1:t-1})\; p(m_k \mid \mathbf{z}_{1:t-1})}{p(\mathbf{z}_t \mid \mathbf{z}_{1:t-1})}. \]
+<p><em>Assumption 1, conditional independence:</em> once you know whether the cell is occupied, older measurements tell you nothing more about the new one, so \(p(\mathbf{z}_t \mid m_k, \mathbf{z}_{1:t-1}) = p(\mathbf{z}_t \mid m_k)\). Apply Bayes' rule a second time to that factor, \(p(\mathbf{z}_t \mid m_k) = p(m_k \mid \mathbf{z}_t)\,p(\mathbf{z}_t) / p(m_k)\), and substitute:</p>
+\[ p(m_k \mid \mathbf{z}_{1:t}) = \frac{p(m_k \mid \mathbf{z}_t)\; p(\mathbf{z}_t)\; p(m_k \mid \mathbf{z}_{1:t-1})}{p(m_k)\; p(\mathbf{z}_t \mid \mathbf{z}_{1:t-1})}. \]
+<p>The same steps for the opposite event "cell is free", written \(\neg m_k\), give the same formula with \(\neg m_k\) in place of \(m_k\). Divide the first by the second. The two awkward terms \(p(\mathbf{z}_t)\) and \(p(\mathbf{z}_t \mid \mathbf{z}_{1:t-1})\) appear in both and cancel:</p>
+\[ \underbrace{\frac{p(m_k \mid \mathbf{z}_{1:t})}{p(\neg m_k \mid \mathbf{z}_{1:t})}}_{o(m_k \mid \mathbf{z}_{1:t})} = \underbrace{\frac{p(m_k \mid \mathbf{z}_t)}{p(\neg m_k \mid \mathbf{z}_t)}}_{o(m_k \mid \mathbf{z}_t)} \cdot \underbrace{\frac{p(m_k \mid \mathbf{z}_{1:t-1})}{p(\neg m_k \mid \mathbf{z}_{1:t-1})}}_{o(m_k \mid \mathbf{z}_{1:t-1})} \cdot \underbrace{\frac{p(\neg m_k)}{p(m_k)}}_{1 / o(m_k)} . \]
+<p>Because \(p(\neg m_k \mid \cdot) = 1 - p(m_k \mid \cdot)\), each ratio is an odds as in equation (5.7). Take the logarithm and the product becomes a sum:</p>
+\[ l(m_k \mid \mathbf{z}_{1:t}) = l(m_k \mid \mathbf{z}_{1:t-1}) + l(m_k \mid \mathbf{z}_t) - l(m_k). \]
+<p>The last term is the log-odds of the prior. With the usual prior \(p(m_k) = 0.5\) it is \(\log 1 = 0\), and what remains is equation (5.6). <em>Assumption 2, independent cells,</em> is what allowed us to do all of this for one cell at a time. To read a probability back out, invert the definition: \(p = 1 / (1 + e^{-l})\).</p></div>
+
+<h3>5. The inverse sensor model, and a grid you can fill</h3>
+<p>The term \(l(m_k \mid \mathbf{z}_t)\) is the <strong>inverse sensor model</strong>: it goes from a measurement to a belief about a cell, the reverse of a model that predicts measurements. For a narrow laser beam a simple piecewise-constant model is enough. <span class="src">§5.4.4.1 · p. 138</span></p>
+<div class="tbl"><table>
+  <tr><th>Where the cell is</th><th>What the beam says</th><th>Update to l</th></tr>
+  <tr><td>Between the sensor and the beam's end point</td><td>The beam passed, so the cell is probably free</td><td>Add a negative constant</td></tr>
+  <tr><td>Contains the end point</td><td>Something reflected the beam here</td><td>Add a positive constant</td></tr>
+  <tr><td>Beyond the end point, or off the beam</td><td>Nothing</td><td>Leave unchanged</td></tr>
+</table></div>
+<p>Worked example. Say a hit means \(p = 0.7\), so \(l = \log(0.7/0.3) = +0.847\), and a pass means \(p = 0.4\), so \(l = \log(0.4/0.6) = -0.405\). A cell that starts at \(l = 0\) and is hit three times reaches \(l = 2.542\), which is \(p = 1/(1 + e^{-2.542}) = 0.93\). Two later beams that pass through it bring it to \(l = 1.731\), \(p = 0.85\). No measurement is ever stored: the single number \(l\) summarizes all of them.</p>
+<p>Try it: the map below already holds one scan. Press "Scan here" twice and watch the probe cell on the lower face of the box. Then press "Auto tour".</p>
+<div class="viz" data-viz="w08_occ"></div>
+<p class="cap">Notice the probe cell go 0.70, 0.84, 0.93 as in the worked example. Notice also what stays half-tone after the first scan: the regions hidden behind the box and behind the thin wall, the pillar included. Unknown is not the same as free, and only moving the robot resolves it.</p>
+<p>Two limits of the grid follow from its assumptions. Treating cells as independent ignores that walls are continuous, so a grid cannot guess the occupancy of an unobserved cell from its neighbours. And the cell size is fixed before mapping starts, so the resolution is the same everywhere. <span class="src">§5.2.1 · p. 124</span> Days 4 and 5 return to both.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"θ in (5.2)–(5.4) is measured from the z axis."</strong> Here it is measured from the horizontal plane, which is why \(z = r\sin\theta\). The physics convention (angle from the z axis) swaps the sine and cosine of \(\theta\).</li>
+<li><strong>"A cell at p = 0.5 is half full."</strong> It means no information. The cell is either occupied or free; the probability describes what we know.</li>
+<li><strong>"The inverse sensor model is the sensor's noise model."</strong> A noise model is \(p(\mathbf{z} \mid m)\), from world to measurement. The inverse model is \(p(m_k \mid \mathbf{z}_t)\), from measurement to world, and it is usually designed by hand.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A LiDAR must resolve 1.5 cm in range. What timing resolution does it need?</p><div class="opts"><button type="button" class="opt">50 ps</button><button type="button" class="opt">1 ns</button><button type="button" class="opt">100 ps</button><button type="button" class="opt">10 ps</button></div><p class="exp" hidden>From (5.1), a range change of 0.015 m is a delay change of 2 × 0.015 / (3 × 10⁸) = 10⁻¹⁰ s = 100 ps. The factor 2 is the round trip.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A beam with azimuth 90° and inclination 30° returns r = 20 m. Where is the point in the sensor frame?</p><div class="opts"><button type="button" class="opt">(0, 17.3, 10) m</button><button type="button" class="opt">(0, 10, 17.3) m</button><button type="button" class="opt">(17.3, 0, 10) m</button><button type="button" class="opt">(10, 17.3, 0) m</button></div><p class="exp" hidden>Ground distance 20 cos 30° = 17.3 m, all of it along y because the azimuth is 90°. Height z = 20 sin 30° = 10 m. The second option is what you get if you measure the inclination from the z axis.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A cell starts at p = 0.5. A hit means p = 0.7 and a pass means p = 0.4. After two hits and one pass, what is its occupancy probability?</p><div class="opts"><button type="button" class="opt">0.60</button><button type="button" class="opt">0.93</button><button type="button" class="opt">0.84</button><button type="button" class="opt">0.78</button></div><p class="exp" hidden>Odds multiply: (7/3) × (7/3) × (2/3) = 3.63, so p = 3.63 / 4.63 = 0.78. In log-odds: 0.847 + 0.847 − 0.405 = 1.289. Averaging the three probabilities (0.60) is not Bayes' rule.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. A beam returns r = 5 m. What does the piecewise-constant model do to a cell 7 m from the sensor in the same direction?</p><div class="opts"><button type="button" class="opt">Marks it more likely free</button><button type="button" class="opt">Nothing; it keeps its previous value</button><button type="button" class="opt">Marks it more likely occupied</button><button type="button" class="opt">Resets it to p = 0.5</button></div><p class="exp" hidden>The beam stopped at 5 m, so it carries no information about what lies behind. The cell keeps whatever log-odds it had, which is 0 (unknown) if nothing else has observed it.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Time of flight gives range, \(r = c\,\Delta t / 2\). A scan is a range image or depth map, and with the beam angles or camera intrinsics it becomes a point cloud in the sensor frame.</li>
+<li>\(x = r\cos\theta\cos\phi\), \(y = r\cos\theta\sin\phi\), \(z = r\sin\theta\), with \(\theta\) measured from the horizontal plane.</li>
+<li>An occupancy grid stores one probability per cell and treats cells as independent.</li>
+<li>Bayes' rule in log-odds form is an addition: \(l \leftarrow l + l(m_k \mid \mathbf{z}_t)\), with \(p = 1/(1 + e^{-l})\). The prior term vanishes for a prior of 0.5.</li>
+<li>A beam lowers \(l\) in the cells it crosses, raises it in the cell where it ends, and leaves the rest unknown.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 5 introduction, §5.1 "Range Sensing Preliminaries", §5.2 opening and §5.2.1 "Occupancy Maps", pp. 119–124; the piecewise-constant model is mentioned in §5.4.4.1, p. 138.</li>
+<li>Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (the binary Bayes filter and the derivation of the log-odds update).</li>
+<li>Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (the pinhole camera model used for back-projection).</li>
+</ol></div>
+<p class="next"></p>
+</section>

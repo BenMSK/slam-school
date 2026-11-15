@@ -1,0 +1,65 @@
+<section class="day" data-day="132" id="d132" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 22 · Review</span>
+  <h2>Week 22 review: metric-semantic SLAM</h2>
+  <p class="lead">After today you can write the residual for each object shape model, run one step of hard and soft data association, fuse class labels in a voxel, and explain how meshes and scene graphs stay consistent after a loop closure.</p>
+  <p class="meta">About 60 min · No new pages</p>
+</header>
+
+<div class="box key"><h3>The week in one paragraph</h3><p>A metric-semantic map stores what things are as well as where they are. Sparse maps turn landmarks into objects with a class, pose, scale, and shape, and compare each shape model with the matching detector output: keypoints, boxes, masks, or depth. Classes and data associations are discrete, so the back-end alternates between choosing them (hard, or softly with EM) and solving least squares. Dense maps keep a class distribution per voxel and fuse labels by adding log-odds. Meshes follow a loop closure through a deformation graph, and scene graphs stack objects, places, and rooms on top, storing each symbol once.</p></div>
+
+<h3>1. Formula sheet</h3>
+<div class="tbl"><table>
+  <tr><th>What it is</th><th>Formula</th><th>Where</th></tr>
+  <tr><td>Object landmark; keypoint shape</td><td>\(\boldsymbol{\ell} = (\sigma, \mathbf{q}, \lambda, \mathbf{s})\), \(\ \mathbf{s}_j = \mathbf{b}_{j,0} + \sum_k c_k\mathbf{b}_{j,k}\)</td><td>Def. 16.1, (16.2), pp. 456–457 · Day 1</td></tr>
+  <tr><td>Keypoint residual</td><td>\(r_i^2 = \sum_j \norm{\mathbf{z}_{i,j} - \pi(\mathbf{q}_i^{-1}\mathbf{T}_i, \lambda_i\mathbf{s}_{i,j})}^2_{\boldsymbol{\Sigma}_i}\)</td><td>(16.3), p. 458 · Day 1</td></tr>
+  <tr><td>Dual quadric, projected</td><td>\(\mathbf{Q}^*_{\mathbf{s}} \propto \mathbf{Q}_{\mathbf{s}}^{-1}\), \(\ \mathbf{C}^*_{\mathbf{x}} \propto \mathbf{P}\mathbf{T}^{-1}\mathbf{Q}^*_{\boldsymbol{\ell}}\mathbf{T}^{-\top}\mathbf{P}\T\)</td><td>(16.6)–(16.8), pp. 459–460 · Day 2</td></tr>
+  <tr><td>Hybrid cost and alternation</td><td>\(\mathcal{L}(\Theta, D) = \sum_k -\log\phi_k(V_k)\); minimize over \(D\), then over \(\Theta\)</td><td>(16.18), (16.22), pp. 468–470 · Day 3</td></tr>
+  <tr><td>EM association weight</td><td>\(w_{kj} \propto \pi_{kj}\,\N(\mathbf{z}_k; h(\Theta, \boldsymbol{\ell}_j), \boldsymbol{\Sigma})\)</td><td>p. 470 · Day 3</td></tr>
+  <tr><td>Multi-class log-odds fusion</td><td>\(\mathbf{h} \leftarrow \mathbf{h} + \mathbf{l}(z)\), \(\ p(k) = e^{h_k}/\sum_j e^{h_j}\)</td><td>(16.24), pp. 474–475 · Day 4</td></tr>
+  <tr><td>PGMO as a pose graph; mesh blending</td><td>\(\sum \norm{\mathbf{T}_i\mathbf{E}_{ij} - \mathbf{T}_j}^2_{\boldsymbol{\Omega}_{ij}}\); \(\ \tilde{\mathbf{v}} = \sum_j w_j[\mathbf{R}_j(\mathbf{v} - \mathbf{g}_j) + \mathbf{t}_j]\)</td><td>(16.31), (16.32), p. 482 · Day 5</td></tr>
+  <tr><td>Memory, flat and hierarchical</td><td>\(L \cdot V/\delta^3\) and \(V/\delta^3 + N_{\text{objects}} + N_{\text{rooms}} + \dots\)</td><td>(16.34), (16.35), p. 484 · Day 5</td></tr>
+</table></div>
+
+<h3>2. Mixed quiz</h3>
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A real car and a 1:10 toy of the same model are both in the map. Which component of their object landmarks differs, apart from the pose?</p><div class="opts"><button type="button" class="opt">The category σ</button><button type="button" class="opt">The scale λ</button><button type="button" class="opt">The shape s</button><button type="button" class="opt">The modes b</button></div><p class="exp" hidden>Same category and same canonical shape. Only the scale differs.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. Camera at the world origin with identity pose. An unrotated object frame sits at (2, 0, 10) m with λ = 1. Where does the semantic landmark s = (0, 1, 0) appear in normalized image coordinates?</p><div class="opts"><button type="button" class="opt">(0, 0.1)</button><button type="button" class="opt">(0.2, 0)</button><button type="button" class="opt">(2, 1)</button><button type="button" class="opt">(0.2, 0.1)</button></div><p class="exp" hidden>World point: (2, 1, 10). Dividing by depth gives (0.2, 0.1).</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. A sphere of radius 3 m is centred on the optical axis at depth 5 m. What is the half-width of its outline in normalized image coordinates?</p><div class="opts"><button type="button" class="opt">0.75</button><button type="button" class="opt">0.60</button><button type="button" class="opt">1.67</button><button type="button" class="opt">0.36</button></div><p class="exp" hidden>ρ²I − t tᵀ = diag(9, 9, 9 − 25) ∝ diag(9/16, 9/16, −1). Half-width = 3/4 = 0.75, not 3/5.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Which pairing of shape model and detector output does the chapter use?</p><div class="opts"><button type="button" class="opt">Ellipsoid with segmentation mask</button><button type="button" class="opt">Mesh with bounding box</button><button type="button" class="opt">Mesh with segmentation mask</button><button type="button" class="opt">SDF with semantic keypoints</button></div><p class="exp" hidden>Ellipsoid with bounding box (16.10), mesh with mask (16.12), SDF with depth points (16.15).</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. A detection labelled "chair" is equally far from object A (a chair) and object B (a table). The label is right 80% of the time. What is the EM weight of A?</p><div class="opts"><button type="button" class="opt">0.50</button><button type="button" class="opt">0.80</button><button type="button" class="opt">1.00</button><button type="button" class="opt">0.20</button></div><p class="exp" hidden>The geometry terms cancel. The label likelihoods, normalized, give 0.8/(0.8 + 0.2) = 0.8.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q6. With the continuous variables fixed, why can each detection's association be chosen on its own?</p><div class="opts"><button type="button" class="opt">The cost is convex in the associations</button><button type="button" class="opt">EM guarantees it</button><button type="button" class="opt">Given the poses and landmarks the associations are conditionally independent, so the maximum of the product is the product of the maxima</button><button type="button" class="opt">Every detection sees a different object</button></div><p class="exp" hidden>This is (16.20) and (16.21): K searches over J candidates replace one search over J^K assignments.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q7. A voxel with classes {free, A, B} has h = [0, 2, 2]. A ray passes through it, with φ⁻ = [0, −1.5, −1.5]. What is the probability of "free" afterwards?</p><div class="opts"><button type="button" class="opt">0.23</button><button type="button" class="opt">0.06</button><button type="button" class="opt">0.33</button><button type="button" class="opt">0.50</button></div><p class="exp" hidden>h becomes [0, 0.5, 0.5]. Softmax: 1/(1 + 2e^0.5) = 1/4.30 = 0.23. Before the pass it was 1/(1 + 2e²) = 0.06.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q8. In a scene graph, the room nodes of the building form a subgraph of treewidth 2, and the objects of any one room form a subgraph of treewidth at most 3. What bound does (16.37) give for the whole graph?</p><div class="opts"><button type="button" class="opt">2</button><button type="button" class="opt">3</button><button type="button" class="opt">6</button><button type="button" class="opt">4</button></div><p class="exp" hidden>The largest treewidth among groups of siblings, plus one: max(2, 3) + 1 = 4, however many rooms there are.</p></div>
+</div>
+
+<h3>3. Pen-and-paper problems</h3>
+<ol class="probs">
+  <li><p>A dual conic, scaled so that its bottom-right entry is \(-1\), is \(\begin{bmatrix}0.05 & 0.02 & -0.2\\ 0.02 & 0 & 0.1\\ -0.2 & 0.1 & -1\end{bmatrix}\). Find the bounding box \((u, v, w, h)\) it represents.</p>
+      <details class="sol"><summary>Solution</summary><div><p>Compare with (16.9) multiplied out. The centre is minus the last column: \((c_u, c_v) = (0.2, -0.1)\). Then \((w/2)^2 = C^*_{11} + c_u^2 = 0.05 + 0.04 = 0.09\), so \(w = 0.6\), and \((h/2)^2 = C^*_{22} + c_v^2 = 0 + 0.01\), so \(h = 0.2\). Check the off-diagonal: \(-c_uc_v = 0.02\). The corner is \((u, v) = (0.2 - 0.3,\ -0.1 - 0.1) = (-0.1, -0.2)\).</p></div></details></li>
+  <li><p>A robot moves along a line. The map has two chairs, A at 2.0 m and B at 3.0 m. The robot believes it is at \(p = 0.4\) m and receives two detections of objects ahead, \(z_1 = 1.9\) m and \(z_2 = 2.7\) m, with \(\sigma = 0.5\) m and no useful labels. Do one EM iteration for \(p\). Compare with a hard nearest-neighbour step.</p>
+      <details class="sol"><summary>Solution</summary><div><p>E-step. The detections are predicted at \(2.3\) and \(3.1\) m. With \(e^{-d^2/2\sigma^2} = e^{-2d^2}\): for \(z_1\), distances \(0.3\) and \(0.7\) give \(0.835\) and \(0.375\), so \(w_{1A} = 0.69\), \(w_{1B} = 0.31\). For \(z_2\), distances \(1.1\) and \(0.1\) give \(0.089\) and \(0.980\), so \(w_{2A} = 0.08\), \(w_{2B} = 0.92\).</p>
+      <p>M-step. Minimizing \(\sum_{k,j} w_{kj}(z_k + p - \ell_j)^2\) gives the weighted mean of the values \(\ell_j - z_k\), with weights summing to 2: \(p = \tfrac12[0.69(0.1) + 0.31(1.1) + 0.08(-0.7) + 0.92(0.3)] = 0.31\) m.</p>
+      <p>Nearest neighbour assigns \(z_1\) to A and \(z_2\) to B: \(p = \tfrac12(0.1 + 0.3) = 0.2\) m. EM differs because it still gives 31% to the first detection being chair B.</p></div></details></li>
+  <li><p>A voxel has classes {free, wall, door} and starts with all three equally likely. The sensor reports "hit, wall" with probability 0.04, 0.64, 0.16 when the cell is free, wall, door; "hit, door" with 0.04, 0.16, 0.64; and passes through with 0.92, 0.2, 0.2. The cell receives: hit wall, hit wall, hit door, pass. Find the class probabilities.</p>
+      <details class="sol"><summary>Solution</summary><div><p>Log-odds increments relative to "free": \(\mathbf{l}(\text{hit wall}) = [0, \ln 16, \ln 4]\), \(\mathbf{l}(\text{hit door}) = [0, \ln 4, \ln 16]\), \(\mathbf{l}(\text{pass}) = [0, \ln 0.217, \ln 0.217]\). Adding logs is multiplying ratios: wall \(16 \cdot 16 \cdot 4 \cdot 0.217 = 222.6\), door \(4 \cdot 4 \cdot 16 \cdot 0.217 = 55.7\), free \(1\). So \(\mathbf{h} = [0, 5.41, 4.02]\) and \(p = [1, 222.6, 55.7]/279.3 = [0.004, 0.797, 0.199]\). Wall leads door four to one: a net of one label vote, worth \(0.64/0.16\).</p></div></details></li>
+  <li><p>Mesh control nodes \(k\) and \(l\) start at \(\mathbf{g}_k = (0,0,0)\) and \(\mathbf{g}_l = (2,0,0)\). After a loop closure both have rotated by 90° about the \(z\)-axis; \(\mathbf{t}_k = (0,0,0)\) and \(\mathbf{t}_l = (0, 2, 0.3)\). (a) Compute the rigidity residual of edge \((k, l)\) in (16.27) and its cost for \(\omega_t = 4\). (b) A third node \(j\) at \(\mathbf{g}_j = (1, 2, 0)\) did not move. Where does the mesh vertex \(\mathbf{v} = (1, 0, 0)\) go under (16.32) with \(m = 3\)?</p>
+      <details class="sol"><summary>Solution</summary><div><p>(a) A 90° rotation about \(z\) maps \((x, y, z)\) to \((-y, x, z)\). So \(\mathbf{R}_k(\mathbf{g}_l - \mathbf{g}_k) + \mathbf{t}_k - \mathbf{t}_l = (0, 2, 0) + (0,0,0) - (0, 2, 0.3) = (0, 0, -0.3)\). Cost: \(4 \times 0.09 = 0.36\).</p>
+      <p>(b) Distances from \(\mathbf{v}\): 1 to \(k\), 1 to \(l\), 2 to \(j\), so \(d_{\max} = 2\), \(\bar{w} = (0.25, 0.25, 0)\), and \(w = (0.5, 0.5, 0)\). Node \(k\) sends \(\mathbf{v}\) to \(\mathbf{R}_k(1,0,0) + \mathbf{t}_k = (0, 1, 0)\). Node \(l\) sends it to \(\mathbf{R}_l(-1, 0, 0) + \mathbf{t}_l = (0, -1, 0) + (0, 2, 0.3) = (0, 1, 0.3)\). The blend is \(\tilde{\mathbf{v}} = (0, 1, 0.15)\).</p></div></details></li>
+</ol>
+
+<div class="box ok"><h4>You are ready for next week if you can</h4><ul>
+<li>Trace a semantic landmark from the object frame to a pixel.</li>
+<li>Project a sphere with the dual quadric and read a bounding box off a dual conic.</li>
+<li>Compute nearest-neighbour, max-mixture, and EM associations for one detection.</li>
+<li>Update a multi-class log-odds vector and turn it back into probabilities.</li>
+<li>Explain how PGMO reduces mesh deformation to pose-graph optimization.</li>
+<li>Say what "closed-set" means. Next week drops that assumption.</li>
+</ul></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 16 "Metric-Semantic SLAM", pp. 454–489.</li>
+<li>Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004; Bishop, <em>Pattern Recognition and Machine Learning</em>, 2006; Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (background for Days 2, 3, and 4).</li>
+</ol></div>
+<p class="next"></p>
+</section>

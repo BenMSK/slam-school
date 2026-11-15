@@ -1,0 +1,130 @@
+<section class="day" data-day="111" id="d111" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 19 · Day 3</span>
+  <h2>Learned matching, and RAFT optical flow</h2>
+  <p class="lead">After today you can describe how learned detectors and attention-based matchers produce correspondences, and trace one RAFT iteration: correlation volume, lookup, update.</p>
+  <p class="meta">About 60 min · Read §13.2.1–13.2.3, pp. 374–378 (5 pages) · Needs Week 19 Day 1 and Week 11 Day 3</p>
+</header>
+
+<div class="box read"><h4>Read first: §13.2 up to the end of §13.2.3, pp. 374–378</h4>
+<p>Stop at the heading "13.2.4 Optical Flow as Visual Measurements" on p. 378; that is tomorrow. While you read, look for:</p>
+<ul>
+<li>The argument on p. 374 for predicting measurements instead of states.</li>
+<li>What SuperGlue outputs, and what the extra column is for (p. 374).</li>
+<li>Equation (13.4) and the shape of the correlation volume (p. 377).</li>
+<li>The four inputs of RAFT's update operator (p. 378).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Asking a network for the pose makes it relearn geometry. Asking it for matches lets it do what networks are good at, recognizing that two image patches show the same thing, and leaves the geometry to the factor graph. RAFT is the cleanest example: it compares every pixel of one image with every pixel of the other once, stores the result, and then refines its flow estimate by looking up that table again and again.</p></div>
+
+<h3>1. Predict the measurements, not the state</h3>
+<p>In the notation of Part I, SLAM estimates the state \(\mathbf{x}\) (poses, depths) from measurements \(\mathbf{z}\) (for example feature matches) by solving for \(\mathbf{x}^{\text{MAP}}\). Yesterday's networks went from images straight to \(\mathbf{x}\) in one forward pass. To do that well, a network has to learn multi-view geometry from scratch: how depth, pose, and intrinsics relate. The alternative is to let the network predict \(\mathbf{z}\) and keep the optimization. <span class="src">§13.2 · p. 374</span></p>
+<div class="box kid"><h4>In plain words</h4><p>Finding the same corner in two photos is a recognition problem. Working out how the camera moved from a set of matched corners is a geometry problem with a known solution. Give each job to whoever is good at it.</p></div>
+
+<h3>2. Learned keypoints, descriptors, and matchers</h3>
+<p>Indirect SLAM (<a href="#d63">Week 11 · Day 3</a>) first finds <strong>keypoints</strong>, salient image locations, then computes a <strong>descriptor</strong> vector from the neighbourhood of each, and matches keypoints by comparing descriptors. Each step can be learned. <span class="src">§13.2.1–13.2.2 · pp. 374–375</span></p>
+<div class="tbl"><table>
+  <tr><th>System</th><th>What is learned</th><th>How it works, per the book</th></tr>
+  <tr><td>SuperPoint</td><td>Detector and descriptor</td><td>One convolutional network both finds salient regions and assigns descriptors to them</td></tr>
+  <tr><td>Universal Correspondence Network</td><td>Descriptor</td><td>Learned descriptors improve matching accuracy downstream</td></tr>
+  <tr><td>SuperGlue</td><td>Matcher on keypoints</td><td>Repeatedly updates each keypoint's feature vector with self- and cross-attention; outputs an assignment matrix</td></tr>
+  <tr><td>LightGlue</td><td>Matcher on keypoints</td><td>Architecture and training changes that make SuperGlue faster and more accurate</td></tr>
+  <tr><td>LoFTR</td><td>Dense matcher, no keypoints</td><td>Self- and cross-attention over a coarse feature grid, then refinement at higher resolution</td></tr>
+</table></div>
+<p>Descriptor networks are typically trained with a <strong>contrastive loss</strong>: descriptors of matching points should be similar, and descriptors of non-matching points far apart. <span class="src">§13.2.1 · p. 374</span></p>
+<div class="box note"><h4>Filling the gap: a contrastive loss you can compute</h4>
+<p>The book describes the loss in words. One standard form, for a pair of descriptors at distance \(D\), with a margin \(m \gt 0\):</p>
+\[ \ell = \begin{cases} D^2 & \text{if the pair is a true match,} \\ \max(0,\, m - D)^2 & \text{if it is not.} \end{cases} \]
+<p>Matching pairs are pulled together. Non-matching pairs are pushed apart, but only until they are \(m\) apart; after that they cost nothing. With \(m = 1\): a true match at \(D = 0.3\) costs \(0.09\); a non-match at \(D = 0.4\) costs \((1 - 0.4)^2 = 0.36\); a non-match at \(D = 1.2\) costs 0.</p></div>
+<p><strong>SuperGlue's output.</strong> For \(N\) keypoints in image 1 and \(M\) in image 2, the network outputs an <strong>assignment matrix</strong>: for each keypoint of image 1, a likelihood for each keypoint of image 2, plus one extra column meaning "no match". <span class="src">§13.2.2 · p. 374</span> A small made-up example with three keypoints on each side:</p>
+<div class="tbl"><table>
+  <tr><th>Image 1 keypoint</th><th>→ B1</th><th>→ B2</th><th>→ B3</th><th>→ unmatched</th></tr>
+  <tr><td>A1</td><td>0.02</td><td>0.93</td><td>0.01</td><td>0.04</td></tr>
+  <tr><td>A2</td><td>0.90</td><td>0.03</td><td>0.02</td><td>0.05</td></tr>
+  <tr><td>A3</td><td>0.05</td><td>0.02</td><td>0.08</td><td>0.85</td></tr>
+</table></div>
+<p>A1 matches B2, A2 matches B1, and A3 is most likely occluded or out of view in image 2. The extra column is what lets the network decline to match, which is the outlier rejection of <a href="#d31">Week 6 · Day 1</a> done inside the matcher. The attention layers are the ones from <a href="#d109">Day 1</a>: self-attention lets a keypoint consult the other keypoints of its own image, and cross-attention lets it consult the candidates in the other image.</p>
+<p>SuperGlue and LightGlue work on a sparse set of keypoints, which is cheap but ignores most of the image and yields few good matches where texture is poor. LoFTR matches densely to avoid this. All of them plug into an indirect SLAM system as ordinary visual measurements with their factors. <span class="src">p. 375</span></p>
+
+<h3>3. Optical flow, and RAFT's correlation volume</h3>
+<p><strong>Optical flow</strong> is the per-pixel motion between two frames: a vector \(\mathbf{f}(u, v)\) for every pixel, saying where that pixel went. It is dense matching, and the flow field can serve as measurements in a factor graph. Classical methods computed it by minimizing a data term (matched regions should look alike) plus a regularization term (the motion field should be plausible). <span class="src">§13.2.3 · pp. 375–376</span></p>
+<p><strong>RAFT</strong> (Recurrent All-Pairs Field Transforms) is the learned method the book describes, because DROID-SLAM is built on it. It has three parts. <span class="src">§13.2.3 · pp. 376–378 · Fig. 13.7</span></p>
+<figure class="fig"><svg viewBox="0 0 600 246" role="img" aria-label="Block diagram of RAFT. Top row: the two images go into the appearance encoder, whose features are used to build the correlation pyramid once. Bottom row: a loop. The current flow, which starts at zero, tells the lookup where to read the correlation pyramid. The values read go to a convolutional GRU, which outputs a flow update that is added to the flow. The loop repeats twelve or more times.">
+  <defs><marker id="w19ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="10" y="24" width="96" height="44" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="58" y="51" text-anchor="middle" font-size="12" fill="var(--ink)">Images I₁, I₂</text>
+  <rect x="130" y="24" width="150" height="44" rx="10" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="205" y="51" text-anchor="middle" font-size="12" fill="var(--ink)">Appearance encoder</text>
+  <rect x="306" y="24" width="150" height="44" rx="10" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="381" y="51" text-anchor="middle" font-size="12" fill="var(--ink)">Correlation pyramid</text>
+  <text x="468" y="50" font-size="11" fill="var(--muted)">built once</text>
+  <line x1="106" y1="46" x2="127" y2="46" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar3)"/>
+  <line x1="280" y1="46" x2="303" y2="46" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar3)"/>
+  <line x1="381" y1="68" x2="381" y2="127" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar3)"/>
+  <rect x="130" y="130" width="150" height="44" rx="10" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="205" y="157" text-anchor="middle" font-size="12" fill="var(--ink)">Flow f, starts at 0</text>
+  <rect x="306" y="130" width="150" height="44" rx="10" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="381" y="157" text-anchor="middle" font-size="12" fill="var(--ink)">Lookup near i + f(i)</text>
+  <rect x="486" y="130" width="104" height="44" rx="10" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="538" y="157" text-anchor="middle" font-size="12" fill="var(--ink)">Conv-GRU</text>
+  <line x1="280" y1="152" x2="303" y2="152" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar3)"/>
+  <line x1="456" y1="152" x2="483" y2="152" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar3)"/>
+  <path d="M538 174 L538 204 L205 204 L205 177" fill="none" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar3)"/>
+  <text x="371" y="222" text-anchor="middle" font-size="11" fill="var(--muted)">update δf, added to f</text>
+  <text x="371" y="238" text-anchor="middle" font-size="11" fill="var(--muted)">repeat 12 or more times</text>
+</svg><figcaption>RAFT's loop. The expensive comparison of all pixel pairs happens once, in the top row. Each iteration in the bottom row only reads a few values from it. A second encoder, the context encoder (not drawn), gives the GRU features of image 1 and its starting hidden state.</figcaption></figure>
+<p><strong>Feature extraction.</strong> Two encoders map an image of size \((h_{in}, w_{in}, 3)\) to a feature map of size \((h, w, c)\): an <strong>appearance encoder</strong> \(g_\theta\) applied to both images, and a <strong>context encoder</strong> \(c_\theta\). By default \(h = h_{in}/8\) and \(w = w_{in}/8\). <span class="src">p. 376</span></p>
+<p><strong>Correlation volume.</strong> Take the inner product of every feature vector of image 1 with every feature vector of image 2: <span class="src">eq. (13.4) · p. 377</span></p>
+\[ \mathbf{C}_{ijkl}(I_1, I_2) = \langle g_\theta(I_1)_{ij},\, g_\theta(I_2)_{kl} \rangle = \sum_m g_\theta(I_1)_{ijm} \cdot g_\theta(I_2)_{klm}. \tag{13.4} \]
+<p>\(\mathbf{C}\) has four indices and shape \(h \times w \times h \times w\). Fix a pixel \((i, j)\) of image 1, and \(\mathbf{C}_{ij\cdot\cdot}\) is a whole image: a map of how well each pixel of image 2 resembles it.</p>
+<div class="box note"><h4>Filling the gap: (13.4) as one matrix product, and how big it is</h4>
+<p>Number the \(hw\) pixels of each feature map \(1, \dots, hw\) and stack the feature vectors as rows of two matrices \(\mathbf{F}_1, \mathbf{F}_2 \in \R^{hw \times c}\). Then</p>
+\[ \mathbf{C} = \mathbf{F}_1 \mathbf{F}_2\T \in \R^{hw \times hw}, \qquad \mathbf{C}_{pq} = \sum_m (\mathbf{F}_1)_{pm} (\mathbf{F}_2)_{qm}, \]
+<p>which is (13.4) with \(p\) standing for \((i, j)\) and \(q\) for \((k, l)\). (Which factor carries the transpose depends on whether you stack features as rows or as columns.) A tiny case with two pixels and \(c = 2\): rows \((1, 0)\) and \((0.6, 0.8)\) in \(\mathbf{F}_1\), rows \((0.8, 0.6)\) and \((0, 1)\) in \(\mathbf{F}_2\) give</p>
+\[ \mathbf{C} = \begin{bmatrix} 0.8 & 0 \\ 0.96 & 0.8 \end{bmatrix}. \]
+<p>Pixel 2 of image 1 resembles pixel 1 of image 2 most (0.96).</p>
+<p>Size: a \(384 \times 512\) image gives a \(48 \times 64\) feature map, which is 3072 pixels. The volume has \(3072^2 \approx 9.4\) million entries. The <strong>correlation pyramid</strong> adds three coarser copies \(\mathbf{C}^1, \mathbf{C}^2, \mathbf{C}^3\), made by average-pooling the last two dimensions, so \(\mathbf{C}^l\) has shape \(h \times w \times h/2^l \times w/2^l\). Here that is \(3072 \times (3072 + 768 + 192 + 48) \approx 12.5\) million numbers in total. Only image 2's axes shrink: every pixel of image 1 keeps its own row at full resolution. <span class="src">p. 377</span></p></div>
+
+<h3>4. Lookup and update: the iteration</h3>
+<p>RAFT keeps a flow estimate \(\mathbf{f}\), starting from zero. One iteration does two things. <span class="src">§13.2.3 · pp. 377–378 · Fig. 13.8</span></p>
+<p><strong>Lookup.</strong> For pixel \((u, v)\) of image 1, the current guess of its match in image 2 is \((u', v') = \mathbf{f}(u, v) + (u, v)\). RAFT reads the correlation volume on a small grid around that guess,</p>
+\[ N(u', v') = \{ (u' + \Delta u,\, v' + \Delta v) \mid \Delta u, \Delta v \in \{-r, \dots, r\} \}, \tag{13.5} \]
+<p>with bilinear interpolation, since \((u', v')\) is not a whole pixel. It does the same at each coarser level around the rescaled position \((u'/2^l, v'/2^l)\), and concatenates everything into one feature vector. The fine level tells it about small displacements, and the coarse levels about large ones.</p>
+<p>In one dimension: pixel \(u = 10\) with current flow \(3.4\) has \(u' = 13.4\). With \(r = 2\) the lookup reads positions \(11.4, 12.4, 13.4, 14.4, 15.4\) of row 10 of \(\mathbf{C}^0\); for instance the middle one is \(0.6\,\mathbf{C}^0[10][13] + 0.4\,\mathbf{C}^0[10][14]\). At level 1 it reads five positions around \(13.4/2 = 6.7\), which together span about 10 pixels of the original row. With \(r = 3\) in two dimensions, a lookup reads \(7 \times 7 = 49\) values per level, 196 in total, out of the millions stored.</p>
+<p><strong>Update.</strong> A <strong>convolutional GRU</strong> (a gated recurrent unit whose linear layers are replaced by convolutions) takes four inputs, each a 2-D feature map: its hidden state from the previous iteration, the context features, the current flow, and the correlation features just looked up. It outputs a new hidden state and a flow update: <span class="src">p. 378</span></p>
+\[ \mathbf{f}^{k+1} = \boldsymbol{\delta}\mathbf{f}^k + \mathbf{f}^k . \]
+<p>The same weights are used in every iteration (<strong>weight tying</strong>). The book notes that tied weights and bounded activations encourage convergence to a fixed point, and that the convolutions pass information between neighbouring pixels. RAFT is trained on synthetic data with ground-truth flow and generalizes well to real images. <span class="src">pp. 376, 378</span></p>
+<p>Try it: press Step a few times, or Play. Then set "Pyramid levels" to 1 and run again.</p>
+<div class="viz" data-viz="w19_raft"></div>
+<p class="cap">Notice that with the starting settings (true shift 5 px, radius 2, three levels) the mean flow error goes 5.00 → 0.89 → 0.10 px in two iterations and stays near 0.1. The finest window (pink) cannot reach a match 5 px away, but the coarse levels (amber) can, and they pull the estimate in until the fine level takes over. With one level, the error is still about 3 px after 12 iterations: most pixels never find their match. The update rule in this widget is a fixed formula (a soft-argmax of the values read, then smoothing over neighbouring pixels), where RAFT has a learned Conv-GRU. The correlation volume, pyramid, and lookup follow the equations above.</p>
+<div class="box tip"><h4>Intuition</h4><p>RAFT behaves like an optimizer whose update rule was learned. Compare it with Gauss-Newton (<a href="#d10">Week 2 · Day 4</a>): keep an estimate, look at the local evidence around it, compute a correction, repeat. The book puts it this way: RAFT combines deep learning with traditional first-order optimization. <span class="src">p. 376</span> That design is what allows DROID-SLAM, tomorrow, to put a real Gauss-Newton step inside the same loop.</p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The correlation volume is recomputed in each iteration."</strong> It is built once. Iterations only index into it, which is why a dozen of them are affordable.</li>
+<li><strong>"The pyramid shrinks both images."</strong> Only the last two dimensions, those of image 2, are pooled. Each pixel of image 1 keeps its own full-resolution entry.</li>
+<li><strong>"The lookup returns the best match."</strong> It returns raw correlation values around the current guess. Deciding which way to move is the update operator's job.</li>
+<li><strong>"Sparse matchers are obsolete."</strong> The book lists the trade: keypoints reduce computation; dense matching helps where texture is limited. <span class="src">p. 375</span></li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. RAFT's feature maps are 40 × 50. How many entries does the level-0 correlation volume have?</p><div class="opts"><button type="button" class="opt">2,000</button><button type="button" class="opt">40,000</button><button type="button" class="opt">4,000,000</button><button type="button" class="opt">16,000,000</button></div><p class="exp" hidden>There are 40 · 50 = 2000 pixels in each feature map, and the volume holds one number for every pair: 2000² = 4,000,000.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. In a 1-D version, pixel u = 20 has current flow −2.5 and the lookup radius is r = 1. Which positions of image 2 are read at level 0?</p><div class="opts"><button type="button" class="opt">16.5, 17.5, 18.5</button><button type="button" class="opt">19, 20, 21</button><button type="button" class="opt">21.5, 22.5, 23.5</button><button type="button" class="opt">17, 18, 19</button></div><p class="exp" hidden>The guess is u′ = 20 − 2.5 = 17.5, and the neighbourhood is u′ + Δu for Δu in {−1, 0, 1}. The values are read by interpolation.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. What is the extra column in SuperGlue's assignment matrix for?</p><div class="opts"><button type="button" class="opt">It stores the descriptor length</button><button type="button" class="opt">It holds the confidence of the camera pose</button><button type="button" class="opt">It normalizes the rows to unit length</button><button type="button" class="opt">It lets a keypoint be assigned to "no match"</button></div><p class="exp" hidden>A keypoint may be occluded or outside the other image. The extra column gives that outcome its own likelihood (p. 374).</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. A true motion is 20 pixels at feature resolution and the lookup radius is 4. Why can RAFT still find it from a zero initial flow?</p><div class="opts"><button type="button" class="opt">The GRU remembers the answer from training</button><button type="button" class="opt">At pyramid level 3, a radius of 4 cells spans 32 pixels of image 2</button><button type="button" class="opt">The lookup radius grows with each iteration</button><button type="button" class="opt">The correlation volume is recomputed around the new estimate</button></div><p class="exp" hidden>Level l is pooled by 2ˡ, so one cell at level 3 covers 8 pixels and a radius of 4 cells reaches 32 pixels. Coarse levels see large displacements, fine levels refine them.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Predicting matches keeps the geometry in the factor graph and gives the network a recognition task.</li>
+<li>SuperPoint learns detection and description. SuperGlue and LightGlue match keypoints with attention and can answer "no match". LoFTR matches densely.</li>
+<li>RAFT builds the all-pairs correlation volume (13.4) once, as a matrix product of feature maps, and pools it into a four-level pyramid.</li>
+<li>Each iteration looks up a \((2r+1)^2\) neighbourhood (13.5) per level around the current match and lets a Conv-GRU output a flow update.</li>
+<li>Tied weights and repeated lookups make RAFT a learned iterative optimizer for flow.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §13.2.1–13.2.3, pp. 374–378, equations (13.4)–(13.5), Figures 13.6–13.8.</li>
+<li>Hadsell, Chopra, LeCun, <em>Dimensionality Reduction by Learning an Invariant Mapping</em>, 2006 (the margin form of the contrastive loss).</li>
+<li>Goodfellow, Bengio, Courville, <em>Deep Learning</em>, 2016 (recurrent networks and gated units).</li>
+</ol></div>
+<p class="next"></p>
+</section>

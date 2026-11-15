@@ -1,0 +1,112 @@
+<section class="day" data-day="58" id="d58" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 10 · Day 4</span>
+  <h2>Fisher information and the graph Laplacian</h2>
+  <p class="lead">After today you can write the Fisher information of a position-only pose graph as its reduced weighted Laplacian, read each pose's uncertainty off the inverse, and predict how a loop closure changes it.</p>
+  <p class="meta">About 60 min · Read §6.2.2, pp. 175–178 (to equation 6.53) · Needs Week 10 Day 3 and Box 6.1 (pp. 157–158)</p>
+</header>
+
+<div class="box read"><h4>Read first: §6.2.2, pp. 175–178, up to equation (6.53)</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The claim on p. 176 that more measurements never hurt, with footnote 11, and the remark that a larger loop helps more.</li>
+<li>The simplifying assumptions behind the measurement model (6.46) on p. 176: what is known, and what shape the noise has.</li>
+<li>The five-line chain (6.52a)–(6.52e) on p. 177. For each equals sign, find the fact that justifies it.</li>
+<li>Footnote 12 on p. 177: what "reduced" means and why it is needed.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>When orientations are known and the noise is isotropic, the Fisher information of a pose graph is \(\mathbf{L}_w\otimes\mathbf{I}_3\): the weighted Laplacian of the graph, with one pose anchored, copied once per axis. The best achievable accuracy is therefore a property of the graph, of who measured whom and how well, and not of where the robot was.</p></div>
+
+<h3>1. More edges never hurt, but they do not help equally</h3>
+<p>Yesterday's formula \(\mathcal{I}=\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{J}\) is a sum over measurements, and each measurement adds a positive semidefinite matrix. So a new measurement can only make the FIM larger in the Loewner order \(\succeq\), and its inverse, the bound on the covariance, only smaller. The book calls this "information never hurts". <span class="src">§6.2.2 · p. 176</span></p>
+<p>How much it helps depends on <em>which</em> two variables the new edge joins. Closing a large loop helps more than closing a small one. To see why, the book works out the FIM for a simplified problem in which the Jacobian can be written down in terms of the graph alone. <span class="src">§6.2.2 · p. 176</span></p>
+
+<h3>2. The graph as a matrix</h3>
+<p>The simplified problem: estimate the positions \(\mathbf{t}_i\in\R^3\) of a 3-D pose graph whose rotations \(\mathbf{R}_i\) are already known. Measurement \(k\) is taken by pose \(i_k\) of pose \(j_k\), in its own frame, with isotropic noise of precision \(w_k\): <span class="src">§6.2.2 · p. 176</span></p>
+\[ \mathbf{z}_k=\mathbf{R}_{i_k}\T(\mathbf{t}_{j_k}-\mathbf{t}_{i_k})+\boldsymbol{\epsilon}_k,\qquad\boldsymbol{\epsilon}_k\sim\N(\mathbf{0},\,w_k^{-1}\mathbf{I}_3). \tag{6.46} \]
+<p>The <strong>incidence matrix</strong> records which edge joins which nodes. In this section it has one <em>row per node</em> and one <em>column per edge</em>: the column of edge \(k=(i,j)\) has \(-1\) in row \(i\), \(+1\) in row \(j\), and zeros elsewhere. (Box 6.1 on p. 157 uses the transpose, edges as rows. The Laplacian is the same either way; only the side on which the transpose appears changes.)</p>
+<p>Relative measurements cannot tell where the whole graph sits: shifting every position by the same vector changes no measurement. This is the <strong>gauge freedom</strong>. It is removed by <strong>anchoring</strong> one pose, usually the first, at the origin, and deleting its row. What is left is the <strong>reduced incidence matrix</strong> \(\mathbf{A}\). <span class="src">§6.2.2 · p. 177, footnote 12</span></p>
+<figure class="fig"><svg viewBox="0 0 600 200" role="img" aria-label="A directed graph with four poses in a diamond. Edges e1 from pose 0 to 1, e2 from 1 to 2, e3 from 2 to 3 are odometry. Edge e4 from pose 3 back to pose 0 is a loop closure. Pose 0 is anchored.">
+  <defs><marker id="w10ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--ink)"/></marker><marker id="w10ar4b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--c1)"/></marker></defs>
+  <line x1="107" y1="94" x2="231" y2="47" stroke="var(--ink)" stroke-width="2" marker-end="url(#w10ar4)"/>
+  <line x1="267" y1="46" x2="391" y2="93" stroke="var(--ink)" stroke-width="2" marker-end="url(#w10ar4)"/>
+  <line x1="393" y1="106" x2="269" y2="153" stroke="var(--ink)" stroke-width="2" marker-end="url(#w10ar4)"/>
+  <line x1="233" y1="154" x2="109" y2="107" stroke="var(--c1)" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#w10ar4b)"/>
+  <rect x="75" y="85" width="30" height="30" fill="var(--c3-soft)" stroke="var(--c3)" stroke-width="2"/>
+  <circle cx="250" cy="40" r="15" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+  <circle cx="410" cy="100" r="15" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+  <circle cx="250" cy="160" r="15" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+  <text x="90" y="105" text-anchor="middle" font-size="13" fill="var(--ink)">0</text>
+  <text x="250" y="45" text-anchor="middle" font-size="13" fill="var(--ink)">1</text>
+  <text x="410" y="105" text-anchor="middle" font-size="13" fill="var(--ink)">2</text>
+  <text x="250" y="165" text-anchor="middle" font-size="13" fill="var(--ink)">3</text>
+  <text x="158" y="54" text-anchor="end" font-size="12" fill="var(--ink)">e1: 0 → 1</text>
+  <text x="345" y="54" font-size="12" fill="var(--ink)">e2: 1 → 2</text>
+  <text x="345" y="152" font-size="12" fill="var(--ink)">e3: 2 → 3</text>
+  <text x="158" y="156" text-anchor="end" font-size="12" fill="var(--c1)">e4: 3 → 0</text>
+  <text x="56" y="140" font-size="12" fill="var(--muted)">anchored</text>
+  <text x="470" y="60" font-size="12" fill="var(--muted)">solid: odometry</text>
+  <text x="470" y="80" font-size="12" fill="var(--muted)">dashed: loop closure</text>
+</svg><figcaption>The running example: three odometry edges and one loop closure. Pose 0 is the anchor.</figcaption></figure>
+<p>For this graph, with rows for poses 1, 2, 3 and columns for \(e_1,\dots,e_4\):</p>
+\[ \mathbf{A}=\begin{bmatrix} 1 & -1 & 0 & 0 \\ 0 & 1 & -1 & 0 \\ 0 & 0 & 1 & -1 \end{bmatrix},\qquad \mathbf{L}_w=\mathbf{A}\mathbf{W}\mathbf{A}\T=\begin{bmatrix} w_1+w_2 & -w_2 & 0 \\ -w_2 & w_2+w_3 & -w_3 \\ 0 & -w_3 & w_3+w_4 \end{bmatrix}, \]
+<p>with \(\mathbf{W}=\diag(w_1,\dots,w_4)\). \(\mathbf{L}_w\) is the <strong>reduced weighted Laplacian</strong>: each diagonal entry is the total weight of the edges at that pose, each off-diagonal entry is minus the weight of the edge between two poses, and the row and column of the anchor are gone. Check one column of \(\mathbf{A}\): \(e_4\) runs from 3 to 0, so it has \(-1\) in row 3, and its \(+1\) was in the deleted row 0.</p>
+
+<h3>3. From the measurement model to the Laplacian</h3>
+<div class="box note"><h4>Filling the gap: the Kronecker product in three rules</h4>
+<p>\(\mathbf{A}\otimes\mathbf{B}\) is the block matrix obtained by replacing every entry \(a_{ij}\) of \(\mathbf{A}\) with the block \(a_{ij}\mathbf{B}\). So \(\mathbf{A}\otimes\mathbf{I}_3\) is "\(\mathbf{A}\), acting on 3-vectors instead of numbers". Three rules are all today needs:</p>
+\[ (\mathbf{A}\otimes\mathbf{B})\T=\mathbf{A}\T\otimes\mathbf{B}\T,\qquad(\mathbf{A}\otimes\mathbf{B})(\mathbf{C}\otimes\mathbf{D})=(\mathbf{A}\mathbf{C})\otimes(\mathbf{B}\mathbf{D}),\qquad(\mathbf{A}\otimes\mathbf{B})^{-1}=\mathbf{A}^{-1}\otimes\mathbf{B}^{-1}. \]</div>
+<p>Stack the positions of the non-anchored poses into \(\mathbf{t}\). Then \((\mathbf{A}\otimes\mathbf{I}_3)\T\mathbf{t}\) is the stack of differences \(\mathbf{t}_{j_k}-\mathbf{t}_{i_k}\), one per edge (try it on the example: the column of \(e_2\) gives \(\mathbf{t}_2-\mathbf{t}_1\), and that of \(e_4\) gives \(-\mathbf{t}_3=\mathbf{t}_0-\mathbf{t}_3\)). With \(\mathbf{R}=\operatorname{BlockDiag}(\mathbf{R}_{i_1},\dots,\mathbf{R}_{i_m})\) rotating each difference into the frame of the observing pose, the whole measurement model and its Jacobian are <span class="src">§6.2.2 · p. 177</span></p>
+\[ \mathbf{z}=\mathbf{R}\T(\mathbf{A}\otimes\mathbf{I}_3)\T\mathbf{t}+\boldsymbol{\epsilon},\qquad\mathbf{J}=\mathbf{R}\T(\mathbf{A}\otimes\mathbf{I}_3)\T,\qquad\boldsymbol{\Sigma}^{-1}=\operatorname{BlockDiag}(w_1\mathbf{I}_3,\dots,w_m\mathbf{I}_3)=\mathbf{W}\otimes\mathbf{I}_3 . \]
+<p>Now apply \(\mathcal{I}=\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{J}\), equation (6.52), one step at a time:</p>
+\[ \begin{aligned} \mathcal{I} & = (\mathbf{A}\otimes\mathbf{I}_3)\,\mathbf{R}\,\boldsymbol{\Sigma}^{-1}\mathbf{R}\T(\mathbf{A}\otimes\mathbf{I}_3)\T & & \text{substitute } \mathbf{J} \\ & = (\mathbf{A}\otimes\mathbf{I}_3)(\mathbf{W}\otimes\mathbf{I}_3)(\mathbf{A}\T\otimes\mathbf{I}_3) & & \mathbf{R}\boldsymbol{\Sigma}^{-1}\mathbf{R}\T=\boldsymbol{\Sigma}^{-1},\ \text{rule 1} \\ & = (\mathbf{A}\mathbf{W}\mathbf{A}\T)\otimes\mathbf{I}_3 & & \text{rule 2, twice} \\ & = \mathbf{L}_w\otimes\mathbf{I}_3 . \end{aligned} \]
+<p>The one step that uses the assumptions is \(\mathbf{R}\boldsymbol{\Sigma}^{-1}\mathbf{R}\T=\boldsymbol{\Sigma}^{-1}\). Block \(k\) of the left side is \(\mathbf{R}_{i_k}(w_k\mathbf{I}_3)\mathbf{R}_{i_k}\T=w_k\mathbf{R}_{i_k}\mathbf{R}_{i_k}\T=w_k\mathbf{I}_3\). Isotropic noise looks the same in every frame, so the rotations drop out. With anisotropic noise they would not, for the same reason as on Day 2.</p>
+<p>By rule 3 the Cramér-Rao bound is \(\cov(\hat{\mathbf{t}})\succeq\mathbf{L}_w^{-1}\otimes\mathbf{I}_3\). For pose \(i\) this reads: its position covariance is at least \([\mathbf{L}_w^{-1}]_{ii}\,\mathbf{I}_3\), a sphere whose variance per axis is one diagonal entry of the inverse Laplacian.</p>
+<div class="box note"><h4>Filling the gap: here the bound is attained exactly</h4>
+<p>With known rotations the model is linear in \(\mathbf{t}\). The weighted least-squares estimate is \(\hat{\mathbf{t}}=\mathcal{I}^{-1}\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\mathbf{z}\), so \(\hat{\mathbf{t}}-\mathbf{t}=\mathcal{I}^{-1}\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\boldsymbol{\epsilon}\). It is unbiased, and its covariance is \(\mathcal{I}^{-1}\mathbf{J}\T\boldsymbol{\Sigma}^{-1}\boldsymbol{\Sigma}\boldsymbol{\Sigma}^{-1}\mathbf{J}\mathcal{I}^{-1}=\mathcal{I}^{-1}\). So in this problem \(\mathbf{L}_w^{-1}\otimes\mathbf{I}_3\) is not only a bound: it is the covariance of the optimal estimate.</p></div>
+<p><strong>The running example, unit weights.</strong> Without the loop closure (\(w_4=0\)) and with it (\(w_4=1\)):</p>
+\[ \begin{bmatrix} 2 & -1 & 0 \\ -1 & 2 & -1 \\ 0 & -1 & 1 \end{bmatrix}^{-1}=\begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 2 \\ 1 & 2 & 3 \end{bmatrix},\qquad \begin{bmatrix} 2 & -1 & 0 \\ -1 & 2 & -1 \\ 0 & -1 & 2 \end{bmatrix}^{-1}=\frac14\begin{bmatrix} 3 & 2 & 1 \\ 2 & 4 & 2 \\ 1 & 2 & 3 \end{bmatrix}. \]
+<p>Odometry alone gives variances 1, 2, 3 along the chain: the variance grows by one step's worth per step, which is the random-walk drift of <a href="#d1">Week 1 · Day 1</a>. The single loop closure brings them to 0.75, 1, 0.75. The pose that gains most is pose 3, the far end of the chain, and the worst pose is now the one in the middle of the loop.</p>
+<div class="box tip"><h4>Intuition: a circuit of resistors</h4><p>Replace each edge by a resistor with conductance \(w_k\) (resistance \(1/w_k\)) and connect the anchor to ground. Then \([\mathbf{L}_w^{-1}]_{ii}\) is the <strong>effective resistance</strong> between pose \(i\) and the anchor. The two school rules do the rest. In series, resistances add: a chain of \(k\) unit edges gives variance \(k\). In parallel, \(R=\frac{R_1R_2}{R_1+R_2}\): pose 2 above is reached by two paths of resistance 2, so \(\frac{2\cdot 2}{2+2}=1\); pose 1 by paths of resistance 1 and 3, so \(\frac{1\cdot 3}{1+3}=0.75\). A loop closure is a second wire to ground. It helps most where the existing path was long.</p></div>
+
+<h3>4. Play with a larger graph</h3>
+<p>Try it: eight poses, odometry only at first. Read the variances along the chain. Press "7–0" to close the big loop. Then press "All off" and close the small loop "2–0" instead.</p>
+<div class="viz" data-viz="w10_graph"></div>
+<p class="cap">Notice: with odometry only the variances are 1, 2, …, 7 and there is exactly one spanning tree. Closing the big loop 7–0 cuts the worst variance from 7 to 2 (now at pose 4, halfway round) and the mean from 4 to 1.5. Closing the small loop 2–0 instead leaves pose 7 at 5.67. The numbers on the buttons rank the candidates the same way: +2.08 for 7–0 against +1.10 for 2–0. Tomorrow explains those numbers and the spanning trees.</p>
+<p>The widget is 2-D, so its FIM is \(\mathbf{L}_w\otimes\mathbf{I}_2\) and the uncertainty regions are circles. They are circles, not ellipses, because the noise is isotropic and the rotations are known.</p>
+
+<h3>5. Beyond the simplified problem</h3>
+<p>For full pose-graph optimization, where rotations are estimated too, the FIM is no longer a pure Laplacian, but the graph structure is still there: <span class="src">§6.2.2 · pp. 177–178</span></p>
+\[ \mathcal{I}(\mathbf{x})=\sum_{k=1}^{m}\mathbf{L}_k\otimes\Big(\Ad(\mathbf{T}_{i_k}^{-1})\T\,\boldsymbol{\Sigma}_k^{-1}\,\Ad(\mathbf{T}_{i_k}^{-1})\Big),\qquad\mathbf{L}_k=\mathbf{a}_k\mathbf{a}_k\T, \tag{6.53} \]
+<p>where \(\mathbf{a}_k\) is column \(k\) of the reduced incidence matrix, \(\mathbf{L}_k\) is the <strong>elementary Laplacian</strong> of edge \(k\), \(\boldsymbol{\Sigma}_k\) is that measurement's \(6\times 6\) noise covariance, and \(\Ad\) is the adjoint from <a href="#d23">Week 4 · Day 5</a>. Each edge contributes "its place in the graph" Kronecker "its geometry and noise". Today's result is the special case in which the second factor is \(w_k\mathbf{I}_3\) for every edge, since \(\sum_k w_k\mathbf{a}_k\mathbf{a}_k\T=\mathbf{A}\mathbf{W}\mathbf{A}\T\). The book reports that design criteria computed from the Laplacian alone closely match those from the full FIM under certain conditions. <span class="src">§6.2.2 · p. 178</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The covariance of pose i depends only on the edges at pose i."</strong> \(\mathbf{L}_w\) is sparse and local, but its inverse is dense: every edge in the graph affects every pose.</li>
+<li><strong>"Anchoring pose 0 is an approximation."</strong> It is a choice of coordinates. All covariances are then relative to pose 0, which is why they grow with graph distance from it.</li>
+<li><strong>"A loop closure fixes the pose where it lands."</strong> It lowers the uncertainty of every pose on the loop, most of all those far from the anchor along the old path.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A chain 0–1–2–3–4–5 has unit-weight odometry edges and pose 0 anchored. What is the variance per axis of pose 5?</p><div class="opts"><button type="button" class="opt">1</button><button type="button" class="opt">5</button><button type="button" class="opt">25</button><button type="button" class="opt">1/5</button></div><p class="exp" hidden>Five unit resistors in series: the effective resistance to the anchor is 5. Variance grows linearly along a chain.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. Add one loop closure of weight 1 between poses 5 and 0 in that chain. What is the variance per axis of pose 5 now?</p><div class="opts"><button type="button" class="opt">2.5</button><button type="button" class="opt">1</button><button type="button" class="opt">4</button><button type="button" class="opt">5/6</button></div><p class="exp" hidden>Two parallel paths to the anchor, of resistance 5 (the chain) and 1 (the new edge): 5·1/(5+1) = 5/6 ≈ 0.83.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. Which assumption makes R Σ⁻¹ Rᵀ = Σ⁻¹ true in the derivation of (6.52)?</p><div class="opts"><button type="button" class="opt">Each measurement's noise is isotropic, so each block of Σ⁻¹ is a multiple of the identity</button><button type="button" class="opt">All edge weights are equal</button><button type="button" class="opt">The rotations are all the identity</button><button type="button" class="opt">The graph has no loops</button></div><p class="exp" hidden>Block k is R(wI)Rᵀ = wI for any rotation R. The weights may differ from edge to edge, and the rotations may be anything, as long as they are known.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. A 3-D pose graph has 10 poses (one anchored) and 14 measurements, with known rotations. What are the sizes of the reduced incidence matrix A and of the FIM?</p><div class="opts"><button type="button" class="opt">10 × 14 and 30 × 30</button><button type="button" class="opt">14 × 9 and 14 × 14</button><button type="button" class="opt">9 × 14 and 27 × 27</button><button type="button" class="opt">9 × 9 and 42 × 42</button></div><p class="exp" hidden>A has one row per non-anchored pose and one column per edge: 9 × 14. The Laplacian is 9 × 9, and the FIM L ⊗ I₃ is 27 × 27.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Every measurement adds a positive semidefinite term to the FIM, so the bound can only shrink. How much depends on where the edge is in the graph.</li>
+<li>For positions with known rotations and isotropic noise, \(\mathbf{J}=\mathbf{R}\T(\mathbf{A}\otimes\mathbf{I}_3)\T\) and \(\mathcal{I}=\mathbf{L}_w\otimes\mathbf{I}_3\) with \(\mathbf{L}_w=\mathbf{A}\mathbf{W}\mathbf{A}\T\).</li>
+<li>The covariance of pose \(i\) is \([\mathbf{L}_w^{-1}]_{ii}\mathbf{I}_3\), and that diagonal entry is the effective resistance from pose \(i\) to the anchor.</li>
+<li>Chains add variance like resistors in series; loop closures act like resistors in parallel, and help most when the loop is long.</li>
+<li>For full PGO the FIM (6.53) keeps the same graph structure, with a geometry-and-noise block on each edge.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §6.2.2 "Fisher Information Matrix and Graph Laplacian", pp. 175–178; Box 6.1, pp. 157–158.</li>
+<li>Horn and Johnson, <em>Topics in Matrix Analysis</em>, 1991 (Kronecker products).</li>
+<li>Godsil and Royle, <em>Algebraic Graph Theory</em>, 2001 (incidence and Laplacian matrices).</li>
+<li>Doyle and Snell, <em>Random Walks and Electric Networks</em>, 1984 (effective resistance and the Laplacian).</li>
+<li>Kay, <em>Fundamentals of Statistical Signal Processing: Estimation Theory</em>, 1993 (the linear Gaussian model attains the bound).</li>
+</ol></div>
+<p class="next"></p>
+</section>

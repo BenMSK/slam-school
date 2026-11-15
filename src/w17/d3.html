@@ -1,0 +1,128 @@
+<section class="day" data-day="99" id="d99" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 17 · Day 3</span>
+  <h2>The observability matrix and the four unobservable directions</h2>
+  <p class="lead">After today you can build the observability matrix of an aided inertial system, verify its four null vectors, and explain why global position and yaw cannot be estimated while roll, pitch, and scale can.</p>
+  <p class="meta">About 60 min · Read §11.3.2, pp. 324–325 (2 pages) · Needs Week 17 Days 1 and 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §11.3.2, pp. 324–325</h4>
+<p>Stop before §11.3.3 on p. 325. While you read, look for:</p>
+<ul>
+<li>What one block row of the observability matrix (11.50) is made of (p. 324).</li>
+<li>The sentence that says how many unobservable directions an AINS has, and what they are physically (p. 324).</li>
+<li>In (11.51), the two rows that contain \(\mathbf{I}_3\). They belong to the robot position and to the point feature (p. 324).</li>
+<li>The paragraph on p. 325 that says this unobservability "is not pathological", and footnote 9 about SLAM without an IMU.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Stack the measurement Jacobians of all camera frames, each carried back to the first frame by the transition matrix, and you get the observability matrix \(\mathbf{M}\). For an IMU aided by landmarks at unknown positions, \(\mathbf{M}\) always has a nullspace of dimension four: shift the whole solution in any of three directions, or rotate it about the gravity vector, and no measurement changes. Everything else, including roll, pitch, and metric scale, is observable in general.</p></div>
+
+<h3>1. Building \(\mathbf{M}\)</h3>
+<p>Day 2 gave the measurement error at frame \(k\): \(\tilde{\mathbf{z}}_k \simeq \mathbf{H}_{x_k}\tilde{\mathbf{x}}_k\) plus noise, where \(\mathbf{H}_{x_k}\) stacks the Jacobians of every feature seen at that frame. Day 1 gave the propagation of an initial error without noise: \(\tilde{\mathbf{x}}_k = \boldsymbol{\Phi}_{(k,1)}\tilde{\mathbf{x}}_1\). Substitute one into the other and stack over frames. This is equation (11.50): <span class="src">§11.3.2 · p. 324</span></p>
+\[ \begin{bmatrix} \tilde{\mathbf{z}}_1 \\ \tilde{\mathbf{z}}_2 \\ \vdots \\ \tilde{\mathbf{z}}_k \end{bmatrix} \simeq \underbrace{\begin{bmatrix} \mathbf{H}_{x_1}\boldsymbol{\Phi}_{(1,1)} \\ \mathbf{H}_{x_2}\boldsymbol{\Phi}_{(2,1)} \\ \vdots \\ \mathbf{H}_{x_k}\boldsymbol{\Phi}_{(k,1)} \end{bmatrix}}_{\mathbf{M}(\hat{\mathbf{x}})}\ \tilde{\mathbf{x}}_1 . \]
+<p>It is the matrix of <a href="#d97">Day 1</a>, with two differences. \(\mathbf{H}\) and \(\boldsymbol{\Phi}\) now change from frame to frame, and both depend on the linearization point, which is why the book writes \(\mathbf{M}(\hat{\mathbf{x}})\). The <strong>unobservable subspace</strong> \(\mathcal{U}\) is the nullspace of \(\mathbf{M}\): all \(\mathbf{u}\) with \(\mathbf{M}\mathbf{u} = \mathbf{0}\). (The book says the system is fully observable when the nullspace "is empty"; strictly, a nullspace always contains \(\mathbf{0}\), and the meaning is that it contains nothing else.)</p>
+
+<div class="box note"><h4>Filling the gap: \(\mathbf{M}\) and the information matrix have the same nullspace</h4>
+<p>The book says \(\mathbf{M}\) is "closely related" to the Fisher information matrix. Here is the relation. With measurement noise of covariance \(\boldsymbol{\Sigma}\), the stacked model \(\tilde{\mathbf{z}} = \mathbf{M}\tilde{\mathbf{x}}_1 + \boldsymbol{\eta}\) is a linear Gaussian model, and its information matrix about \(\tilde{\mathbf{x}}_1\) is (<a href="#d57">Week 10 · Day 3</a>)</p>
+\[ \boldsymbol{\mathcal{I}} = \mathbf{M}\T\boldsymbol{\Sigma}^{-1}\mathbf{M} . \]
+<p>If \(\mathbf{M}\mathbf{u} = \mathbf{0}\) then clearly \(\boldsymbol{\mathcal{I}}\mathbf{u} = \mathbf{0}\). Conversely, if \(\boldsymbol{\mathcal{I}}\mathbf{u} = \mathbf{0}\) then</p>
+\[ 0 = \mathbf{u}\T\mathbf{M}\T\boldsymbol{\Sigma}^{-1}\mathbf{M}\mathbf{u} = \norm{\boldsymbol{\Sigma}^{-1/2}\mathbf{M}\mathbf{u}}^2 \quad\Longrightarrow\quad \mathbf{M}\mathbf{u} = \mathbf{0}, \]
+<p>because \(\boldsymbol{\Sigma}^{-1/2}\) is invertible. So the unobservable directions are exactly the eigenvectors of the information matrix with eigenvalue zero. Along them the Cramér-Rao bound on the variance is infinite. This also gives a recipe that needs no algebra: compute \(\mathbf{M}\) numerically, take the eigenvalues of \(\mathbf{M}\T\mathbf{M}\), and count the zeros. The lab below does exactly that.</p></div>
+
+<h3>2. The four null vectors</h3>
+<p>The book quotes the nullspace for a state with one point, one line, and one plane, equation (11.51). Here are its rows for the IMU state and the point feature, in the state order of (11.37); the line and plane rows follow the same logic. <span class="src">§11.3.2 · pp. 324–325</span></p>
+<div class="tbl"><table>
+<tr><th>Block of the error state</th><th>\(\mathbf{u}_1\) (one column)</th><th>\(\mathbf{u}_{2:4}\) (three columns)</th></tr>
+<tr><td>rotation \(\tilde{\boldsymbol{\theta}}\)</td><td>\(\mathbf{R}^{c_1}_w\mathbf{g}^w\)</td><td>\(\mathbf{0}\)</td></tr>
+<tr><td>gyroscope bias \(\tilde{\mathbf{b}}^g\)</td><td>\(\mathbf{0}\)</td><td>\(\mathbf{0}\)</td></tr>
+<tr><td>velocity \(\tilde{\mathbf{v}}\)</td><td>\(-\mathbf{v}^w_1\times\mathbf{g}^w\)</td><td>\(\mathbf{0}\)</td></tr>
+<tr><td>accelerometer bias \(\tilde{\mathbf{b}}^a\)</td><td>\(\mathbf{0}\)</td><td>\(\mathbf{0}\)</td></tr>
+<tr><td>position \(\tilde{\mathbf{p}}\)</td><td>\(-\mathbf{p}^w_1\times\mathbf{g}^w\)</td><td>\(\mathbf{I}_3\)</td></tr>
+<tr><td>point feature \(\tilde{\mathbf{p}}_f\)</td><td>\(-\mathbf{p}^w_f\times\mathbf{g}^w\)</td><td>\(\mathbf{I}_3\)</td></tr>
+</table></div>
+<p>The subscript 1 means "at the first frame", and \(\mathbf{R}^{c_1}_w\mathbf{g}^w\) is the gravity vector expressed in the sensor frame at that time.</p>
+<p><strong>\(\mathbf{u}_{2:4}\) is a shift.</strong> Each of its three columns adds the same unit vector to the robot position and to every feature, and touches nothing else.</p>
+<p><strong>\(\mathbf{u}_1\) is a rotation about gravity.</strong> Rotate the world by a small angle \(\varepsilon\) about the axis \(\mathbf{g}\) (rotation vector \(\varepsilon\mathbf{g}\)). Any world vector \(\mathbf{a}\) becomes \(\mathbf{a} + \varepsilon\,\mathbf{g}\times\mathbf{a} = \mathbf{a} - \varepsilon\,\mathbf{a}\times\mathbf{g}\). That is the entry \(-\mathbf{a}\times\mathbf{g}\) for \(\mathbf{a} = \mathbf{v}_1, \mathbf{p}_1, \mathbf{p}_f\). The body orientation picks up the same rotation, written in body coordinates: \(\mathbf{R}^{c_1}_w\mathbf{g}^w\). The biases live in the body frame and do not change. A rotation about the gravity axis is a change of <strong>yaw</strong>.</p>
+<figure class="fig"><svg viewBox="0 0 600 200" role="img" aria-label="Two panels. Left, a top view: a robot and a landmark are turned together about the gravity axis, which points into the page; the gravity vector looks the same from the body afterwards. Right, a side view: the body is tilted while gravity keeps pointing down, so the direction of gravity seen from the body changes.">
+  <defs><marker id="w17ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--c2)"/></marker></defs>
+  <line x1="300" y1="10" x2="300" y2="190" stroke="var(--line)" stroke-width="1"/>
+  <text x="145" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Yaw: turn everything about gravity</text>
+  <line x1="95" y1="125" x2="205" y2="80" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="112" y1="147" x2="185" y2="53" stroke="var(--c3)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <circle cx="95" cy="125" r="7" fill="var(--c5)"/><rect x="199" y="74" width="12" height="12" fill="var(--c2)"/>
+  <circle cx="112" cy="147" r="7" fill="none" stroke="var(--c3)" stroke-width="2"/><rect x="179" y="47" width="12" height="12" fill="none" stroke="var(--c3)" stroke-width="2"/>
+  <circle cx="145" cy="104" r="7" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/><path d="M140 99 L150 109 M150 99 L140 109" stroke="var(--ink)" stroke-width="1.5" fill="none"/>
+  <text x="145" y="186" text-anchor="middle" font-size="12" fill="var(--muted)">⊗ g points into the page: unchanged</text>
+  <text x="455" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Tilt: turn everything against gravity</text>
+  <line x1="405" y1="90" x2="505" y2="90" stroke="var(--ink)" stroke-width="4"/>
+  <line x1="409.7" y1="68.9" x2="500.3" y2="111.1" stroke="var(--c3)" stroke-width="4" stroke-dasharray="7 5"/>
+  <line x1="455" y1="92" x2="455" y2="146" stroke="var(--c2)" stroke-width="2.5" marker-end="url(#w17ar3)"/>
+  <text x="465" y="148" font-size="13" fill="var(--c2)">g</text>
+  <text x="455" y="186" text-anchor="middle" font-size="12" fill="var(--muted)">g stays put, so the body feels it turn</text>
+</svg><figcaption>Left: seen from above, the solution (solid) and a copy turned about the gravity axis (dashed) give the same camera rays and the same accelerometer readings. Right: seen from the side, a tilted copy changes the direction of gravity in the body frame, and the accelerometer reports that.</figcaption></figure>
+
+<div class="box note"><h4>Filling the gap: checking that these vectors are in the nullspace</h4>
+<p>The book defers the proof to its reference. Two short arguments cover it for point features.</p>
+<p><strong>At the first frame, with the Jacobian of Day 2.</strong> \(\mathbf{H}_f = [(\hat{\mathbf{p}}^c_f)^{\wedge},\ \mathbf{0},\ \mathbf{0},\ \mathbf{0},\ -\hat{\mathbf{R}}\T,\ \hat{\mathbf{R}}\T]\). For a shift \(\mathbf{t}\): \(-\hat{\mathbf{R}}\T\mathbf{t} + \hat{\mathbf{R}}\T\mathbf{t} = \mathbf{0}\). For \(\mathbf{u}_1\), write \(\mathbf{g}^c = \hat{\mathbf{R}}\T\mathbf{g}\) and use the fact that a rotation can be moved inside a cross product, \(\hat{\mathbf{R}}\T(\mathbf{a}\times\mathbf{b}) = (\hat{\mathbf{R}}\T\mathbf{a})\times(\hat{\mathbf{R}}\T\mathbf{b})\):</p>
+\[ \begin{aligned} \mathbf{H}_f\mathbf{u}_1 &= \hat{\mathbf{p}}^c_f\times\mathbf{g}^c + \hat{\mathbf{R}}\T(\mathbf{p}_1\times\mathbf{g}) - \hat{\mathbf{R}}\T(\mathbf{p}_f\times\mathbf{g}) \\ &= \hat{\mathbf{p}}^c_f\times\mathbf{g}^c - \big(\hat{\mathbf{R}}\T(\mathbf{p}_f - \mathbf{p}_1)\big)\times\mathbf{g}^c = \hat{\mathbf{p}}^c_f\times\mathbf{g}^c - \hat{\mathbf{p}}^c_f\times\mathbf{g}^c = \mathbf{0} . \end{aligned} \]
+<p>Whatever \(\mathbf{H}_r\) and \(\mathbf{H}_b\) are, they multiply a zero vector.</p>
+<p><strong>At every later frame, without any Jacobian.</strong> Let \(\mathbf{Q}\) be a rotation about the gravity axis, so \(\mathbf{Q}\mathbf{g} = \mathbf{g}\). Start the integration (11.12) from the rotated initial state \(\mathbf{Q}\mathbf{R}_1, \mathbf{Q}\mathbf{v}_1, \mathbf{Q}\mathbf{p}_1\) with the same IMU readings and biases. One step gives</p>
+\[ \mathbf{v}' = \mathbf{Q}\mathbf{v} + \mathbf{g}\Delta t + \mathbf{Q}\mathbf{R}(\tilde{\mathbf{a}} - \mathbf{b}^a)\Delta t = \mathbf{Q}\big(\mathbf{v} + \mathbf{g}\Delta t + \mathbf{R}(\tilde{\mathbf{a}} - \mathbf{b}^a)\Delta t\big), \]
+<p>and the same for position and rotation. The last equality needs \(\mathbf{Q}\mathbf{g} = \mathbf{g}\). So the whole predicted trajectory is the old one rotated by \(\mathbf{Q}\). Rotate the landmarks too, and every feature in the sensor frame is unchanged: \((\mathbf{Q}\mathbf{R})\T(\mathbf{Q}\mathbf{p}_f - \mathbf{Q}\mathbf{p}) = \mathbf{R}\T(\mathbf{p}_f - \mathbf{p})\). All measurements at all times are identical, for a rotation of any size. Its derivative at zero angle is \(\mathbf{u}_1\), so \(\mathbf{M}\mathbf{u}_1 = \mathbf{0}\). For a rotation about any other axis, \(\mathbf{Q}\mathbf{g} \ne \mathbf{g}\) and the argument fails at the first step: that is why roll and pitch <em>are</em> observable.</p></div>
+
+<h3>3. Compute it: the observability lab</h3>
+<p>The lab is a 2-D visual-inertial system small enough to compute in your browser. A robot carries one gyroscope, a two-axis accelerometer, and a camera that measures the bearing (optionally also the range) to three landmarks, nine times in four seconds. The unknowns are the initial heading, gyro bias, velocity, accelerometer bias, position, and the landmark positions: 14 numbers, in the book's order. The widget differentiates all camera readings with respect to those 14 numbers while the IMU readings are held fixed. That derivative is \(\mathbf{M}\). Then it takes the eigenvalues of \(\mathbf{M}\T\mathbf{M}\).</p>
+<p>A plane has less room than space, so the counts shrink:</p>
+<div class="tbl"><table>
+<tr><th>Unobservable in general</th><th>3-D (the book)</th><th>Lab, top view</th><th>Lab, side view</th></tr>
+<tr><td>Global position</td><td>3</td><td>2</td><td>2</td></tr>
+<tr><td>Rotation about gravity (yaw)</td><td>1</td><td>1 (gravity is perpendicular to the plane)</td><td>0 (no such rotation stays in the plane)</td></tr>
+<tr><td>Total</td><td>4</td><td>3</td><td>2</td></tr>
+</table></div>
+<p>Try it: read the bar chart and the table first. Then move "Size of the change" and watch the last tile. Then set "Try this change" to scale. Then switch the view to side.</p>
+<div class="viz" data-viz="w17_obslab"></div>
+<p class="cap">Notice: in the top view three of the 14 eigenvalues are zero, and the table names them: shift along x, shift along y, yaw. The pink copy is the solution rotated by 17°, and the camera readings change by 0°. Scale is observable (information 0.688) even though the camera is monocular; apply a scale change of × 1.25 and the bearings move by about 8°. In the side view only two zeros remain, and a rotation is now visible to the sensors, because it tilts the body against gravity.</p>
+
+<h3>4. Unobservable, but harmless: gauge freedom</h3>
+<p>The book stresses that these four directions are not a defect. No measurement refers to a global frame: the IMU measures motion relative to the body, the camera measures landmarks relative to the body, and the landmarks were never surveyed. The one exception is gravity, which the accelerometer senses and which ties down roll and pitch. So position and yaw are not unknown facts about the world; they are a choice of world frame that is ours to make. <span class="src">§11.3.2 · p. 325</span></p>
+<p>This is the <strong>gauge freedom</strong> you met for bundle adjustment in <a href="#d70">Week 12 · Day 4</a>: a family of solutions that all explain the data equally well. Observability analysis finds the family. Fixing the gauge picks one member, for example by declaring the first position to be the origin with zero yaw, or by adding a prior factor on the first state. That adds a convention, not information: relative quantities such as the distance travelled or the angle turned come out the same in every gauge.</p>
+<div class="tbl"><table>
+<tr><th>System</th><th>Unobservable directions</th><th>Count</th><th>Where</th></tr>
+<tr><td>Vision only, one camera</td><td>position, roll, pitch, yaw, scale</td><td>7</td><td>§7.8, p. 221</td></tr>
+<tr><td>Landmark SLAM without an IMU</td><td>position and the full 3-D rotation</td><td>at least 6</td><td>footnote 9, p. 325</td></tr>
+<tr><td>IMU aided by a camera or LiDAR</td><td>position, yaw</td><td>4</td><td>§11.3.2, p. 324</td></tr>
+<tr><td>The same, plus an absolute sensor such as GPS</td><td>none</td><td>0</td><td>§11.3.2, p. 325</td></tr>
+</table></div>
+<p>Reading down the table shows what an IMU adds to vision: gravity makes roll and pitch observable, and metric acceleration makes scale observable. The four that remain need a sensor that measures something absolute.</p>
+<p>The book ends the section with a warning. For some motions the nullspace is <em>larger</em> than four, and those extra directions are not a choice of frame. That is Day 4.</p>
+<div class="box tip"><h4>Intuition</h4><p>Imagine the robot and all its landmarks standing on a turntable inside a windowless lorry. Drive the lorry somewhere else, or turn the table about its vertical axis, and nothing measured on the table changes. Tilt the table, and a plumb line shows it at once. Shift and yaw are the turntable moves the sensors cannot feel.</p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Four unobservable directions means four state variables are unknown."</strong> Each direction is a combination that moves the robot and every landmark together. No single variable is to blame.</li>
+<li><strong>"Yaw is unobservable, so a VIO cannot track heading."</strong> Changes of heading are observable, through the gyroscope and the landmarks. Only the heading of the starting frame is free.</li>
+<li><strong>"More landmarks will fix it."</strong> Every landmark at an unknown position adds three unknowns and moves with the gauge. The nullspace stays four-dimensional. A landmark at a <em>known</em> position would help.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="3"><p class="qq">Q1. A visual-inertial system tracks 50 point landmarks at unknown positions with generic motion. What is the dimension of the nullspace of \(\mathbf{M}\)?</p><div class="opts"><button type="button" class="opt">0</button><button type="button" class="opt">7</button><button type="button" class="opt">150</button><button type="button" class="opt">4</button></div><p class="exp" hidden>Three for global position and one for yaw, whatever the number of unknown landmarks.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A feature is at \(\mathbf{p}^w_f = (2, 0, 1)\) and gravity is \(\mathbf{g}^w = (0, 0, -9.81)\). What is the feature block \(-\mathbf{p}^w_f\times\mathbf{g}^w\) of \(\mathbf{u}_1\)?</p><div class="opts"><button type="button" class="opt">(0, −19.62, 0)</button><button type="button" class="opt">(0, 19.62, 0)</button><button type="button" class="opt">(−19.62, 0, 0)</button><button type="button" class="opt">(0, 0, −9.81)</button></div><p class="exp" hidden>\(\mathbf{p}\times\mathbf{g} = (p_y g_z - p_z g_y,\ p_z g_x - p_x g_z,\ p_x g_y - p_y g_x) = (0,\ 0 - 2\cdot(-9.81),\ 0) = (0, 19.62, 0)\), and the block is its negative. A point on the \(x\) axis moves along \(-y\): a turn about the downward axis. The height of the point plays no role.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q3. A numerically computed \(\mathbf{M}\) has 27 rows and 14 columns, and \(\mathbf{M}\T\mathbf{M}\) has 11 non-zero eigenvalues. How many independent unobservable directions are there?</p><div class="opts"><button type="button" class="opt">13</button><button type="button" class="opt">16</button><button type="button" class="opt">3</button><button type="button" class="opt">11</button></div><p class="exp" hidden>The rank is 11 and there are 14 unknowns, so the nullspace has dimension \(14 - 11 = 3\). The number of rows does not matter once it exceeds the rank.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Why is a rotation of the whole solution about gravity invisible, while a rotation about a horizontal axis is not?</p><div class="opts"><button type="button" class="opt">The gyroscope measures only horizontal rotation rates</button><button type="button" class="opt">Only a rotation about gravity leaves the gravity vector unchanged, so the same accelerometer readings still fit</button><button type="button" class="opt">Cameras cannot detect rotation about the vertical axis</button><button type="button" class="opt">The yaw bias is larger than the roll and pitch biases</button></div><p class="exp" hidden>The integration contains \(\mathbf{g}\Delta t\) in the world frame. Rotating the solution by \(\mathbf{Q}\) reproduces the measurements only if \(\mathbf{Q}\mathbf{g} = \mathbf{g}\).</p></div>
+  <div class="q" data-a="2"><p class="qq">Q5. Which pair is observable with a camera and an IMU, but not with the camera alone?</p><div class="opts"><button type="button" class="opt">Global position and yaw</button><button type="button" class="opt">Yaw and scale</button><button type="button" class="opt">Roll and pitch, and scale</button><button type="button" class="opt">Global position and scale</button></div><p class="exp" hidden>Vision alone leaves 7 directions free; adding an IMU leaves 4 (position and yaw). The three it removes are roll, pitch, and scale.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>\(\mathbf{M}\) stacks \(\mathbf{H}_{x_k}\boldsymbol{\Phi}_{(k,1)}\): how the first-frame error shows up in the measurements of frame \(k\).</li>
+<li>Its nullspace equals that of the information matrix \(\mathbf{M}\T\boldsymbol{\Sigma}^{-1}\mathbf{M}\): zero eigenvalues are unobservable directions.</li>
+<li>An AINS with unknown landmarks has four: three shifts (\(\mathbf{u}_{2:4}\)) and a rotation about gravity (\(\mathbf{u}_1\)).</li>
+<li>A rotation about gravity is invisible because it leaves \(\mathbf{g}\) unchanged. Roll and pitch change \(\mathbf{g}\) in the body frame and are observable.</li>
+<li>These four are gauge freedom: a choice of world frame, fixed by convention or by an absolute sensor.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §11.3.2 "Observability Analysis", pp. 324–325, equations (11.50)–(11.51) and footnote 9; §7.8, p. 221, for the count of seven in vision-only systems.</li>
+<li>The equality of the two nullspaces and the role of the information matrix follow Bar-Shalom, Li, Kirubarajan, <em>Estimation with Applications to Tracking and Navigation</em>, 2001.</li>
+<li>The verification of the null vectors is this course's own derivation from equations (11.12) and (11.43).</li>
+</ol></div>
+<p class="next"></p>
+</section>

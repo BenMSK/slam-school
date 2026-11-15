@@ -1,0 +1,155 @@
+<section class="day" data-day="41" id="d41" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 7 · Day 5</span>
+  <h2>Numerical pitfalls, a differentiable second-order optimizer, and the libraries</h2>
+  <p class="lead">After today you can explain why Lie group code switches to Taylor series near zero, write the damped linear system a differentiable Levenberg-Marquardt optimizer solves, show how a robust kernel enters it through a first-derivative correction, and place the main libraries on a map.</p>
+  <p class="meta">About 60 min · Read §4.4–4.5, pp. 113–118 (6 pages) · Needs Week 7 Day 4 and Week 6 Day 4</p>
+</header>
+
+<div class="box read"><h4>Read first: §4.4–4.5, pp. 113–118</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>Example 4.6 on p. 114: the two branches of equation (4.41) and the test that chooses between them.</li>
+<li>Equations (4.43) and (4.44) on p. 115: the Levenberg-Marquardt step written as a linear system \(\mathbf{A}\,\boldsymbol{\delta}_t = \boldsymbol{\beta}\).</li>
+<li>Equation (4.46) on p. 116 and the reason given for preferring it to Triggs' correction.</li>
+<li>The three groups of libraries in §4.4.2 (pp. 116–118) and, in §4.5, what is said to be missing in systems that use bundle adjustment as "just a special layer".</li>
+</ul>
+<p>Pages 116–118 are a survey. Skim the names; the table in §5 below organizes them.</p></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>The mathematics of Days 1–4 becomes software only after two practical problems are solved. First, formulas that are correct on paper can produce 0/0 or lose all their digits in floating point, and AutoDiff faithfully differentiates the bad formula. Second, SLAM needs second-order, robust, manifold-aware optimizers, which deep-learning toolkits do not provide. The libraries of this section exist to close those two gaps.</p></div>
+
+<h3>1. A correct formula that still fails</h3>
+<p>Example 4.6 uses the exponential map that turns a rotation vector \(\boldsymbol{\nu}\in\R^3\) (axis times angle) into a unit quaternion. With the vector part written first, <span class="src">Example 4.6 · p. 114</span></p>
+\[ \Exp(\boldsymbol{\nu}) = \left[\, \sin\!\Big(\frac{\norm{\boldsymbol{\nu}}}{2}\Big)\frac{\boldsymbol{\nu}\T}{\norm{\boldsymbol{\nu}}},\;\; \cos\!\Big(\frac{\norm{\boldsymbol{\nu}}}{2}\Big) \right]\T . \tag{4.40} \]
+<p>(In the printed equation the argument of the cosine is written with \(\mathbf{x}\); it is the same vector \(\boldsymbol{\nu}\).) The trouble is the factor that multiplies \(\boldsymbol{\nu}\), \(\gamma = \sin(\norm{\boldsymbol{\nu}}/2)/\norm{\boldsymbol{\nu}}\). At \(\boldsymbol{\nu} = \mathbf{0}\), which is the identity rotation and the most common value of an update step near convergence, it is 0/0. The book's remedy, as implemented in PyPose's <code>LieTensor</code>, is to switch to a Taylor expansion for small angles: <span class="src">Example 4.6 · p. 114</span></p>
+\[ \Exp(\boldsymbol{\nu}) = \begin{cases} \big[\, \boldsymbol{\nu}\T\gamma_e,\; \cos(\norm{\boldsymbol{\nu}}/2) \,\big]\T & \text{if } \norm{\boldsymbol{\nu}} \gt \text{eps}, \\ \big[\, \boldsymbol{\nu}\T\gamma_o,\; 1 - \frac{\norm{\boldsymbol{\nu}}^2}{8} + \frac{\norm{\boldsymbol{\nu}}^4}{384} \,\big]\T & \text{otherwise,} \end{cases} \tag{4.41} \]
+<p>with \(\gamma_e = \sin(\norm{\boldsymbol{\nu}}/2)/\norm{\boldsymbol{\nu}}\) and \(\gamma_o = \frac12 - \frac{\norm{\boldsymbol{\nu}}^2}{48} + \frac{\norm{\boldsymbol{\nu}}^4}{3840}\); eps is the smallest machine number with \(1 + \text{eps} \ne 1\).</p>
+<div class="box note"><h4>Filling the gap: where 48, 3840, 8, and 384 come from</h4>
+<p>Write \(\theta = \norm{\boldsymbol{\nu}}\) and use the series \(\sin a = a - \frac{a^3}{6} + \frac{a^5}{120} - \dots\) and \(\cos a = 1 - \frac{a^2}{2} + \frac{a^4}{24} - \dots\) with \(a = \theta/2\):</p>
+\[ \frac{\sin(\theta/2)}{\theta} = \frac{1}{\theta}\Big(\frac{\theta}{2} - \frac{\theta^3}{8\cdot 6} + \frac{\theta^5}{32\cdot 120}\Big) = \frac12 - \frac{\theta^2}{48} + \frac{\theta^4}{3840}, \qquad \cos\frac{\theta}{2} = 1 - \frac{\theta^2}{4\cdot 2} + \frac{\theta^4}{16\cdot 24} = 1 - \frac{\theta^2}{8} + \frac{\theta^4}{384} . \]
+<p>The division by \(\theta\) has been done on paper, so nothing is divided at run time. At \(\theta = 0.1\): \(\gamma_o = 0.5 - 0.000208 + 0.00000003 = 0.499792\), and the direct formula gives \(\sin(0.05)/0.1 = 0.499792\) too. The first neglected term is \(\theta^6/645120\), far below rounding for small angles.</p></div>
+<p>Why does a learning library care more than a classical one? Because it also needs the <em>derivative</em>, and AutoDiff differentiates the operations you wrote, not the function you meant. For the naive formula the quotient rule gives</p>
+\[ \frac{d\gamma}{d\theta} = \frac{\cos(\theta/2)}{2\theta} - \frac{\sin(\theta/2)}{\theta^2} , \]
+<p>two terms of size about \(1/(2\theta)\) whose difference is the small number \(-\theta/24 + \dots\). Subtracting nearly equal numbers destroys significant digits (<strong>catastrophic cancellation</strong>), and at \(\theta = 0\) the result is NaN, which then spreads to every parameter the gradient touches. The following experiment is this app's own illustration of that mechanism.</p>
+<p>Try it: slide the angle down from 1 toward 0, then press the button for θ = 0.</p>
+<div class="viz" data-viz="w07_small"></div>
+<p class="cap">Notice that the value of γ is fine everywhere except exactly at zero, but its naive derivative is not: at θ = 1e-3 it returns −6.104e-5 where the exact value is −4.167e-5, at 1e-4 it is wrong by a factor of about 100, and below that it is rounding noise: exactly 0 at some angles, far too large or of the wrong sign at others (the chart clips errors above 100). The two-term series is accurate to about 8 digits below 0.1 and only degrades for large angles. Each formula is good where the other is bad, which is why the code needs both branches.</p>
+<p>The same section lists what distinguishes <code>LieTensor</code>: gradients of any order on common hardware, batched Jacobians through a <code>vmap</code> operator, and support for both Lie group and Lie algebra types, so that \(\Exp\) and \(\Log\) can be called directly and differentiated. <span class="src">§4.4 · pp. 114–115</span></p>
+
+<h3>2. A second-order optimizer inside a learning library</h3>
+<p>Networks are trained with first-order methods such as SGD and Adam. The lower level of a SLAM bilevel problem needs more: second-order or constrained optimization, and robustness to outliers. <span class="src">§4.4.1 · p. 115</span> The book walks through Levenberg-Marquardt (LM) as PyPose organizes it. Start from weighted least squares,</p>
+\[ \min \sum_i (\mathbf{h}_i(\mathbf{x}_i) - \mathbf{z}_i)\T\,\boldsymbol{\Sigma}_i\,(\mathbf{h}_i(\mathbf{x}_i) - \mathbf{z}_i), \tag{4.42} \]
+<p>where \(\mathbf{h}\) is the model, \(\mathbf{z}_i\) the measurement, and \(\boldsymbol{\Sigma}_i\) a square information matrix (in this section \(\boldsymbol{\Sigma}_i\) multiplies the residual directly, so it plays the role of a weight). LM updates \(\mathbf{x}_t \leftarrow \mathbf{x}_{t-1} + \boldsymbol{\delta}_t\) with</p>
+\[ \sum_i \big(\boldsymbol{\Lambda}_i + \lambda\cdot\diag(\boldsymbol{\Lambda}_i)\big)\,\boldsymbol{\delta}_t = -\sum_i \mathbf{J}_i\T\boldsymbol{\Sigma}_i\mathbf{r}_i, \qquad \boldsymbol{\Lambda}_i = \mathbf{J}_i\T\boldsymbol{\Sigma}_i\mathbf{J}_i, \quad \mathbf{r}_i = \mathbf{h}_i(\mathbf{x}_i) - \mathbf{z}_i . \tag{4.43} \]
+<p>\(\boldsymbol{\Lambda}_i\) is the Gauss-Newton approximation of the Hessian and \(\lambda\) the damping factor. In short \(\mathbf{A}\,\boldsymbol{\delta}_t = \boldsymbol{\beta}\), equation (4.44). \(\mathbf{A}\) is usually positive definite, so Cholesky works (<a href="#d5">Week 1 · Day 5</a>); for large sparse Jacobians, sparse Cholesky or preconditioned conjugate gradient. <span class="src">§4.4.1 · p. 115</span></p>
+<p><strong>Toy numbers.</strong> The problem of <a href="#d37">Day 1</a> at \(x = 1\), \(y = 2\), with \(\boldsymbol{\Sigma} = \mathbf{I}\): \(\mathbf{J} = (2, 1)\T\), \(\mathbf{r} = (-1, 0)\T\), so \(\Lambda = 5\) and \(\beta = -\mathbf{J}\T\mathbf{r} = 2\). The step is \(\delta = 2/(5 + 5\lambda)\):</p>
+<div class="tbl"><table>
+  <tr><th>Damping λ</th><th>A = Λ + λ·diag(Λ)</th><th>Step δ</th><th>Character</th></tr>
+  <tr><td>0</td><td>5</td><td>0.400</td><td>pure Gauss-Newton (the first row of Day 1's table)</td></tr>
+  <tr><td>0.1</td><td>5.5</td><td>0.364</td><td>nearly Gauss-Newton</td></tr>
+  <tr><td>1</td><td>10</td><td>0.200</td><td>half the Gauss-Newton step</td></tr>
+  <tr><td>10</td><td>55</td><td>0.036</td><td>a short, cautious step along the scaled gradient</td></tr>
+</table></div>
+<p>Damping with \(\diag(\boldsymbol{\Lambda})\) and not with the identity makes the step insensitive to the units of each variable; the trust-region reading of \(\lambda\) is in <a href="#d11">Week 2 · Day 5</a>.</p>
+
+<h3>3. Robust kernels inside the solver</h3>
+<p>Real problems have outliers, so the quadratic is wrapped in a robust kernel \(\rho:\R\to\R\) (Chapter 3): <span class="src">§4.4.1 · p. 116</span></p>
+\[ \min \sum_i \rho\big(\mathbf{r}_i\T\boldsymbol{\Sigma}_i\mathbf{r}_i\big) . \tag{4.45} \]
+<p>The system (4.43) must change accordingly. One classical way, Triggs' correction (also used by Ceres), involves the second derivative of \(\rho\), which is negative, and that can make second-order optimizers unstable. PyPose's alternative, <code>FastTriggs</code>, uses only the first derivative: with \(c_i = \mathbf{r}_i\T\boldsymbol{\Sigma}_i\mathbf{r}_i\),</p>
+\[ \mathbf{r}_i^{\rho} = \sqrt{\rho'(c_i)}\;\mathbf{r}_i, \qquad \mathbf{J}_i^{\rho} = \sqrt{\rho'(c_i)}\;\mathbf{J}_i . \tag{4.46} \]
+<div class="box note"><h4>Filling the gap: why scaling by the square root of ρ′ is the right correction</h4>
+<p>Differentiate one term of (4.45) with the chain rule. Since \(\partial c_i/\partial\mathbf{x} = 2\,\mathbf{r}_i\T\boldsymbol{\Sigma}_i\mathbf{J}_i\) (for symmetric \(\boldsymbol{\Sigma}_i\)), the gradient is</p>
+\[ \nabla\rho(c_i) = \rho'(c_i)\cdot 2\,\mathbf{J}_i\T\boldsymbol{\Sigma}_i\mathbf{r}_i . \]
+<p>Now put the corrected quantities of (4.46) into the plain right-hand side of (4.43): \((\mathbf{J}_i^{\rho})\T\boldsymbol{\Sigma}_i\mathbf{r}_i^{\rho} = \rho'(c_i)\,\mathbf{J}_i\T\boldsymbol{\Sigma}_i\mathbf{r}_i\). It is the true gradient (up to the common factor 2). So the corrected problem is an ordinary weighted least-squares problem that has the same gradient as the robust cost at the current estimate. The matrix on the left becomes \(\rho'(c_i)\,\mathbf{J}_i\T\boldsymbol{\Sigma}_i\mathbf{J}_i\), which is positive semidefinite because \(\rho' \ge 0\).</p>
+<p>This is iteratively reweighted least squares (<a href="#d34">Week 6 · Day 4</a>) with weight \(\rho'(c_i)\), recomputed at every iteration. The exact Hessian of \(\rho(c_i)\) has one more term, proportional to \(\rho''(c_i)\). For a robust kernel \(\rho\) flattens out, so \(\rho'' \lt 0\), and that term can make the matrix indefinite. Triggs' correction keeps a version of that term; the first-order correction drops it.</p>
+<p><strong>Numbers.</strong> Take the Cauchy kernel \(\rho(c) = \log(1 + c)\), so \(\rho'(c) = 1/(1+c)\), with scalar residuals and \(\Sigma = 1\). An inlier \(r = 0.5\): \(c = 0.25\), \(\rho' = 0.8\), corrected residual \(0.894\times 0.5 = 0.447\). An outlier \(r = 3\): \(c = 9\), \(\rho' = 0.1\), corrected residual \(0.316\times 3 = 0.949\). A residual six times larger enters the solver only about twice as large.</p></div>
+
+<h3>4. Four pluggable parts</h3>
+<p>PyPose exposes the pieces of this loop as arguments of the optimizer: <code>solver</code>, <code>kernel</code>, <code>corrector</code>, and <code>strategy</code>. <span class="src">§4.4.1 · pp. 115–116</span></p>
+<figure class="fig"><svg viewBox="0 0 600 190" role="img" aria-label="Four boxes in a row joined by arrows: linearize, robustify with kernel and corrector, linear solve with the solver, and step control with the strategy. A return arrow under the row leads from the last box back to the first, labelled update x and repeat until converged.">
+  <defs><marker id="w07ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <text x="300" y="20" text-anchor="middle" font-size="12" fill="var(--muted)">one Levenberg-Marquardt iteration; the named parts are swappable</text>
+  <rect x="12" y="36" width="132" height="74" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="78" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Linearize</text>
+  <text x="78" y="78" text-anchor="middle" font-size="11" fill="var(--muted)">residuals and</text>
+  <text x="78" y="93" text-anchor="middle" font-size="11" fill="var(--muted)">Jacobians at x</text>
+  <rect x="160" y="36" width="132" height="74" rx="10" fill="var(--c3-soft)" stroke="var(--c3)"/>
+  <text x="226" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Robustify</text>
+  <text x="226" y="78" text-anchor="middle" font-size="11" fill="var(--muted)">kernel, corrector:</text>
+  <text x="226" y="93" text-anchor="middle" font-size="11" fill="var(--muted)">rescale r and J</text>
+  <rect x="308" y="36" width="132" height="74" rx="10" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="374" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Linear solve</text>
+  <text x="374" y="78" text-anchor="middle" font-size="11" fill="var(--muted)">solver: Cholesky,</text>
+  <text x="374" y="93" text-anchor="middle" font-size="11" fill="var(--muted)">sparse, or PCG</text>
+  <rect x="456" y="36" width="132" height="74" rx="10" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="522" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Step control</text>
+  <text x="522" y="78" text-anchor="middle" font-size="11" fill="var(--muted)">strategy: damping,</text>
+  <text x="522" y="93" text-anchor="middle" font-size="11" fill="var(--muted)">trust region</text>
+  <line x1="144" y1="73" x2="157" y2="73" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar5)"/>
+  <line x1="292" y1="73" x2="305" y2="73" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar5)"/>
+  <line x1="440" y1="73" x2="453" y2="73" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar5)"/>
+  <path d="M522 110 L522 142 L78 142 L78 114" fill="none" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w07ar5)"/>
+  <text x="300" y="166" text-anchor="middle" font-size="12" fill="var(--ink)">update x and repeat until converged</text>
+</svg><figcaption>Every box is built from differentiable operations, so the loop can be unrolled (Day 2), or its converged output can be differentiated implicitly (Day 3).</figcaption></figure>
+<div class="tbl"><table>
+  <tr><th>Part</th><th>Decides</th><th>Examples named in the book</th><th>Equation</th></tr>
+  <tr><td>solver</td><td>how A·δ = β is solved</td><td>Cholesky, sparse Cholesky, preconditioned conjugate gradient</td><td>(4.44)</td></tr>
+  <tr><td>kernel</td><td>the robust loss ρ</td><td>the kernels of Chapter 3</td><td>(4.45)</td></tr>
+  <tr><td>corrector</td><td>how ρ changes r and J</td><td>Triggs, FastTriggs</td><td>(4.46)</td></tr>
+  <tr><td>strategy</td><td>how far to step</td><td>adaptive damping, dogleg, trust region</td><td>p. 116</td></tr>
+</table></div>
+<p>In pseudocode (the structure described on pp. 115–116, not literal library code):</p>
+<pre class="code"><code>optimizer = LM(model, solver, kernel, corrector, strategy)
+repeat
+    r, J  = residuals and Jacobians of model at x     # J by AutoDiff, Lie groups included (Day 4)
+    r, J  = corrector(kernel, r, J)                    # (4.46)
+    A     = sum of JᵀΣJ + λ·diag(JᵀΣJ)                 # (4.43)
+    β     = −sum of JᵀΣr
+    δ     = solver(A, β)                               # (4.44)
+    x, λ  = strategy(x, δ, λ)                          # accept or reject the step, adapt the damping
+until converged</code></pre>
+<p>A plain LM run may not reach the global optimum from a poor initial guess, which is why the strategy is there to keep each step from going too far. <span class="src">§4.4.1 · p. 116</span></p>
+
+<h3>5. The library map, and where the field is going</h3>
+<p>§4.4.2 sorts the open-source tools into three groups. <span class="src">§4.4.2 · pp. 116–118</span></p>
+<div class="tbl"><table>
+  <tr><th>Group</th><th>What it provides</th><th>Names in the book</th></tr>
+  <tr><td>Linear algebra</td><td>fast vectors and matrices; the layer everything else stands on</td><td>NumPy, Eigen, ArrayFire</td></tr>
+  <tr><td>Machine learning</td><td>tensors, AutoDiff, GPU training</td><td>Torch, Theano, Caffe, Chainer, TensorFlow, PyTorch, MXNet, JAX; gvnn for differentiable transformation layers</td></tr>
+  <tr><td>Machine learning with optimization inside</td><td>differentiable optimization embedded in networks; second-order optimizers and Lie group gradients</td><td>Theseus, CvxpyLayer, PyPose</td></tr>
+  <tr><td>Specialized optimization</td><td>nonlinear least squares and factor graphs for SLAM; modeling and optimal-control solvers</td><td>Ceres, g2o, GTSAM; Pyomo, JuMP, CasADi, IPOPT, OpenOCL, CT, Drake</td></tr>
+</table></div>
+<p>The classical SLAM solvers (Ceres, g2o, GTSAM) are in the last row: excellent at the lower level, but not built to pass gradients to a network. The third row is the bridge this chapter is about.</p>
+<p>§4.5 then sketches the research landscape. <span class="src">§4.5 · p. 118</span> End-to-end learned odometry comes in supervised forms (DeepVO, TartanVO), which do better but need ground truth that is laborious to collect, and unsupervised forms (UnDeepVO, Unsupervised VIO). Hybrid systems attach geometry to a network: a bundle adjustment layer (BA-Net, DROID-SLAM), a pose and code graph optimized at inference (DeepFactors), a cheirality layer (DiffPoseNet). The book's criticism is that in these systems the pose error is backpropagated <em>through</em> BA while the supervision still comes from ground-truth poses, so BA acts as one more layer. iSLAM instead connects front-end and back-end in both directions as a bilevel problem, so the front-end learns from the result of geometric optimization without external supervision. The same bilevel pattern appears in reinforcement learning, local and global planning, feature matching, and multi-robot routing.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"If the value is computed accurately, so is its gradient."</strong> The widget shows the opposite: γ is accurate to 7 digits at θ = 1e-4 while its naive derivative is off by a factor of 100.</li>
+<li><strong>"The Taylor branch is an approximation, so it is less accurate."</strong> Below the switch point its truncation error is smaller than the rounding error of the exact formula.</li>
+<li><strong>"A robust kernel only changes the cost value."</strong> It changes the linear system: residuals and Jacobians are rescaled by \(\sqrt{\rho'}\) at every iteration.</li>
+<li><strong>"Any deep-learning optimizer can serve as the SLAM back-end."</strong> First-order methods converge slowly on these problems; the book's point on p. 115 is that second-order and constrained solvers are needed.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. Using the first two terms of γₒ in (4.41), what multiplies ν in the quaternion Exp when ‖ν‖ = 0.2?</p><div class="opts"><button type="button" class="opt">0.50000</button><button type="button" class="opt">0.49583</button><button type="button" class="opt">0.49917</button><button type="button" class="opt">0.09983</button></div><p class="exp" hidden>γₒ ≈ 1/2 − 0.2²/48 = 0.5 − 0.04/48 = 0.5 − 0.00083 = 0.49917. (0.09983 is sin(0.1), the size of the whole vector part.)</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A scalar LM step has Λ = JᵀΣJ = 5 and β = −JᵀΣr = 2. With damping λ = 1 in (4.43), what is δ?</p><div class="opts"><button type="button" class="opt">0.2</button><button type="button" class="opt">0.4</button><button type="button" class="opt">0.333</button><button type="button" class="opt">2.5</button></div><p class="exp" hidden>(Λ + λ·diag(Λ))δ = (5 + 5)δ = 2, so δ = 0.2. The value 0.333 would come from damping with λ times the identity; (4.43) scales the damping by the diagonal of Λ.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. With the Cauchy kernel ρ(c) = log(1 + c) and Σ = 1, what corrected residual does (4.46) pass to the solver for r = 2?</p><div class="opts"><button type="button" class="opt">2</button><button type="button" class="opt">0.4</button><button type="button" class="opt">0.2</button><button type="button" class="opt">0.894</button></div><p class="exp" hidden>c = r² = 4, ρ′(c) = 1/5 = 0.2, √0.2 = 0.447, and 0.447 × 2 = 0.894.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Why does the first-order correction (4.46) keep the LM matrix positive semidefinite when a correction using ρ″ may not?</p><div class="opts"><button type="button" class="opt">Because it ignores the outliers completely</button><button type="button" class="opt">Because it multiplies JᵀΣJ by ρ′, which is non-negative, and adds no term with the negative ρ″</button><button type="button" class="opt">Because it increases the damping λ</button><button type="button" class="opt">Because it replaces Cholesky by conjugate gradient</button></div><p class="exp" hidden>The corrected matrix is a sum of ρ′(c)·JᵀΣJ terms with ρ′ ≥ 0. The exact second derivative of ρ adds a term proportional to ρ″, which is negative for robust kernels.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q5. According to §4.5, what distinguishes iSLAM from systems that attach a bundle adjustment layer to a network?</p><div class="opts"><button type="button" class="opt">It removes the geometric back-end</button><button type="button" class="opt">It backpropagates ground-truth pose error through BA</button><button type="button" class="opt">Front-end and back-end are coupled in both directions as a bilevel problem, and the front-end learns from the back-end's result without external supervision</button><button type="button" class="opt">It is trained only with supervised labels</button></div><p class="exp" hidden>In the BA-layer systems the supervision comes from ground-truth poses and BA is one more layer. The bilevel formulation lets the geometric optimization itself supervise the front-end.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Near zero rotation, formulas such as \(\sin(\theta/2)/\theta\) give 0/0 and their AutoDiff gradients lose accuracy; Lie group code switches to Taylor series there, equation (4.41).</li>
+<li>A differentiable LM optimizer solves \(\sum_i(\boldsymbol{\Lambda}_i + \lambda\diag\boldsymbol{\Lambda}_i)\boldsymbol{\delta} = -\sum_i\mathbf{J}_i\T\boldsymbol{\Sigma}_i\mathbf{r}_i\) at each iteration, equation (4.43).</li>
+<li>A robust kernel enters by rescaling \(\mathbf{r}_i\) and \(\mathbf{J}_i\) with \(\sqrt{\rho'(c_i)}\), equation (4.46): IRLS with a matrix that stays positive semidefinite.</li>
+<li>Solver, kernel, corrector, and strategy are independent, swappable parts of the loop.</li>
+<li>Classical SLAM solvers handle the lower level; libraries such as Theseus and PyPose make it differentiable so the two levels can be trained together.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §4.4 "Numerical Challenges of Automatic Differentiation and Modern Libraries" (with §4.4.1 and §4.4.2) and §4.5 "Further Readings &amp; Recent Trends", pp. 113–118; Example 4.6; equations (4.40)–(4.46).</li>
+<li>Goldberg, <em>What every computer scientist should know about floating-point arithmetic</em>, 1991 (rounding and catastrophic cancellation). The 32-bit experiment in the widget is this app's own.</li>
+<li>Nocedal and Wright, <em>Numerical Optimization</em>, 2006 (Levenberg-Marquardt and scaling of the damping term).</li>
+<li>Hartley and Zisserman, <em>Multiple View Geometry</em>, 2nd ed., 2004 (robust cost functions and iterative reweighting in geometric estimation).</li>
+</ol></div>
+<p class="next"></p>
+</section>

@@ -1,0 +1,83 @@
+<section class="day" data-day="18" id="d18" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 3 · Review</span>
+  <h2>Week 3 review: sparsity, elimination, and the Bayes tree</h2>
+  <p class="lead">After today you can go from a factor graph to its matrix patterns, eliminate it by hand into a Bayes net and a Bayes tree, marginalize with the Schur complement, and say what an incremental update has to recompute.</p>
+  <p class="meta">About 60 min · No new pages</p>
+</header>
+
+<div class="box key"><h3>The week in one paragraph</h3><p>A SLAM least-squares problem is sparse because each factor touches few variables: factors are block-rows of \(\mathbf{A}\), variables are block-columns, and \(\boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A}\) has a nonzero block only between variables that share a factor. Variable elimination removes one variable at a time, leaving a conditional (a row of \(\mathbf{R}\)) and a new factor on its neighbours; with Gaussian factors this is sparse QR or Cholesky, and the result is a Bayes net solved by back-substitution. Removing a variable joins its neighbours, which is fill-in on the graph and the Schur complement in the matrix, so the ordering decides the cost. Grouping the conditionals into cliques gives the Bayes tree, in which a new factor affects only the path from its variables to the root. iSAM2 uses that to update the solution incrementally.</p></div>
+
+<h3>1. Formula sheet</h3>
+<div class="tbl"><table>
+<tr><th>What it is</th><th>Formula</th><th>Where</th></tr>
+<tr><td>Blocks of the information matrix</td><td>\(\boldsymbol{\Lambda}_{jk} = \sum_i \mathbf{A}_{ij}\T\mathbf{A}_{ik}\), nonzero only if a factor contains both \(j\) and \(k\)</td><td>§1.5.2, p. 37 · Day 1</td></tr>
+<tr><td>One elimination step</td><td>\(\psi(\mathbf{x}_j, \mathbf{s}_j) = p(\mathbf{x}_j \mid \mathbf{s}_j)\,\tau(\mathbf{s}_j)\)</td><td>(1.43), §1.6.1, p. 40 · Day 2</td></tr>
+<tr><td>The same step as partial QR</td><td>\([\bar{\mathbf{A}}_j \mid \bar{\mathbf{b}}_j] = \mathbf{Q}\begin{bmatrix} \mathbf{R}_j & \mathbf{T}_j & \mathbf{d}_j \\ \mathbf{0} & \tilde{\mathbf{A}}_\tau & \tilde{\mathbf{b}}_\tau \end{bmatrix}\)</td><td>(1.48), §1.6.2, p. 42 · Day 2</td></tr>
+<tr><td>A row of R as a Gaussian</td><td>mean \(\boldsymbol{\mu}_j = \mathbf{R}_j^{-1}(\mathbf{d}_j - \mathbf{T}_j\mathbf{s}_j)\), covariance \(\boldsymbol{\Sigma}_j = (\mathbf{R}_j\T\mathbf{R}_j)^{-1}\)</td><td>(1.51)–(1.52), §1.6.3, p. 45 · Day 3</td></tr>
+<tr><td>Back-substitution</td><td>\(\mathbf{x}_j^* = \mathbf{R}_j^{-1}(\mathbf{d}_j - \mathbf{T}_j\mathbf{s}_j^*)\), in reverse elimination order</td><td>(1.53), §1.6.3, p. 45 · Day 3</td></tr>
+<tr><td>Size of R</td><td>nonzeros \(= \sum_j (1 + |\mathbf{s}_j|)\); fill-in = edges added when neighbours are joined</td><td>Day 3</td></tr>
+<tr><td>Schur complement: marginal of \(\mathbf{x}_b\) in information form</td><td>\(\boldsymbol{\Lambda}_{bb} - \boldsymbol{\Lambda}_{ba}\boldsymbol{\Lambda}_{aa}^{-1}\boldsymbol{\Lambda}_{ab}\)</td><td>Day 3 (not in the book)</td></tr>
+<tr><td>Conditional of \(\mathbf{x}_b\) given \(\mathbf{x}_a\) in covariance form</td><td>\(\boldsymbol{\Sigma}_{bb} - \boldsymbol{\Sigma}_{ba}\boldsymbol{\Sigma}_{aa}^{-1}\boldsymbol{\Sigma}_{ab}\)</td><td>Day 3 (not in the book)</td></tr>
+<tr><td>Bayes tree</td><td>\(p(\mathbf{x}) = \prod_k p(\mathbf{f}_k \mid \mathbf{s}_k)\), with \(\mathbf{s}_k = \mathbf{c}_k \cap \boldsymbol{\varpi}_k\) and \(\mathbf{f}_k = \mathbf{c}_k \setminus \mathbf{s}_k\)</td><td>(1.55), §1.7.1, p. 47 · Day 4</td></tr>
+</table></div>
+
+<h3>2. Mixed quiz</h3>
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A factor relates one pose, one landmark and one camera-calibration variable. How many nonzero blocks does its block-row of A have?</p><div class="opts"><button type="button" class="opt">1</button><button type="button" class="opt">2</button><button type="button" class="opt">3</button><button type="button" class="opt">As many as there are variables</button></div><p class="exp" hidden>One block per variable the factor touches. In G it joins all three pairs, a clique of three.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q2. Four poses with a prior on the first, three odometry factors, and one loop closure between poses 1 and 4. How many nonzero blocks does Λ have above the diagonal?</p><div class="opts"><button type="button" class="opt">3</button><button type="button" class="opt">4</button><button type="button" class="opt">5</button><button type="button" class="opt">6</button></div><p class="exp" hidden>One per edge of G: three odometry edges and the loop-closure edge. The prior adds to the diagonal only.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. Variable x has factors ϕ(x, a) and ϕ(x, b). There is also a factor ϕ(a) and a factor ϕ(b, c). What is the separator of x if it is eliminated first?</p><div class="opts"><button type="button" class="opt">a and b</button><button type="button" class="opt">a, b and c</button><button type="button" class="opt">a only</button><button type="button" class="opt">Empty</button></div><p class="exp" hidden>Only factors that touch x are collected. Their other variables are a and b. The factors ϕ(a) and ϕ(b, c) stay in the graph untouched.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q4. Eliminate x from the rows "x = 1" and "x − y = 0" (unit noise). What is the conditional mean of x given y?</p><div class="opts"><button type="button" class="opt">1</button><button type="button" class="opt">y</button><button type="button" class="opt">1 + y</button><button type="button" class="opt">(1 + y)/2</button></div><p class="exp" hidden>The x column is (1, 1), so R = √2 and the first row is √2·x − y/√2 = 1/√2. Dividing by √2 gives x = (1 + y)/2, the average of the two things said about x.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. G is a ring a – b – c – d – a. How many fill-in edges does eliminating a first create?</p><div class="opts"><button type="button" class="opt">0</button><button type="button" class="opt">1</button><button type="button" class="opt">2</button><button type="button" class="opt">3</button></div><p class="exp" hidden>The neighbours of a are b and d, which are not joined. Eliminating a adds the edge b – d. After that the rest is a triangle and needs nothing more.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q6. Two scalars have covariance Σ = [[2, 1], [1, 2]]. What is the variance of x₂ once x₁ is known?</p><div class="opts"><button type="button" class="opt">2</button><button type="button" class="opt">1</button><button type="button" class="opt">1.5</button><button type="button" class="opt">0.5</button></div><p class="exp" hidden>Conditioning in covariance form is a Schur complement: 2 − 1·(1/2)·1 = 1.5. The marginal variance, 2, is read off directly.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q7. A Bayes tree has root x₃, x₄ with children x₂ : x₃ and l₁ : x₄, and x₁ : x₂ below x₂ : x₃. A new pose x₅ arrives with an odometry factor to x₄. Which existing cliques are affected?</p><div class="opts"><button type="button" class="opt">The root only</button><button type="button" class="opt">The root and l₁ : x₄</button><button type="button" class="opt">All four</button><button type="button" class="opt">None</button></div><p class="exp" hidden>x₄ is frontal in the root, which has no ancestors. In l₁ : x₄ it is only the separator, so that clique's conditional is unchanged.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q8. In the same tree, a loop-closure factor between x₄ and x₁ arrives instead. Which cliques are affected?</p><div class="opts"><button type="button" class="opt">x₁ : x₂ and the root</button><button type="button" class="opt">The root only</button><button type="button" class="opt">All four</button><button type="button" class="opt">x₁ : x₂, x₂ : x₃ and the root</button></div><p class="exp" hidden>The path from the clique where x₁ is frontal up to the root passes through x₂ : x₃. The branch l₁ : x₄ is not on it and is re-attached as it is.</p></div>
+</div>
+
+<h3>3. Pen-and-paper problems</h3>
+<ol class="probs">
+<li><p>Four scalar poses in a ring: a prior \(x_1 = 0\), odometry \(x_2 - x_1 = 1\), \(x_3 - x_2 = 1\), \(x_4 - x_3 = 1\), and a loop closure \(x_4 - x_1 = 3.3\), all with unit noise. (a) Write \(\mathbf{A}\) and compute \(\boldsymbol{\Lambda} = \mathbf{A}\T\mathbf{A}\). (b) For the ordering \(x_1, x_2, x_3, x_4\), give each separator, the fill-in, and the number of nonzeros of \(\mathbf{R}\). (c) Can another ordering avoid fill-in?</p>
+<details class="sol"><summary>Solution</summary><div>
+<p>(a) One row per factor, columns \(x_1 \dots x_4\):</p>
+\[ \mathbf{A} = \begin{bmatrix} 1 & 0 & 0 & 0 \\ -1 & 1 & 0 & 0 \\ 0 & -1 & 1 & 0 \\ 0 & 0 & -1 & 1 \\ -1 & 0 & 0 & 1 \end{bmatrix}, \qquad \boldsymbol{\Lambda} = \begin{bmatrix} 3 & -1 & 0 & -1 \\ -1 & 2 & -1 & 0 \\ 0 & -1 & 2 & -1 \\ -1 & 0 & -1 & 2 \end{bmatrix} . \]
+<p>The 3 is the prior, one odometry factor and the loop closure. The zeros are the pairs \((x_1, x_3)\) and \((x_2, x_4)\), which share no factor.</p>
+<p>(b) \(x_1\) has neighbours \(x_2, x_4\): separator \(\{x_2, x_4\}\), and they were not joined, so one fill-in edge. \(x_2\) now has neighbours \(x_3, x_4\), already joined: separator \(\{x_3, x_4\}\), no fill-in. \(x_3\): separator \(\{x_4\}\). \(x_4\): empty. Nonzeros of \(\mathbf{R}\): \(4 + (2 + 2 + 1 + 0) = 9\), one more than the 8 in the upper triangle of \(\boldsymbol{\Lambda}\).</p>
+<p>(c) No. A ring of four is not chordal, and the eliminated graph must be. Whichever variable goes first has two neighbours that are not joined, so every ordering creates exactly one fill-in here.</p></div></details></li>
+<li><p>Two scalars with three unit-noise factors: \(x = 0\), \(y - x = 1\), \(y = 1.6\). Eliminate \(x\), then \(y\), by QR, and back-substitute. Say in words what the new factor on \(y\) means.</p>
+<details class="sol"><summary>Solution</summary><div>
+<p>The factors touching \(x\) are the first two. With columns \((x, y \mid b)\) the stacked rows are \((1, 0 \mid 0)\) and \((-1, 1 \mid 1)\). The \(x\) column is \((1, -1)\), so use \(\mathbf{q}_1 = (1, -1)/\sqrt2\) and \(\mathbf{q}_2 = (1, 1)/\sqrt2\):</p>
+\[ \mathbf{q}_1: \; (1.414,\; -0.707 \mid -0.707), \qquad \mathbf{q}_2: \; (0,\; 0.707 \mid 0.707) . \]
+<p>The first row is the conditional: \(x = (y - 1)/2\), precision 2. The second is the new factor \(\tau(y)\): \(y = 1\) with variance 2. In words, "the prior on \(x\) plus one odometry step puts \(y\) at 1", and the two unit variances add.</p>
+<p>Now \(y\) has the rows \((0.707 \mid 0.707)\) and \((1 \mid 1.6)\). \(R = \sqrt{0.5 + 1} = 1.225\) and \(d = (0.707 \times 0.707 + 1 \times 1.6)/1.225 = 1.714\).</p>
+<p>Back-substitution: \(y^* = 1.714/1.225 = 1.4\), then \(x^* = (1.4 - 1)/2 = 0.2\). Check with the normal equations: \(\boldsymbol{\Lambda} = \begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix}\), \(\mathbf{A}\T\mathbf{b} = (-1, 2.6)\), and \(\boldsymbol{\Lambda}^{-1} = \tfrac13\begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}\) gives \((0.2, 1.4)\).</p></div></details></li>
+<li><p>Three scalars have the information matrix \(\boldsymbol{\Lambda} = \begin{bmatrix} 2 & -1 & 0 \\ -1 & 2 & -1 \\ 0 & -1 & 1 \end{bmatrix}\). (a) Marginalize \(x_2\) out and give the information matrix of \((x_1, x_3)\). (b) Condition on \(x_2\) instead. (c) Given that \(\boldsymbol{\Sigma} = \boldsymbol{\Lambda}^{-1} = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 2 & 2 \\ 1 & 2 & 3 \end{bmatrix}\), check (a) and compare the variances of \(x_3\) in (a) and (b).</p>
+<details class="sol"><summary>Solution</summary><div>
+<p>(a) Schur complement with \(a = x_2\): \(\boldsymbol{\Lambda}_{aa} = 2\), and \(x_2\) is linked to \(x_1\) and \(x_3\) by \(-1\) each, so subtract \(\tfrac12\) in all four positions:</p>
+\[ \begin{bmatrix} 2 & 0 \\ 0 & 1 \end{bmatrix} - \frac12\begin{bmatrix} 1 & 1 \\ 1 & 1 \end{bmatrix} = \begin{bmatrix} 1.5 & -0.5 \\ -0.5 & 0.5 \end{bmatrix} . \]
+<p>The zero between \(x_1\) and \(x_3\) has become \(-0.5\): fill-in.</p>
+<p>(b) Delete the row and column of \(x_2\): \(\begin{bmatrix} 2 & 0 \\ 0 & 1 \end{bmatrix}\). Given \(x_2\), the other two are independent.</p>
+<p>(c) The marginal covariance is the block \(\begin{bmatrix} 1 & 1 \\ 1 & 3 \end{bmatrix}\), with determinant 2 and inverse \(\tfrac12\begin{bmatrix} 3 & -1 \\ -1 & 1 \end{bmatrix}\), which is the matrix of (a). The variance of \(x_3\) is 3 in the marginal and \(1/1 = 1\) in the conditional: knowing \(x_2\) removes the uncertainty accumulated along the chain before it.</p></div></details></li>
+<li><p>A robot has poses \(x_1, \dots, x_4\) with a prior on \(x_1\) and odometry between consecutive poses, and a landmark \(l\) seen from \(x_1\) and \(x_2\). (a) Eliminate in the order \(l, x_1, x_2, x_3, x_4\) and give the separators. (b) Build the Bayes tree. (c) Which cliques does a loop closure between \(x_4\) and \(x_1\) affect? (d) Instead, a new pose \(x_5\) arrives with odometry from \(x_4\). Update the tree, eliminating the affected variables in the order \(x_3, x_4, x_5\).</p>
+<details class="sol"><summary>Solution</summary><div>
+<p>(a) \(l\): its factors involve \(x_1\) and \(x_2\), separator \(\{x_1, x_2\}\) (already joined by odometry, no fill-in). \(x_1\): prior, odometry and the new factor, separator \(\{x_2\}\). \(x_2\): \(\{x_3\}\). \(x_3\): \(\{x_4\}\). \(x_4\): empty.</p>
+<p>(b) In reverse order: \(x_4\) starts the root. \(x_3 \mid x_4\) joins it: root \(x_3, x_4\). \(x_2 \mid x_3\): the root's variables \(\{x_3, x_4\}\) differ from \(\{x_3\}\), so a new child \(x_2 : x_3\). \(x_1 \mid x_2\): the clique of \(x_2\) has \(\{x_2, x_3\}\), which differs from \(\{x_2\}\), so a new child \(x_1 : x_2\). \(l \mid x_1, x_2\): the clique of \(x_1\) has exactly \(\{x_1, x_2\}\), so \(l\) joins it. The tree is a chain: root \(x_3, x_4\), then \(x_2 : x_3\), then \(l, x_1 : x_2\).</p>
+<p>(c) \(x_1\) is frontal in the leaf and \(x_4\) in the root. The path from the leaf to the root is the whole tree, so all three cliques and all five variables are redone.</p>
+<p>(d) \(x_4\) is frontal in the root, so only the root is detached. It becomes a factor on \((x_3, x_4)\); add the new factor on \((x_4, x_5)\). Eliminate \(x_3\): separator \(\{x_4\}\). \(x_4\): separator \(\{x_5\}\). \(x_5\): empty. Tree: \(x_5\) starts the root, \(x_4\) joins it, and \(x_3 \mid x_4\) becomes a child because \(\{x_4, x_5\} \neq \{x_4\}\). Re-attach the orphan \(x_2 : x_3\) under the clique where \(x_3\) is frontal. Result: root \(x_4, x_5\), then \(x_3 : x_4\), then \(x_2 : x_3\), then \(l, x_1 : x_2\). Three of six variables were re-eliminated, and the lower two cliques were not touched.</p></div></details></li>
+</ol>
+
+<div class="box ok"><h4>You are ready for next week if you can</h4><ul>
+<li>Draw the pattern of \(\mathbf{A}\) and of \(\boldsymbol{\Lambda}\) for a small factor graph without computing anything.</li>
+<li>Eliminate a scalar variable from two or three rows by QR and say what the conditional and the new factor mean.</li>
+<li>Solve \(\mathbf{R}\mathbf{x} = \mathbf{d}\) by back-substitution and read a conditional variance off the diagonal.</li>
+<li>Predict the fill-in of an ordering from the graph, and explain why the estimate does not depend on the ordering.</li>
+<li>Compute a Schur complement, and say which of marginalizing and conditioning is the easy one in each form of a Gaussian.</li>
+<li>Find the cliques a new factor affects in a Bayes tree.</li>
+</ul></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 1, §1.5–1.8, pp. 35–52.</li>
+<li>Barfoot, <em>State Estimation for Robotics</em>, 2017 (Gaussian marginals and conditionals, Schur complement).</li>
+<li>Kaess, Johannsson, Roberts, Ila, Leonard, Dellaert, <em>iSAM2: Incremental smoothing and mapping using the Bayes tree</em>, 2012 (building and updating the Bayes tree).</li>
+</ol></div>
+<p class="next"></p>
+</section>

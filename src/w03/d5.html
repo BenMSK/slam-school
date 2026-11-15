@@ -1,0 +1,112 @@
+<section class="day" data-day="17" id="d17" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 3 · Day 5</span>
+  <h2>iSAM and iSAM2: incremental smoothing and mapping</h2>
+  <p class="lead">After today you can describe how iSAM1 and iSAM2 keep a SLAM solution up to date, including incremental reordering, partial back-substitution and selective relinearization, and say when an update is cheap and when it is not.</p>
+  <p class="meta">About 60 min · Read §1.7.3 and §1.8, pp. 50–52 (2 pages of text) · Needs Week 3 Day 4</p>
+</header>
+
+<div class="box read"><h4>Read first: §1.7.3 and §1.8, from the bottom of p. 50 to p. 52</h4>
+<p>Most of p. 50 is Figure 1.15, so this is a short reading. Look for:</p>
+<ul>
+<li>p. 50: how iSAM1 handled linearization, and what iSAM2 uses in place of the matrix.</li>
+<li>p. 51, first paragraph: which variables are forced to the end of the ordering, and why.</li>
+<li>p. 51, second paragraph: when back-substitution may stop early.</li>
+<li>p. 51, third paragraph: why relinearizing a variable affects more cliques than adding a factor does.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Incremental smoothing and mapping keeps the whole trajectory in the estimate but does only the work a new measurement calls for. iSAM1 updates the matrix \(\mathbf{R}\) directly and starts over from time to time. iSAM2 edits the Bayes tree and is lazy in three places: it reorders only the variables it re-eliminates, re-solves only where the answer moved, and relinearizes only the factors whose variables moved.</p></div>
+
+<h3>1. iSAM1: add a row to R without refactoring</h3>
+<p>The first version, iSAM1, used the incremental matrix factorization methods of Golub and Van Loan. <span class="src">§1.7.3 · p. 50</span> The book does not show them, so here is the basic one.</p>
+<div class="box note"><h4>Filling the gap: updating R with Givens rotations</h4>
+<p>We have \([\mathbf{R} \mid \mathbf{d}]\), so the current cost is \(\norm{\mathbf{R}\mathbf{x} - \mathbf{d}}^2\) plus a constant. One new scalar measurement, already whitened, adds a term \((\mathbf{a}\T\mathbf{x} - \beta)^2\). The new problem is the least-squares problem of the stacked matrix</p>
+\[ \left[\begin{array}{c|c} \mathbf{R} & \mathbf{d} \\ \mathbf{a}\T & \beta \end{array}\right] , \]
+<p>which is upper-triangular except for its last row. A <strong>Givens rotation</strong> is a rotation in the plane of two rows. To zero entry \(a_c\) of the new row against row \(c\) of \(\mathbf{R}\), set \(r = \sqrt{R_{cc}^2 + a_c^2}\), \(\cos = R_{cc}/r\), \(\sin = a_c/r\), and replace the two rows by</p>
+\[ \begin{aligned} \text{row } c &\leftarrow \cos \cdot (\text{row } c) + \sin \cdot (\text{new row}) , \\ \text{new row} &\leftarrow -\sin \cdot (\text{row } c) + \cos \cdot (\text{new row}) . \end{aligned} \]
+<p>The new diagonal entry is \(r\) and the new row's entry in column \(c\) is \((-a_c R_{cc} + R_{cc} a_c)/r = 0\). A rotation is orthogonal, so by the argument of <a href="#d14">Day 2</a> the cost function is unchanged. Repeat for each column from the first nonzero of \(\mathbf{a}\) to the last. What remains of the new row is a single number in the right-hand-side column, which only adds to the residual.</p>
+<p>Two things to notice. Rows of \(\mathbf{R}\) above the first nonzero of \(\mathbf{a}\) are never touched. And mixing in row \(c\) can put nonzeros into later entries of the new row that started as zeros, so one rotation is usually not enough.</p></div>
+<p>Try it: \(\mathbf{R}\) belongs to five poses in a chain. Rotate in a loop closure to the first pose, then switch to the measurement that touches only the newest pose.</p>
+<div class="viz" data-viz="w03_givens"></div>
+<p class="cap">Notice that the loop closure x₅ − x₁ = 4.6 needs 5 rotations and changes every row of R, and the estimate moves from (0, 1, 2.1, 3, 4) to (0, 1.12, 2.34, 3.36, 4.48). The measurement x₅ = 4.4 needs one rotation and changes one row. Yet it also moves every estimate, because back-substitution passes the change in x₅ on to all the others.</p>
+<p>This is yesterday's tree rule in matrix clothing. For a chain, the rows from the first nonzero down to the last are the path to the root. The tree is more precise for general graphs, because it also skips branches that lie between the two in the ordering but are unrelated.</p>
+<p>iSAM1 had two weak spots. The column order was the order in which variables arrived, so loop closures produced growing fill-in. And all of \(\mathbf{R}\) was built on one linearization point. Its remedy was a periodic batch step: linearize the full factor graph again, at fixed intervals or when fill-in became unwieldy. <span class="src">§1.7.3 · p. 50</span> The work between two batch steps was small, but the batch steps themselves grew with the map.</p>
+
+<h3>2. iSAM2: edit the tree, and be lazy three times</h3>
+<p>iSAM2 stores the posterior as a Bayes tree and applies the update of <a href="#d16">Day 4</a> for every new measurement. <span class="src">§1.7.3 · p. 50</span> Three practical questions remain, and the book answers each on p. 51.</p>
+<p><strong>Which ordering for the part that is re-eliminated?</strong> Only the variables of the affected cliques are eliminated again, so only they can be reordered. Running COLAMD on them alone is one option. iSAM2 does better with <strong>constrained COLAMD</strong>: it forces the most recently accessed variables to the end of the ordering, which puts them in the root clique, and orders the rest well. The reason is a bet about the future. The next factors will almost surely involve the newest pose, and if that pose is already in the root, the path to the root is as short as it can be. The book expects later updates to be efficient "in most cases, except for large loop closures". <span class="src">§1.7.3 · p. 51</span></p>
+<p><strong>Which variables need a new value?</strong> Back-substitution in the tree starts at the root and moves towards the leaves, each clique using the values of its separator. A clique's solution changes only through its separator, so if the values handed down have changed by less than a small threshold, there is no need to descend further. <span class="src">§1.7.3 · p. 51</span> The widget above shows why this matters: an update that changes one row of \(\mathbf{R}\) can still shift every estimate a little, and the threshold decides how far down the tree those shifts are followed.</p>
+<p><strong>Which factors are linearized again?</strong> Only those containing a variable whose estimate has moved away from its linearization point by more than a threshold. <span class="src">§1.7.3 · p. 51</span> The iSAM2 paper calls this fluid relinearization: there are no batch steps any more.</p>
+<div class="box note"><h4>Filling the gap: why relinearization reaches further than a new factor</h4>
+<p>Adding a factor leaves all old factors as they were. The affected cliques can be turned back into factors as they are, and only cliques where the new factor's variables are <em>frontal</em>, plus their ancestors, are redone.</p>
+<p>Relinearizing variable \(v\) is different: every factor that touches \(v\) gets a new \(\mathbf{A}_i\) and \(\mathbf{b}_i\). Such a factor entered the tree at the clique where the first of its variables was eliminated, and \(v\) may be only a <em>separator</em> variable there. So every clique that contains \(v\) at all, as frontal or as separator, holds outdated numbers and must be redone, together with all ancestors. The cliques cannot simply be recycled either. The method has to go back to the original nonlinear factors, and the contributions of the untouched sub-trees must have been cached during elimination. The book's verdict: this affects larger parts of the tree, but is in most cases still much cheaper than recomputing all of it. <span class="src">§1.7.3 · p. 51</span></p></div>
+<p>Put together, one iSAM2 step looks like this (a summary of pp. 50–51, not the paper's exact listing):</p>
+<pre class="code"><code>when new factors (and new variables) arrive:
+  1. mark the cliques on the paths from the new factors' variables to the root
+  2. mark every clique containing a variable that has moved past the
+     relinearization threshold, and the paths from those to the root
+  3. turn the marked part back into a factor graph: relinearized original
+     factors where needed, cached summaries of the sub-trees below, the new factors
+  4. order its variables with constrained COLAMD (recent variables last)
+     and eliminate: this is the new top of the Bayes tree
+  5. re-attach the untouched sub-trees
+  6. back-substitute from the root; stop going down a branch where the
+     change is below the threshold</code></pre>
+<div class="tbl"><table>
+<tr><th>Question</th><th>iSAM1</th><th>iSAM2</th></tr>
+<tr><td>How is the factor stored?</td><td>As the sparse matrix R</td><td>As a Bayes tree</td></tr>
+<tr><td>A new measurement</td><td>Incremental matrix factorization update</td><td>Re-eliminate the affected cliques</td></tr>
+<tr><td>Relinearization</td><td>The full graph, periodically or when fill-in grows</td><td>Per variable, when it moves past a threshold</td></tr>
+<tr><td>Variable ordering</td><td>Improved only at the periodic batch steps</td><td>Updated at every step for the affected variables, recent ones last</td></tr>
+<tr><td>Solution update</td><td>Back-substitution</td><td>Back-substitution from the root, stopped early by a threshold</td></tr>
+</table></div>
+
+<h3>3. When is an update cheap?</h3>
+<p>Go back to the <a href="#d16">Day 4</a> widget with today's vocabulary. While the robot explores, each new factor involves the newest pose and something recent. Those variables are in or next to the root, so 3 or 4 variables are re-eliminated, independent of how long the trajectory is. That is the regime in which incremental smoothing gives a full-trajectory estimate at a nearly constant cost per step.</p>
+<p>A loop closure ties the newest pose to an old one that sits deep in the tree. The whole path between them is redone, and for a large loop this can be most of the tree. No ordering trick removes that cost, since the new measurement really does change what is known about everything on the loop. Afterwards the old variable is near the root and the following steps are cheap again.</p>
+<div class="box kid"><h4>In plain words</h4><p>Keep your notes in a binder with the newest pages on top. A new observation about today only needs the top pages rewritten. Discovering that today's place is the same as a place from chapter one means rewriting everything in between. Once that is done, you are back to rewriting only the top pages.</p></div>
+<p>Both algorithms are implemented in the GTSAM library, and the book reports that they have been applied to many robotics estimation problems, at sizes that reach into the millions. <span class="src">§1.7.3 · p. 51</span></p>
+
+<h3>4. Where the chapter leaves you</h3>
+<p>Section 1.8 is a short reading list. For factor graphs and elimination in more detail the book recommends the longer article by Dellaert and co-authors that it cites, and for the Bayes tree the iSAM2 paper by Kaess and co-authors. <span class="src">§1.8 · p. 51</span> It then names what the plain version of this chapter left out and the rest of the handbook supplies: state variables that live on manifolds, such as rotations (next week), many kinds of sensors, outlier measurements (Week 6), and the outputs of learned models. <span class="src">§1.8 · pp. 51–52</span></p>
+<p>The path of Chapter 1, in one line each:</p>
+<div class="tbl"><table>
+<tr><th>Object</th><th>As a graph</th><th>As linear algebra</th></tr>
+<tr><td>The problem</td><td>Factor graph</td><td>Sparse Jacobian A and right-hand side b</td></tr>
+<tr><td>Who is related to whom</td><td>Graph G (Markov random field)</td><td>Pattern of Λ = AᵀA</td></tr>
+<tr><td>Solving</td><td>Variable elimination</td><td>Sparse QR or Cholesky</td></tr>
+<tr><td>The result</td><td>Bayes net</td><td>Upper-triangular R and d</td></tr>
+<tr><td>The estimate</td><td>MAP inference in the Bayes net</td><td>Back-substitution</td></tr>
+<tr><td>Keeping it up to date</td><td>Editing the Bayes tree</td><td>Incremental factorization</td></tr>
+</table></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Incremental means approximate."</strong> For the linear problem the updated tree is exactly what a batch factorization would give. The approximations are the two thresholds, which trade a little accuracy for speed.</li>
+<li><strong>"iSAM is a filter."</strong> It is a smoother: every past pose stays in the estimate and can still be corrected, as a loop closure shows.</li>
+<li><strong>"A loop closure is cheap because it is one factor."</strong> The cost depends on where its variables sit in the tree, not on the number of factors.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A row of R reads (3, …) in column c and the new row has 4 in column c. After the Givens rotation, what is the diagonal entry R_cc?</p><div class="opts"><button type="button" class="opt">7</button><button type="button" class="opt">3</button><button type="button" class="opt">5</button><button type="button" class="opt">1</button></div><p class="exp" hidden>r = √(3² + 4²) = 5. The rotation moves all the weight of the two entries into the row of R and leaves zero in the new row.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. R has 100 columns in arrival order. A new measurement row has its first nonzero in column 97. How many rows of R can change?</p><div class="opts"><button type="button" class="opt">At most 4: rows 97 to 100</button><button type="button" class="opt">All 100</button><button type="button" class="opt">Exactly 1</button><button type="button" class="opt">96: rows 1 to 96</button></div><p class="exp" hidden>Rotations start at the first nonzero and move right. Rows above it are never mixed with the new row.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. Why does iSAM2 force the most recently used variables to the end of the elimination ordering?</p><div class="opts"><button type="button" class="opt">Because they have the largest uncertainty</button><button type="button" class="opt">Because it minimizes fill-in for every graph</button><button type="button" class="opt">Because old variables must never be changed</button><button type="button" class="opt">Because they land in the root, where the next measurements are expected to attach</button></div><p class="exp" hidden>Variables eliminated last form the root clique. New factors usually involve recent variables, so the affected path to the root stays short.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Variable v is frontal in clique C₁ and a separator variable in its child C₂. Its estimate has moved past the relinearization threshold. Which cliques are redone?</p><div class="opts"><button type="button" class="opt">C₁ and its ancestors only</button><button type="button" class="opt">C₁, C₂ and the ancestors of C₁</button><button type="button" class="opt">C₂ only</button><button type="button" class="opt">Always the whole tree</button></div><p class="exp" hidden>Relinearization changes the factors on v, and some of them were absorbed in C₂, where v is a separator. All cliques containing v are redone, plus everything above them.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. During back-substitution a clique receives separator values that changed by far less than the threshold. What does iSAM2 do?</p><div class="opts"><button type="button" class="opt">Re-eliminates the clique</button><button type="button" class="opt">Stops there and keeps the old values of that clique and of everything below it</button><button type="button" class="opt">Relinearizes its factors</button><button type="button" class="opt">Moves its variables to the root</button></div><p class="exp" hidden>A clique's solution depends on the rest of the tree only through its separator. If that input has barely changed, neither will the outputs further down.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>A new measurement row can be rotated into \(\mathbf{R}\) with Givens rotations. Rows above its first nonzero are untouched. This is the matrix view of "only the path to the root".</li>
+<li>iSAM1 updates \(\mathbf{R}\) this way and relinearizes the full graph in periodic batch steps.</li>
+<li>iSAM2 edits the Bayes tree: re-eliminate the affected cliques, with recently used variables ordered last so they sit in the root.</li>
+<li>It back-substitutes only as far as the solution changes, and relinearizes only variables that moved past a threshold. Relinearization redoes every clique containing such a variable.</li>
+<li>Exploration costs a few variables per step. A large loop closure can cost most of the tree.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §1.7.3 "Incremental Smoothing and Mapping", pp. 50–51, and §1.8 "Further Readings &amp; Recent Trends", pp. 51–52.</li>
+<li>Golub and Van Loan, <em>Matrix Computations</em>, 4th edition, 2013 (Givens rotations and updating a QR factorization when a row is added).</li>
+<li>Kaess, Ranganathan, Dellaert, <em>iSAM: Incremental smoothing and mapping</em>, 2008 (iSAM1: Givens updates, periodic reordering and relinearization).</li>
+<li>Kaess, Johannsson, Roberts, Ila, Leonard, Dellaert, <em>iSAM2: Incremental smoothing and mapping using the Bayes tree</em>, 2012 (fluid relinearization, constrained ordering, partial solution updates).</li>
+</ol></div>
+<p class="next"></p>
+</section>

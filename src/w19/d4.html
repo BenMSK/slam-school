@@ -1,0 +1,149 @@
+<section class="day" data-day="112" id="d112" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 19 · Day 4</span>
+  <h2>Flow as a measurement, differentiable bundle adjustment, DROID-SLAM and DPVO</h2>
+  <p class="lead">After today you can write optical flow as a function of pose and depth, derive the confidence-weighted Gauss-Newton step inside DROID-SLAM, and say how DPVO differs.</p>
+  <p class="meta">About 60 min · Read §13.2.4–13.3, pp. 378–386 (9 pages) · Needs Week 19 Day 3, Week 2 Day 4, Week 7 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §13.2.4–13.2.5 and §13.3, pp. 378–386</h4>
+<p>Nine pages, three of them mostly figures. Stop at the heading "13.4 DuSt3R" on p. 386. While you read, look for:</p>
+<ul>
+<li>Equation (13.7), and which three variables each factor of (13.8) touches (pp. 378–379).</li>
+<li>The two reasons why "RAFT, then least squares" does not work well (pp. 379–380).</li>
+<li>Equation (13.11) and the sentence that explains it in words (pp. 381–382).</li>
+<li>What the back-end adds in Figure 13.11, and what DROID-SLAM cannot do (pp. 382–383).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>In a static scene, the flow of a pixel is fixed by its depth and the two camera poses. So flow is a measurement of pose and depth, and a factor graph can invert it. DROID-SLAM puts that inversion inside the network: a RAFT-style update operator proposes where each pixel should go and how much to trust it, and a few Gauss-Newton steps turn those proposals into pose and depth updates. Because Gauss-Newton is differentiable, the whole loop is trained on pose error.</p></div>
+
+<h3>1. Flow is a function of pose and depth</h3>
+<p>Let \(\mathbf{T}^w_i\) and \(\mathbf{T}^w_j\) be the camera-to-world poses of images \(I_i\) and \(I_j\). A pixel \((u, v)\) of image \(i\) with depth \(d\) is back-projected to 3D, moved into frame \(j\), and projected. The difference between where it lands and where it started is the <strong>induced flow</strong>: <span class="src">§13.2.4 · eq. (13.6) · p. 378</span></p>
+\[ \hat{\mathbf{f}}(u, v) = \boldsymbol{\pi}\!\left( \mathbf{T}^j_i \cdot \boldsymbol{\pi}^{-1}(u, v, d) \right) - (u, v), \qquad \mathbf{T}^j_i = (\mathbf{T}^w_j)^{-1} \cdot \mathbf{T}^w_i . \tag{13.6} \]
+<p>This is yesterday's warp (13.2) with the starting pixel subtracted. With the numbers from <a href="#d110">Day 2</a>, \(f = 500\) px, a pixel 100 px right of the image centre, depth 4 m, and camera \(j\) placed 0.2 m to the right of camera \(i\): the point \((0.8, 0, 4)\) becomes \((0.6, 0, 4)\) in frame \(j\), lands 75 px right of centre, and the induced flow is \((-25, 0)\) px. Applied to the whole \(h \times w\) grid of pixels with a depth map \(\mathbf{d}_i\), the same formula is the measurement function <span class="src">eq. (13.7) · p. 378</span></p>
+\[ \mathbf{h}_{ij}(\mathbf{T}^w_i, \mathbf{T}^w_j, \mathbf{d}_i) = \boldsymbol{\pi}\!\left( \mathbf{T}^j_i \cdot \boldsymbol{\pi}^{-1}(\mathbf{u}, \mathbf{v}, \mathbf{d}_i) \right) - \begin{bmatrix} \mathbf{u} \\ \mathbf{v} \end{bmatrix}. \tag{13.7} \]
+<p>Now run it backwards. Suppose a network has measured the flow \(\mathbf{z}_{ij}\) for a set of image pairs, the edges of a <strong>frame graph</strong> \(\mathcal{G}\). The unknowns \(\mathbf{x}\) are all poses and all depth maps, and the cost is <span class="src">§13.2.5 · eq. (13.8) · p. 379</span></p>
+\[ J(\mathbf{x}) \triangleq \sum_{(i,j) \in \mathcal{G}} \left\| \mathbf{z}_{ij} - \mathbf{h}_{ij}(\mathbf{T}^w_i, \mathbf{T}^w_j, \mathbf{d}_i) \right\|^2_{\boldsymbol{\Sigma}_{ij}} . \tag{13.8} \]
+<p>This is the nonlinear least-squares form of <a href="#d8">Week 2 · Day 2</a>. Each edge is one factor, and it touches three variables: the source pose, the destination pose, and the source depth map. With \(48 \times 64\) feature maps, one edge contributes \(2 \cdot 3072 = 6144\) scalar residuals, and each frame brings 6 pose unknowns and 3072 depths. The book adds two practical notes: use inverse depth, because it makes the cost better approximated locally, and update poses through the local parameterization \(\exp(\boldsymbol{\xi}_i^\wedge)\, \mathbf{T}^w_i\). <span class="src">p. 379</span></p>
+
+<h3>2. Why "RAFT, then bundle adjustment" is not enough</h3>
+<p>Computing flow with RAFT and then minimizing (13.8) does not work particularly well, for two reasons the book gives. <span class="src">§13.3 · pp. 379–380</span></p>
+<ul>
+<li>The flow network was trained to get flow right, not pose. Its loss does not model what SLAM cares about.</li>
+<li>The flow contains outliers, and (13.8) weights every pixel equally. You know from <a href="#d31">Week 6 · Day 1</a> what a few outliers do to least squares.</li>
+</ul>
+<p>The fix is to make the optimization a layer of the network, a <strong>differentiable bundle adjustment (DBA)</strong> layer, so that the training loss is measured after the optimizer and its gradient reaches the network through it. And to let the network output, for every residual, a <strong>confidence weight</strong>. In the general factor-graph cost</p>
+\[ J(\mathbf{x}) \triangleq \sum_i \left\| \mathbf{e}_i(\mathbf{x}_i) \right\|^2_{\boldsymbol{\Sigma}_i}, \qquad \mathbf{e}_i(\mathbf{x}) = \mathbf{z}_i - \mathbf{h}_i(\mathbf{x}_i), \tag{13.9} \]
+<p>both the error and its covariance are replaced by network outputs: <span class="src">eq. (13.9)–(13.10) · p. 380</span></p>
+\[ J(\mathbf{x}) \triangleq \left\| \mathbf{e}_\theta(\mathbf{z}, \mathbf{x}) \right\|^2_{\boldsymbol{\Sigma}_\theta(\mathbf{z}, \mathbf{x})} . \tag{13.10} \]
+<p>The network now shapes the cost function that the solver minimizes. BANet was among the first to do this, with a photometric error on learned feature maps. DROID-SLAM and DPVO use optical flow as the intermediate quantity. <span class="src">p. 380</span></p>
+
+<h3>3. One DROID-SLAM iteration</h3>
+<p>DROID-SLAM takes images \(I_1, \dots, I_n\) and a frame graph with edges between co-visible pairs. It reuses RAFT's parts: the two encoders at 1/8 resolution, and one correlation pyramid \(\mathbf{C}_{ij}\) per edge, so \(E\) edges mean \(E\) pyramids. Each edge also has a hidden state \(\mathbf{q}_{ij}\), started from the context features of frame \(i\). <span class="src">§13.3.1 · pp. 380–381 · Fig. 13.10</span></p>
+<figure class="fig"><svg viewBox="0 0 600 216" role="img" aria-label="A loop of six boxes. The state, poses and depths, gives the induced flow through equation 13.7. The induced flow tells the lookup where to read the correlation pyramid. A convolutional GRU, one per edge, turns the correlation features into a flow revision and confidence weights. A Gauss-Newton step on the cost of equation 13.11 turns those into an update of the poses and depths, which closes the loop.">
+  <defs><marker id="w19ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="10" y="20" width="185" height="44" rx="10" fill="var(--c1-soft)" stroke="var(--c1)"/>
+  <text x="102" y="47" text-anchor="middle" font-size="12" fill="var(--ink)">State: poses T, depths d</text>
+  <rect x="215" y="20" width="170" height="44" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="300" y="47" text-anchor="middle" font-size="12" fill="var(--ink)">Induced flow h(x)</text>
+  <rect x="405" y="20" width="185" height="44" rx="10" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="497" y="47" text-anchor="middle" font-size="12" fill="var(--ink)">Lookup in pyramid C</text>
+  <rect x="405" y="150" width="185" height="44" rx="10" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="497" y="177" text-anchor="middle" font-size="12" fill="var(--ink)">Conv-GRU, one per edge</text>
+  <rect x="215" y="150" width="170" height="44" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="300" y="177" text-anchor="middle" font-size="12" fill="var(--ink)">Revision δf, weights w</text>
+  <rect x="10" y="150" width="185" height="44" rx="10" fill="var(--c1-soft)" stroke="var(--c1)"/>
+  <text x="102" y="177" text-anchor="middle" font-size="12" fill="var(--ink)">Gauss-Newton on (13.11)</text>
+  <line x1="195" y1="42" x2="212" y2="42" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar4)"/>
+  <line x1="385" y1="42" x2="402" y2="42" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar4)"/>
+  <line x1="497" y1="64" x2="497" y2="147" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar4)"/>
+  <line x1="405" y1="172" x2="388" y2="172" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar4)"/>
+  <line x1="215" y1="172" x2="198" y2="172" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar4)"/>
+  <line x1="102" y1="150" x2="102" y2="67" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w19ar4)"/>
+  <text x="114" y="112" font-size="11" fill="var(--muted)">update Δ</text>
+  <text x="485" y="112" text-anchor="end" font-size="11" fill="var(--muted)">correlation features</text>
+  <text x="300" y="112" text-anchor="middle" font-size="11" fill="var(--muted)">one iteration</text>
+</svg><figcaption>The green boxes are classical geometry and optimization. The amber box is learned. Compare with yesterday's RAFT loop: the flow estimate has been replaced by poses and depths, and "add δf" by a Gauss-Newton step.</figcaption></figure>
+<p>In each iteration, the current poses and depths give the induced flow of every edge through (13.7). That flow says where to look up the correlation pyramid. The Conv-GRU, one copy per edge with shared weights, takes the hidden state, the correlation features, flow features, and the residual from the previous iteration, and outputs two maps per edge: a <strong>flow revision</strong> \(\boldsymbol{\delta}\mathbf{f}_{ij}\) (how the induced flow should change) and a <strong>confidence map</strong> \(\mathbf{w}_{ij}\). <span class="src">p. 381</span> These define the cost of the DBA layer:</p>
+\[ J(\mathbf{x}) \triangleq \sum_{(i,j) \in \mathcal{G}} \left\| \boldsymbol{\delta}\mathbf{f}_{ij} - \left[ \mathbf{h}_{ij}(\mathbf{x}_{ij}) - \mathbf{h}_{ij}(\mathbf{x}^0_{ij}) \right] \right\|^2_{\boldsymbol{\Sigma}_{ij}}, \tag{13.11} \]
+<p>where \(\mathbf{x}^0_{ij}\) are the poses and depths at the start of the iteration. <span class="src">eq. (13.11) · p. 381</span> In words: change the state so that the induced flow changes by what the network asked for, and care most about the pixels where the network is confident. Poses and depths are then updated by a couple of Gauss-Newton steps. <span class="src">pp. 381–382</span></p>
+<div class="box note"><h4>Filling the gap: (13.11) is a weighted Gauss-Newton step</h4>
+<p>Write the new state as the old one plus a small update \(\boldsymbol{\Delta}\) (pose increments and depth increments), and linearize as in <a href="#d10">Week 2 · Day 4</a>:</p>
+\[ \mathbf{h}_{ij}(\mathbf{x}_{ij}) - \mathbf{h}_{ij}(\mathbf{x}^0_{ij}) \approx \mathbf{J}_{ij}\, \boldsymbol{\Delta}, \qquad \mathbf{J}_{ij} = \left. \frac{\partial \mathbf{h}_{ij}}{\partial \mathbf{x}} \right|_{\mathbf{x}^0} . \]
+<p>The book builds \(\boldsymbol{\Sigma}_{ij}\) from the confidences, \(\boldsymbol{\Sigma}_{ij} = \operatorname{diag} \mathbf{w}_{ij}\), and says the weights let the network place more weight where it is confident. So read \(\mathbf{w}\) as per-residual weights: with \(\mathbf{W}_{ij} = \operatorname{diag}(\mathbf{w}_{ij})\) the cost is</p>
+\[ J(\boldsymbol{\Delta}) = \sum_{(i,j)} \left( \boldsymbol{\delta}\mathbf{f}_{ij} - \mathbf{J}_{ij} \boldsymbol{\Delta} \right)\T \mathbf{W}_{ij} \left( \boldsymbol{\delta}\mathbf{f}_{ij} - \mathbf{J}_{ij} \boldsymbol{\Delta} \right). \]
+<p>Set the gradient with respect to \(\boldsymbol{\Delta}\) to zero:</p>
+\[ \Big( \sum_{(i,j)} \mathbf{J}_{ij}\T \mathbf{W}_{ij} \mathbf{J}_{ij} \Big) \boldsymbol{\Delta} = \sum_{(i,j)} \mathbf{J}_{ij}\T \mathbf{W}_{ij}\, \boldsymbol{\delta}\mathbf{f}_{ij} . \]
+<p>These are the normal equations of weighted least squares from <a href="#d4">Week 1 · Day 4</a>. The network supplies the right-hand side's residual \(\boldsymbol{\delta}\mathbf{f}\) and the weights; geometry supplies \(\mathbf{J}\).</p>
+<p><strong>A scalar example.</strong> One unknown \(\Delta\), three pixels with \(J_k = 1\), requested revisions \(\delta f = (2.0,\, 2.2,\, 8.0)\). The third pixel is on a passing car. Then \(\Delta = \sum_k w_k\, \delta f_k / \sum_k w_k\).</p>
+<ul>
+<li>Equal weights \((1, 1, 1)\): \(\Delta = 12.2 / 3 = 4.07\). The outlier drags the answer.</li>
+<li>Weights \((1, 1, 0.05)\): \(\Delta = (2.0 + 2.2 + 0.4)/2.05 = 2.24\).</li>
+<li>Weights \((1, 1, 0)\): \(\Delta = 2.1\).</li>
+</ul>
+<p><strong>Why it can be trained.</strong> \(\Delta\) is a smooth function of the weights. Here \(\partial \Delta / \partial w_3 = (\delta f_3 - \Delta) / \sum_k w_k = (8 - 4.07)/3 = 1.31\) at equal weights. If the training loss says \(\Delta\) is too large, the gradient says "lower \(w_3\)". In the full system the same derivative is taken through each Gauss-Newton step by the unrolled differentiation of <a href="#d38">Week 7 · Day 2</a>. <span class="src">p. 382</span></p></div>
+<p>Try it: lower the weight on the three pink matches.</p>
+<div class="viz" data-viz="w19_wgn"></div>
+<p class="cap">Notice that with all weights equal the estimate converges to θ = 16.73°, which is 4.73° off, and the translation is off by 0.233. With weight 0.05 on the moving-object matches it is 12.55° and 0.020 off, and with weight 0 it is 12.06° and 0.004. The slider "Gauss-Newton steps" shows the convergence: one step gets within a few degrees, and after six the estimate has settled. In <a href="#d34">Week 6 · Day 4</a> such weights came from the size of each residual (IRLS). Here a network would output them after looking at the images, before the solver runs.</p>
+<p><strong>Training.</strong> DROID-SLAM is trained on the synthetic TartanAir dataset, which has ground-truth depth and pose. The loss combines a pose loss (predicted versus true poses) with a flow loss (flow induced by the predicted pose and depth versus flow induced by the true ones, both through (13.6)). <span class="src">p. 382</span></p>
+
+<h3>4. Running it as a SLAM system</h3>
+<p>The network is trained on a fixed set of frames. Online use needs machinery around it. <span class="src">§13.3.2 · pp. 382–383</span></p>
+<div class="tbl"><table>
+  <tr><th>Stage</th><th>What it does</th></tr>
+  <tr><td>Motion filtering</td><td>Runs the update operator on one edge from the last keyframe to the incoming frame. If the flow revision is below a threshold, the frame is dropped.</td></tr>
+  <tr><td>Initialization</td><td>Once enough frames are collected, connects each frame to its temporal neighbours and runs several iterations. It fails under pure rotation.</td></tr>
+  <tr><td>Front-end</td><td>Adds edges for each new frame: to recent frames in both directions, and to keyframes that the induced flow shows to be highly co-visible.</td></tr>
+  <tr><td>Global optimization</td><td>A back-end over the full frame graph. Adds long-range edges where the induced flow between two frames is small, which closes mid-range loops.</td></tr>
+</table></div>
+<p>The book's Figure 13.11 shows the effect of the back-end on one EuRoC sequence (V1_02_medium): the RMSE absolute trajectory error falls from 16.5 cm with the front-end only to 1.2 cm after global optimization. <span class="src">Fig. 13.11 · p. 383</span> There is no relocalization module, so a large loop with a lot of drift cannot be closed. <span class="src">p. 383</span></p>
+<p>Because the system is a factor graph, new sensors are new factors, with no retraining. <span class="src">§13.3.3 · pp. 383–384</span></p>
+<ul>
+<li><strong>RGB-D:</strong> add a term that keeps each depth \(\mathbf{d}_i\) close to the sensor depth \(\bar{\mathbf{d}}_i\), with zero weight on pixels where the sensor gave no reading: \(J(\mathbf{x}) \triangleq \sum_{(i,j) \in \mathcal{G}} \| \mathbf{z}_{ij} - \mathbf{h}_{ij}(\mathbf{x}) \|^2 + \sum_i \| \bar{\mathbf{d}}_i - \mathbf{d}_i \|^2_{\boldsymbol{\Sigma}_d}\), equation (13.12).</li>
+<li><strong>Stereo:</strong> put left and right frames in the graph, add an edge between each left frame and its right partner, and hold their known relative pose fixed. Figure 13.12 shows that stereo helps considerably, partly because it removes scale drift.</li>
+</ul>
+
+<h3>5. DPVO: the same idea on sparse patches</h3>
+<p><strong>Deep Patch Visual Odometry</strong> keeps DROID-SLAM's structure but tracks a sparse set of small patches instead of every pixel. The book says this helps accuracy as well as cost. <span class="src">§13.3.4 · pp. 384–386</span></p>
+<div class="tbl"><table>
+  <tr><th>Aspect</th><th>DROID-SLAM</th><th>DPVO</th></tr>
+  <tr><td>What is tracked</td><td>Every pixel of every frame, at 1/8 resolution</td><td>3 × 3 patches around randomly sampled centres, on feature maps at 1/4 resolution</td></tr>
+  <tr><td>Depth unknowns</td><td>A dense depth map per frame</td><td>One inverse depth per patch (the patch is a fronto-parallel plane)</td></tr>
+  <tr><td>Graph</td><td>Frame graph: edges between frames</td><td>Patch graph: a bipartite graph whose edges join a patch to each frame within r time steps</td></tr>
+  <tr><td>Update operator</td><td>Conv-GRU per edge</td><td>Recurrent, weight-tied, with temporal convolutions along a patch's lifetime and pooling across frames and patches</td></tr>
+  <tr><td>Optimization</td><td>A couple of Gauss-Newton steps, plus a global back-end</td><td>Two Gauss-Newton steps over an optimization window of keyframes; odometry only</td></tr>
+</table></div>
+<p>The measurement function only changes its indices. Patch \(i\) was extracted from frame \(s(i)\), its source frame, and has one depth \(d_i\): <span class="src">eq. (13.13) · p. 385</span></p>
+\[ \mathbf{h}_{ij}(\mathbf{T}^w_{s(i)}, \mathbf{T}^w_j, d_i) = \boldsymbol{\pi}\!\left( \mathbf{T}^j_{s(i)} \cdot \boldsymbol{\pi}^{-1}(\mathbf{u}, \mathbf{v}, d_i) \right) - \begin{bmatrix} \mathbf{u} \\ \mathbf{v} \end{bmatrix}. \tag{13.13} \]
+<p>DPVO has no loop closure beyond its window. Its successor, Deep Patch Visual SLAM (DPVS), adds global optimization, long-range loop closure through a relocalization module, and short-range loop closure by proximity. The book notes that, unlike DROID-SLAM, it keeps real-time performance on a single GPU. <span class="src">p. 386</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"DROID-SLAM predicts poses with a network."</strong> The network predicts flow revisions and confidences. Poses and depths come out of Gauss-Newton steps on (13.11).</li>
+<li><strong>"δf is the optical flow."</strong> It is a correction to the flow that the current state induces. When the state is right, the network should ask for no change.</li>
+<li><strong>"Confidence weights are a robust loss."</strong> A robust loss computes weights from residuals with a fixed formula. Here the weights are a learned function of the images and the current state, trained through the solver.</li>
+<li><strong>"Dense is always more accurate than sparse."</strong> The book reports that DPVO's sparse patches bring advantages in accuracy too. <span class="src">p. 384</span></li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A camera with f = 400 px moves 0.4 m to the right without rotating. What is the induced horizontal flow of a pixel whose depth is 8 m?</p><div class="opts"><button type="button" class="opt">+20 px</button><button type="button" class="opt">−20 px</button><button type="button" class="opt">−80 px</button><button type="button" class="opt">−2 px</button></div><p class="exp" hidden>The point moves 0.4 m to the left in the new camera frame, so the pixel moves by −f·b/d = −400 · 0.4 / 8 = −20 px.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. Which variables does one factor of the flow cost (13.8) for edge (i, j) connect?</p><div class="opts"><button type="button" class="opt">Pose i and pose j only</button><button type="button" class="opt">Pose i, pose j, depth map i, and depth map j</button><button type="button" class="opt">Depth map i and depth map j only</button><button type="button" class="opt">Pose i, pose j, and depth map i</button></div><p class="exp" hidden>The flow of pixels of image i depends on their depths and on both poses. The depth map of image j is not needed to predict it (p. 379).</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. One unknown Δ, three residuals with J = 1: δf = (1, 1, 5) with weights (1, 1, 0.5). What is the weighted Gauss-Newton update?</p><div class="opts"><button type="button" class="opt">1.8</button><button type="button" class="opt">2.33</button><button type="button" class="opt">1.0</button><button type="button" class="opt">4.5</button></div><p class="exp" hidden>Δ = (1·1 + 1·1 + 0.5·5) / (1 + 1 + 0.5) = 4.5 / 2.5 = 1.8. With equal weights it would be 7/3 = 2.33.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Why can DROID-SLAM use stereo or RGB-D input without retraining?</p><div class="opts"><button type="button" class="opt">The GRU was trained on all sensor types</button><button type="button" class="opt">Stereo and depth images are converted to monocular video first</button><button type="button" class="opt">The extra information enters as additional factors or edges in the same optimization</button><button type="button" class="opt">The correlation pyramid is replaced by a depth pyramid</button></div><p class="exp" hidden>Sensor depth becomes one more least-squares term (13.12), and a stereo pair becomes an edge with a fixed relative pose. The learned update operator is unchanged (pp. 383–384).</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. How many depth unknowns does one DPVO patch contribute?</p><div class="opts"><button type="button" class="opt">Nine, one per pixel of the 3 × 3 patch</button><button type="button" class="opt">One inverse depth</button><button type="button" class="opt">Three, for a plane</button><button type="button" class="opt">None, depth comes from a depth network</button></div><p class="exp" hidden>Each patch is modelled as a fronto-parallel plane in its source image, so a single (inverse) depth describes it (pp. 384–385).</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Induced flow (13.6)–(13.7): back-project with depth, change frame, project, subtract the pixel. It makes flow a measurement of pose and depth, with cost (13.8).</li>
+<li>Off-the-shelf flow plus least squares is weak: the flow loss is not a pose loss, and all pixels count equally.</li>
+<li>DROID-SLAM's network outputs a flow revision and a confidence per pixel. A DBA layer solves the weighted normal equations of (13.11) for pose and depth updates, and training differentiates through it.</li>
+<li>Around the network sit a motion filter, an initializer, a front-end, and a global back-end. RGB-D and stereo are extra factors.</li>
+<li>DPVO replaces dense frames with sparse patches, one inverse depth each, in a patch graph. DPVS adds loop closure.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §13.2.4–13.2.5 and §13.3, pp. 378–386, equations (13.6)–(13.13), Figures 13.9–13.13.</li>
+<li>Nocedal and Wright, <em>Numerical Optimization</em>, 2006 (Gauss-Newton and weighted least-squares normal equations).</li>
+<li>Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (pinhole projection used in the worked flow example).</li>
+</ol></div>
+<p class="next"></p>
+</section>

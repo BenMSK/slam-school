@@ -1,0 +1,145 @@
+<section class="day" data-day="117" id="d117" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 20 · Day 3</span>
+  <h2>Storing the field: MLPs, grids, points, and what SLAM needs</h2>
+  <p class="lead">After today you can compare MLP, grid, and point representations of a neural field on compression, speed, scene completion, dynamic allocation, and forgetting, and say why those properties matter for SLAM.</p>
+  <p class="meta">About 60 min · Read §14.2.2–14.2.4, pp. 403–408 (6 pages) · Needs Week 20 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §14.2.2–14.2.4, pp. 403–408</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>Why a single MLP is slow, and what a voxel feature grid replaces the MLP query with (p. 403).</li>
+<li>The two surface representations of §14.2.3 and how a mesh is extracted from them (pp. 404–405).</li>
+<li>The three advantages of neural-field maps over classical dense SLAM (pp. 405–406), and what iMAP and NICE-SLAM each introduced (p. 406).</li>
+<li>Table 14.1 on p. 407, and the four paragraphs around it that explain its rows (pp. 406–408).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>The rendering equation of Day 2 does not care how density and colour are stored. Put them in one network and the map is compact and fills holes, but it is slow, cannot grow, and forgets. Put them in a grid or in points and the map is fast and local, but larger. SLAM must update its map while it runs, so the book concludes that the data structure, more than any other component, decides what a neural-field SLAM system can do.</p></div>
+
+<h3>1. Why one MLP is slow, and what replaced it</h3>
+<p>The original NeRF asks one MLP for the colour and density of every sample on every ray. Each answer runs the whole network, so every weight takes part in every query, forward and backward. Training is slow as a result. Later methods moved some or all of the scene into explicit data structures with fast access. <span class="src">§14.2.2 · p. 403</span></p>
+<figure class="fig"><svg viewBox="0 0 600 196" role="img" aria-label="Three ways to answer a query at a point. One MLP: the point goes through a network and every weight is used. A grid: only the nodes at the corners of the cell containing the point are read. Points: only stored points near the query are read, and nothing is stored in empty space.">
+  <defs><marker id="w20ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <text x="100" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">One MLP</text>
+  <rect x="62" y="48" width="78" height="96" rx="10" fill="var(--c4-soft)" stroke="var(--c4)"/>
+  <rect x="74" y="60" width="12" height="72" rx="3" fill="var(--c4)"/><rect x="95" y="60" width="12" height="72" rx="3" fill="var(--c4)"/><rect x="116" y="60" width="12" height="72" rx="3" fill="var(--c4)"/>
+  <text x="22" y="101" text-anchor="middle" font-size="13" fill="var(--ink)">x, d</text>
+  <line x1="38" y1="96" x2="59" y2="96" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w20ar3)"/>
+  <line x1="140" y1="96" x2="161" y2="96" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w20ar3)"/>
+  <text x="166" y="101" font-size="13" fill="var(--ink)">c, σ</text>
+  <text x="100" y="168" text-anchor="middle" font-size="11" fill="var(--muted)">every weight is used</text>
+  <text x="100" y="184" text-anchor="middle" font-size="11" fill="var(--muted)">by every query</text>
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Voxel or hash grid</text>
+  <path d="M225 50 H375 M225 80 H375 M225 110 H375 M225 140 H375 M225 50 V140 M262.5 50 V140 M300 50 V140 M337.5 50 V140 M375 50 V140" fill="none" stroke="var(--line2)" stroke-width="1"/>
+  <circle cx="262.5" cy="80" r="5.5" fill="var(--c1)"/><circle cx="300" cy="80" r="5.5" fill="var(--c1)"/><circle cx="262.5" cy="110" r="5.5" fill="var(--c1)"/><circle cx="300" cy="110" r="5.5" fill="var(--c1)"/>
+  <circle cx="287" cy="99" r="4" fill="var(--ink)"/>
+  <text x="300" y="168" text-anchor="middle" font-size="11" fill="var(--muted)">only the corners of one</text>
+  <text x="300" y="184" text-anchor="middle" font-size="11" fill="var(--muted)">cell are read and updated</text>
+  <text x="500" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Points or surfels</text>
+  <circle cx="430" cy="122" r="4" fill="var(--line2)"/><circle cx="445" cy="107" r="4" fill="var(--line2)"/><circle cx="462" cy="96" r="4" fill="var(--line2)"/>
+  <circle cx="480" cy="89" r="4.5" fill="var(--c2)"/><circle cx="500" cy="87" r="4.5" fill="var(--c2)"/>
+  <circle cx="520" cy="91" r="4" fill="var(--line2)"/><circle cx="538" cy="99" r="4" fill="var(--line2)"/><circle cx="555" cy="111" r="4" fill="var(--line2)"/><circle cx="568" cy="126" r="4" fill="var(--line2)"/>
+  <circle cx="491" cy="102" r="22" fill="none" stroke="var(--muted)" stroke-dasharray="4 3"/>
+  <circle cx="491" cy="102" r="4" fill="var(--ink)"/>
+  <text x="500" y="168" text-anchor="middle" font-size="11" fill="var(--muted)">only nearby points are read,</text>
+  <text x="500" y="184" text-anchor="middle" font-size="11" fill="var(--muted)">nothing is stored in empty space</text>
+</svg><figcaption>The black dot is the query position. What differs between the three is how many stored numbers one query, and one gradient step, touches.</figcaption></figure>
+<div class="tbl"><table>
+  <tr><th>Structure</th><th>How a query is answered</th><th>What the book reports</th></tr>
+  <tr><td><strong>Voxel feature grid</strong> (Plenoxel, DirectVoxGo)</td><td>Trainable values at grid nodes, read by index lookup and trilinear interpolation</td><td>Training time falls from days to about ten minutes</td></tr>
+  <tr><td><strong>Multi-resolution hash grid</strong> (Instant-NGP)</td><td>Grid features at several resolutions kept in a hash table, decoded by a tiny MLP</td><td>With an optimized GPU implementation, training in seconds</td></tr>
+  <tr><td><strong>Points with features</strong> (Point-NeRF)</td><td>Features attached to a point cloud, decoded by a tiny MLP, rendered by volume rendering</td><td>Points can be placed freely, so empty space is skipped: a factor of 3 over the original NeRF</td></tr>
+</table></div>
+<p><span class="src">§14.2.2 · pp. 403–404</span> Surfels (small oriented discs, <a href="#d46">Week 8 · Day 4</a>) can carry a radiance field in the same way as points. Hash tables as a way to store a sparse grid are the idea of <a href="#d45">Week 8 · Day 3</a>.</p>
+
+<div class="box note"><h4>Filling the gap: trilinear interpolation, and why it makes updates local</h4>
+<p>A grid stores values only at its nodes. <strong>Linear interpolation</strong> fills in between. In 1D, at a fraction \(s \in [0, 1]\) of the way from node \(i\) to node \(i+1\),</p>
+\[ f = (1 - s)\,f_i + s\,f_{i+1} . \]
+<p>In 2D (bilinear) do this along \(x\), then along \(y\). The four corner values get weights that are products of 1D weights. With \(f_{00} = 1\), \(f_{10} = 3\), \(f_{01} = 2\), \(f_{11} = 6\) and \((s_x, s_y) = (0.25, 0.5)\):</p>
+\[ f = \underbrace{0.75 \cdot 0.5}_{0.375} \cdot 1 + \underbrace{0.25 \cdot 0.5}_{0.125} \cdot 3 + \underbrace{0.75 \cdot 0.5}_{0.375} \cdot 2 + \underbrace{0.25 \cdot 0.5}_{0.125} \cdot 6 = 2.25 . \]
+<p><strong>Trilinear</strong> interpolation is the 3D version: eight corners, each weighted by a product of three such factors. Two things follow. The weights are non-negative and sum to 1, so the result is a smooth average of the corner values. And the derivative of \(f\) with respect to a node value is that node's weight, which is zero for every node outside the cell. A loss on one sample therefore changes eight numbers, not the whole map.</p></div>
+
+<h3>2. Neural fields: outputs other than radiance</h3>
+<p>A field that maps position to colour and density is one choice of output. Fields that output something else are called <strong>neural fields</strong>. <span class="src">§14.2.3 · p. 404</span></p>
+<ul>
+<li><strong>Surfaces.</strong> For accurate geometry from RGB images, the field can be a signed distance function (NeuS, VolSDF) or an occupancy field (UNISURF), still trained through volume rendering. A mesh is then extracted with marching cubes (<a href="#d46">Week 8 · Day 4</a>). <span class="src">§14.2.3 · pp. 404–405</span> To use equation (14.2), such a method needs a rule that turns signed distance or occupancy into opacity. The book does not give those rules, so see the cited papers for them.</li>
+<li><strong>Semantics.</strong> Give the network an extra output for a semantic label, and train it against 2D label images from many views. The result is a labelling that is consistent in 3D. More generally a field can fuse 2D feature maps from pre-trained foundation networks, which enables scene decomposition and editing by language prompt or by clicking. <span class="src">§14.2.3 · pp. 405–406 · Fig. 14.9</span></li>
+</ul>
+
+<h3>3. Neural fields in a SLAM system</h3>
+<p>Everything so far assumed posed images and offline optimization. Visual SLAM needs the camera poses and the scene estimated together, in real time. The book lists three reasons to try it with neural fields anyway. <span class="src">§14.2.4 · pp. 405–406</span></p>
+<ol>
+<li><strong>One optimization in place of several fusion steps.</strong> Differentiable rendering fuses 2D data into 3D end to end. A TSDF pipeline (<a href="#d44">Week 8 · Day 2</a>) chains hand-designed steps whose consistency is not guaranteed.</li>
+<li><strong>Complex light.</strong> A radiance field can model transparent objects and reflections, which helps when the error being minimized is photometric.</li>
+<li><strong>Completion and compression.</strong> Depending on the data structure, the representation's built-in priors fill unobserved regions and keep the map small.</li>
+</ol>
+<div class="tbl"><table>
+  <tr><th>System</th><th>Map representation</th><th>What the book says about it</th></tr>
+  <tr><td>iMAP</td><td>A single MLP, as in the original NeRF</td><td>The first neural-field SLAM system. Real-time joint estimation of camera pose and geometry from RGB-D video. The MLP's smoothness prior gives compression and scene completion.</td></tr>
+  <tr><td>NICE-SLAM</td><td>Multi-resolution voxel feature grid plus a tiny MLP</td><td>The first hybrid representation in SLAM. Several later systems use similar grids.</td></tr>
+  <tr><td>NeRF-SLAM</td><td>NeRF</td><td>Speeds up the reconstruction with depth from DROID-SLAM (<a href="#d112">Week 19 · Day 4</a>).</td></tr>
+  <tr><td>Loopy-SLAM</td><td>Point primitives</td><td>Points can be re-allocated, which handles loop closure more easily.</td></tr>
+  <tr><td>MIPS-Fusion</td><td>Several local neural-field submaps</td><td>Submaps are how grid-type fields cope with pose updates from loop closure.</td></tr>
+</table></div>
+<p><span class="src">§14.2.4 · pp. 406–408 · Figs. 14.10–14.12</span></p>
+
+<h3>4. Five properties, three data structures</h3>
+<p>Table 14.1 rates the three families on five properties. "Limited" marks a weakness in every row. <span class="src">Table 14.1 · p. 407</span></p>
+<div class="tbl"><table>
+  <tr><th>Property</th><th>MLP</th><th>Voxel / hash</th><th>Point / surfel</th></tr>
+  <tr><td>Compression</td><td>Good</td><td>Moderate</td><td>Moderate</td></tr>
+  <tr><td>Inference speed</td><td>Limited</td><td>Good</td><td>Moderate</td></tr>
+  <tr><td>Scene completion</td><td>Good</td><td>Good</td><td>Moderate</td></tr>
+  <tr><td>Dynamic allocation</td><td>Limited</td><td>Limited</td><td>Good</td></tr>
+  <tr><td>Forgetting problem</td><td>Limited</td><td>Moderate</td><td>Moderate</td></tr>
+</table></div>
+<ul>
+<li><strong>Compression against speed.</strong> An MLP packs the whole field into its weights, which is compact but hard to interpret. A grid is interpretable, fast to read, and can be updated locally, at the cost of memory. This is the usual trade of time against space, and because SLAM must run in real time, explicit structures usually win. <span class="src">pp. 406–407</span></li>
+<li><strong>Scene completion.</strong> An MLP is a continuous function, so it gives plausible values in small regions it never observed. A multi-resolution grid does the same. The smoothing reaches as far as the positional encoding's frequency or the grid's cell size allows. Points are discrete and have no such global smoothing. <span class="src">p. 407 · Fig. 14.11</span></li>
+<li><strong>Dynamic allocation.</strong> SLAM discovers the scene's extent as it goes and must move parts of the map when a loop closes (<a href="#d1">Week 1 · Day 1</a>). An MLP or a voxel grid has fixed bounds and a fixed encoding or resolution, so such systems resort to several local models. Points can be added and moved freely. <span class="src">pp. 407–408 · Fig. 14.12</span></li>
+<li><strong>Forgetting.</strong> With a global function, a parameter update made for one place changes the output everywhere. The system must keep feeding past observations back in as a training signal, which requires an explicit keyframe database. Relying less on a global function, or removing it, reduces the problem. <span class="src">p. 408</span></li>
+</ul>
+<p>Try it: the widget fits a 1D field three ways. Start with the global function, look at the gap, then press "Explore the new region". Turn on "Replay old keyframes". Then switch to the grid and to points.</p>
+<div class="viz" data-viz="w20_field"></div>
+<p class="cap">Notice that the global function passes through the gap almost exactly (error 0.002) though it never saw it. After Explore it fits the new region (0.031) but its error in the old region jumps from 0.000 to 0.197. With replay it stays at 0.004. The grid at resolution 24 hardly forgets (0.003 to 0.005) but leaves a hole in the gap (0.355); at resolution 8 a cell is wide enough to bridge the gap (0.013). Points never forget and leave the gap empty.</p>
+<p>What the widget's two learned models are: the "global function" is a sum of sines and cosines that span the whole interval. It stands in for an MLP in the one respect that matters here, that every parameter influences the output everywhere. The grid is 1D linear interpolation between node values. Explore without replay applies the least-squares fit to the new samples that changes the parameters as little as possible, which is where gradient descent on the new samples alone heads when it starts from the old parameters.</p>
+
+<div class="box note"><h4>Filling the gap: why a global function forgets and a grid does not</h4>
+<p>Write either model as \(f(x) = \sum_k \theta_k\,\phi_k(x)\): parameters \(\theta_k\) times fixed basis functions \(\phi_k\). One gradient-descent step of size \(\eta\) on the squared error at a new position \(x_n\), where the residual is \(r = f(x_n) - y_n\), changes each parameter by \(\Delta\theta_k = -2\eta\,r\,\phi_k(x_n)\). The prediction at an <em>old</em> position \(x_o\) therefore moves by</p>
+\[ \Delta f(x_o) = \sum_k \Delta\theta_k\,\phi_k(x_o) = -2\eta\,r \sum_k \phi_k(x_n)\,\phi_k(x_o) . \]
+<p>The sum measures how much the two positions share parameters.</p>
+<ul>
+<li><strong>Grid.</strong> \(\phi_k(x)\) is the interpolation weight of node \(k\), which is zero unless \(x\) is in a cell next to that node. With cells 0.1 wide, \(x_n = 0.83\) and \(x_o = 0.31\) have no node in common, so the sum is 0 and the old prediction does not move.</li>
+<li><strong>Global.</strong> Take just three basis functions, \(1\), \(\sin\pi x\), \(\cos\pi x\). The sum is \(1 + \sin(0.83\pi)\sin(0.31\pi) + \cos(0.83\pi)\cos(0.31\pi) = 1 + \cos(0.52\pi) = 0.937\). With \(r = 0.5\) and \(\eta = 0.1\) the old prediction shifts by \(-2 \times 0.1 \times 0.5 \times 0.937 = -0.094\), although nothing was observed there.</li>
+</ul>
+<p>Replaying old keyframes adds gradient steps that pull the old region back. That is the keyframe database the book says such maps require.</p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"A finer grid is always better."</strong> A fine grid stores more and smooths less: holes smaller than a coarse cell get filled, holes larger than a fine cell do not. Multi-resolution grids keep both.</li>
+<li><strong>"Hybrid grids have no forgetting."</strong> Table 14.1 rates them "Moderate". A hybrid still decodes its features with a small shared MLP, and coarse cells are shared by neighbouring regions.</li>
+<li><strong>"Compact means fast."</strong> The MLP is the most compact and the slowest to query, because all of its weights take part in every query.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A 2D grid cell has corner values f₀₀ = 2, f₁₀ = 4, f₀₁ = 6, f₁₁ = 8 (first index along x). What does bilinear interpolation give at (sₓ, s_y) = (0.5, 0.25)?</p><div class="opts"><button type="button" class="opt">5.0</button><button type="button" class="opt">3.5</button><button type="button" class="opt">4.0</button><button type="button" class="opt">4.5</button></div><p class="exp" hidden>Along x at the bottom: 0.5 × 2 + 0.5 × 4 = 3. Along x at the top: 0.5 × 6 + 0.5 × 8 = 7. Along y: 0.75 × 3 + 0.25 × 7 = 4.0.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. After a loop closure, part of the map has to move. Which representation does the book rate best for this, and why?</p><div class="opts"><button type="button" class="opt">Points or surfels, because discrete primitives can be re-allocated freely</button><button type="button" class="opt">A single MLP, because it is continuous</button><button type="button" class="opt">A voxel grid, because lookups are fast</button><button type="button" class="opt">A hash grid, because it has several resolutions</button></div><p class="exp" hidden>MLPs and grids have fixed bounds and resolution, so they handle pose updates with several local submaps. Points can be moved, added, and removed directly.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. Why does an MLP-based SLAM map need a keyframe database?</p><div class="opts"><button type="button" class="opt">To initialize the weights of the MLP</button><button type="button" class="opt">Because an MLP cannot render depth</button><button type="button" class="opt">To store the camera intrinsics</button><button type="button" class="opt">Because training only on new views would change the output in old regions, so past views must keep being replayed</button></div><p class="exp" hidden>Every weight affects the whole field. Without past observations in the optimization, updates for the current view overwrite what was learned before: the forgetting problem.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. In the widget, the grid fills the unobserved gap at resolution 8 but not at resolution 24. Why?</p><div class="opts"><button type="button" class="opt">The coarse grid has more parameters</button><button type="button" class="opt">Interpolation smooths only over one cell: every coarse node near the gap still touches observed samples, but some fine nodes touch none</button><button type="button" class="opt">The fine grid forgets the old region</button><button type="button" class="opt">The coarse grid was trained longer</button></div><p class="exp" hidden>The gap is 0.12 wide. At resolution 8 a cell is 0.125 wide, so every node near the gap belongs to a cell that also contains observed samples. At resolution 24 a cell is about 0.04 wide, and some nodes have only unobserved cells around them, so nothing ever sets their values.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>A single MLP uses all its weights for every query. Grids answer a query by lookup and trilinear interpolation, points by reading nearby primitives.</li>
+<li>Neural fields generalize radiance fields: the output can be a signed distance, an occupancy, a semantic label, or a feature vector.</li>
+<li>For SLAM, neural fields offer end-to-end fusion, complex light modelling, and completion and compression. iMAP used one MLP, NICE-SLAM a grid with a tiny MLP.</li>
+<li>Table 14.1: MLPs compress and complete well but are slow, rigid, and forgetful. Grids are fast. Points are the easiest to re-allocate.</li>
+<li>Forgetting comes from shared parameters. The cure is replaying keyframes or making the representation local.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §14.2.2 "Data Structures in NeRF", §14.2.3 "Neural Fields", §14.2.4 "NeRF/Neural Fields for Visual SLAM", pp. 403–408, Table 14.1, Figures 14.6–14.12.</li>
+<li>Press, Teukolsky, Vetterling, Flannery, <em>Numerical Recipes</em>, 3rd edition, 2007 (bilinear and trilinear interpolation).</li>
+<li>The forgetting calculation is one gradient-descent step on a model that is linear in its parameters, as in <a href="#d10">Week 2 · Day 4</a>.</li>
+</ol></div>
+<p class="next"></p>
+</section>

@@ -1,0 +1,129 @@
+<section class="day" data-day="10" id="d10" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 2 · Day 4</span>
+  <h2>Steepest descent and Gauss-Newton</h2>
+  <p class="lead">After today you can derive the steepest-descent and Gauss-Newton steps from a Taylor expansion of the cost, carry out a step of each by hand, and say when Gauss-Newton fails.</p>
+  <p class="meta">About 60 min · Read §1.4 to §1.4.2, pp. 33–34 (2 pages) · Needs Week 2 Day 3</p>
+</header>
+
+<div class="box read"><h4>Read first: §1.4 opening, §1.4.1 and §1.4.2, pp. 33–34</h4>
+<p>Only two pages today, because the derivations behind them take the rest of the hour. While you read, look for:</p>
+<ul>
+<li>The structure every method shares: start, compute a step, add it, repeat (p. 33).</li>
+<li>The steepest-descent step (1.35) and the gradient \(-2\mathbf{A}\T\mathbf{b}\) that the book states without derivation (p. 33).</li>
+<li>The Gauss-Newton step (1.36) and the two sentences after it on when it converges fast and when it diverges (p. 34).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A nonlinear least-squares problem is solved by repeating yesterday's linear solve: linearize at the current estimate, compute a step, move, linearize again. Steepest descent uses only the slope of the cost and is safe but slow. Gauss-Newton also uses an estimate of the curvature that comes for free from the Jacobian, which makes it fast near the answer and unreliable far from it.</p></div>
+
+<h3>1. The loop all methods share</h3>
+<p>The cost to minimize is the sum from Day 2, which the book now names \(J\), equation (1.34): <span class="src">§1.4 · p. 33</span></p>
+\[ J(\mathbf{x}) \triangleq \sum_i \norm{\mathbf{z}_i-\mathbf{h}_i(\mathbf{x}_i)}^2_{\boldsymbol{\Sigma}_i}. \tag{1.34} \]
+<p>There is no formula for its minimizer. Every method starts from an initial estimate \(\mathbf{x}^0\) and improves it step by step, \(\mathbf{x}^{t+1}=\mathbf{x}^t+\boldsymbol{\delta}\), until a convergence test passes, for example when the step becomes tiny. The methods differ only in how they compute \(\boldsymbol{\delta}\). <span class="src">§1.4 · p. 33</span></p>
+<pre class="code"><code>x ← initial estimate
+repeat
+    A, b ← linearize and whiten every factor at x     (Day 3)
+    δ    ← a step computed from A and b               (steepest descent, Gauss-Newton, ...)
+    x    ← x + δ
+until the step δ is smaller than a threshold</code></pre>
+<p>Throughout, \(\mathbf{A}\) and \(\mathbf{b}\) are the whitened Jacobian and whitened prediction error at the current estimate \(\mathbf{x}^t\). Near \(\mathbf{x}^t\) the cost is approximated by the quadratic \(J(\mathbf{x})\approx\norm{\mathbf{A}(\mathbf{x}-\mathbf{x}^t)-\mathbf{b}}_2^2\).</p>
+
+<h3>2. Steepest descent</h3>
+<p><strong>Steepest descent (SD)</strong> moves a short distance in the direction in which the cost falls fastest, which is the negative gradient, equation (1.35): <span class="src">§1.4.1 · p. 33</span></p>
+\[ \boldsymbol{\delta}^{\text{sd}} = -\alpha\,\nabla J(\mathbf{x})\big|_{\mathbf{x}=\mathbf{x}^t} = 2\alpha\,\mathbf{A}\T\mathbf{b}, \]
+<p>where \(\alpha\gt 0\) is the <strong>step size</strong>. The second form uses the book's statement that the gradient at the linearization point is \(-2\mathbf{A}\T\mathbf{b}\).</p>
+<div class="box note"><h4>Filling the gap: why the gradient is −2Aᵀb</h4>
+<p>Stack all whitened errors into one vector \(\mathbf{r}(\mathbf{x})\), with blocks \(\boldsymbol{\Sigma}_i^{-1/2}(\mathbf{z}_i-\mathbf{h}_i(\mathbf{x}_i))\). Then \(J(\mathbf{x})=\mathbf{r}(\mathbf{x})\T\mathbf{r}(\mathbf{x})=\sum_k r_k(\mathbf{x})^2\). By the definitions of Day 3, at the current estimate \(\mathbf{r}(\mathbf{x}^t)=\mathbf{b}\), and the derivative of \(\mathbf{r}\) with respect to \(\mathbf{x}\) is \(-\mathbf{A}\): the minus sign is there because \(\mathbf{h}\) enters \(\mathbf{r}\) with a minus sign. The chain rule on a sum of squares gives</p>
+\[ \frac{\partial J}{\partial x_j} = \sum_k 2\,r_k\,\frac{\partial r_k}{\partial x_j} \quad\Longrightarrow\quad \nabla J(\mathbf{x}^t) = 2\left(\frac{\partial \mathbf{r}}{\partial \mathbf{x}}\right)^{\!\mathsf{T}}\mathbf{r} = -2\,\mathbf{A}\T\mathbf{b}. \]
+<p>This is the exact gradient of the nonlinear cost, not an approximation: a gradient needs first derivatives only, and \(\mathbf{A}\) contains exactly those. The same vector \(\mathbf{A}\T\mathbf{b}\) is the right-hand side of the normal equations.</p></div>
+<p>The difficulty is \(\alpha\). Too large and the step overshoots, too small and nothing happens. A <strong>line search</strong> tries several values along the direction and keeps the best. Even with a good \(\alpha\), SD converges slowly near the minimum. <span class="src">§1.4.1 · p. 33</span> The book does not say why. The reason is worth seeing once.</p>
+<div class="box note"><h4>Filling the gap: why steepest descent crawls</h4>
+<p>Take a cost that is exactly quadratic, \(\norm{\mathbf{A}\boldsymbol{\delta}-\mathbf{b}}^2\), with minimizer \(\boldsymbol{\delta}^*\). Let \(\mathbf{e}=\boldsymbol{\delta}-\boldsymbol{\delta}^*\) be the current error. The gradient is \(2\mathbf{A}\T\mathbf{A}\,\mathbf{e}\), so one SD step changes the error to</p>
+\[ \mathbf{e}_{\text{new}} = \bigl(\mathbf{I}-2\alpha\,\mathbf{A}\T\mathbf{A}\bigr)\,\mathbf{e}. \]
+<p>Along an eigenvector of \(\mathbf{A}\T\mathbf{A}\) with eigenvalue \(\lambda_i\), the error is multiplied by \(1-2\alpha\lambda_i\) at every step. It shrinks only if \(|1-2\alpha\lambda_i|\lt 1\), so the step size must satisfy \(\alpha\lt 1/\lambda_{\max}\): the steepest direction sets the limit. But then in the flattest direction the factor is at best about \(1-2\lambda_{\min}/\lambda_{\max}\), which is close to 1.</p>
+<p><em>Numbers.</em> Let \(\mathbf{A}\T\mathbf{A}=\diag(100,\,1)\). Stability needs \(\alpha\lt 0.01\). With \(\alpha=0.005\) the factors are \(1-1=0\) and \(1-0.01=0.99\). The steep direction is fixed in one step. The flat direction keeps 99% of its error each step: after 100 steps \(0.99^{100}=37\%\) is still there, and reaching 1% takes \(\ln(0.01)/\ln(0.99)\approx 458\) steps. The number of steps grows with the ratio \(\lambda_{\max}/\lambda_{\min}\), the <strong>condition number</strong> of \(\mathbf{A}\T\mathbf{A}\). SLAM problems have large condition numbers, because some directions are measured precisely and others (far along a chain of odometry) only loosely.</p></div>
+<figure class="fig"><svg viewBox="0 0 600 180" role="img" aria-label="Contour ellipses of a quadratic cost that is ten times wider than it is tall, a long narrow valley. From a start point at the upper left, steepest descent drops to the valley floor in one step and then creeps along the floor in tiny steps, still far from the minimum after 100 steps. Gauss-Newton goes from the start to the minimum in one straight step.">
+  <defs><marker id="w02ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--c5)"/></marker></defs>
+  <ellipse cx="330" cy="100" rx="260" ry="26" fill="none" stroke="var(--line2)" stroke-width="1.5"/>
+  <ellipse cx="330" cy="100" rx="175" ry="17.5" fill="none" stroke="var(--line2)" stroke-width="1.5"/>
+  <ellipse cx="330" cy="100" rx="90" ry="9" fill="none" stroke="var(--line2)" stroke-width="1.5"/>
+  <line x1="94" y1="52" x2="321" y2="98" stroke="var(--c5)" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#w02ar2)"/>
+  <path d="M90 50 L92.4 100 L242.2 100" fill="none" stroke="var(--c2)" stroke-width="2"/>
+  <circle cx="92.4" cy="100" r="3.5" fill="var(--c2)"/><circle cx="113" cy="100" r="3.5" fill="var(--c2)"/><circle cx="133.7" cy="100" r="3.5" fill="var(--c2)"/><circle cx="152.5" cy="100" r="3.5" fill="var(--c2)"/><circle cx="169.4" cy="100" r="3.5" fill="var(--c2)"/><circle cx="184.8" cy="100" r="3.5" fill="var(--c2)"/><circle cx="198.7" cy="100" r="3.5" fill="var(--c2)"/><circle cx="211.2" cy="100" r="3.5" fill="var(--c2)"/><circle cx="222.6" cy="100" r="3.5" fill="var(--c2)"/><circle cx="232.9" cy="100" r="3.5" fill="var(--c2)"/><circle cx="242.2" cy="100" r="3.5" fill="var(--c2)"/>
+  <circle cx="90" cy="50" r="5" fill="var(--ink)"/>
+  <circle cx="330" cy="100" r="5" fill="var(--c1)"/>
+  <text x="90" y="36" text-anchor="middle" font-size="12" fill="var(--ink)">start</text>
+  <text x="330" y="150" text-anchor="middle" font-size="12" fill="var(--ink)">minimum</text>
+  <text x="300" y="52" text-anchor="middle" font-size="12" fill="var(--ink)">Gauss-Newton: one step</text>
+  <text x="150" y="150" text-anchor="middle" font-size="12" fill="var(--ink)">steepest descent, steps 1, 10, 20, … 100</text>
+</svg><figcaption>The cost of the numerical example, 100u² + v² with u vertical and v horizontal, drawn to scale. With α = 0.005 steepest descent reaches the valley floor at once and then covers 1% of the remaining distance per step. Gauss-Newton solves a quadratic exactly in one step.</figcaption></figure>
+
+<h3>3. Gauss-Newton, derived twice</h3>
+<p><strong>Gauss-Newton (GN)</strong> takes the step that solves the normal equations of the linearized problem, equation (1.36): <span class="src">§1.4.2 · pp. 33–34</span></p>
+\[ \mathbf{A}\T\mathbf{A}\;\boldsymbol{\delta}^{\text{gn}} = \mathbf{A}\T\mathbf{b}. \tag{1.36} \]
+<p><strong>First derivation: linearize inside the squares.</strong> This is Day 3 read as an algorithm. Replace each \(\mathbf{h}_i\) by its first-order Taylor expansion. The cost becomes \(\norm{\mathbf{A}\boldsymbol{\delta}-\mathbf{b}}^2\), a bowl whose bottom is found by the normal equations. Jump to the bottom of the bowl, then build a new bowl there.</p>
+<p><strong>Second derivation: Newton's method with one term left out.</strong> The book says GN uses "a second-order update" and approximates the Hessian by \(\mathbf{A}\T\mathbf{A}\). Here is what that means.</p>
+<div class="box note"><h4>Filling the gap: Gauss-Newton is Newton without the second-order term</h4>
+<p>Newton's method expands the cost itself to second order around \(\mathbf{x}^t\):</p>
+\[ J(\mathbf{x}^t+\boldsymbol{\delta}) \approx J(\mathbf{x}^t) + \nabla J\T\boldsymbol{\delta} + \tfrac12\,\boldsymbol{\delta}\T\,\nabla^2 J\,\boldsymbol{\delta}, \]
+<p>where \(\nabla^2 J\) is the <strong>Hessian</strong>, the matrix of second derivatives. Setting the derivative with respect to \(\boldsymbol{\delta}\) to zero gives the Newton step \(\nabla^2 J\,\boldsymbol{\delta}=-\nabla J\).</p>
+<p>For a sum of squares \(J=\sum_k r_k^2\), differentiate \(\partial J/\partial x_j=\sum_k 2r_k\,\partial r_k/\partial x_j\) once more with the product rule:</p>
+\[ \frac{\partial^2 J}{\partial x_i\,\partial x_j} = 2\sum_k \frac{\partial r_k}{\partial x_i}\frac{\partial r_k}{\partial x_j} \;+\; 2\sum_k r_k\,\frac{\partial^2 r_k}{\partial x_i\,\partial x_j}, \qquad\text{that is}\qquad \nabla^2 J = 2\,\mathbf{A}\T\mathbf{A} + 2\sum_k r_k\,\nabla^2 r_k . \]
+<p>The first part needs only the Jacobian, which we already have. The second part needs the second derivatives of every measurement function, multiplied by the residuals. Gauss-Newton drops the second part. With \(\nabla^2J\approx 2\mathbf{A}\T\mathbf{A}\) and \(\nabla J=-2\mathbf{A}\T\mathbf{b}\), the Newton step becomes \(2\mathbf{A}\T\mathbf{A}\,\boldsymbol{\delta}=2\mathbf{A}\T\mathbf{b}\), which is (1.36). The factor 2 cancels, which is why the book can call \(\mathbf{A}\T\mathbf{A}\) "the Hessian" without it.</p>
+<p>The dropped part is small in two situations: when the residuals \(r_k\) are small (the measurements fit well near the solution), and when the measurement functions are nearly linear over the size of the step (their second derivatives are small). In both, GN behaves almost like Newton's method, whose error is roughly squared at each iteration: \(10^{-1}\), \(10^{-2}\), \(10^{-4}\), \(10^{-8}\). That is the "nearly quadratic convergence" the book mentions.</p>
+<p>Dropping it also buys something. \(\mathbf{A}\T\mathbf{A}\) is positive definite when \(\mathbf{A}\) has full column rank, so \(\nabla J\T\boldsymbol{\delta}^{\text{gn}}=-2\,\mathbf{b}\T\mathbf{A}(\mathbf{A}\T\mathbf{A})^{-1}\mathbf{A}\T\mathbf{b}\lt 0\): the GN step always points downhill. The true Hessian has no such guarantee.</p></div>
+<p>Pointing downhill is not the same as landing lower. If the quadratic model fits poorly, the full GN step can end at a worse estimate, and the iteration can diverge. <span class="src">§1.4.2 · p. 34</span></p>
+<div class="tbl"><table>
+  <tr><th></th><th>Steepest descent</th><th>Gauss-Newton</th></tr>
+  <tr><td>Step</td><td>\(\boldsymbol{\delta}^{\text{sd}}=2\alpha\,\mathbf{A}\T\mathbf{b}\)</td><td>\(\boldsymbol{\delta}^{\text{gn}}=(\mathbf{A}\T\mathbf{A})^{-1}\mathbf{A}\T\mathbf{b}\), computed by factorization</td></tr>
+  <tr><td>Uses</td><td>Slope only</td><td>Slope and approximate curvature</td></tr>
+  <tr><td>Work per step</td><td>One matrix-vector product</td><td>One linear solve (Day 3)</td></tr>
+  <tr><td>Tuning</td><td>Step size \(\alpha\)</td><td>None</td></tr>
+  <tr><td>Near the minimum</td><td>Slow when the condition number is large</td><td>Nearly quadratic convergence</td></tr>
+  <tr><td>Far from the minimum</td><td>Safe if \(\alpha\) is small</td><td>May overshoot and diverge</td></tr>
+</table></div>
+
+<h3>4. One unknown, by hand</h3>
+<p>A landmark is known to be on the wall \(x=1\), at unknown height \(y\). A robot at the origin measures its bearing as \(z=0\) with \(\sigma=0.1\) rad. The prediction is \(h(y)=\operatorname{atan2}(y,1)=\arctan y\), so the cost is \(J(y)=(\arctan y/0.1)^2\) and the minimum is at \(y=0\). At an estimate \(y\):</p>
+\[ A = \frac{1}{\sigma}\,\frac{dh}{dy} = \frac{1}{\sigma\,(1+y^2)}, \qquad b = \frac{0-\arctan y}{\sigma}, \qquad \delta^{\text{gn}} = \frac{A\,b}{A^2} = \frac{b}{A} = -(1+y^2)\arctan y . \]
+<p><em>From \(y=1\).</em> \(\delta=-2(0.785)=-1.571\), giving \(y=-0.571\). Then \(\delta=+(1.326)(0.519)=0.688\), giving \(y=0.117\). Then \(y=-0.001\). The errors \(1,\ 0.571,\ 0.117,\ 0.001\) shrink faster and faster.</p>
+<p><em>From \(y=2\).</em> \(A=2\), \(b=-11.07\), and \(\delta=-5.54\), giving \(y=-3.54\). The cost went <em>up</em>, from \(122.6\) to \(167.7\). The next steps land at \(13.95\) and then \(-279\). The method has diverged.</p>
+<p>Try it: press Step a few times from the starting estimate 2.0. Then move the start to 1.0 and step again.</p>
+<div class="viz" data-viz="w02_gn1d"></div>
+<p class="cap">Notice the amber parabola: it is the model \((A\delta-b)^2\) that Gauss-Newton minimizes, and it touches zero at \(-3.54\). The true cost there, at the hollow dot, is higher than at the filled dot. Far from the minimum the curve flattens, the slope \(A\) is small, and dividing by it produces a huge step. From 1.3 or closer the iteration converges. From 1.4 or farther it diverges.</p>
+<div class="box tip"><h4>Intuition</h4><p>Gauss-Newton assumes that the measurement function keeps the slope it has right here. For \(\arctan\), far from zero the slope is small, so the model concludes "the bearing barely changes with \(y\), so \(y\) must move a long way to remove this error". The real function is much steeper near zero, and the long step flies past the answer.</p></div>
+
+<h3>5. On a pose graph</h3>
+<p>The same two methods on a real SLAM problem: 13 planar poses around a loop, 39 unknowns. The factors are a prior on the first pose, 12 odometry measurements, and one loop closure. The initial estimate chains the odometry, so the loop does not close.</p>
+<p>Try it: press Step twice, then Run 20. Then set the SD step size to 1.20 and run again.</p>
+<div class="viz" data-viz="w02_pgo2"></div>
+<p class="cap">Notice the cost curves. Both start at 81.69. Gauss-Newton is at 3.41 after one step and at its minimum, 2.81, after two. Steepest descent drops to 55.75 and then flattens: after 22 steps it is still at 17.19. The slider sets \(\alpha\) as a fraction of \(1/\lambda_{\max}\), the limit derived above, using the largest eigenvalue of \(\mathbf{A}\T\mathbf{A}\) at the start. At 1.20 the SD cost falls for three steps and then climbs into the thousands.</p>
+<p>The minimum cost is not zero. Fourteen factors supply 42 numbers for 39 unknowns, the noisy measurements contradict each other, and 2.81 is the disagreement that no trajectory can remove.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Gauss-Newton needs second derivatives because it is a second-order method."</strong> It needs the Jacobian only. Its curvature estimate \(\mathbf{A}\T\mathbf{A}\) is built from first derivatives.</li>
+<li><strong>"A descent direction guarantees a lower cost."</strong> Only for a short enough step. The full GN step from \(y=2\) points downhill and still lands higher.</li>
+<li><strong>"One GN step solves the problem."</strong> Only if the problem is linear, as on Day 3. Otherwise each step solves an approximation, and the loop must repeat.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. One unknown, two whitened rows: A is the column (2, 1) and b = (3, 1). What is the Gauss-Newton step?</p><div class="opts"><button type="button" class="opt">7</button><button type="button" class="opt">1.4</button><button type="button" class="opt">0.71</button><button type="button" class="opt">2.8</button></div><p class="exp" hidden>AᵀA = 4 + 1 = 5 and Aᵀb = 6 + 1 = 7, so δ = 7/5 = 1.4.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. Which part of the exact Hessian of J does Gauss-Newton leave out?</p><div class="opts"><button type="button" class="opt">The term 2AᵀA</button><button type="button" class="opt">The gradient −2Aᵀb</button><button type="button" class="opt">The covariance matrices</button><button type="button" class="opt">The residuals multiplied by the second derivatives of the residual functions</button></div><p class="exp" hidden>∇²J = 2AᵀA + 2Σ r_k ∇²r_k. GN keeps the first part, which needs only the Jacobian, and drops the second.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. In the one-unknown bearing example, where does one Gauss-Newton step from y = 0.5 land? (arctan 0.5 = 0.464)</p><div class="opts"><button type="button" class="opt">−0.08</button><button type="button" class="opt">0.04</button><button type="button" class="opt">−0.58</button><button type="button" class="opt">0.25</button></div><p class="exp" hidden>δ = −(1 + 0.25)(0.464) = −0.580, so the new estimate is 0.5 − 0.580 = −0.08. (−0.58 is the step, not the landing point.)</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. On a quadratic cost, AᵀA has eigenvalues 400 and 4. Above which fixed step size α does steepest descent diverge?</p><div class="opts"><button type="button" class="opt">0.005</button><button type="button" class="opt">0.0025</button><button type="button" class="opt">0.01</button><button type="button" class="opt">0.25</button></div><p class="exp" hidden>The error along eigenvalue λ is multiplied by 1 − 2αλ, which must stay between −1 and 1, so α must be below 1/λmax = 1/400 = 0.0025. The condition number 100 then makes the flat direction slow.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>All nonlinear solvers iterate: linearize at the current estimate, compute a step δ, set x ← x + δ.</li>
+<li>The gradient of J is exactly −2Aᵀb. Steepest descent steps along 2αAᵀb and needs a step size.</li>
+<li>Steepest descent is slow when the condition number of AᵀA is large, because one α must suit both steep and flat directions.</li>
+<li>Gauss-Newton solves AᵀAδ = Aᵀb. It is Newton's method with the Hessian approximated by 2AᵀA, dropping the term that contains second derivatives.</li>
+<li>Gauss-Newton converges nearly quadratically close to the solution, and can overshoot or diverge when the linear model is poor.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §1.4 "Nonlinear Optimization", §1.4.1 "Steepest Descent", §1.4.2 "Gauss-Newton", pp. 33–34.</li>
+<li>The gradient and Hessian of a sum of squares, the Gauss-Newton approximation, and the convergence rate of steepest descent on a quadratic follow Nocedal and Wright, <em>Numerical Optimization</em>, 2006.</li>
+</ol></div>
+<p class="next"></p>
+</section>

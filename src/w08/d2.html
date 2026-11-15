@@ -1,0 +1,131 @@
+<section class="day" data-day="44" id="d44" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 8 · Day 2</span>
+  <h2>Signed distance fields and the TSDF</h2>
+  <p class="lead">After today you can compute a projective signed distance from a beam, fuse several of them into a TSDF voxel by weighted averaging, and locate the surface at the zero crossing.</p>
+  <p class="meta">About 60 min · Read §5.2.2–5.2.3, pp. 124–126 (3 pages) · Needs Week 8 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §5.2.2 and §5.2.3, pp. 124–126</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The sign convention of an implicit surface, and how Figure 5.6 shows it for a disk (p. 125).</li>
+<li>The two distances: Euclidean (the ESDF) and projective, and the reason the second one is used when estimating a surface from measurements (pp. 125–126).</li>
+<li>What the truncation band is and why it exists (p. 126).</li>
+<li>The two differences between occupancy and distance fields in §5.2.3: directness and smoothness (p. 126).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Instead of asking "is this cell occupied?", ask "how far is this point from the nearest surface, and on which side?". The surface is then the set of points where the answer is zero. A range beam gives a cheap approximation of that distance for every voxel near its end point, and averaging the approximations from many beams gives a smooth field whose zero crossing locates the surface more finely than the voxel size.</p></div>
+
+<h3>1. A surface as the zero set of a function</h3>
+<p>An <strong>implicit surface</strong> is a function \(f(\mathbf{p})\) of position that is zero exactly on the surface, negative inside objects, and positive outside. <span class="src">§5.2.2 · pp. 124–125</span> The surface is never listed point by point; it is wherever \(f\) changes sign.</p>
+<p>Example: a disk of radius 0.75 centred at the origin, as in Figure 5.6, can be described by</p>
+\[ f(x, y) = \sqrt{x^2 + y^2} - 0.75 . \]
+<p>At \((1, 0)\), \(f = +0.25\): outside. At \((0.3, 0.4)\), \(f = 0.5 - 0.75 = -0.25\): inside. At \((0.45, 0.6)\), \(f = 0.75 - 0.75 = 0\): on the surface. Testing whether a point is inside an obstacle is one function evaluation and a sign check, and there is no resolution to choose. <span class="src">§5.2.2 · p. 125</span></p>
+
+<h3>2. The Euclidean signed distance</h3>
+<p>Many functions have the same zero set. The most useful one is the <strong>Euclidean signed distance function (ESDF)</strong>: its magnitude is the distance to the nearest surface point and its sign says inside or outside. <span class="src">§5.2.2 · p. 125</span> The disk function above is one. At \((1, 0)\) it says "0.25 from the surface", which is true.</p>
+<p>That makes collision checking cheap. A round robot of radius \(\rho\) centred at \(\mathbf{p}\) touches nothing exactly when \(f(\mathbf{p}) \gt \rho\). And the gradient \(\nabla f\) tells a planner which way to move to gain clearance.</p>
+<div class="box note"><h4>Filling the gap: a distance field has gradient length 1</h4>
+<p>The book speaks of "high-quality proximity gradients". The reason they are high quality is the <strong>Eikonal property</strong>: wherever a distance function \(d\) is differentiable, \(\norm{\nabla d} = 1\). Two short steps show why, for the unsigned distance outside objects.</p>
+<p><em>Step 1: \(d\) cannot change faster than one metre per metre.</em> Take two points \(\mathbf{p}\) and \(\mathbf{q}\). One way to reach the surface from \(\mathbf{p}\) is to walk to \(\mathbf{q}\) and then to the surface point nearest to \(\mathbf{q}\), so \(d(\mathbf{p}) \le \norm{\mathbf{p} - \mathbf{q}} + d(\mathbf{q})\). Swapping the roles gives \(|d(\mathbf{p}) - d(\mathbf{q})| \le \norm{\mathbf{p} - \mathbf{q}}\), hence \(\norm{\nabla d} \le 1\).</p>
+<p><em>Step 2: in one direction it changes at exactly that rate.</em> Let \(\mathbf{s}\) be the surface point nearest to \(\mathbf{p}\), and walk a distance \(\varepsilon\) straight towards it. The new point is at distance \(d(\mathbf{p}) - \varepsilon\) from \(\mathbf{s}\), and by step 1 it cannot be closer to the surface than that. So \(d\) drops by exactly \(\varepsilon\): the slope along the unit vector \(\mathbf{u}\) from \(\mathbf{s}\) to \(\mathbf{p}\) is 1.</p>
+<p>A gradient of length at most 1 with slope 1 along \(\mathbf{u}\) must be \(\mathbf{u}\) itself: \(\nabla d = \mathbf{u}\), a unit vector pointing straight away from the nearest surface point. Check on the disk: \(\nabla f = (x, y)/\sqrt{x^2 + y^2}\), which has length 1 everywhere except at the centre, where the nearest surface point is not unique. On the surface itself, \(\nabla f\) is the surface normal.</p></div>
+<p>Computing an ESDF needs, for every map point, the closest surface point. For a known surface, algorithms such as Fast Marching do this efficiently. While the surface is still being estimated from measurements, it is too expensive and too fragile. <span class="src">§5.2.2 · p. 125</span></p>
+
+<h3>3. What one beam gives: the projective distance</h3>
+<p>A beam from the sensor origin \(\mathbf{o}\) that returns range \(r\) says where the surface is <em>along that beam</em>. For a query point \(\mathbf{q}\) on the beam, the <strong>projective signed distance</strong> is the distance from \(\mathbf{q}\) to the beam's end point, measured along the beam: <span class="src">§5.2.2 · pp. 125–126</span></p>
+\[ d_{\text{proj}}(\mathbf{q}) = r - \norm{\mathbf{q} - \mathbf{o}} . \]
+<p>It is positive in front of the surface, zero at the hit, negative behind. It costs one subtraction, with no search for a closest point.</p>
+<figure class="fig"><svg viewBox="0 0 600 240" role="img" aria-label="A beam from a sensor hits a wall at an angle alpha to the wall normal. For a point q on the beam, the projective distance is measured along the beam to the hit point and is longer than the Euclidean distance, which is measured straight to the wall.">
+  <rect x="430" y="10" width="170" height="220" fill="var(--soft)"/>
+  <line x1="430" y1="10" x2="430" y2="230" stroke="var(--ink)" stroke-width="2"/>
+  <text x="515" y="129" text-anchor="middle" font-size="13" fill="var(--muted)">solid</text>
+  <line x1="190" y1="222" x2="430" y2="40" stroke="var(--c5)" stroke-width="2"/>
+  <line x1="286" y1="149.2" x2="430" y2="40" stroke="var(--c2)" stroke-width="4.5"/>
+  <line x1="286" y1="149.2" x2="430" y2="149.2" stroke="var(--c1)" stroke-width="3" stroke-dasharray="6 4"/>
+  <line x1="430" y1="40" x2="350" y2="40" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="3 3"/>
+  <path d="M386 40 A44 44 0 0 0 394.9 66.6" fill="none" stroke="var(--ink)" stroke-width="1.2"/>
+  <text x="371" y="60" font-size="13" fill="var(--ink)">α</text>
+  <text x="346" y="36" text-anchor="end" font-size="11" fill="var(--muted)">wall normal</text>
+  <circle cx="190" cy="222" r="6" fill="var(--ink)"/>
+  <text x="178" y="226" text-anchor="end" font-size="12" fill="var(--ink)">sensor o</text>
+  <circle cx="286" cy="149.2" r="5" fill="var(--ink)"/>
+  <text x="272" y="142" text-anchor="end" font-size="13" fill="var(--ink)">q</text>
+  <text x="340" y="84" text-anchor="end" font-size="12" fill="var(--c2)">projective distance, along the beam</text>
+  <text x="358" y="172" text-anchor="middle" font-size="12" fill="var(--c1)">Euclidean distance</text>
+</svg><figcaption>For a flat wall hit at angle α to its normal, Euclidean distance = projective distance × cos α. Both are zero at the same place.</figcaption></figure>
+<p>The projective distance is never smaller in magnitude than the true one: the beam's end point is itself a surface point, so the nearest surface point can only be as close or closer. For a flat wall hit at angle \(\alpha\) to its normal the factor is \(1/\cos\alpha\); at \(\alpha = 60^\circ\) the projective distance is twice the true one. What survives is the place where it is zero. The estimated surface is correct even though the distances around it are overestimates. <span class="src">§5.2.2 · p. 126</span></p>
+
+<h3>4. Truncate and average: the TSDF</h3>
+<p>Far from the surface the overestimate is large and useless, and behind the surface the beam knows nothing at all. So the projective distance is clamped to a <strong>truncation band</strong> of half-width \(\tau\) around the surface. The clamped field is the <strong>Truncated Signed Distance Function (TSDF)</strong>. <span class="src">§5.2.2 · p. 126</span> A common convention, and the one used in this lesson: a voxel in front of the band receives \(+\tau\), which only says "free", and a voxel more than \(\tau\) behind the hit receives nothing.</p>
+<figure class="fig"><svg viewBox="0 0 600 232" role="img" aria-label="Value stored along one beam. In free space far in front of the surface the value is clamped to plus tau. Inside the truncation band it falls linearly, crossing zero at the measured surface, down to minus tau. Farther behind the surface nothing is updated.">
+  <line x1="50" y1="120" x2="580" y2="120" stroke="var(--line2)" stroke-width="1.5"/>
+  <line x1="50" y1="40" x2="50" y2="200" stroke="var(--line2)" stroke-width="1.5"/>
+  <text x="44" y="64" text-anchor="end" font-size="12" fill="var(--muted)">+τ</text>
+  <text x="44" y="124" text-anchor="end" font-size="12" fill="var(--muted)">0</text>
+  <text x="44" y="184" text-anchor="end" font-size="12" fill="var(--muted)">−τ</text>
+  <line x1="380" y1="40" x2="380" y2="196" stroke="var(--c3)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="380" y="30" text-anchor="middle" font-size="12" fill="var(--c3)">measured surface</text>
+  <path d="M50 60 L280 60 L480 180" fill="none" stroke="var(--c5)" stroke-width="3" stroke-linejoin="round"/>
+  <text x="165" y="50" text-anchor="middle" font-size="12" fill="var(--ink)">free space, clamped to +τ</text>
+  <text x="535" y="154" text-anchor="middle" font-size="12" fill="var(--muted)">not updated</text>
+  <path d="M280 204 L280 210 L480 210 L480 204" fill="none" stroke="var(--muted)" stroke-width="1.2"/>
+  <text x="380" y="225" text-anchor="middle" font-size="12" fill="var(--muted)">truncation band</text>
+  <text x="56" y="218" font-size="11" fill="var(--muted)">distance along the beam →</text>
+</svg><figcaption>What one beam contributes to the voxels along it. Only the band around the hit carries distance information; in front of it the value just says "free".</figcaption></figure>
+<p>Each voxel stores a value \(D\) and a weight \(W\), both starting at zero. For every new measurement \(d\) (the clamped projective distance at the voxel centre) with weight \(w\), the update of Curless and Levoy, made popular in robotics by KinectFusion, is a running weighted average: <span class="src">§5.2.2 · p. 126</span></p>
+\[ D \leftarrow \frac{W D + w\,d}{W + w}, \qquad W \leftarrow W + w . \]
+<div class="box note"><h4>Filling the gap: why an average, and why it can be done one measurement at a time</h4>
+<p>Suppose a voxel has received \(d_1, \dots, d_n\) with weights \(w_1, \dots, w_n\). The single value that fits them best in the weighted least-squares sense minimizes \(J(D) = \sum_i w_i (D - d_i)^2\). Setting the derivative to zero,</p>
+\[ \frac{dJ}{dD} = 2\sum_i w_i (D - d_i) = 0 \quad\Longrightarrow\quad D_n = \frac{\sum_i w_i d_i}{\sum_i w_i}. \]
+<p>With \(w_i = 1/\sigma_i^2\) this is the maximum-likelihood estimate under Gaussian noise (<a href="#d4">Week 1 · Day 4</a>). Now write \(W_{n-1} = \sum_{i \lt n} w_i\). The old average satisfies \(W_{n-1} D_{n-1} = \sum_{i \lt n} w_i d_i\), so</p>
+\[ D_n = \frac{\sum_{i \lt n} w_i d_i + w_n d_n}{W_{n-1} + w_n} = \frac{W_{n-1} D_{n-1} + w_n d_n}{W_{n-1} + w_n}. \]
+<p>That is the update above. The two numbers \(D\) and \(W\) carry everything needed from the past, the same economy as the log-odds of Day 1. Averaging also removes noise: \(n\) independent measurements with standard deviation \(\sigma\) average to one with \(\sigma/\sqrt{n}\). Range noise of 5 cm becomes 1 cm after 25 scans.</p></div>
+<p>Worked example, with \(w = 1\). A voxel receives \(d = 0.12, 0.08, 0.13\) m. After the first, \(D = 0.12\), \(W = 1\). After the second, \(D = (1 \times 0.12 + 0.08)/2 = 0.10\). After the third, \(D = (2 \times 0.10 + 0.13)/3 = 0.11\), \(W = 3\).</p>
+<p>The surface lies between two neighbouring voxels whose values have opposite signs. Because the field is nearly linear there, linear interpolation places it. If the voxel at position \(x_a\) has \(D_a \gt 0\) and the next one at \(x_b\) has \(D_b \lt 0\),</p>
+\[ x^{*} = x_a + (x_b - x_a)\,\frac{D_a}{D_a - D_b}. \]
+<p>With voxels at 2.0 m and 2.1 m holding \(+0.06\) and \(-0.04\): \(x^{*} = 2.0 + 0.1 \times 0.06/0.10 = 2.06\) m. The voxels are 10 cm apart, yet the surface is placed to the centimetre.</p>
+<p>Try it: the same room as yesterday on a finer grid, now storing a TSDF. Read the two error tiles, press "Auto tour", and read them again. Then look at the thin wall in the middle.</p>
+<div class="viz" data-viz="w08_tsdf"></div>
+<p class="cap">Notice that after one scan the zero crossing is no better than the raw end points (3.6 cm against 2.6 cm), since nothing has been averaged yet. After the 50 scans of the tour its typical error is about 1 cm: a tenth of the 12.5 cm cell, and well below the 5 cm range noise. The probe cell reads 0.40 m where the true distance is 0.19 m, the overestimate of section 3. The thin wall is the failure case: seen from both sides, it comes out about three times too thick. Set τ to 0.10 m, less than one cell, and the outline after one scan is full of gaps.</p>
+
+<h3>5. Occupancy or distance?</h3>
+<p>Both are volumetric: they estimate a quantity everywhere in the observed space. They differ in what they make easy. <span class="src">§5.2.3 · p. 126</span></p>
+<div class="tbl"><table>
+  <tr><th>Question</th><th>Occupancy map</th><th>Distance field (TSDF)</th></tr>
+  <tr><td>How directly do beams give the quantity?</td><td>Directly: a beam says free, occupied, or nothing. Few heuristics.</td><td>Indirectly: the true distance is not measurable from one beam, so a proxy (projective, truncated) is used.</td></tr>
+  <tr><td>How smooth is the stored field?</td><td>It models a yes-or-no property, so it jumps at surfaces.</td><td>Smooth and differentiable: gradients, and sub-voxel accuracy by interpolation.</td></tr>
+  <tr><td>Thin obstacles</td><td>Kept.</td><td>Easily lost.</td></tr>
+</table></div>
+<p>The last row is the price of estimating negative values behind a surface. If a thin object is seen from both sides, a voxel just behind it for one viewpoint is just in front of it for the other. Positive and negative values are averaged, and the zero crossing can move or vanish. <span class="src">§5.4.4.1 · p. 138</span> This is what displaced the outline of the thin wall in the widget.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"A TSDF stores the distance to the nearest surface."</strong> It stores an average of clamped distances along beams. It is close to the true distance only near surfaces seen roughly head-on, and it overestimates elsewhere. A planner that needs true clearances should build an ESDF from it.</li>
+<li><strong>"A larger truncation band is always safer."</strong> A wide band fuses more overestimates and erases objects thinner than the band. A band narrower than a voxel leaves holes, because the voxels on the two sides of a surface are no longer both updated.</li>
+<li><strong>"Negative values mean the sensor saw inside the object."</strong> No beam goes there. The negative side is extrapolated from the hit point, which is why it is trusted only within the band.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A disk of radius 2 m centred at the origin has f(x, y) = √(x² + y²) − 2. What does f say about the point (1.2, 0.5)?</p><div class="opts"><button type="button" class="opt">Outside, 0.7 m from the surface</button><button type="button" class="opt">Inside, 0.7 m from the surface</button><button type="button" class="opt">Inside, 1.3 m from the surface</button><button type="button" class="opt">On the surface</button></div><p class="exp" hidden>√(1.44 + 0.25) = 1.3, so f = 1.3 − 2 = −0.7. Negative means inside, and the magnitude is the distance to the surface.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. A beam returns r = 4.00 m and τ = 0.20 m. A voxel centre lies on the beam, 3.70 m from the sensor. What does this beam contribute to that voxel?</p><div class="opts"><button type="button" class="opt">+0.30 m</button><button type="button" class="opt">−0.30 m</button><button type="button" class="opt">Nothing, the voxel is skipped</button><button type="button" class="opt">+0.20 m</button></div><p class="exp" hidden>The projective distance is 4.00 − 3.70 = +0.30 m, which is clamped to +τ = 0.20 m. A voxel at 4.50 m would have −0.50 m, deeper than τ behind the surface, and would be skipped.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. A voxel holds D = 0.10 m with W = 3. A new measurement d = 0.02 m arrives with weight 1. What is the new D?</p><div class="opts"><button type="button" class="opt">0.08 m</button><button type="button" class="opt">0.06 m</button><button type="button" class="opt">0.02 m</button><button type="button" class="opt">0.10 m</button></div><p class="exp" hidden>(3 × 0.10 + 1 × 0.02) / 4 = 0.08 m, and W becomes 4. The old value counts three times because it already summarizes three measurements; 0.06 would be the answer only if W were 1.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Two neighbouring voxel centres are 5 cm apart and hold D = +0.03 m and D = −0.02 m. Where is the surface?</p><div class="opts"><button type="button" class="opt">2 cm from the positive voxel</button><button type="button" class="opt">2.5 cm from the positive voxel</button><button type="button" class="opt">3 cm from the positive voxel</button><button type="button" class="opt">At the negative voxel</button></div><p class="exp" hidden>The fraction of the way is 0.03 / (0.03 + 0.02) = 0.6, and 0.6 × 5 cm = 3 cm. The surface is closer to the voxel whose value is closer to zero.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. A beam hits a flat wall at 60° to the wall's normal. At some point on the beam the projective distance is 0.40 m. How far is that point from the wall?</p><div class="opts"><button type="button" class="opt">0.40 m</button><button type="button" class="opt">0.20 m</button><button type="button" class="opt">0.80 m</button><button type="button" class="opt">0.35 m</button></div><p class="exp" hidden>Euclidean distance = projective distance × cos α = 0.40 × 0.5 = 0.20 m. The projective distance overestimates, here by a factor of two.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>An implicit surface is the zero set of a function that is negative inside and positive outside.</li>
+<li>The Euclidean signed distance has a gradient of length 1 that points away from the nearest surface point. It gives one-lookup collision checks and useful gradients.</li>
+<li>One beam gives the projective distance \(r - \norm{\mathbf{q} - \mathbf{o}}\): cheap, an overestimate, but zero in the right place.</li>
+<li>A TSDF clamps it to a band \(\pm\tau\) and fuses by \(D \leftarrow (WD + wd)/(W + w)\), the incremental form of weighted least squares.</li>
+<li>Occupancy is direct and keeps thin obstacles. Distance fields are smooth, differentiable, and accurate below the voxel size, but can erase thin objects.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §5.2.2 "Implicit Surface and Distance Fields" and §5.2.3 "Occupancy Maps or Distance Fields?", pp. 124–126; the thin-object failure is described in §5.4.4.1, p. 138.</li>
+<li>Curless and Levoy, <em>A Volumetric Method for Building Complex Models from Range Images</em>, 1996 (the weighted running average).</li>
+<li>Osher and Fedkiw, <em>Level Set Methods and Dynamic Implicit Surfaces</em>, 2003 (signed distance functions and the property \(\norm{\nabla d} = 1\)).</li>
+</ol></div>
+<p class="next"></p>
+</section>

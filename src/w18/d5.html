@@ -1,0 +1,136 @@
+<section class="day" data-day="107" id="d107" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 18 · Day 5</span>
+  <h2>Leg odometry in a factor graph, and where it breaks</h2>
+  <p class="lead">After today you can propagate encoder noise to the foot, write the residual and covariance of the forward-kinematics, contact, and velocity factors, and name the assumptions that fail on soft ground, flexible legs, and slippery floors.</p>
+  <p class="meta">About 60 min · Read §12.4–12.6, pp. 348–357 (10 pages; pp. 353–357 read quickly) · Needs Week 18 Day 3 and Week 16 Day 4</p>
+</header>
+
+<div class="box read"><h4>Read first: §12.4–12.6, pp. 348–357</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>How the non-Gaussian effect of encoder noise is made Gaussian again, equation (12.27) on p. 349.</li>
+<li>In Figure 12.7 (p. 351): which factors join two consecutive states and which attach to one state.</li>
+<li>Why the contact covariance (12.34) is multiplied by a time interval.</li>
+<li>Figures 12.8 and 12.9 (p. 354): two different causes that leg odometry misreads in the same way.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A measurement becomes a factor once it has a residual and a covariance. For leg odometry the covariance has two sources: encoder noise, pushed through the kinematics with the Jacobian, and slip, modeled as noise on the contact point's velocity. With those in hand, leg odometry sits in the factor graph next to the IMU factor of Week 16, and the graph, not the legs alone, decides what to believe when the ground is soft or slippery.</p></div>
+
+<h3>1. Encoder noise at the foot</h3>
+<p>Model each encoder reading as the true angle plus zero-mean Gaussian noise: <span class="src">§12.4.1 · p. 348</span></p>
+\[ \tilde{\mathbf{q}} = \mathbf{q} + \boldsymbol{\eta}_q, \qquad \boldsymbol{\eta}_q \sim \N(\mathbf{0}, \boldsymbol{\Sigma}_q) . \tag{12.26} \]
+<p>Forward kinematics is full of sines and cosines, so the foot position computed from \(\tilde{\mathbf{q}}\) is not exactly Gaussian. As everywhere in this book, linearize: <span class="src">§12.4.1 · p. 349</span></p>
+\[ \mathbf{f}_p(\mathbf{q} + \boldsymbol{\eta}_q) \approx \mathbf{f}_p(\mathbf{q}) + \mathbf{J}_c(\mathbf{q})\,\boldsymbol{\eta}_q \tag{12.27} \]
+<p>where \(\mathbf{J}_c\) is the leg Jacobian of <a href="#d104">Day 2</a>, expressed in the contact frame.</p>
+<div class="box note"><h4>Filling the gap: from (12.27) to a covariance</h4>
+<p>The foot-position error is \(\mathbf{e} = \mathbf{J}_c\boldsymbol{\eta}_q\), a linear function of a Gaussian, so it is Gaussian with zero mean and covariance</p>
+\[ \E[\mathbf{e}\,\mathbf{e}\T] = \mathbf{J}_c\,\E[\boldsymbol{\eta}_q\boldsymbol{\eta}_q\T]\,\mathbf{J}_c\T = \mathbf{J}_c\,\boldsymbol{\Sigma}_q\,\mathbf{J}_c\T . \]
+<p>Numbers for the planar leg at \(q = (30^\circ, -60^\circ)\), with independent noise of \(\sigma_q = 0.5^\circ = 0.00873\) rad on each joint, so \(\boldsymbol{\Sigma}_q = \sigma_q^2\mathbf{I}\):</p>
+\[ \mathbf{J}_v\mathbf{J}_v\T = \begin{bmatrix} 0.693 & 0.346 \\ 0 & -0.2 \end{bmatrix} \begin{bmatrix} 0.693 & 0 \\ 0.346 & -0.2 \end{bmatrix} = \begin{bmatrix} 0.60 & -0.069 \\ -0.069 & 0.04 \end{bmatrix} \text{ m}^2 . \]
+<p>The standard deviations are \(\sigma_x = 0.00873\sqrt{0.60} = 6.8\) mm and \(\sigma_z = 0.00873\sqrt{0.04} = 1.7\) mm. Half a degree at the joints is 7 mm at the foot, mostly horizontal, because in this pose turning the hip sweeps the foot sideways.</p></div>
+<p>Try it: compare the predicted and measured numbers. Then straighten the knee by moving q₂ to 0°.</p>
+<div class="viz" data-viz="w18_cov"></div>
+<p class="cap">Notice that the cloud of exactly computed foot positions has the shape and size of the 2σ ellipse that the Jacobian predicts (6.8 and 1.7 mm predicted, 7.3 and 1.8 mm measured from 300 samples): for noise of encoder size, the first-order formula is accurate. With a straight leg the ellipse collapses to a line across the leg (short axis 0 mm). To first order, joint noise cannot move the foot along a straight leg.</p>
+<p>Velocity measurements have two noise inputs, on the angles and on the rates. Expanding the product and dropping the term with two noises multiplied together: <span class="src">§12.4.1 · p. 349</span></p>
+\[ \mathbf{J}(\mathbf{q} + \boldsymbol{\eta}_q)(\dot{\mathbf{q}} + \boldsymbol{\eta}_{\dot q}) \approx \mathbf{J}(\mathbf{q})\,\dot{\mathbf{q}} + \frac{\partial}{\partial \mathbf{q}}\big(\mathbf{J}(\mathbf{q})\,\dot{\mathbf{q}}\big)\,\boldsymbol{\eta}_q + \mathbf{J}(\mathbf{q})\,\boldsymbol{\eta}_{\dot q} . \tag{12.28} \]
+<p>Both extra terms are linear in Gaussian noise, so they can be lumped into one Gaussian velocity noise \(\boldsymbol{\eta}_v\).</p>
+
+<h3>2. Filter or factor graph</h3>
+<p>A walking controller needs the state at a high rate, so legged robots have mostly used Kalman filters (EKF, UKF, invariant EKF) that fuse IMU and kinematics. A Kalman filter needs a process model; when there is none, a constant-velocity model or IMU propagation stands in for it. A factor graph treats process and measurement models alike, as relations between states and measurements, which makes it the more general tool. With only two consecutive states in the graph it behaves like a filter. With a longer window it can also correct past states. Keeping the number of states small over a long window calls for <strong>preintegration</strong>, exactly as for the IMU in <a href="#d94">Week 16 · Day 4</a>. So far, graph-based estimators on legged robots have mostly served mapping at lower rates rather than control. <span class="src">§12.4, §12.4.2 · pp. 348–350</span></p>
+
+<h3>3. Bipeds: forward-kinematics and contact factors</h3>
+<p>For a humanoid, each state holds the base pose \(\mathbf{T}\) and the contact pose \(\mathbf{C}_i\) of a stance foot (state (12.12)). Two factors use them. <span class="src">§12.4.2.1 · pp. 350–351</span></p>
+<figure class="fig"><svg viewBox="0 0 600 250" role="img" aria-label="A factor graph with two rows of variables. Top row: base states T0, T1, T2, joined by IMU factors, with a prior on T0. Bottom row: contact frames C0, C1, C2, joined by contact factors. Each base state is joined to the contact frame below it by a forward kinematics factor.">
+  <line x1="60" y1="70" x2="118" y2="70" stroke="var(--muted)" stroke-width="1.5"/>
+  <line x1="162" y1="70" x2="278" y2="70" stroke="var(--c2)" stroke-width="2"/>
+  <line x1="322" y1="70" x2="438" y2="70" stroke="var(--c2)" stroke-width="2"/>
+  <line x1="162" y1="190" x2="278" y2="190" stroke="var(--c5)" stroke-width="2"/>
+  <line x1="322" y1="190" x2="438" y2="190" stroke="var(--c5)" stroke-width="2"/>
+  <line x1="140" y1="92" x2="140" y2="168" stroke="var(--c1)" stroke-width="2"/>
+  <line x1="300" y1="92" x2="300" y2="168" stroke="var(--c1)" stroke-width="2"/>
+  <line x1="460" y1="92" x2="460" y2="168" stroke="var(--c1)" stroke-width="2"/>
+  <circle cx="60" cy="70" r="6" fill="var(--ink)"/>
+  <circle cx="220" cy="70" r="6" fill="var(--c2)"/><circle cx="380" cy="70" r="6" fill="var(--c2)"/>
+  <circle cx="220" cy="190" r="6" fill="var(--c5)"/><circle cx="380" cy="190" r="6" fill="var(--c5)"/>
+  <circle cx="140" cy="130" r="6" fill="var(--c1)"/><circle cx="300" cy="130" r="6" fill="var(--c1)"/><circle cx="460" cy="130" r="6" fill="var(--c1)"/>
+  <circle cx="140" cy="70" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/><circle cx="300" cy="70" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/><circle cx="460" cy="70" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <circle cx="140" cy="190" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/><circle cx="300" cy="190" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/><circle cx="460" cy="190" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <text x="140" y="75" text-anchor="middle" font-size="13" fill="var(--ink)">T₀</text><text x="300" y="75" text-anchor="middle" font-size="13" fill="var(--ink)">T₁</text><text x="460" y="75" text-anchor="middle" font-size="13" fill="var(--ink)">T₂</text>
+  <text x="140" y="195" text-anchor="middle" font-size="13" fill="var(--ink)">C₀</text><text x="300" y="195" text-anchor="middle" font-size="13" fill="var(--ink)">C₁</text><text x="460" y="195" text-anchor="middle" font-size="13" fill="var(--ink)">C₂</text>
+  <text x="60" y="52" text-anchor="middle" font-size="12" fill="var(--muted)">prior</text>
+  <text x="220" y="52" text-anchor="middle" font-size="12" fill="var(--muted)">IMU</text>
+  <text x="380" y="52" text-anchor="middle" font-size="12" fill="var(--muted)">IMU</text>
+  <text x="152" y="134" font-size="12" fill="var(--muted)">FK (12.29)</text>
+  <text x="312" y="134" font-size="12" fill="var(--muted)">FK</text>
+  <text x="472" y="134" font-size="12" fill="var(--muted)">FK</text>
+  <text x="220" y="214" text-anchor="middle" font-size="12" fill="var(--muted)">contact (12.33)</text>
+  <text x="380" y="214" text-anchor="middle" font-size="12" fill="var(--muted)">contact</text>
+  <text x="300" y="243" text-anchor="middle" font-size="11" fill="var(--muted)">top row: base pose, velocity, biases · bottom row: contact frame of the stance foot</text>
+</svg><figcaption>Figure 12.7(a) with each state split into its base part and its contact part. The book draws one circle per state; this drawing shows which part each factor touches.</figcaption></figure>
+<p>The <strong>forward kinematics factor</strong> is the measurement (12.13) written as a residual. If \(\mathbf{fk}(\mathbf{q}) = \mathbf{T}^{-1}\mathbf{C}_i\) held exactly, then \(\mathbf{C}_i^{-1}\,\mathbf{T}\,\mathbf{fk}(\mathbf{q})\) would be the identity and its logarithm zero:</p>
+\[ \mathbf{r}_{\mathcal{F}} = \Log\!\big( \mathbf{C}_i^{-1}\,\mathbf{T}\,\mathbf{fk}(\tilde{\mathbf{q}}) \big) \quad (12.29), \qquad \boldsymbol{\Sigma}_{\mathcal{F}} = \mathbf{J}_c(\tilde{\mathbf{q}})\,\boldsymbol{\Sigma}_q\,\mathbf{J}_c\T(\tilde{\mathbf{q}}) \quad (12.30). \]
+<p>Its covariance is section 1's result. The <strong>contact preintegration factor</strong> says the contact frame should not have moved between times \(t_i\) and \(t_j\), up to slip: <span class="src">(12.31)–(12.34) · pp. 350–351</span></p>
+\[ \mathbf{r}_{\mathcal{C}} = \begin{bmatrix} \Log(\mathbf{B}_i\T\mathbf{B}_j) \\ \mathbf{B}_i\T(\mathbf{c}_j - \mathbf{c}_i) \end{bmatrix} \quad (12.33), \qquad \boldsymbol{\Sigma}_{\mathcal{C}} = \begin{bmatrix} \boldsymbol{\Sigma}_w & \mathbf{0} \\ \mathbf{0} & \boldsymbol{\Sigma}_v \end{bmatrix} \Delta t_{ij} \quad (12.34). \]
+<p>The top block is the rotation of the contact frame from \(i\) to \(j\), the bottom block its translation; both should be zero. \(\boldsymbol{\Sigma}_w\) and \(\boldsymbol{\Sigma}_v\) describe the contact's angular and linear velocity noise.</p>
+<div class="box note"><h4>Filling the gap: why the covariance is multiplied by \(\Delta t_{ij}\)</h4>
+<p>The book models slip as zero-mean Gaussian noise on the <em>velocity</em> of the contact point. Position is the integral of velocity, and the integral of white noise is a random walk: its variance grows in proportion to elapsed time (the same law as the drift in <a href="#d1">Week 1 · Day 1</a> and the integrated IMU noise of Week 16). So \(\boldsymbol{\Sigma}_v\) is a rate, in m²/s, and the position variance after a stance of length \(\Delta t_{ij}\) is \(\boldsymbol{\Sigma}_v\,\Delta t_{ij}\). Example: \(\boldsymbol{\Sigma}_v = (0.02)^2\mathbf{I}\) m²/s and a stance of 0.25 s give a standard deviation of \(0.02\sqrt{0.25} = 0.01\) m. The factor lets the contact point creep by about 1 cm before it objects. A longer stance is allowed more creep.</p></div>
+<p>One limit: this factor is valid only for the same stance leg, within one stance phase. Handling the switch from one leg to the other needed follow-up work. <span class="src">§12.4.2.1 · p. 351</span></p>
+
+<h3>4. Quadrupeds: the velocity factor</h3>
+<p>Point feet cannot constrain all 6 degrees of freedom between two states, so the factors of section 3 do not apply. Quadrupeds preintegrate the velocity measurement of <a href="#d105">Day 3</a> instead: <span class="src">§12.4.2.2 · p. 352</span></p>
+\[ \tilde{\mathbf{v}} = -\mathbf{J}_v(\mathbf{q})\,\dot{\mathbf{q}} - \boldsymbol{\omega} \times \mathbf{f}_p(\mathbf{q}) + \boldsymbol{\eta}_v \tag{12.35} \]
+\[ \Delta\tilde{\mathbf{t}}_{ij} = \sum_{k=i}^{j-1} \Delta\tilde{\mathbf{R}}_{ik}\,\tilde{\mathbf{v}}_k\,\Delta t \ + \delta\mathbf{p}_{ij} \quad (12.36), \qquad \mathbf{r}_{\mathcal{V}} = \mathbf{R}_i\T(\mathbf{t}_j - \mathbf{t}_i) - \Delta\mathbf{t}_{ij} \quad (12.37). \]
+<p>Mind the notation: bold \(\Delta\mathbf{t}_{ij}\) is a translation increment, plain \(\Delta t\) is the sample time.</p>
+<div class="box note"><h4>Filling the gap: where the sum comes from</h4>
+<p>\(\mathbf{v}_k\) is the body velocity in base coordinates, so the world-frame velocity is \(\mathbf{R}_k\mathbf{v}_k\). Holding it for one sample interval at a time and adding up,</p>
+\[ \mathbf{t}_j - \mathbf{t}_i = \sum_{k=i}^{j-1} \mathbf{R}_k\,\mathbf{v}_k\,\Delta t . \]
+<p>The right side depends on the absolute orientations \(\mathbf{R}_k\), which the optimizer keeps changing. Multiply both sides by \(\mathbf{R}_i\T\):</p>
+\[ \mathbf{R}_i\T(\mathbf{t}_j - \mathbf{t}_i) = \sum_{k=i}^{j-1} \underbrace{\mathbf{R}_i\T\mathbf{R}_k}_{\Delta\mathbf{R}_{ik}}\,\mathbf{v}_k\,\Delta t . \]
+<p>Now the right side needs only \(\Delta\mathbf{R}_{ik}\), the rotation since time \(i\), which is the preintegrated gyroscope rotation of Week 16. It can be computed once from the measurements and reused however the optimizer moves \(\mathbf{R}_i\) and \(\mathbf{t}_i\). That is the whole trick of preintegration, applied to leg velocity.</p>
+<p>For the covariance, each term of the sum adds \(\mathbf{A}\boldsymbol{\Sigma}_v\mathbf{A}\T\) with \(\mathbf{A} = \Delta\tilde{\mathbf{R}}_{ik}\Delta t\), which is how the book builds \(\boldsymbol{\Sigma}_{\mathcal{V},ij}\) in (12.38). If \(\boldsymbol{\Sigma}_v = \sigma_v^2\mathbf{I}\), the rotations cancel and \(n\) samples give \(n\,\Delta t^2\sigma_v^2\,\mathbf{I}\). Example: \(\sigma_v = 0.05\) m/s per sample, \(\Delta t = 2.5\) ms, \(n = 100\) samples (0.25 s): \(\sqrt{100} \times 0.0025 \times 0.05 = 1.25\) mm.</p></div>
+<p>When several legs are in stance at once there are three options: use only the leg judged most reliable; treat each leg as its own measurement, which is easiest when contact positions are in the state; or average the legs' velocity measurements into one, to save computation. <span class="src">§12.4.2.3 · p. 352</span></p>
+
+<h3>5. Fusing with other sensors, and what still breaks</h3>
+<p>In a SLAM system, leg odometry's job is to supply low-drift edges between consecutive nodes, so that loop closures have less to correct. Cameras and LiDARs are added as more measurements (in a filter) or more factors (in a graph). The difficulty is that the sources differ in rate, noise, and failure behaviour. A <strong>loosely coupled</strong> system runs separate estimators (visual-inertial, legged-inertial, LiDAR-inertial) in parallel and picks the best output. A <strong>tightly coupled</strong> system puts all factors in one graph; then the triage happens per factor: a failed modality's factor is simply not added, and robust cost functions (<a href="#d34">Week 6 · Day 4</a>) absorb noise that is not zero-mean Gaussian. <span class="src">§12.4.3 · p. 353</span></p>
+<div class="tbl"><table>
+  <tr><th>What goes wrong</th><th>Which assumption fails</th><th>What leg odometry reports</th><th>Remedies in the book</th></tr>
+  <tr><td>Leg deformation (Figure 12.8)</td><td>The robot is rigid, so \(\mathbf{fk}\) gives the real foot position</td><td>A biased motion, for example upward when the legs bend under load</td><td>Reject measurements during impacts; IMUs on the links to measure their true orientation</td></tr>
+  <tr><td>Soft or collapsing ground (Figure 12.9)</td><td>The contact point has zero velocity</td><td>An upward motion, as the foot sinks after contact was declared</td><td>An exteroceptive sensor such as a camera, to make the contact's velocity observable; track that velocity as an extra state</td></tr>
+  <tr><td>Slip</td><td>The contact point has zero velocity (the force leaves the friction cone)</td><td>A motion that did not happen: too much forward travel when the foot slides backward</td><td>The same as for soft ground</td></tr>
+</table></div>
+<p><span class="src">§12.5 · pp. 353–355</span></p>
+<div class="box note"><h4>Filling the gap: why sinking looks like climbing</h4>
+<p>Take the upright planar robot, hip at height 0.65 m, and let contact be declared when the foot first touches: the contact point is fixed at height \(c_z = 0\). The ground then gives way by 3 cm. The leg extends to keep pushing, so the foot's height in the base frame goes from \(-0.65\) to \(-0.68\) m. Leg odometry computes the body height as \(t_z = c_z - f_{p,z} = 0 - (-0.68) = 0.68\) m. The body did not move, yet it is reported 3 cm higher. At the next touchdown the new contact point is placed 3 cm too high as well, and the error repeats: after 10 such steps the robot believes it has climbed 30 cm on level ground.</p></div>
+<p>Recent trends: learned contact detectors that replace the force threshold; locomotion controllers trained by reinforcement learning, which need only body velocity and the direction of gravity (both observable from inertial data), although skills that must reach a goal position, such as parkour, still need odometry; and humanoids, whose hands, arms, and trunk also make intermittent contact and whose compliance breaks the rigid-contact assumption. <span class="src">§12.6 · pp. 355–356</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Encoder noise is the main error in leg odometry."</strong> It is the easiest to model. Slip, soft ground, and bending legs are biases, and they are usually larger.</li>
+<li><strong>"The contact factor says the foot is fixed."</strong> It says the foot is fixed up to a random walk whose variance grows with the stance time.</li>
+<li><strong>"A quadruped can use the contact preintegration factor."</strong> A point foot has no orientation to constrain. Quadrupeds use the preintegrated velocity factor.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. In some pose J_v = [0.5, 0; 0, 0.2] m/rad, and each joint reading has independent noise of 0.01 rad (1σ). What is the 1σ foot-position error in x and z?</p><div class="opts"><button type="button" class="opt">10 mm and 10 mm</button><button type="button" class="opt">2.5 mm and 0.4 mm</button><button type="button" class="opt">5 mm and 2 mm</button><button type="button" class="opt">0.5 mm and 0.2 mm</button></div><p class="exp" hidden>Σ = σ² J Jᵀ = 0.01² × diag(0.25, 0.04) m², so the standard deviations are 0.01 × 0.5 = 5 mm and 0.01 × 0.2 = 2 mm.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. The contact velocity noise is Σ_v = (0.04)² I m²/s and a stance lasts 0.25 s. By (12.34), how far may the contact point have moved, at 1σ per axis?</p><div class="opts"><button type="button" class="opt">2 cm</button><button type="button" class="opt">1 cm</button><button type="button" class="opt">4 cm</button><button type="button" class="opt">0.04 cm</button></div><p class="exp" hidden>The variance is 0.04² × 0.25 m², so the standard deviation is 0.04 × √0.25 = 0.02 m.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. Why is R_iᵀ(t_j − t_i), and not t_j − t_i, the quantity in the velocity residual (12.37)?</p><div class="opts"><button type="button" class="opt">Because translations must always be rotated before subtraction</button><button type="button" class="opt">Because the velocity noise is defined in the world frame</button><button type="button" class="opt">Because point feet cannot measure translation</button><button type="button" class="opt">Because the preintegrated sum then needs only rotations relative to time i, which do not change when the optimizer moves the state</button></div><p class="exp" hidden>Expressing the displacement in the base frame at time i turns the absolute rotations R_k into relative ones, ΔR_ik, which come from the gyroscope alone. The sum can be computed once.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. A robot walks 10 steps on level mud. At every step the foot sinks 2 cm after contact has been declared. With otherwise perfect sensing, what does leg odometry say about the body's height at the end?</p><div class="opts"><button type="button" class="opt">20 cm lower than at the start</button><button type="button" class="opt">20 cm higher than at the start</button><button type="button" class="opt">2 cm higher than at the start</button><button type="button" class="opt">Unchanged, because the errors alternate</button></div><p class="exp" hidden>Each sinking is read as the body rising 2 cm above a fixed contact point, and the next contact point inherits that error. Ten steps accumulate to +20 cm.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q5. In a tightly coupled factor graph, a camera fails in the dark while the legs and IMU keep working. What does the book describe as the response?</p><div class="opts"><button type="button" class="opt">Switch the whole estimator to a separate legged-inertial filter</button><button type="button" class="opt">Increase the encoder noise covariance</button><button type="button" class="opt">Do not add that modality's factors; use robust cost functions for noise that is not zero-mean Gaussian</button><button type="button" class="opt">Restart the graph with a new prior</button></div><p class="exp" hidden>In the tightly coupled design the triage happens factor by factor. Switching between whole subsystems is the loosely coupled approach.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Encoder noise reaches the foot through the Jacobian: \(\boldsymbol{\Sigma} = \mathbf{J}_c\boldsymbol{\Sigma}_q\mathbf{J}_c\T\).</li>
+<li>Bipeds: a forward-kinematics factor ties base and contact poses; a contact factor says the contact frame stays put, with covariance growing as \(\Delta t_{ij}\).</li>
+<li>Quadrupeds: stance-leg velocities are preintegrated into a relative-translation factor, \(\mathbf{r}_{\mathcal{V}} = \mathbf{R}_i\T(\mathbf{t}_j - \mathbf{t}_i) - \Delta\mathbf{t}_{ij}\).</li>
+<li>Fusion is loosely coupled (pick among parallel estimators) or tightly coupled (one graph, factors dropped when a sensor fails).</li>
+<li>Flexible legs, soft ground, and slip all break the model's assumptions and show up as biased motion.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §12.4 "Using Leg Odometry for State Estimation", §12.5 "Open Challenges", §12.6 "Further Readings &amp; Recent Trends", pp. 348–357.</li>
+<li>Barfoot, <em>State Estimation for Robotics</em>, 2017 (covariance of a linear function of a Gaussian; first-order uncertainty propagation).</li>
+<li>Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (filters and their process and measurement models).</li>
+<li>The derivation of the preintegrated sum and the soft-ground example are our own steps, in the notation of §12.4.2.</li>
+</ol></div>
+<p class="next"></p>
+</section>

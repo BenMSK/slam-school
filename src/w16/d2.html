@@ -1,0 +1,128 @@
+<section class="day" data-day="92" id="d92" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 16 · Day 2</span>
+  <h2>Initial alignment and the noise parameters of an IMU</h2>
+  <p class="lead">After today you can compute the gravity-aligned initial rotation from a static accelerometer reading, explain why yaw stays free, and read an IMU's noise density and bias random walk off a data sheet or an Allan plot.</p>
+  <p class="meta">About 60 min · Read §11.1.2, p. 307 (1 page) · Needs Week 16 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §11.1.2, p. 307</h4>
+<p>One dense page. While you read, look for:</p>
+<ul>
+<li>Why the starting orientation, a free choice in ordinary SLAM, is no longer free once an IMU is used.</li>
+<li>Which rotation cannot be recovered from gravity alone.</li>
+<li>In equation (11.6): which column of the rotation matrix comes straight from the measurement, and which two are constructed.</li>
+<li>In equation (11.7): the second physical vector a high-end IMU can sense, and the closing remark about projecting onto SO(3).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Gravity is the one direction of the world that an IMU can sense directly. A robot standing still can therefore work out which way is up, which fixes two of its three orientation angles (roll and pitch). The third, yaw, is invisible to gravity. How well any of this works depends on two numbers per sensor, the white-noise density and the bias random walk, which the second half of today explains.</p></div>
+
+<h3>1. Why the first pose is no longer arbitrary</h3>
+<p>In SLAM without an IMU you may declare the first pose to be the identity. Nothing in the measurements cares how the world frame is oriented. Equation (11.1) changes that: it contains \(\mathbf{g}^w\), the gravity vector in world coordinates. To use it you must know the direction of gravity in your world frame. The usual choice is a <strong>gravity-aligned</strong> world frame, with one axis along the vertical, and then the initial rotation \(\mathbf{R}^w_b(0)\) has to be computed so that it agrees with that choice. This step is called <strong>initial alignment</strong>. <span class="src">§11.1.2 · p. 307</span></p>
+<p>The simplest method assumes the robot starts at rest. Then \(\mathbf{a}^w = \mathbf{0}\) and, by (11.1), the accelerometer sees only gravity's reaction. One measured direction cannot fix a full 3-D orientation: turning the robot about the vertical does not change what the accelerometer reads. So <strong>yaw</strong> (rotation about gravity) cannot be recovered and is chosen freely, while <strong>roll</strong> and <strong>pitch</strong> (the two tilts away from level) can. <span class="src">§11.1.2 · p. 307</span></p>
+
+<h3>2. Static initialization by Gram–Schmidt</h3>
+<p>The book builds the rotation column by column: <span class="src">§11.1.2 · p. 307</span></p>
+\[ \mathbf{z}^b_w = \frac{\mathbf{g}^b}{\norm{\mathbf{g}^b}}, \qquad
+\mathbf{x}^b_w = \frac{\mathbf{e}_1 - \mathbf{z}^b_w\,(\mathbf{e}_1\T \mathbf{z}^b_w)}{\norm{\mathbf{e}_1 - \mathbf{z}^b_w\,(\mathbf{e}_1\T \mathbf{z}^b_w)}}, \qquad
+\mathbf{y}^b_w = \mathbf{z}^b_w \times \mathbf{x}^b_w, \qquad
+\mathbf{R}^b_w = \begin{bmatrix} \mathbf{x}^b_w & \mathbf{y}^b_w & \mathbf{z}^b_w \end{bmatrix}. \tag{11.6} \]
+<p>Here \(\mathbf{g}^b\) is the measured gravity vector in body coordinates and \(\mathbf{e}_1 = (1,0,0)\T\). The procedure of taking one vector, then removing from the next its component along the first, is <strong>Gram–Schmidt orthonormalization</strong>.</p>
+<div class="box note"><h4>Filling the gap: why these are the columns</h4>
+<p>\(\mathbf{R}^b_w\) converts world coordinates to body coordinates. Apply it to the world's third axis \((0,0,1)\T\): the result is the third column of the matrix. So the third column <em>is</em> the world \(z\)-axis as seen from the body, which the book writes \(\mathbf{z}^b_w\). Likewise the first two columns are the world \(x\)- and \(y\)-axes seen from the body. Since the world \(z\)-axis is defined to be the vertical, and the static reading tells us where the vertical is, the third column is simply the normalized reading.</p>
+<p>The other two columns only have to be perpendicular to \(\mathbf{z}^b_w\) and to each other. The construction is orthogonal by design:</p>
+\[ (\mathbf{z}^b_w)\T\big(\mathbf{e}_1 - \mathbf{z}^b_w(\mathbf{e}_1\T\mathbf{z}^b_w)\big) = \mathbf{e}_1\T\mathbf{z}^b_w - \underbrace{(\mathbf{z}^b_w)\T\mathbf{z}^b_w}_{=1}\,(\mathbf{e}_1\T\mathbf{z}^b_w) = 0 . \]
+<p>Starting from \(\mathbf{e}_1\), the body's own \(x\)-axis, is where the free yaw is spent: the world \(x\)-axis becomes the horizontal direction the robot's nose points along. Any other start vector gives another valid yaw. The recipe breaks only if \(\mathbf{e}_1\) is parallel to \(\mathbf{z}^b_w\) (a robot standing on its nose), where the numerator is zero; then start from \(\mathbf{e}_2\) instead.</p>
+<p><strong>Which sign?</strong> By (11.1) a static accelerometer reads \(\mathbf{R}^b_w(-\mathbf{g}^w)\), which points <em>up</em>. If you feed that raw reading into (11.6) as \(\mathbf{g}^b\), the world \(z\)-axis points up and \(\mathbf{g}^w = (0,0,-9.81)\). If you negate it first, world \(z\) points down. Either is consistent as long as \(\mathbf{g}^w\) in (11.1) matches. We use the raw reading and \(z\) up.</p></div>
+<figure class="fig"><svg viewBox="0 0 600 245" role="img" aria-label="Gram-Schmidt in a plane. From a common origin, the measured unit vector z points up and to the right, and the body axis e1 points right. Removing from e1 its component along z leaves a vector perpendicular to z, which after scaling to unit length is the new x. Three numbered steps are listed on the right.">
+  <defs><marker id="w16ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--c2)"/></marker>
+  <marker id="w16ar2b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker>
+  <marker id="w16ar2c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--c1)"/></marker></defs>
+  <line x1="150" y1="150" x2="218.8" y2="51.7" stroke="var(--c2)" stroke-width="2.5" marker-end="url(#w16ar2)"/>
+  <line x1="150" y1="150" x2="270" y2="150" stroke="var(--muted)" stroke-width="2" marker-end="url(#w16ar2b)"/>
+  <line x1="150" y1="150" x2="248.3" y2="218.8" stroke="var(--c1)" stroke-width="2.5" marker-end="url(#w16ar2c)"/>
+  <line x1="270" y1="150" x2="230.5" y2="206.4" stroke="var(--line2)" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <circle cx="150" cy="150" r="4" fill="var(--ink)"/>
+  <text x="226" y="48" font-size="14" fill="var(--ink)">z</text>
+  <text x="277" y="146" font-size="14" fill="var(--ink)">e₁</text>
+  <text x="256" y="232" font-size="14" fill="var(--ink)">x</text>
+  <text x="266" y="188" font-size="11" fill="var(--muted)">remove the part along z</text>
+  <text x="340" y="56" font-size="12" fill="var(--ink)">1. z = unit vector of the reading</text>
+  <text x="340" y="80" font-size="12" fill="var(--ink)">2. x = e₁ minus its part along z,</text>
+  <text x="356" y="97" font-size="12" fill="var(--ink)">rescaled to length 1</text>
+  <text x="340" y="121" font-size="12" fill="var(--ink)">3. y = z × x completes the frame</text>
+</svg><figcaption>Equation (11.6) in pictures. The measurement fixes z. The x-axis is whatever is left of the body's own x-axis after its vertical part is removed, and y follows from the cross product.</figcaption></figure>
+<p><strong>Worked example.</strong> A robot sits still and its accelerometer, averaged over a second, reads \((1.70, 0, 9.66)\) m/s². Its length is \(\sqrt{1.70^2 + 9.66^2} = 9.81\).</p>
+<ul>
+<li>\(\mathbf{z}^b_w = (1.70, 0, 9.66)/9.81 = (0.1733, 0, 0.9849)\).</li>
+<li>\(\mathbf{e}_1\T\mathbf{z}^b_w = 0.1733\), so \(\mathbf{e}_1 - 0.1733\,\mathbf{z}^b_w = (0.9700, 0, -0.1707)\), of length \(0.9849\). Dividing: \(\mathbf{x}^b_w = (0.9849, 0, -0.1733)\).</li>
+<li>\(\mathbf{y}^b_w = \mathbf{z}^b_w \times \mathbf{x}^b_w = (0, 1, 0)\).</li>
+</ul>
+\[ \mathbf{R}^b_w = \begin{bmatrix} 0.9849 & 0 & 0.1733 \\ 0 & 1 & 0 \\ -0.1733 & 0 & 0.9849 \end{bmatrix}, \qquad \mathbf{R}^w_b = (\mathbf{R}^b_w)\T . \]
+<p>Since \(\sin 10^\circ = 0.1736\), this is a rotation of 10° about the \(y\)-axis. The first column of \(\mathbf{R}^w_b\) is the body \(x\)-axis in world coordinates, \((0.9849, 0, 0.1733)\): the nose points 10° above the horizon. Check: \(\mathbf{R}^b_w\,(0,0,9.81)\T = (1.70, 0, 9.66)\T\), the reading we started from.</p>
+
+<h3>3. What can go wrong when standing still</h3>
+<p>Static alignment trusts the reading to be pure gravity. Two things break that. If the robot is accelerating, the specific force is no longer vertical. If the accelerometer has a bias \(b\) along a horizontal axis, the measured "up" is tilted by about \(b/g\) radians: a bias of 0.05 m/s² tilts it by \(0.05/9.81 = 0.0051\) rad, or 0.29°. Averaging more samples reduces the effect of white noise but does nothing to a bias.</p>
+<p>Try it: press "At rest" and compare the inferred pitch with the true pitch. Then raise the horizontal acceleration to 1 m/s².</p>
+<div class="viz" data-viz="w16_tilt"></div>
+<p class="cap">Notice that at rest the inferred pitch equals the true pitch (20.0°). With 1 m/s² of forward acceleration the reading tilts and the inferred pitch becomes 25.8°: an error of atan(1/9.81) = 5.8°. This is why the book's method assumes a static start.</p>
+
+<h3>4. Alignment with a high-end IMU</h3>
+<p>The Earth turns once a day, about 15° per hour or \(7.3 \times 10^{-5}\) rad/s. A high-end gyroscope can measure this <strong>Earth rotation rate</strong> \(\boldsymbol{\omega}_{ie}\) while standing still. That is a second known direction, not parallel to gravity, and two directions fix the full orientation including yaw. <span class="src">§11.1.2 · p. 307</span></p>
+<div class="box note"><h4>Filling the gap: where equation (11.7) comes from</h4>
+<p>Each known vector obeys \(\mathbf{u}^b = \mathbf{R}^b_w\mathbf{u}^w\). Transposing, \((\mathbf{u}^b)\T = (\mathbf{u}^w)\T\mathbf{R}^w_b\). Write this for three vectors, gravity, the Earth rate, and their cross product (a rotation maps the cross product of two vectors to the cross product of their images), and stack the three rows:</p>
+\[ \underbrace{\begin{bmatrix} (\mathbf{g}^b)\T \\ (\boldsymbol{\omega}^b_{ie})\T \\ (\mathbf{g}^b \times \boldsymbol{\omega}^b_{ie})\T \end{bmatrix}}_{\text{measured}} = \underbrace{\begin{bmatrix} (\mathbf{g}^w)\T \\ (\boldsymbol{\omega}^w_{ie})\T \\ (\mathbf{g}^w \times \boldsymbol{\omega}^w_{ie})\T \end{bmatrix}}_{\text{known}} \mathbf{R}^w_b
+\quad\Longrightarrow\quad
+\mathbf{R}^w_b = \begin{bmatrix} (\mathbf{g}^w)\T \\ (\boldsymbol{\omega}^w_{ie})\T \\ (\mathbf{g}^w \times \boldsymbol{\omega}^w_{ie})\T \end{bmatrix}^{-1} \begin{bmatrix} (\mathbf{g}^b)\T \\ (\boldsymbol{\omega}^b_{ie})\T \\ (\mathbf{g}^b \times \boldsymbol{\omega}^b_{ie})\T \end{bmatrix}. \tag{11.7} \]
+<p>The cross product is included only to make the known matrix square and invertible. (In the book's printing the last row of the right-hand matrix carries a superscript \(w\) on \(\boldsymbol{\omega}_{ie}\); from the derivation it must be the body-frame vector.) With noisy measurements the result is not exactly a rotation matrix, so it is replaced by the nearest one, which the book calls projecting onto \(\SO(3)\). The standard way is a singular value decomposition \(\mathbf{U}\mathbf{S}\mathbf{V}\T\) of the result, keeping \(\mathbf{U}\mathbf{V}\T\) (with a sign flip of the last column of \(\mathbf{U}\) if the determinant is \(-1\)).</p></div>
+<p>A MEMS gyroscope cannot do this. A bias of 0.1°/s is 360° per hour, 24 times the signal it would have to detect. So low-cost systems leave yaw free at start-up.</p>
+
+<h3>5. Noise parameters in practice</h3>
+<p>The model of Day 1 has two random ingredients per sensor: white noise \(\boldsymbol{\eta}\) and a bias that performs a random walk, \(\dot{\mathbf{b}} = \boldsymbol{\eta}^{b}\) (equation (11.32), Day 5). Each is described by one number, and the units of that number confuse almost everyone at first.</p>
+<div class="tbl"><table>
+  <tr><th>Parameter</th><th>Typical unit</th><th>Standard deviation of one sample at period Δt</th><th>After integrating for time t</th></tr>
+  <tr><td>Gyroscope <strong>noise density</strong> \(\sigma_g\)</td><td>rad/s/√Hz</td><td>\(\sigma_g/\sqrt{\Delta t}\)</td><td>angle error \(\sigma_g\sqrt{t}\) ("angle random walk")</td></tr>
+  <tr><td>Accelerometer noise density \(\sigma_a\)</td><td>m/s²/√Hz</td><td>\(\sigma_a/\sqrt{\Delta t}\)</td><td>velocity error \(\sigma_a\sqrt{t}\) ("velocity random walk")</td></tr>
+  <tr><td>Gyroscope <strong>bias random walk</strong> \(\sigma_{bg}\)</td><td>rad/s²/√Hz</td><td>bias step \(\sigma_{bg}\sqrt{\Delta t}\)</td><td>bias has wandered by \(\sigma_{bg}\sqrt{t}\)</td></tr>
+  <tr><td>Accelerometer bias random walk \(\sigma_{ba}\)</td><td>m/s³/√Hz</td><td>bias step \(\sigma_{ba}\sqrt{\Delta t}\)</td><td>bias has wandered by \(\sigma_{ba}\sqrt{t}\)</td></tr>
+</table></div>
+<p>The two middle-column rules are the book's \(\operatorname{Cov}(\boldsymbol{\eta}^{gd}) = \tfrac{1}{\Delta t}\operatorname{Cov}(\boldsymbol{\eta}^{g})\) <span class="src">§11.2.1 · p. 309</span> and \(\boldsymbol{\Sigma}^{bgd} = \Delta t_{ij}\operatorname{Cov}(\boldsymbol{\eta}^{bg})\) <span class="src">§11.2.2.4 · p. 316</span>, where the extra \(d\) means "discrete-time".</p>
+<div class="box note"><h4>Filling the gap: why divide by √Δt?</h4>
+<p>Continuous white noise has the same power at every frequency, so its instantaneous variance is infinite. Only its averages are finite. A sensor sample is roughly an average over one sampling period, and the average of white noise of density \(\sigma\) over a window \(\Delta t\) has variance \(\sigma^2/\Delta t\): a shorter window averages less, so each sample is noisier. Now integrate \(n\) samples, \(t = n\,\Delta t\). Variances of independent terms add:</p>
+\[ \operatorname{var}\Big(\sum_{k=1}^{n}\eta_k\,\Delta t\Big) = n\cdot\frac{\sigma^2}{\Delta t}\cdot\Delta t^2 = \sigma^2\,n\,\Delta t = \sigma^2 t . \]
+<p>The sampling rate has cancelled, as it should: the integrated error depends only on the density and the elapsed time. Example: \(\sigma_g = 0.01\)°/s/√Hz sampled at 100 Hz gives samples with standard deviation \(0.01 \times \sqrt{100} = 0.1\)°/s, and an angle error of \(0.01 \times \sqrt{60} = 0.077\)° after one minute. For the bias the logic runs the other way: the bias itself is the integral of white noise, so its change over \(\Delta t\) has variance \(\sigma_b^2\,\Delta t\).</p></div>
+<p>How are the two numbers measured? Record the sensor at rest for a long time. Cut the record into blocks of length \(\tau\) and average each block. The <strong>Allan variance</strong> is half the mean squared difference between consecutive block averages, and its square root is the <strong>Allan deviation</strong>. For white noise of density \(N\), block averages get quieter as blocks get longer and the Allan deviation is \(N/\sqrt{\tau}\). A random-walking bias of strength \(K\) makes distant blocks disagree more, contributing \(K\sqrt{\tau/3}\). On a log-log plot these are straight lines of slope \(-\tfrac12\) and \(+\tfrac12\).</p>
+<p>Try it: change \(N\) and \(K\) and watch the two branches move.</p>
+<div class="viz" data-viz="w16_allan"></div>
+<p class="cap">Notice the V shape. On the left branch you can read the noise density directly: at τ = 1 s the measured Allan deviation is 0.0200°/s against a true N of 0.020. The model's minimum, at τ = √3·N/K = 3.5 s, is the longest averaging time that still helps; averaging longer lets the wandering bias back in. Press "New noise" a few times: the rightmost points jump around the model curve, because only a dozen blocks fit in a 10-minute record. Set K to zero and the right branch disappears.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Averaging long enough gives a perfect gravity direction."</strong> Averaging beats white noise only. A bias \(b\) leaves a tilt error of about \(b/g\) however long you wait.</li>
+<li><strong>"A faster IMU is noisier, so it is worse."</strong> Each sample is noisier by \(\sqrt{\text{rate}}\), but there are more of them, and the integrated error \(\sigma\sqrt{t}\) is unchanged.</li>
+<li><strong>"Yaw is unknown because the gyroscope is poor."</strong> With gravity as the only reference, yaw is unobservable for any accelerometer. It takes a second reference direction, such as the Earth's rotation, to fix it.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. Why can static alignment with a MEMS IMU not determine yaw?</p><div class="opts"><button type="button" class="opt">The accelerometer noise is too large</button><button type="button" class="opt">Rotating the robot about the vertical does not change the measured gravity vector</button><button type="button" class="opt">Yaw is not part of a rotation matrix</button><button type="button" class="opt">Gram–Schmidt fails for three vectors</button></div><p class="exp" hidden>The only reference is one direction, the vertical. Any rotation about that direction leaves the body-frame reading unchanged, so no amount of data can reveal it.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. A static accelerometer reads (0, 4.905, 8.496) m/s², which has length 9.81. Using (11.6), what is the second column, y, of the rotation matrix?</p><div class="opts"><button type="button" class="opt">(0, 0.5, 0.866)</button><button type="button" class="opt">(0, 1, 0)</button><button type="button" class="opt">(0, −0.5, 0.866)</button><button type="button" class="opt">(0, 0.866, −0.5)</button></div><p class="exp" hidden>z = (0, 0.5, 0.866). e₁ is already perpendicular to z, so x = (1, 0, 0). Then y = z × x = (0, 0.866, −0.5). Option one is z itself.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. A gyroscope has noise density 0.005°/s/√Hz and is sampled at 400 Hz. The standard deviation of the noise in one sample is</p><div class="opts"><button type="button" class="opt">0.1°/s</button><button type="button" class="opt">0.00025°/s</button><button type="button" class="opt">0.005°/s</button><button type="button" class="opt">2°/s</button></div><p class="exp" hidden>Divide by √Δt, which is the same as multiplying by √rate: 0.005 × √400 = 0.005 × 20 = 0.1°/s.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. During static alignment the accelerometer has a horizontal bias of 0.1 m/s². Roughly how large is the resulting tilt error, after averaging many samples?</p><div class="opts"><button type="button" class="opt">Zero: averaging removes it</button><button type="button" class="opt">0.06°</button><button type="button" class="opt">0.6°</button><button type="button" class="opt">6°</button></div><p class="exp" hidden>The bias adds a horizontal component to a vertical vector of length 9.81, tilting it by 0.1/9.81 = 0.0102 rad = 0.58°. Averaging does not remove a bias.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. On the white-noise branch of an Allan deviation plot, the averaging time τ is increased 100-fold. The Allan deviation</p><div class="opts"><button type="button" class="opt">drops 100-fold</button><button type="button" class="opt">drops 10-fold</button><button type="button" class="opt">stays the same</button><button type="button" class="opt">rises 10-fold</button></div><p class="exp" hidden>For white noise the Allan deviation is N/√τ, so 100 times more averaging gives √100 = 10 times less scatter.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>With an IMU the world frame is gravity-aligned, so the initial rotation must be computed, not chosen.</li>
+<li>At rest, the normalized accelerometer reading is the third column of \(\mathbf{R}^b_w\); Gram–Schmidt fills in the other two, equation (11.6). Roll and pitch are determined, yaw is free.</li>
+<li>Acceleration or accelerometer bias during alignment tilts the estimated vertical by about (horizontal error)/g.</li>
+<li>A gyroscope good enough to sense the Earth's rotation supplies a second direction and fixes yaw too, equation (11.7).</li>
+<li>White noise: per-sample deviation \(\sigma/\sqrt{\Delta t}\), integrated error \(\sigma\sqrt{t}\). Bias random walk: drift \(\sigma_b\sqrt{t}\). An Allan plot shows both.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §11.1.2 "Initial Alignment", p. 307; the discrete-noise relations on p. 309 and p. 316.</li>
+<li>Groves, <em>Principles of GNSS, Inertial, and Multisensor Integrated Navigation Systems</em>, 2nd ed., 2013 (levelling, gyrocompassing, and sensor noise parameters).</li>
+<li>IEEE Std 952-1997, <em>IEEE Standard Specification Format Guide and Test Procedure for Single-Axis Interferometric Fiber Optic Gyros</em>, 1997 (definition of Allan variance and the slopes of its noise terms).</li>
+<li>Woodman, <em>An Introduction to Inertial Navigation</em>, University of Cambridge technical report, 2007 (white noise and bias random walk in MEMS sensors).</li>
+</ol></div>
+<p class="next"></p>
+</section>

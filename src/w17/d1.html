@@ -1,0 +1,142 @@
+<section class="day" data-day="97" id="d97" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 17 · Day 1</span>
+  <h2>Can the data pin down the state? Observability and the error-state model</h2>
+  <p class="lead">After today you can test a linear system for observability with a rank computation, and read the error-state dynamics and transition matrix of an aided inertial system.</p>
+  <p class="meta">About 60 min · Read the opening of §11.3 and §11.3.1.1, pp. 319–322 (3 pages) · Needs Week 16 Day 3</p>
+</header>
+
+<div class="box read"><h4>Read first: §11.3 up to equation (11.41), pp. 319–322</h4>
+<p>Start at the heading "11.3" in the lower half of p. 319 and stop after equation (11.41). While you read, look for:</p>
+<ul>
+<li>What observability analysis is for, and the three uses the book lists for its results (p. 320).</li>
+<li>The state in (11.37) and the order of its six parts (p. 320). Every matrix this week uses that order.</li>
+<li>In (11.40), the block of zeros in the lower right, and why it is there (p. 321).</li>
+<li>In (11.41), which blocks of \(\boldsymbol{\Phi}\) are identity and which are zero (p. 322).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Before asking how accurate an estimator is, ask whether the measurements can determine the state at all. If two different states produce exactly the same measurements, no algorithm can tell them apart. For a linearized system this becomes a question about one matrix: a direction \(\mathbf{u}\) in state space is <strong>unobservable</strong> when moving the initial state along \(\mathbf{u}\) changes none of the predicted measurements.</p></div>
+
+<h3>1. The question</h3>
+<p>Week 16 ended with an IMU that drifts when used alone. The cure is to pair it with an <strong>exteroceptive sensor</strong>, one that looks at the outside world, such as a camera or a LiDAR. The book calls the combination an <strong>aided inertial navigation system (AINS)</strong>. <span class="src">§11.3 · p. 319</span></p>
+<p>Aiding has a cost. The state already holds two IMU biases that no sensor measures directly, and now it also holds the positions of landmarks nobody surveyed. So the book asks whether the data is <em>sufficient</em> to estimate this larger state without ambiguity. Answering that question is <strong>observability analysis</strong>. <span class="src">§11.3 · p. 320</span></p>
+<figure class="fig"><svg viewBox="0 0 600 200" role="img" aria-label="Two rows on the same ruler from 0 to 5 metres. In world A the robot is at 1.0 metre and the landmark at 3.0 metres. In world B the robot is at 2.5 metres and the landmark at 4.5 metres. In both rows the measured distance from robot to landmark is 2.0 metres.">
+  <defs><marker id="w17ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <line x1="40" y1="172" x2="560" y2="172" stroke="var(--line2)" stroke-width="1.5"/>
+  <line x1="40" y1="167" x2="40" y2="177" stroke="var(--line2)"/><line x1="140" y1="167" x2="140" y2="177" stroke="var(--line2)"/><line x1="240" y1="167" x2="240" y2="177" stroke="var(--line2)"/><line x1="340" y1="167" x2="340" y2="177" stroke="var(--line2)"/><line x1="440" y1="167" x2="440" y2="177" stroke="var(--line2)"/><line x1="540" y1="167" x2="540" y2="177" stroke="var(--line2)"/>
+  <text x="40" y="193" text-anchor="middle" font-size="11" fill="var(--muted)">0 m</text><text x="140" y="193" text-anchor="middle" font-size="11" fill="var(--muted)">1</text><text x="240" y="193" text-anchor="middle" font-size="11" fill="var(--muted)">2</text><text x="340" y="193" text-anchor="middle" font-size="11" fill="var(--muted)">3</text><text x="440" y="193" text-anchor="middle" font-size="11" fill="var(--muted)">4</text><text x="540" y="193" text-anchor="middle" font-size="11" fill="var(--muted)">5</text>
+  <text x="8" y="50" font-size="13" font-weight="700" fill="var(--ink)">A</text>
+  <circle cx="140" cy="45" r="9" fill="var(--c5)"/><rect x="334" y="39" width="12" height="12" fill="var(--c2)"/>
+  <line x1="153" y1="45" x2="329" y2="45" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w17ar1)"/>
+  <text x="241" y="35" text-anchor="middle" font-size="12" fill="var(--ink)">measured ℓ − p = 2.0 m</text>
+  <text x="140" y="72" text-anchor="middle" font-size="12" fill="var(--muted)">p = 1.0</text><text x="340" y="72" text-anchor="middle" font-size="12" fill="var(--muted)">ℓ = 3.0</text>
+  <text x="8" y="125" font-size="13" font-weight="700" fill="var(--ink)">B</text>
+  <circle cx="290" cy="120" r="9" fill="var(--c5)"/><rect x="484" y="114" width="12" height="12" fill="var(--c2)"/>
+  <line x1="303" y1="120" x2="479" y2="120" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w17ar1)"/>
+  <text x="391" y="110" text-anchor="middle" font-size="12" fill="var(--ink)">measured ℓ − p = 2.0 m</text>
+  <text x="290" y="147" text-anchor="middle" font-size="12" fill="var(--muted)">p = 2.5</text><text x="490" y="147" text-anchor="middle" font-size="12" fill="var(--muted)">ℓ = 4.5</text>
+</svg><figcaption>A robot (circle) measures its distance to a landmark (square) whose position is also unknown. Worlds A and B differ by a shift of 1.5 m and give the same reading. The shift is an unobservable direction: it is the vector (1, 1) in the space of (p, ℓ).</figcaption></figure>
+<p>The book lists three things the analysis is used for: making estimators <em>consistent</em> (Day 5), finding the fewest measurements that can initialize an estimator, and identifying <strong>degenerate motions</strong> that hide more of the state than usual (Day 4). <span class="src">§11.3 · p. 320</span></p>
+
+<h3>2. The rank test for a linear system</h3>
+<p>The book goes straight to the full inertial system. The idea is easier to see on a small linear one first. This section is background that the book assumes.</p>
+<p>Take a state \(\mathbf{x}_k \in \R^n\) that evolves and is measured linearly:</p>
+\[ \mathbf{x}_{k+1} = \boldsymbol{\Phi}\,\mathbf{x}_k + (\text{known input}), \qquad \mathbf{z}_k = \mathbf{H}\,\mathbf{x}_k . \]
+<p>Everything the sensors will ever report is a function of the initial state \(\mathbf{x}_1\), because \(\mathbf{x}_k = \boldsymbol{\Phi}^{k-1}\mathbf{x}_1 + (\text{known})\). Stack the first \(K\) measurements:</p>
+\[ \begin{bmatrix} \mathbf{z}_1 \\ \mathbf{z}_2 \\ \vdots \\ \mathbf{z}_K \end{bmatrix} = \underbrace{\begin{bmatrix} \mathbf{H} \\ \mathbf{H}\boldsymbol{\Phi} \\ \vdots \\ \mathbf{H}\boldsymbol{\Phi}^{K-1} \end{bmatrix}}_{\mathbf{M}} \mathbf{x}_1 + (\text{known}) . \]
+<p>\(\mathbf{M}\) is the <strong>observability matrix</strong>. Two initial states \(\mathbf{x}_1\) and \(\mathbf{x}_1 + \mathbf{u}\) give identical measurements exactly when \(\mathbf{M}\mathbf{u} = \mathbf{0}\). The set of such \(\mathbf{u}\) is the <strong>nullspace</strong> of \(\mathbf{M}\). So:</p>
+<ul>
+<li>If \(\rank \mathbf{M} = n\), the nullspace holds only \(\mathbf{0}\), and \(\mathbf{x}_1\) (hence every later state) can be recovered. The system is <strong>observable</strong>.</li>
+<li>If \(\rank \mathbf{M} = n - d\), there are \(d\) independent unobservable directions (the rank–nullity theorem).</li>
+</ul>
+<p><strong>Worked example.</strong> A cart on a rail carries an accelerometer with an unknown constant bias \(b\). The state is \((p, v, b)\): position, velocity, bias. With an accelerometer reading \(a_m\) and time step \(\Delta t = 1\) s, the integration rule of <a href="#d93">Week 16 · Day 3</a> gives</p>
+\[ p_{k+1} = p_k + v_k - \tfrac12 b + \tfrac12 a_m, \quad v_{k+1} = v_k - b + a_m, \quad b_{k+1} = b \quad\Longrightarrow\quad \boldsymbol{\Phi} = \begin{bmatrix} 1 & 1 & -\tfrac12 \\ 0 & 1 & -1 \\ 0 & 0 & 1 \end{bmatrix},\quad \boldsymbol{\Phi}^k = \begin{bmatrix} 1 & k & -\tfrac{k^2}{2} \\ 0 & 1 & -k \\ 0 & 0 & 1 \end{bmatrix}. \]
+<p>If a second sensor measures position, \(\mathbf{H} = [1\ 0\ 0]\), three readings give</p>
+\[ \mathbf{M} = \begin{bmatrix} 1 & 0 & 0 \\ 1 & 1 & -\tfrac12 \\ 1 & 2 & -2 \end{bmatrix}, \qquad \det \mathbf{M} = 1\cdot\big(1\cdot(-2) - (-\tfrac12)\cdot 2\big) = -1 \ne 0 , \]
+<p>so the rank is 3 and all of \(p, v, b\) can be found, even though only position is measured. If instead the second sensor measures velocity, \(\mathbf{H} = [0\ 1\ 0]\), every row of \(\mathbf{M}\) starts with a zero, so \(\mathbf{M}\,(1, 0, 0)\T = \mathbf{0}\). Position is unobservable, which makes sense: integrating velocity never tells you where you started.</p>
+<p>Try it: set the sensor and the number of readings, and watch the rank.</p>
+<div class="viz" data-viz="w17_rank"></div>
+<p class="cap">Notice: with position measured, the rank is 1, 2, 3 after one, two, three readings, and then stays at 3. With velocity measured it stops at 2 however many readings you add, and the null vector is pure position. With the landmark option there are four unknowns, the rank stops at 3, and the null vector moves \(p\) and \(\ell\) together: the shift in the figure above.</p>
+<div class="box kid"><h4>In plain words</h4><p>Write down every number the sensors will report as a formula in the unknowns. If you can nudge the unknowns in some combination and every formula gives the same number as before, that combination is invisible. Counting the invisible combinations is all the rank test does.</p></div>
+
+<h3>3. The state of an aided inertial system</h3>
+<p>The book's state collects the robot state and the features (landmarks), all expressed in the world frame: <span class="src">§11.3.1 · p. 320, eq. (11.37)</span></p>
+\[ \mathbf{x} = \{\mathbf{R}^w_b,\ \mathbf{b}^g,\ \mathbf{v}^w,\ \mathbf{b}^a,\ \mathbf{p}^w,\ \mathbf{x}^w_f\} . \]
+<div class="tbl"><table>
+<tr><th>Part</th><th>Meaning</th><th>Error dimensions</th></tr>
+<tr><td>\(\mathbf{R}^w_b\)</td><td>rotation of the body frame with respect to the world frame</td><td>3</td></tr>
+<tr><td>\(\mathbf{b}^g\)</td><td>gyroscope bias (body frame)</td><td>3</td></tr>
+<tr><td>\(\mathbf{v}^w\)</td><td>velocity</td><td>3</td></tr>
+<tr><td>\(\mathbf{b}^a\)</td><td>accelerometer bias (body frame)</td><td>3</td></tr>
+<tr><td>\(\mathbf{p}^w\)</td><td>position</td><td>3</td></tr>
+<tr><td>\(\mathbf{x}^w_f\)</td><td>features: points, lines, planes (Day 2)</td><td>\(n_f\)</td></tr>
+</table></div>
+<p>The motion model is the kinematics of Week 16 plus the bias random walks, equations (11.38) and (11.39): <span class="src">§11.3.1.1 · p. 321</span></p>
+\[ \dot{\mathbf{R}}^w_b = \mathbf{R}^w_b(\boldsymbol{\omega}^b_b)^{\wedge}, \quad \dot{\mathbf{v}}^w = \mathbf{a}^w, \quad \dot{\mathbf{p}}^w = \mathbf{v}^w, \qquad \dot{\mathbf{b}}^g = \boldsymbol{\eta}^{bg}, \quad \dot{\mathbf{b}}^a = \boldsymbol{\eta}^{ba}. \]
+
+<h3>4. The error state and its dynamics</h3>
+<p>This model is nonlinear, because of the rotation. Observability analysis works on its linearization. Pick a <strong>linearization point</strong> \(\hat{\mathbf{x}}\) (the current estimate) and describe the true state by its small deviation from it, the <strong>error state</strong> <span class="src">§11.3.1.1 · p. 321</span></p>
+\[ \tilde{\mathbf{x}} = \{\tilde{\boldsymbol{\theta}},\ \tilde{\mathbf{b}}^g,\ \tilde{\mathbf{v}}^w,\ \tilde{\mathbf{b}}^a,\ \tilde{\mathbf{p}}^w,\ \tilde{\mathbf{x}}^w_f\}, \qquad \text{for example } \mathbf{v}^w = \hat{\mathbf{v}}^w + \tilde{\mathbf{v}}^w . \]
+<p>Rotations cannot be added, so the rotation error is a 3-vector in the tangent space, applied on the right (the book's footnote 8, and the perturbation convention of <a href="#d21">Week 4 · Day 3</a>):</p>
+\[ \mathbf{R}^w_b = \hat{\mathbf{R}}^w_b \Exp(\tilde{\boldsymbol{\theta}}) \simeq \hat{\mathbf{R}}^w_b\,(\mathbf{I} + \tilde{\boldsymbol{\theta}}^{\wedge}) . \]
+<p>The error state has \(15 + n_f\) entries. Its dynamics are equation (11.40):</p>
+\[ \dot{\tilde{\mathbf{x}}}(t) \simeq \begin{bmatrix} \mathbf{F}_c(t) & \mathbf{0}_{15\times n_f} \\ \mathbf{0}_{n_f \times 15} & \mathbf{0}_{n_f} \end{bmatrix} \tilde{\mathbf{x}}(t) + \begin{bmatrix} \mathbf{G}_c(t) \\ \mathbf{0}_{n_f\times 12} \end{bmatrix} \boldsymbol{\eta}(t) =: \mathbf{F}(t)\,\tilde{\mathbf{x}}(t) + \mathbf{G}(t)\,\boldsymbol{\eta}(t). \]
+<p>The zeros say that features do not move and are not driven by noise: an error in a landmark position stays what it is. The noise \(\boldsymbol{\eta}\) has 12 entries: gyroscope noise, accelerometer noise, and the two bias random-walk noises, three numbers each.</p>
+
+<div class="box note"><h4>Filling the gap: what is inside \(\mathbf{F}_c\)</h4>
+<p>The book names \(\mathbf{F}_c\) but does not print it. Here is the standard derivation, in the book's ordering and conventions. Write the IMU readings as \(\boldsymbol{\omega}_m, \mathbf{a}_m\) (the book's \(\tilde{\boldsymbol{\omega}}, \tilde{\mathbf{a}}\) of (11.12); renamed because the tilde now marks errors), and their bias-corrected values at the linearization point as \(\hat{\boldsymbol{\omega}} = \boldsymbol{\omega}_m - \hat{\mathbf{b}}^g\), \(\hat{\mathbf{a}} = \mathbf{a}_m - \hat{\mathbf{b}}^a\). From the measurement model (11.1)–(11.2), the true quantities are \(\boldsymbol{\omega}^b_b = \hat{\boldsymbol{\omega}} - \tilde{\mathbf{b}}^g - \boldsymbol{\eta}^g\) and \(\mathbf{a}^w = \mathbf{R}(\hat{\mathbf{a}} - \tilde{\mathbf{b}}^a - \boldsymbol{\eta}^a) + \mathbf{g}\).</p>
+<p><strong>Position.</strong> \(\dot{\mathbf{p}} = \mathbf{v}\) is already linear: \(\dot{\tilde{\mathbf{p}}} = \tilde{\mathbf{v}}\).</p>
+<p><strong>Velocity.</strong> Insert \(\mathbf{R} \simeq \hat{\mathbf{R}}(\mathbf{I} + \tilde{\boldsymbol{\theta}}^{\wedge})\) and drop products of two small terms:</p>
+\[ \dot{\mathbf{v}} \simeq \underbrace{\hat{\mathbf{R}}\hat{\mathbf{a}} + \mathbf{g}}_{\dot{\hat{\mathbf{v}}}} + \hat{\mathbf{R}}\,\tilde{\boldsymbol{\theta}}^{\wedge}\hat{\mathbf{a}} - \hat{\mathbf{R}}\,\tilde{\mathbf{b}}^a - \hat{\mathbf{R}}\,\boldsymbol{\eta}^a \quad\Longrightarrow\quad \dot{\tilde{\mathbf{v}}} = -\hat{\mathbf{R}}\,\hat{\mathbf{a}}^{\wedge}\,\tilde{\boldsymbol{\theta}} - \hat{\mathbf{R}}\,\tilde{\mathbf{b}}^a - \hat{\mathbf{R}}\,\boldsymbol{\eta}^a , \]
+<p>using \(\tilde{\boldsymbol{\theta}}^{\wedge}\hat{\mathbf{a}} = -\hat{\mathbf{a}}^{\wedge}\tilde{\boldsymbol{\theta}}\), property (11.20).</p>
+<p><strong>Rotation.</strong> Differentiate \(\mathbf{R} = \hat{\mathbf{R}}(\mathbf{I} + \tilde{\boldsymbol{\theta}}^{\wedge})\) with \(\dot{\hat{\mathbf{R}}} = \hat{\mathbf{R}}\hat{\boldsymbol{\omega}}^{\wedge}\), and set it equal to \(\mathbf{R}\,(\boldsymbol{\omega}^b_b)^{\wedge}\):</p>
+\[ \hat{\mathbf{R}}\hat{\boldsymbol{\omega}}^{\wedge}(\mathbf{I} + \tilde{\boldsymbol{\theta}}^{\wedge}) + \hat{\mathbf{R}}\,\dot{\tilde{\boldsymbol{\theta}}}^{\wedge} = \hat{\mathbf{R}}(\mathbf{I} + \tilde{\boldsymbol{\theta}}^{\wedge})(\hat{\boldsymbol{\omega}} - \tilde{\mathbf{b}}^g - \boldsymbol{\eta}^g)^{\wedge} . \]
+<p>Cancel \(\hat{\mathbf{R}}\hat{\boldsymbol{\omega}}^{\wedge}\) on both sides, drop second-order terms, and use \(\mathbf{a}^{\wedge}\mathbf{b}^{\wedge} - \mathbf{b}^{\wedge}\mathbf{a}^{\wedge} = (\mathbf{a}\times\mathbf{b})^{\wedge}\):</p>
+\[ \dot{\tilde{\boldsymbol{\theta}}}^{\wedge} = \tilde{\boldsymbol{\theta}}^{\wedge}\hat{\boldsymbol{\omega}}^{\wedge} - \hat{\boldsymbol{\omega}}^{\wedge}\tilde{\boldsymbol{\theta}}^{\wedge} - (\tilde{\mathbf{b}}^g + \boldsymbol{\eta}^g)^{\wedge} \quad\Longrightarrow\quad \dot{\tilde{\boldsymbol{\theta}}} = -\hat{\boldsymbol{\omega}}^{\wedge}\tilde{\boldsymbol{\theta}} - \tilde{\mathbf{b}}^g - \boldsymbol{\eta}^g . \]
+<p>Collect the coefficients, rows and columns in the order \((\tilde{\boldsymbol{\theta}}, \tilde{\mathbf{b}}^g, \tilde{\mathbf{v}}, \tilde{\mathbf{b}}^a, \tilde{\mathbf{p}})\):</p>
+\[ \mathbf{F}_c = \begin{bmatrix} -\hat{\boldsymbol{\omega}}^{\wedge} & -\mathbf{I} & \mathbf{0} & \mathbf{0} & \mathbf{0} \\ \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} \\ -\hat{\mathbf{R}}\hat{\mathbf{a}}^{\wedge} & \mathbf{0} & \mathbf{0} & -\hat{\mathbf{R}} & \mathbf{0} \\ \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} \\ \mathbf{0} & \mathbf{0} & \mathbf{I} & \mathbf{0} & \mathbf{0} \end{bmatrix} . \]
+<p>Read the third row: a tilt error \(\tilde{\boldsymbol{\theta}}\) makes the estimator rotate the measured acceleration (which is mostly the reaction to gravity) the wrong way, and that leaks into velocity. This is the gravity-leak effect you saw in Week 16.</p></div>
+
+<h3>5. From \(\mathbf{F}\) to the transition matrix \(\boldsymbol{\Phi}\)</h3>
+<p>Estimators run in discrete time, so we need the matrix that carries an error from time \(t_k\) to \(t_{k+1}\) when there is no noise: \(\tilde{\mathbf{x}}_{k+1} = \boldsymbol{\Phi}_{(k+1,k)}\,\tilde{\mathbf{x}}_k\). This <strong>state transition matrix</strong> solves \(\dot{\boldsymbol{\Phi}} = \mathbf{F}\boldsymbol{\Phi}\) starting from the identity. <span class="src">§11.3.1.1 · pp. 321–322</span> Transition matrices chain: \(\boldsymbol{\Phi}_{(k,1)} = \boldsymbol{\Phi}_{(k,k-1)}\cdots\boldsymbol{\Phi}_{(2,1)}\).</p>
+<div class="box note"><h4>Filling the gap: solving \(\dot{\boldsymbol{\Phi}} = \mathbf{F}\boldsymbol{\Phi}\) when \(\mathbf{F}\) is constant</h4>
+<p>For constant \(\mathbf{F}\) the solution is the matrix exponential \(\boldsymbol{\Phi} = \exp(\mathbf{F}\Delta t) = \mathbf{I} + \mathbf{F}\Delta t + \tfrac12\mathbf{F}^2\Delta t^2 + \dots\) The cart of section 2 has \(\dot p = v\), \(\dot v = a_m - b\), \(\dot b = 0\), so</p>
+\[ \mathbf{F} = \begin{bmatrix} 0 & 1 & 0 \\ 0 & 0 & -1 \\ 0 & 0 & 0 \end{bmatrix}, \quad \mathbf{F}^2 = \begin{bmatrix} 0 & 0 & -1 \\ 0 & 0 & 0 \\ 0 & 0 & 0 \end{bmatrix}, \quad \mathbf{F}^3 = \mathbf{0} \quad\Longrightarrow\quad \boldsymbol{\Phi} = \begin{bmatrix} 1 & \Delta t & -\tfrac12\Delta t^2 \\ 0 & 1 & -\Delta t \\ 0 & 0 & 1 \end{bmatrix}, \]
+<p>which is the \(\boldsymbol{\Phi}\) of section 2 at \(\Delta t = 1\). For the inertial system \(\mathbf{F}\) changes with time, and the blocks of \(\boldsymbol{\Phi}\) are integrals that the book leaves to its reference. Their <em>pattern</em> follows from the powers of \(\mathbf{F}_c\) alone.</p></div>
+<p>The pattern is equation (11.41). In the same block order as the state: <span class="src">§11.3.1.1 · p. 322</span></p>
+\[ \boldsymbol{\Phi}_{(k+1,k)} = \begin{bmatrix} \boldsymbol{\Phi}_{11} & \boldsymbol{\Phi}_{12} & \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} \\ \mathbf{0} & \mathbf{I} & \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} \\ \boldsymbol{\Phi}_{31} & \boldsymbol{\Phi}_{32} & \mathbf{I} & \boldsymbol{\Phi}_{34} & \mathbf{0} & \mathbf{0} \\ \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{I} & \mathbf{0} & \mathbf{0} \\ \boldsymbol{\Phi}_{51} & \boldsymbol{\Phi}_{52} & \boldsymbol{\Phi}_{53} & \boldsymbol{\Phi}_{54} & \mathbf{I} & \mathbf{0} \\ \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{I} \end{bmatrix} . \]
+<p>Three things to read off:</p>
+<ul>
+<li><strong>Rows 2, 4, 6 are identity rows.</strong> Without noise, bias errors and feature errors do not change.</li>
+<li><strong>Row 5 is full.</strong> A position error at \(t_{k+1}\) collects contributions from every IMU error: tilt, both biases, velocity.</li>
+<li><strong>Column 5 holds only one identity block.</strong> A position error at \(t_k\) is copied to \(t_{k+1}\) and feeds nothing else. The IMU does not care where it is. Keep this in mind for Day 3: it is the first hint that global position will be unobservable.</li>
+</ul>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Unobservable means the estimator is broken."</strong> It means some combination of the unknowns cannot be determined from this data. Often that combination is a harmless choice of reference frame (Day 3).</li>
+<li><strong>"Observability depends on how noisy the sensors are."</strong> It is a property of the noise-free model: which changes of state alter the predicted measurements. Noise decides how well the observable part is estimated.</li>
+<li><strong>"The rotation error has nine entries."</strong> \(\tilde{\boldsymbol{\theta}}\) is a 3-vector in the tangent space, so the IMU error state has \(5 \times 3 = 15\) entries.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. For the cart with \(\boldsymbol{\Phi}^k\) as above and a position sensor \(\mathbf{H} = [1\ 0\ 0]\), what is the fourth row of \(\mathbf{M}\), the row \(\mathbf{H}\boldsymbol{\Phi}^3\)?</p><div class="opts"><button type="button" class="opt">[1  3  −3]</button><button type="button" class="opt">[0  1  −3]</button><button type="button" class="opt">[1  3  −4.5]</button><button type="button" class="opt">[1  3  −1.5]</button></div><p class="exp" hidden>The first row of \(\boldsymbol{\Phi}^k\) is \([1,\ k,\ -k^2/2]\). With \(k = 3\) that is \([1,\ 3,\ -4.5]\).</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. The cart has a velocity sensor only. Which statement is right?</p><div class="opts"><button type="button" class="opt">Bias is observable, position is not</button><button type="button" class="opt">Position is observable, bias is not</button><button type="button" class="opt">Nothing is observable</button><button type="button" class="opt">Everything is observable after three readings</button></div><p class="exp" hidden>The rows are \([0, 1, -k]\). The first column is zero, so \((1,0,0)\) is a null vector: position is unobservable. The other two columns are independent after two readings, so velocity and bias are observable: the bias shows up as a steady drift between predicted and measured velocity.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. An aided inertial system tracks 20 point landmarks. How many entries does its error state have?</p><div class="opts"><button type="button" class="opt">35</button><button type="button" class="opt">60</button><button type="button" class="opt">81</button><button type="button" class="opt">75</button></div><p class="exp" hidden>15 for the IMU part (rotation error, two biases, velocity, position, three each) plus \(n_f = 20 \times 3 = 60\) for the points.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Why is the lower-right block of \(\mathbf{F}\) in (11.40) zero?</p><div class="opts"><button type="button" class="opt">Features are not part of the state</button><button type="button" class="opt">Features are static in the world frame, so their error does not evolve</button><button type="button" class="opt">Feature errors are assumed to be zero</button><button type="button" class="opt">The camera measures features without noise</button></div><p class="exp" hidden>A landmark does not move and no process noise drives it, so the time derivative of its error is zero. The corresponding block of \(\boldsymbol{\Phi}\) is the identity.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Observability asks whether the measurements determine the state without ambiguity. It is a property of the model, not of the noise.</li>
+<li>For a linear system, stack \(\mathbf{H}\boldsymbol{\Phi}^{k-1}\) into \(\mathbf{M}\). The nullspace of \(\mathbf{M}\) is the set of unobservable directions; full rank means observable.</li>
+<li>The AINS state is \(\{\mathbf{R}, \mathbf{b}^g, \mathbf{v}, \mathbf{b}^a, \mathbf{p}, \mathbf{x}_f\}\), and its error state has \(15 + n_f\) entries, with the rotation error in the tangent space.</li>
+<li>The error obeys \(\dot{\tilde{\mathbf{x}}} = \mathbf{F}\tilde{\mathbf{x}} + \mathbf{G}\boldsymbol{\eta}\); the transition matrix \(\boldsymbol{\Phi}\) carries errors from one time to the next.</li>
+<li>In \(\boldsymbol{\Phi}\), position error only copies itself forward, and feature errors never change.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §11.3 opening and §11.3.1.1 "Linearized IMU Kinematic Model", pp. 319–322, equations (11.37)–(11.41).</li>
+<li>The rank test and the matrix-exponential solution follow Kailath, <em>Linear Systems</em>, 1980.</li>
+<li>The entries of \(\mathbf{F}_c\) follow the error-state derivation in Solà, <em>Quaternion kinematics for the error-state Kalman filter</em>, 2017, rewritten in the book's state order.</li>
+</ol></div>
+<p class="next"></p>
+</section>

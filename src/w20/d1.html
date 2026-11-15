@@ -1,0 +1,151 @@
+<section class="day" data-day="115" id="d115" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 20 · Day 1</span>
+  <h2>Maps you can optimize by rendering them</h2>
+  <p class="lead">After today you can explain what differentiable rendering is, why it lets a 3D map be learned from ordinary 2D images, and how ray marching differs from rasterization.</p>
+  <p class="meta">About 60 min · Read Ch. 14 opening and §14.1, pp. 397–401 (5 pages) · Needs Week 8 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: Chapter 14 opening and §14.1, pp. 397–401</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The reasons p. 398 gives for why points and occupancy grids are awkward for learning, and what DeepSDF does instead.</li>
+<li>The two ways a graphics pipeline can hold a 3D model, and the rendering method that goes with each (p. 399).</li>
+<li>In Figure 14.2 (p. 400): what the forward arrows pass through, and where the backward arrows end.</li>
+<li>The sentence on p. 400 that says what the key to high-quality view synthesis turned out to be, and the paragraph on p. 401 that says how 3DGS renders differently from NeRF.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A map does not have to be assembled by hand-designed fusion rules. If an image can be rendered from the map by a procedure whose output changes smoothly when the map's parameters change, then the difference between the rendered image and a real photo has a gradient with respect to those parameters, and following it improves the map. Neural radiance fields (NeRF) and 3D Gaussian splatting (3DGS) are two map representations built for that loop.</p></div>
+
+<h3>1. From stored geometry to learned functions</h3>
+<p>The maps of <a href="#d44">Week 8 · Day 2</a> store geometry directly: points, or a grid of occupancy values. When deep learning moved from images to 3D, the first attempts fed those structures to networks. The book names the problem: they are discrete, and they struggle to describe a closed, continuous surface of arbitrary shape compactly, which gets in the way of gradient-based optimization. <span class="src">§14.1.1 · p. 398</span></p>
+<p>The alternative is to let the shape <em>be a function</em>. A <strong>multi-layer perceptron (MLP)</strong> is a small neural network: a stack of layers, each of which multiplies its input by a matrix, adds a vector, and applies a simple nonlinearity. Its matrices and vectors are the <strong>weights</strong>. Feed it a 3D coordinate and train it to output one number: either <strong>occupancy</strong> (is this point inside something?) or the <strong>signed distance function (SDF)</strong>, the distance to the nearest surface with a sign that says inside or outside. The surface is the set of points where the SDF is zero. DeepSDF does exactly this with an 8-layer MLP, optionally with an extra input vector (a latent code) that selects which shape is meant. <span class="src">§14.1.1 · p. 398 · Fig. 14.1</span></p>
+<p>A hand-written example of what such a network has to learn: for a sphere of radius 1 centred at the origin, \(f(\mathbf{x}) = \norm{\mathbf{x}} - 1\). Then \(f(0.5, 0, 0) = -0.5\) (inside), \(f(2, 0, 0) = 1\) (outside), and \(f(0.6, 0.8, 0) = 0\) (on the surface). A trained MLP plays the role of \(f\) for shapes with no formula.</p>
+<div class="tbl"><table>
+  <tr><th>Representation</th><th>What is stored</th><th>What the book says about it</th></tr>
+  <tr><td>Points, occupancy grids</td><td>Discrete samples of geometry</td><td>Discrete, not well suited to gradient-based learning</td></tr>
+  <tr><td>Implicit neural function (occupancy or SDF)</td><td>The weights of an MLP</td><td>Continuous and compact, free of topology limits and discretization error, but trained with 3D ground truth</td></tr>
+  <tr><td>Scene optimized by differentiable rendering</td><td>Any parameters an image can be rendered from</td><td>Needs only 2D images</td></tr>
+</table></div>
+<p>The second row has a practical flaw. Training on 3D targets needs ground-truth 3D data, which is expensive to annotate and does not scale. Photos are cheap. That pushed the field toward supervising 3D with 2D images. <span class="src">§14.1.1 · p. 398</span></p>
+
+<h3>2. Differentiable rendering: the loop</h3>
+<p><strong>Rendering</strong> is the computation that turns a scene description and a camera pose into an image. <strong>Differentiable rendering (DR)</strong> is rendering arranged so that gradients can flow from the 2D image back to the 3D scene parameters. <span class="src">§14.1.2 · p. 399</span></p>
+<figure class="fig"><svg viewBox="0 0 600 215" role="img" aria-label="Loop diagram. Scene parameters such as colour, density, semantics and camera poses feed a renderer, which produces rendered outputs such as RGB, depth, labels and normals. A loss compares them with real images. Solid arrows run forward from parameters to loss, dashed arrows run backward from the loss to the parameters.">
+  <defs><marker id="w20ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="10" y="40" width="140" height="110" rx="12" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="80" y="64" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Scene parameters</text>
+  <text x="80" y="88" text-anchor="middle" font-size="11" fill="var(--muted)">colour, density,</text>
+  <text x="80" y="104" text-anchor="middle" font-size="11" fill="var(--muted)">semantics,</text>
+  <text x="80" y="120" text-anchor="middle" font-size="11" fill="var(--muted)">camera poses</text>
+  <rect x="190" y="40" width="120" height="110" rx="12" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="250" y="64" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Renderer</text>
+  <text x="250" y="88" text-anchor="middle" font-size="11" fill="var(--muted)">ray marching</text>
+  <text x="250" y="104" text-anchor="middle" font-size="11" fill="var(--muted)">or rasterization</text>
+  <rect x="350" y="40" width="120" height="110" rx="12" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="410" y="64" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Rendered output</text>
+  <text x="410" y="88" text-anchor="middle" font-size="11" fill="var(--muted)">RGB, depth,</text>
+  <text x="410" y="104" text-anchor="middle" font-size="11" fill="var(--muted)">labels, normals</text>
+  <rect x="510" y="40" width="80" height="110" rx="12" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="550" y="64" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Loss</text>
+  <text x="550" y="88" text-anchor="middle" font-size="11" fill="var(--muted)">difference</text>
+  <text x="550" y="104" text-anchor="middle" font-size="11" fill="var(--muted)">from real</text>
+  <text x="550" y="120" text-anchor="middle" font-size="11" fill="var(--muted)">images</text>
+  <text x="550" y="16" text-anchor="middle" font-size="11" fill="var(--muted)">real image</text>
+  <line x1="550" y1="22" x2="550" y2="37" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w20ar1)"/>
+  <line x1="150" y1="75" x2="187" y2="75" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w20ar1)"/>
+  <line x1="310" y1="75" x2="347" y2="75" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w20ar1)"/>
+  <line x1="470" y1="75" x2="507" y2="75" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w20ar1)"/>
+  <line x1="510" y1="135" x2="473" y2="135" stroke="var(--c3)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#w20ar1)"/>
+  <line x1="350" y1="135" x2="313" y2="135" stroke="var(--c3)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#w20ar1)"/>
+  <line x1="190" y1="135" x2="153" y2="135" stroke="var(--c3)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#w20ar1)"/>
+  <line x1="60" y1="185" x2="100" y2="185" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w20ar1)"/>
+  <text x="108" y="189" font-size="12" fill="var(--ink)">forward: render an image</text>
+  <line x1="330" y1="185" x2="370" y2="185" stroke="var(--c3)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#w20ar1)"/>
+  <text x="378" y="189" font-size="12" fill="var(--ink)">backward: gradient of the loss</text>
+</svg><figcaption>The differentiable rendering loop. Every box on the forward path must be differentiable, so that the loss can be traced back to each scene parameter. Camera poses sit among the parameters, which is what makes this a SLAM tool and not only a mapping tool.</figcaption></figure>
+<p>The outputs need not be colour images. The same loop renders depth maps, semantic label maps, or normal maps, and the parameters can include colour, density, semantics, and camera poses. <span class="src">Fig. 14.2 · p. 400</span></p>
+
+<div class="box note"><h4>Filling the gap: the gradient of one pixel</h4>
+<p>The book says gradients "flow back" without showing one. Take the smallest possible renderer: one pixel sees one semi-transparent blob of grey level \(c\) and opacity \(\alpha\) in front of a background of grey level \(b\). The rendered pixel is the blend</p>
+\[ C = \alpha\,c + (1-\alpha)\,b , \qquad L = (C - C_{gt})^2 , \]
+<p>where \(C_{gt}\) is the pixel in the real photo ("gt" for ground truth) and \(L\) is the loss. By the chain rule,</p>
+\[ \frac{\partial L}{\partial \alpha} = 2\,(C - C_{gt})\,(c - b), \qquad \frac{\partial L}{\partial c} = 2\,(C - C_{gt})\,\alpha . \]
+<p>Numbers: \(c = 0.9\), \(b = 0.1\), \(\alpha = 0.5\) give \(C = 0.5\). The photo says \(C_{gt} = 0.7\), so \(L = 0.04\) and \(\partial L/\partial\alpha = 2(-0.2)(0.8) = -0.32\). A gradient-descent step of size 0.5 moves \(\alpha\) to \(0.5 + 0.5 \times 0.32 = 0.66\). Now \(C = 0.66 \times 0.9 + 0.34 \times 0.1 = 0.628\) and \(L = 0.0052\): the blob became more opaque because the photo was brighter than the render. A real system does the same for millions of parameters and pixels, with the derivatives produced by automatic differentiation (<a href="#d37">Week 7 · Day 1</a>).</p></div>
+
+<div class="box tip"><h4>Intuition</h4><p>You met this idea as the photometric error of direct methods (<a href="#d64">Week 11 · Day 4</a>): predict what a pixel should look like, compare with what the camera saw, and adjust the unknowns. There the unknowns were a pose and some depths. Here they are the whole scene.</p></div>
+
+<h3>3. Two kinds of scene, two ways to render</h3>
+<p>A graphics pipeline holds a 3D model in one of two forms, and each has its own rendering method. <span class="src">§14.1.2 · p. 399</span></p>
+<div class="tbl"><table>
+  <tr><th>Model</th><th>What it encodes</th><th>Rendered by</th><th>Cost</th></tr>
+  <tr><td><strong>Surface data</strong></td><td>Object boundaries, as polygons or implicit surfaces</td><td><strong>Rasterization</strong>: project the surface geometry onto the 2D image plane</td><td>Hardware-accelerated, very efficient</td></tr>
+  <tr><td><strong>Volume data</strong></td><td>Continuous fields such as density or colour throughout space</td><td><strong>Ray marching</strong>: cast a ray through the volume for each pixel and sample values along it</td><td>Higher</td></tr>
+</table></div>
+<p>Early differentiable renderers softened rasterization for meshes. Volume rendering then took over as the stronger tool for gradient-based optimization, because it provides gradients over 3D space even before the exact surface position is known. <span class="src">§14.1.2 · p. 399</span></p>
+
+<div class="box note"><h4>Filling the gap: why "gradients before the surface is found" matters</h4>
+<p>Put two samples on one ray, with opacities \(\alpha_1, \alpha_2\) and grey levels \(c_1, c_2\), over a black background. Light from sample 2 must pass sample 1, so</p>
+\[ C = \alpha_1 c_1 + (1-\alpha_1)\,\alpha_2 c_2 , \qquad \frac{\partial C}{\partial \alpha_1} = c_1 - \alpha_2 c_2 . \]
+<p>Suppose the current scene is wrong: sample 1 is empty (\(\alpha_1 = 0\)) and sample 2 is a solid dark wall (\(\alpha_2 = 1\), \(c_2 = 0.2\)), so \(C = 0.2\). The photo shows a bright object, \(C_{gt} = 0.8\), and sample 1 has colour \(c_1 = 0.8\). Then \(\partial C/\partial\alpha_1 = 0.8 - 0.2 = 0.6\) and \(\partial L/\partial\alpha_1 = 2(0.2 - 0.8)(0.6) = -0.72\). The derivative is not zero even though nothing is there yet: the loss asks for matter at an empty point.</p>
+<p>A hard surface gives no such signal. If a pixel sees an opaque surface, sliding that surface slightly along the ray does not change the pixel at all, so the derivative with respect to the surface position is zero, except at object outlines where the pixel jumps. That is why mesh-based methods had to soften their rasterizers, and why volumes are easier to optimize.</p></div>
+
+<h3>4. NeRF and 3DGS at a glance</h3>
+<p><strong>NeRF</strong> (2020) stores the scene in a single MLP and renders by ray marching: for each pixel it steps along the ray and asks the MLP for opacity and colour at each sample. The MLP takes a 3D location and a viewing direction, passed through a positional encoding so that it can represent fine detail. It is trained from <strong>posed</strong> colour images (images whose camera poses are already known) by minimizing the rendering loss, and it produces high-quality <strong>novel view synthesis</strong>: images from viewpoints that were never photographed. <span class="src">§14.1.3 · pp. 399–400</span></p>
+<p>NeRF's bottleneck is training speed. Later work replaced or assisted the MLP with explicit volume structures, voxel grids and hash tables, and reached comparable quality without an MLP. The book draws the lesson that the key ingredient is differentiable volume rendering and not the network. Even so, marching a ray for every pixel remains slow to render. <span class="src">§14.1.3 · p. 400</span></p>
+<p><strong>3D Gaussian splatting</strong> (2023) keeps the idea of semi-transparent matter but changes both the storage and the renderer. The scene is a large set of semi-transparent Gaussian blobs, blended by alpha blending, and rendered by differentiable rasterization: the renderer loops over the blobs and projects each onto the image, where NeRF loops over rays. Because most of a scene is empty, this is much faster to render, with training speed similar to the fastest volumetric NeRF variants. <span class="src">§14.1.3 · p. 401</span></p>
+<figure class="fig"><svg viewBox="0 0 600 215" role="img" aria-label="Two top-view sketches. On the left, ray marching: a camera sends one ray through a pixel and takes evenly spaced samples along it, including in empty space. On the right, splatting: three blobs are each projected toward the camera and leave a footprint on the image line.">
+  <rect x="14" y="92" width="14" height="16" rx="3" fill="var(--muted)"/><path d="M28 96 l8 -4 v16 l-8 -4 z" fill="var(--muted)"/>
+  <line x1="62" y1="50" x2="62" y2="150" stroke="var(--ink)" stroke-width="2"/>
+  <ellipse cx="170" cy="78" rx="26" ry="15" fill="var(--c3-soft)" stroke="var(--c3)"/>
+  <ellipse cx="245" cy="70" rx="18" ry="26" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <line x1="38" y1="100" x2="285" y2="56" stroke="var(--muted)" stroke-width="1.5"/>
+  <circle cx="90" cy="90.7" r="3.5" fill="var(--ink)"/><circle cx="118" cy="85.7" r="3.5" fill="var(--ink)"/><circle cx="146" cy="80.8" r="3.5" fill="var(--ink)"/>
+  <circle cx="174" cy="75.8" r="3.5" fill="var(--ink)"/><circle cx="202" cy="70.8" r="3.5" fill="var(--ink)"/><circle cx="230" cy="65.8" r="3.5" fill="var(--ink)"/><circle cx="258" cy="60.8" r="3.5" fill="var(--ink)"/>
+  <text x="40" y="170" font-size="11" fill="var(--muted)">image</text>
+  <text x="150" y="190" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">(a) Ray marching</text>
+  <text x="150" y="207" text-anchor="middle" font-size="11" fill="var(--muted)">for each pixel: sample along its ray</text>
+  <line x1="300" y1="20" x2="300" y2="205" stroke="var(--line)" stroke-width="1"/>
+  <rect x="314" y="92" width="14" height="16" rx="3" fill="var(--muted)"/><path d="M328 96 l8 -4 v16 l-8 -4 z" fill="var(--muted)"/>
+  <line x1="362" y1="50" x2="362" y2="150" stroke="var(--ink)" stroke-width="2"/>
+  <ellipse cx="470" cy="60" rx="26" ry="15" fill="var(--c3-soft)" stroke="var(--c3)"/>
+  <ellipse cx="545" cy="112" rx="18" ry="26" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <ellipse cx="450" cy="138" rx="20" ry="11" fill="var(--c1-soft)" stroke="var(--c1)"/>
+  <line x1="338" y1="100" x2="470" y2="45" stroke="var(--c3)" stroke-width="1" stroke-dasharray="3 3"/><line x1="338" y1="100" x2="470" y2="75" stroke="var(--c3)" stroke-width="1" stroke-dasharray="3 3"/>
+  <line x1="338" y1="100" x2="545" y2="86" stroke="var(--c5)" stroke-width="1" stroke-dasharray="3 3"/><line x1="338" y1="100" x2="545" y2="138" stroke="var(--c5)" stroke-width="1" stroke-dasharray="3 3"/>
+  <line x1="338" y1="100" x2="450" y2="127" stroke="var(--c1)" stroke-width="1" stroke-dasharray="3 3"/><line x1="338" y1="100" x2="450" y2="149" stroke="var(--c1)" stroke-width="1" stroke-dasharray="3 3"/>
+  <line x1="366" y1="90" x2="366" y2="95.5" stroke="var(--c3)" stroke-width="5"/>
+  <line x1="371" y1="98.4" x2="371" y2="104.4" stroke="var(--c5)" stroke-width="5"/>
+  <line x1="366" y1="105.8" x2="366" y2="110.5" stroke="var(--c1)" stroke-width="5"/>
+  <text x="340" y="170" font-size="11" fill="var(--muted)">image</text>
+  <text x="450" y="190" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">(b) Splatting</text>
+  <text x="450" y="207" text-anchor="middle" font-size="11" fill="var(--muted)">for each blob: find the pixels it covers</text>
+</svg><figcaption>The two renderers of this week, seen from above. Ray marching spends samples on empty space. Splatting touches only the pixels a primitive lands on.</figcaption></figure>
+<p>Both started as offline tools: given posed images, optimize a scene, originally over days. Explicit data structures brought that down to near real time, and both are now being built into SLAM systems, which is the subject of Days 3 and 5. The underlying thought is older than either: the book traces the pairing of differentiable rendering with occupancy maps back to Thrun's "forward sensor model" of the early 2000s. <span class="src">Ch. 14 opening · p. 397</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"NeRF works because of the neural network."</strong> Grid-based variants reach comparable quality without an MLP. The book credits differentiable volume rendering. <span class="src">p. 400</span></li>
+<li><strong>"Differentiable rendering needs 3D ground truth."</strong> Avoiding 3D ground truth is its purpose. The supervision is 2D images.</li>
+<li><strong>"Rasterization is only for surfaces, so 3DGS is a surface method."</strong> 3DGS rasterizes volume data: its primitives are semi-transparent and are blended, not depth-tested. <span class="src">p. 409</span></li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="0"><p class="qq">Q1. One pixel sees a blob with grey level c = 1.0 and opacity α = 0.25 over a background b = 0.2. The photo shows 0.8. With L = (C − C_gt)², what is ∂L/∂α, and what does gradient descent do?</p><div class="opts"><button type="button" class="opt">−0.64, so α increases</button><button type="button" class="opt">+0.64, so α decreases</button><button type="button" class="opt">0, the pixel does not depend on α</button><button type="button" class="opt">−0.32, so α decreases</button></div><p class="exp" hidden>C = 0.25 × 1.0 + 0.75 × 0.2 = 0.4. ∂L/∂α = 2(0.4 − 0.8)(1.0 − 0.2) = −0.64. Gradient descent moves against the gradient, so α goes up and the pixel gets brighter.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q2. Why did research move from training implicit functions on 3D data to differentiable rendering?</p><div class="opts"><button type="button" class="opt">MLPs cannot represent 3D shapes</button><button type="button" class="opt">3D supervision gives discontinuous surfaces</button><button type="button" class="opt">Ground-truth 3D data is costly to obtain, while 2D images are easy to collect</button><button type="button" class="opt">Rendering is faster than evaluating an MLP</button></div><p class="exp" hidden>DeepSDF-style training works but needs 3D ground truth, which does not scale. Differentiable rendering lets ordinary images supervise the 3D parameters.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q3. Which loop structure describes splatting, as opposed to ray marching?</p><div class="opts"><button type="button" class="opt">For each pixel, sample points along its ray and query the scene at each</button><button type="button" class="opt">For each primitive, project it onto the image and update the pixels it covers</button><button type="button" class="opt">For each voxel, cast a ray to every camera</button><button type="button" class="opt">For each pixel, find the nearest surface and stop</button></div><p class="exp" hidden>Rasterization iterates over primitives. That lets it skip empty space entirely, which is where its speed comes from.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q4. A ray's first sample is empty (α₁ = 0, colour c₁ = 0.5) and its second is an opaque wall (α₂ = 1, c₂ = 0.9). With C = α₁c₁ + (1 − α₁)α₂c₂, what is ∂C/∂α₁?</p><div class="opts"><button type="button" class="opt">0, because the sample is empty</button><button type="button" class="opt">0.5</button><button type="button" class="opt">0.9</button><button type="button" class="opt">−0.4</button></div><p class="exp" hidden>∂C/∂α₁ = c₁ − α₂c₂ = 0.5 − 0.9 = −0.4. Adding matter at the empty sample would darken the pixel, and the derivative says so even though nothing is there yet.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Implicit neural representations store a shape as a function (occupancy or SDF) computed by an MLP: continuous and compact, but they need 3D ground truth to train.</li>
+<li>Differentiable rendering removes that need: render, compare with real images, and send the gradient of the loss back to the scene parameters, which can include camera poses.</li>
+<li>Surfaces are rasterized, volumes are ray-marched. Volumes give useful gradients everywhere along a ray, before any surface is located.</li>
+<li>NeRF is an MLP rendered by ray marching. 3DGS is a set of semi-transparent Gaussians rendered by rasterization, which is much faster to render.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 14 opening and §14.1 "3D Scene Representation and Differentiable Rendering", pp. 397–401, Figures 14.1–14.3.</li>
+<li>The one-pixel and two-sample gradients in "Filling the gap" are direct applications of the chain rule to the alpha-blending formula, which the book states as equation (14.6).</li>
+</ol></div>
+<p class="next"></p>
+</section>

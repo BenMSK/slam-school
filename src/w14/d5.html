@@ -1,0 +1,169 @@
+<section class="day" data-day="83" id="d83" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 14 · Day 5</span>
+  <h2>Complete radar SLAM: maps, pipelines, fusion and datasets</h2>
+  <p class="lead">After today you can trace a radar scan through a complete SLAM pipeline, explain how loop candidates are retrieved and verified, and choose a map representation and a dataset for a radar project.</p>
+  <p class="meta">About 60 min · Read §9.4–9.6, pp. 273–281 (9 pages) · Needs Week 14 Day 4</p>
+</header>
+
+<div class="box read"><h4>Read first: §9.4–9.6, pp. 273–281</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The map representations of §9.4.1 (pp. 273–274), and how the radar voxel model differs from Octomap's ray casting.</li>
+<li>In the TBV-SLAM description (pp. 275–276): the keyframe rule, the finding about covariance matrices, and the formula that combines descriptor and odometry.</li>
+<li>What RadarSLAM, the SoC landmark pipeline and the two 3+1D pipelines do differently (pp. 276–277).</li>
+<li>Table 9.1 on p. 280. Skim it; you only need to know what kinds of datasets exist.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>The back-end of radar SLAM is the pose graph you already know. What is specific to radar is everything that protects the graph from bad input: conservative point selection, loop candidates that are checked against odometry, and verification of the alignment before a loop constraint is accepted.</p></div>
+
+<h3>1. Map representations</h3>
+<p>Radar maps use the representations of Week 8, with changes forced by sparse and spurious measurements. <span class="src">§9.4.1 · pp. 273–274</span></p>
+<div class="tbl"><table>
+  <tr><th>Representation</th><th>What is stored</th><th>Radar-specific point</th></tr>
+  <tr><td>Landmark map</td><td>Individual detected targets</td><td>The earliest approach: the map comes straight from a target detector</td></tr>
+  <tr><td>Occupancy grid</td><td>Probability that a cell is occupied</td><td>The detection probability of the radar can be used in the update</td></tr>
+  <tr><td>Point cloud</td><td>Signal peaks treated like LiDAR points</td><td>Points can carry the distribution of their neighbours (orientation, weight), like surfels or NDT cells. Common for high-resolution 3+1D SoC radars</td></tr>
+  <tr><td>Power heat map</td><td>Reflected power for each cell, before any peak detection</td><td>A dense map of power, not of occupancy. Maps are aligned by correlation</td></tr>
+  <tr><td>Voxel map with a radar sensor model</td><td>Log-odds of occupancy per voxel</td><td>No ray casting: every voxel in the field of view is updated</td></tr>
+  <tr><td>Learned and neural maps</td><td>An upsampled map, or a network queried at a point in space</td><td>LiDAR serves as ground truth for denoising. Radar fields learn geometry and reflectance from a physics-based sensor model</td></tr>
+</table></div>
+<div class="box note"><h4>Filling the gap: why radar drops the ray-casting assumption</h4>
+<p>Recall the log-odds occupancy update from <a href="#d44">Week 8 · Day 2</a>. Each voxel keeps \(l = \log\frac{p}{1-p}\), and every observation adds a constant: \(l \leftarrow l + \log\frac{p_{\text{obs}}}{1-p_{\text{obs}}}\). A LiDAR map decides which voxels to update by ray casting. The beam stops at the first surface, so voxels before the hit are observed free, the hit voxel is observed occupied, and nothing is known behind it.</p>
+<p>Radar waves pass through some materials. A return from behind another object is then real, and "the first contact is the only occupied point" is false. The radar model in the book keeps the log-odds bookkeeping but replaces the ray: voxels inside the field of view that contain a return go up, voxels without one go down, and no assumption is made along the ray. <span class="src">§9.4.1 · pp. 273–274</span> This is how such a map can show structure behind something that blocks a camera.</p>
+<p>A number to fix ideas. With \(p_{\text{hit}} = 0.7\) and \(p_{\text{miss}} = 0.4\), a voxel that has a return in three scans and none in a fourth ends at</p>
+\[ l = 3\ln\frac{0.7}{0.3} + \ln\frac{0.4}{0.6} = 3(0.847) - 0.405 = 2.136, \qquad p = \frac{1}{1 + e^{-2.136}} = 0.894 . \]
+<p>One missed scan does not erase the voxel. That tolerance matters for a sensor whose returns flicker.</p></div>
+
+<h3>2. One pipeline, stage by stage</h3>
+<p>All the pipelines in the book follow Figure 9.1: a front-end that filters raw data into points and recognises places, and a back-end that optimises a pose graph. <span class="src">§9.4.2 · p. 274</span> The clearest example is TBV-SLAM ("trust but verify") for 2D spinning radar. <span class="src">§9.4.2 · pp. 275–276</span></p>
+<figure class="fig"><svg viewBox="0 0 600 250" role="img" aria-label="Flow of a spinning-radar SLAM pipeline in three rows. Top row, for every scan: radargram, keep the k strongest returns per azimuth, register to recent keyframes, new keyframe every 1.5 metres. Middle row, for every new keyframe: descriptor plus shifted copies, retrieve several loop candidates, score by descriptor plus odometry, register the pair and verify the alignment. Bottom row: the pose graph receives odometry constraints from the top row and verified loop constraints from the middle row and outputs poses and map.">
+  <defs><marker id="w14ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="10" y="20" width="120" height="44" rx="8" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <rect x="150" y="20" width="120" height="44" rx="8" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <rect x="290" y="20" width="120" height="44" rx="8" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <rect x="430" y="20" width="120" height="44" rx="8" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="70" y="38" text-anchor="middle" font-size="11" fill="var(--ink)">Radargram</text>
+  <text x="70" y="54" text-anchor="middle" font-size="11" fill="var(--muted)">one rotation</text>
+  <text x="210" y="38" text-anchor="middle" font-size="11" fill="var(--ink)">Keep k strongest</text>
+  <text x="210" y="54" text-anchor="middle" font-size="11" fill="var(--muted)">per azimuth</text>
+  <text x="350" y="38" text-anchor="middle" font-size="11" fill="var(--ink)">Register to recent</text>
+  <text x="350" y="54" text-anchor="middle" font-size="11" fill="var(--ink)">keyframes</text>
+  <text x="490" y="38" text-anchor="middle" font-size="11" fill="var(--ink)">New keyframe</text>
+  <text x="490" y="54" text-anchor="middle" font-size="11" fill="var(--muted)">every 1.5 m</text>
+  <line x1="130" y1="42" x2="148" y2="42" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w14ar2)"/>
+  <line x1="270" y1="42" x2="288" y2="42" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w14ar2)"/>
+  <line x1="410" y1="42" x2="428" y2="42" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w14ar2)"/>
+  <rect x="10" y="110" width="120" height="44" rx="8" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <rect x="150" y="110" width="120" height="44" rx="8" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <rect x="290" y="110" width="120" height="44" rx="8" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <rect x="430" y="110" width="120" height="44" rx="8" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="70" y="128" text-anchor="middle" font-size="11" fill="var(--ink)">Descriptor, plus</text>
+  <text x="70" y="144" text-anchor="middle" font-size="11" fill="var(--ink)">shifted copies</text>
+  <text x="210" y="128" text-anchor="middle" font-size="11" fill="var(--ink)">Retrieve several</text>
+  <text x="210" y="144" text-anchor="middle" font-size="11" fill="var(--ink)">loop candidates</text>
+  <text x="350" y="128" text-anchor="middle" font-size="11" fill="var(--ink)">Score: descriptor</text>
+  <text x="350" y="144" text-anchor="middle" font-size="11" fill="var(--ink)">+ odometry</text>
+  <text x="490" y="128" text-anchor="middle" font-size="11" fill="var(--ink)">Register pair,</text>
+  <text x="490" y="144" text-anchor="middle" font-size="11" fill="var(--ink)">verify alignment</text>
+  <line x1="130" y1="132" x2="148" y2="132" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w14ar2)"/>
+  <line x1="270" y1="132" x2="288" y2="132" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w14ar2)"/>
+  <line x1="410" y1="132" x2="428" y2="132" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w14ar2)"/>
+  <path d="M470 64 V84 H70 V108" fill="none" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w14ar2)"/>
+  <text x="270" y="78" text-anchor="middle" font-size="11" fill="var(--muted)">each new keyframe</text>
+  <path d="M550 42 H580 V220 H552" fill="none" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w14ar2)"/>
+  <text x="572" y="180" text-anchor="end" font-size="11" fill="var(--muted)">odometry</text>
+  <text x="572" y="193" text-anchor="end" font-size="11" fill="var(--muted)">constraint</text>
+  <line x1="450" y1="154" x2="450" y2="198" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w14ar2)"/>
+  <text x="442" y="182" text-anchor="end" font-size="11" fill="var(--muted)">verified loop constraint</text>
+  <rect x="10" y="200" width="540" height="40" rx="8" fill="var(--c1-soft)" stroke="var(--c1)"/>
+  <text x="280" y="225" text-anchor="middle" font-size="12" fill="var(--ink)">Pose graph optimisation → poses and map</text>
+</svg><figcaption>Top row: runs on every scan. Middle row: runs for each new keyframe and may or may not produce a loop constraint. Bottom: the back-end.</figcaption></figure>
+<p><strong>Odometry and keyframes.</strong> The pose is tracked with every scan, using CFEAR odometry (Day 3). For efficiency only some scans become nodes of the graph: a new <strong>keyframe</strong> is added once the estimated distance travelled exceeds a threshold, for example 1.5 m, together with an odometry constraint to the previous keyframe.</p>
+<p><strong>The covariance of a constraint.</strong> A constraint needs a relative pose and a covariance matrix. The pipeline's authors report that a predefined diagonal covariance with small values works better than one computed from the Hessian of the registration cost. <span class="src">§9.4.2 · p. 275</span></p>
+<div class="box note"><h4>Filling the gap: what "covariance from the Hessian" means</h4>
+<p>Registration minimises a least-squares cost. Near the minimum the cost is a quadratic bowl, \(\tfrac12\,\delta\T\mathbf{H}\,\delta\), where \(\delta\) is a small change of the relative pose and \(\mathbf{H} = \mathbf{J}\T\mathbf{J}\) is the Gauss-Newton Hessian (<a href="#d10">Week 2 · Day 4</a>). If the residuals had independent Gaussian noise of variance \(\sigma^2\), the estimate would have covariance \(\sigma^2\mathbf{H}^{-1}\): a steep bowl means a certain estimate, a flat direction means an uncertain one. In a tunnel the bowl is flat along the tunnel, and the covariance would correctly be large in that direction.</p>
+<p>The formula is only as good as its assumptions. It takes the point matches to be correct and the errors of different points to be independent, and with radar points neither holds well. The book reports that the Hessian tends to under- or overestimate the uncertainty, and that this can make the back-end slightly misalign the keyframes. A fixed covariance is cruder, but it cannot be badly wrong in this way.</p></div>
+
+<h3>3. Retrieving and verifying loops</h3>
+<p>The loop branch of TBV-SLAM stacks several safeguards. <span class="src">§9.4.2 · pp. 275–276</span></p>
+<ol>
+<li><strong>Descriptor.</strong> A Scan Context descriptor adapted to encode point density and signal strength (Day 4).</li>
+<li><strong>Augmentation.</strong> For each keyframe, extra descriptors are made from copies of the point cloud shifted sideways, so that a revisit in another lane still matches.</li>
+<li><strong>Several candidates, scored jointly.</strong> Instead of taking the most similar descriptor and then filtering by odometry, the candidate is chosen as
+\[ c = \argmin_{c}\ d_{\text{descriptor}}(q, c) + d_{\text{odometry}}(q, c), \]
+where \(q\) is the query and \(d_{\text{odometry}}\) comes from the likelihood that \(q\) and \(c\) are at the same place, given the accumulated odometry uncertainty.</li>
+<li><strong>Registration.</strong> The pair is aligned with the CFEAR registration module.</li>
+<li><strong>Verification.</strong> Overlap measures and a learned misalignment detector (CorAl) decide whether the alignment is trustworthy. Only then does the loop constraint enter the graph.</li>
+</ol>
+<div class="box note"><h4>Filling the gap: an odometry term you can compute</h4>
+<p>The book describes \(d_{\text{odometry}}\) only in words. Here is one way to build such a term; it illustrates the idea and is not the exact formula of the system. Suppose that, according to odometry, candidate \(c\) lies at offset \(\mathbf{t}\) from the query, and that the accumulated position uncertainty between them is a Gaussian with covariance \(\boldsymbol{\Sigma}\). If the two frames really are at the same place, \(\mathbf{t}\) is pure drift, and its negative log-likelihood is, up to a constant,</p>
+\[ \tfrac12\,\mathbf{t}\T\boldsymbol{\Sigma}^{-1}\mathbf{t} = \tfrac12 m^2 , \]
+<p>half the squared Mahalanobis distance. Take a loop of 800 m with 1.5% drift, so about \(\sigma = 12\) m in every direction.</p>
+<div class="tbl"><table>
+  <tr><th>Candidate</th><th>Descriptor distance</th><th>Offset by odometry</th><th>m = offset/σ</th><th>½m²</th></tr>
+  <tr><td>A</td><td>0.20</td><td>60 m</td><td>5.0</td><td>12.5</td></tr>
+  <tr><td>B</td><td>0.25</td><td>10 m</td><td>0.83</td><td>0.35</td></tr>
+</table></div>
+<p>The descriptor alone prefers A. But A would need a drift of five standard deviations, which is practically impossible, while B needs less than one. Any reasonable sum of the two terms picks B. How the terms are scaled against each other is a design choice. The benefit of scoring jointly is that a slightly worse descriptor match in a plausible location can beat a slightly better one in an implausible location.</p></div>
+<p>The other pipelines make different choices at each stage. <span class="src">§9.4.2 · pp. 276–277</span></p>
+<div class="tbl"><table>
+  <tr><th>Pipeline</th><th>Sensor</th><th>Odometry</th><th>Graph holds</th><th>Loop detection and checks</th></tr>
+  <tr><td>TBV-SLAM</td><td>2D spinning</td><td>CFEAR registration to keyframes</td><td>Keyframe poses</td><td>Adapted Scan Context, lateral augmentation, joint score with odometry, registration, alignment verification</td></tr>
+  <tr><td>RadarSLAM</td><td>2D spinning</td><td>Blob keypoints tracked with a Lucas–Kanade tracker (<a href="#d68">Week 12 · Day 2</a>), constant-velocity motion compensation</td><td>Keyframe poses, with keypoints stored</td><td>M2DP on point clouds (intensity above mean plus one standard deviation). Elongated scans are excluded by the PCA test. No other verification</td></tr>
+  <tr><td>SoC landmark pipeline</td><td>2D SoC</td><td>Wheel encoders</td><td>Poses and individual radar features</td><td>No explicit place recognition. Features are matched by a compact binary descriptor with RANSAC, assuming moderate drift</td></tr>
+  <tr><td>4DRadarSLAM</td><td>3+1D SoC</td><td>Doppler filtering of moving points, then a GICP variant with range-dependent point covariance</td><td>Submaps (keyframes)</td><td>Intensity Scan Context. A candidate is rejected if the odometry distance between the frames is above a threshold</td></tr>
+  <tr><td>4D iRIOM</td><td>3+1D SoC</td><td>Doppler filtering, removal of isolated points, distribution-to-distribution matching</td><td>Submaps (keyframes)</td><td>The original Scan Context with point elevation</td></tr>
+</table></div>
+<p>Two remarks on the table. The SoC landmark pipeline can afford landmarks in the graph because a 2D SoC radar returns far fewer detections than a spinning or a 3+1D radar. And in both 3+1D pipelines the sensor itself turns the datacube into points, so CFAR is not part of the SLAM software; the Doppler least-squares fit of Day 3 does the cleaning by removing points on moving objects, and the fitted ego-velocity serves as a prior for scan-to-submap registration. <span class="src">§9.4.2 · p. 277</span> Figure 9.11 shows the effect of the loop closure on a 3D radar map: the horizontal and vertical drift visible before closure is gone after it. <span class="src">§9.4.2 · p. 275</span></p>
+
+<h3>4. Fusion, datasets and where the field is going</h3>
+<p><strong>Other sensors and prior maps.</strong> <span class="src">§9.4.3 · pp. 277–279</span></p>
+<ul>
+<li><strong>Radar with LiDAR.</strong> Use whichever is better in the current visibility: LiDAR in clear air, radar in smoke or fog. Radar scans can also be recognised against LiDAR maps.</li>
+<li><strong>Radar with cameras.</strong> Doppler ego-velocity (Day 3) is fed into a filter-based visual-inertial odometry. Thermal cameras are combined with radar for low-visibility odometry, with the radar points improving the depth estimate.</li>
+<li><strong>Radar with public maps.</strong> Building walls from OpenStreetMap, or satellite images, serve as a prior map to localise in. This is localisation more than SLAM, and the prior may be incomplete or out of date.</li>
+<li><strong>Ultra-wideband (UWB).</strong> Also radio, but its ranging differs greatly from mmWave radar. In SLAM it mostly supplies a signature of a place for detecting revisits, while distances come from wheel encoders or an IMU. Systems with fixed anchors need installed infrastructure and are not SLAM.</li>
+</ul>
+<p><strong>Datasets.</strong> Table 9.1 lists them with their ground truth and weather. <span class="src">§9.5 · pp. 279–280</span></p>
+<div class="tbl"><table>
+  <tr><th>If you need</th><th>Look at</th><th>Why</th></tr>
+  <tr><td>Spinning radar, urban, large scale</td><td>Oxford Radar RobotCar</td><td>Repeated traversals of one urban route, 280 km in total, varied weather</td></tr>
+  <tr><td>Place recognition across sessions</td><td>MulRan</td><td>Diverse environments and long gaps between sessions</td></tr>
+  <tr><td>Snow and rain over a year</td><td>Boreas</td><td>One route driven repeatedly for a year, 385 km</td></tr>
+  <tr><td>Off-road</td><td>Oxford Offroad Radar Dataset</td><td>About 154 km of unpaved roads and mountain trails</td></tr>
+  <tr><td>Raw ADC samples of an SoC radar</td><td>ColoRadar</td><td>Raw samples, datacubes and point targets, indoors, outdoors and in a mine, with 6-DoF ground truth</td></tr>
+  <tr><td>High-resolution 3+1D radar</td><td>NTU4DRadLM, MSC-RAD4R, Snail-Radar</td><td>Campus, park, urban and rural roads; Snail-Radar carries two different 3+1D radars</td></tr>
+  <tr><td>Object labels with radar</td><td>nuScenes, RadarScenes</td><td>Built for perception. RadarScenes lacks accurate ground-truth poses</td></tr>
+</table></div>
+<p><strong>Trends.</strong> The book expects more fully 3D radar SLAM as SoC sensors improve, notably on drones; systems built from several small-view radars, with the calibration problems that brings; use of the raw radargrams and datacubes instead of point clouds, if manufacturers open access to them; semantic segmentation to support place recognition; and tighter use of other sensors and geographic priors. <span class="src">§9.6 · pp. 280–281</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Radar SLAM needs a different back-end."</strong> The back-end is ordinary pose-graph optimisation. The differences are in the front-end.</li>
+<li><strong>"A better uncertainty model always helps."</strong> A covariance derived from a model whose assumptions fail can hurt more than a fixed, modest one.</li>
+<li><strong>"The most similar descriptor is the loop."</strong> Retrieval proposes; odometry gating, registration and verification dispose.</li>
+<li><strong>"UWB is just another radar."</strong> In SLAM it is mainly a place signature. It does not give the metric scans that mmWave radar gives.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. Why does the radar voxel model update all voxels in the field of view instead of casting a ray to the first return?</p><div class="opts"><button type="button" class="opt">Ray casting is too slow for radar frame rates</button><button type="button" class="opt">Radar has no range measurement</button><button type="button" class="opt">Radar can pass through some materials, so the first return is not the only occupied point</button><button type="button" class="opt">Radar voxels are larger than LiDAR voxels</button></div><p class="exp" hidden>The ray-cast model assumes nothing can be observed behind the first contact. Radar returns from behind an object can be real, so the model raises voxels with returns and lowers those without, without assuming anything along the ray (pp. 273–274).</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. A voxel starts at probability 0.5 and receives two "occupied" updates with p = 0.8 each. What is its occupancy probability?</p><div class="opts"><button type="button" class="opt">0.80</button><button type="button" class="opt">0.64</button><button type="button" class="opt">0.96</button><button type="button" class="opt">0.94</button></div><p class="exp" hidden>Each update multiplies the odds by 0.8/0.2 = 4. The odds go from 1 to 16, so p = 16/17 ≈ 0.94. In log-odds: 2 ln 4 = 2.77.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. Which pipeline keeps individual radar features in the optimised graph, and why is that affordable?</p><div class="opts"><button type="button" class="opt">The 2D SoC landmark pipeline, because such radars return few detections</button><button type="button" class="opt">TBV-SLAM, because spinning radars are slow</button><button type="button" class="opt">4DRadarSLAM, because Doppler removes most points</button><button type="button" class="opt">RadarSLAM, because it tracks only blobs</button></div><p class="exp" hidden>A 2D SoC radar produces far fewer detections than a 360° spinning radar or a 3+1D radar, so keeping every detection as a node is feasible (pp. 276–277). TBV-SLAM and RadarSLAM optimise poses only.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Two loop candidates have descriptor distances 0.30 and 0.34. Odometry, with an accumulated uncertainty of σ = 8 m, places the first 48 m from the query and the second 4 m away. Which does a joint score favour?</p><div class="opts"><button type="button" class="opt">The first, because its descriptor is closer</button><button type="button" class="opt">Neither can be judged without registration</button><button type="button" class="opt">The second: it needs 0.5σ of drift, the first would need 6σ</button><button type="button" class="opt">The first, because 48 m is within the radar range</button></div><p class="exp" hidden>48/8 = 6 standard deviations is practically impossible as drift, while 4/8 = 0.5 is ordinary. The small difference in descriptor distance does not outweigh that.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Radar maps reuse landmark, grid, point-cloud and voxel representations. The radar voxel model drops ray casting because radar can see through some materials.</li>
+<li>A radar SLAM pipeline filters to few reliable points, tracks every scan, adds keyframes by distance, and optimises a pose graph.</li>
+<li>Loop closures are retrieved by descriptor, scored together with odometry uncertainty, registered, and verified before they enter the graph.</li>
+<li>3+1D pipelines start from Doppler ego-velocity, which both seeds registration and removes moving points.</li>
+<li>Radar is fused with LiDAR, cameras and prior maps, and datasets exist for spinning radar, SoC radar, and both.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Ch. 9, §9.4 "Radar SLAM", §9.5 "Radar Datasets", §9.6 "Further Readings &amp; Recent Trends", pp. 273–281, Figure 9.11, Table 9.1.</li>
+<li>Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (log-odds occupancy update and ray-cast sensor models).</li>
+<li>Barfoot, <em>State Estimation for Robotics</em>, 2017 (covariance of a least-squares estimate from the Gauss-Newton Hessian; Mahalanobis distance).</li>
+</ol></div>
+<p class="next"></p>
+</section>

@@ -1,0 +1,102 @@
+<section class="day" data-day="130" id="d130" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 22 · Day 4</span>
+  <h2>Dense semantic maps: fusing labels into surfels and voxels</h2>
+  <p class="lead">After today you can explain how noisy per-frame labels are fused into surfel and voxel maps, derive the multi-class log-odds update, and run it by hand for one voxel.</p>
+  <p class="meta">About 60 min · Read §16.3.1–16.3.2, pp. 471–478 (8 pages, 3 of them mostly figures) · Needs Week 8 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §16.3.1 and §16.3.2, pp. 471–478</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>Why SuMa++ does not simply delete every point labelled "car" (p. 472).</li>
+<li>The definition of a range-category observation (p. 473).</li>
+<li>The log-odds vector, the softmax that undoes it, and the update (16.24), pp. 474–475.</li>
+<li>The three cases of the model (16.26), p. 475, and the pruning rule, pp. 476–477.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A dense semantic map keeps, for every small piece of space, a probability for each class. One segmented image is noisy, so the map fuses many with Bayes' rule. Written in log-odds, that fusion is an addition: each observation adds a fixed vector to the cell it touches.</p></div>
+
+<h3>1. Labels on points and surfels</h3>
+<p>Segmentation networks can label every point of a LiDAR scan. The labels of one scan are noisy and disagree with the next scan's, so the mapping problem is to integrate them over time. SuMa++ stores a class and a confidence in each surfel. Conflicting labels lower the confidence, and surfels with low confidence are filtered out. <span class="src">§16.3.1 · p. 471</span></p>
+<p>The same mechanism handles moving objects. Deleting every point of a movable class throws away parked cars, which are good references for scan registration in a city. Deleting only the surfels whose stored label conflicts with the current scan worked better. <span class="src">§16.3.1 · p. 472</span></p>
+<p>Labels also feed back into SLAM: registration can match only points of compatible classes (compare ICP in <a href="#d74">Week 13 · Day 2</a>), and place descriptors such as Scan Context (<a href="#d76">Week 13 · Day 4</a>) can be extended with class information for loop closure. <span class="src">§16.3.1 · p. 472</span></p>
+
+<h3>2. Voxels: what is observed and what is estimated</h3>
+<p>Split the environment into classes \(\mathcal{K} = \{0, \dots, K\}\), where 0 is free space and the others are object classes. A <strong>range-category observation</strong> is, for each sensor ray \(b\), a pair \(z = (r_{t,b}, y_{t,b})\): the range at which the ray stopped and the class of what it hit. An RGB-D camera produces one per pixel by pairing the depth image with a segmentation of the colour image. <span class="src">§16.3.2 · p. 473</span></p>
+<p>The map \(\mathbf{m}\) is a grid of cells \(i = 1, \dots, N\), each with an unknown class \(m_i \in \mathcal{K}\). With the robot poses known, Bayes' rule updates the map's probability mass function \(p_t(\mathbf{m})\) with each new observation set \(\mathcal{Z}_{t+1}\):</p>
+\[ p_{t+1}(\mathbf{m}) \propto p(\mathcal{Z}_{t+1} \mid \mathbf{m})\, p_t(\mathbf{m}), \qquad p_t(\mathbf{m}) = \prod_{i=1}^{N} p_t(m_i). \tag{16.23} \]
+<p>The second equation is an approximation chosen for cost: cells are treated as independent, so the map stores \(N\) small distributions and not one distribution over \((K+1)^N\) maps. <span class="src">§16.3.2 · pp. 473–474</span></p>
+
+<h3>3. Multi-class log-odds</h3>
+<p>Each cell stores its distribution as a <strong>multi-class log-odds</strong> vector, the log of each class probability relative to "free": <span class="src">§16.3.2 · p. 474</span></p>
+\[ \mathbf{h}_{t,i} = \begin{bmatrix} \log\frac{p_t(m_i=0)}{p_t(m_i=0)} & \cdots & \log\frac{p_t(m_i=K)}{p_t(m_i=0)} \end{bmatrix}\T \in \R^{K+1}, \qquad p_t(m_i = k) = \frac{e^{h_k}}{\sum_{j=0}^{K} e^{h_j}} . \]
+<p>The first entry is always 0. The second formula, the <strong>softmax</strong>, recovers the probabilities. In these coordinates the Bayesian update is a sum:</p>
+\[ \mathbf{h}_{t+1,i} = \mathbf{h}_{t,i} + \sum_{z \in \mathcal{Z}_{t+1}} \mathbf{l}_i(z), \qquad \mathbf{l}_i(z) = \begin{bmatrix} \log\frac{p(z \mid m_i=0)}{p(z \mid m_i=0)} & \cdots & \log\frac{p(z \mid m_i=K)}{p(z \mid m_i=0)} \end{bmatrix}\T . \tag{16.24, 16.25} \]
+
+<div class="box note"><h4>Filling the gap: deriving (16.24) and the softmax</h4>
+<p>Bayes' rule for one cell and one observation, with \(\eta\) a normalizer that does not depend on \(k\):</p>
+\[ p_{t+1}(m_i = k) = \eta\; p(z \mid m_i = k)\; p_t(m_i = k). \]
+<p>Write the same line for \(k = 0\), divide, and take logarithms. \(\eta\) cancels:</p>
+\[ \underbrace{\log\frac{p_{t+1}(m_i=k)}{p_{t+1}(m_i=0)}}_{\text{entry } k \text{ of } \mathbf{h}_{t+1,i}} = \underbrace{\log\frac{p(z \mid m_i=k)}{p(z \mid m_i=0)}}_{\text{entry } k \text{ of } \mathbf{l}_i(z)} + \underbrace{\log\frac{p_t(m_i=k)}{p_t(m_i=0)}}_{\text{entry } k \text{ of } \mathbf{h}_{t,i}} . \]
+<p>If the observations are independent given the cell's class, their likelihoods multiply and their logs add, which gives the sum over \(z\). For the softmax, \(h_k = \log[p(k)/p(0)]\) means \(p(k) = p(0)\,e^{h_k}\). The probabilities sum to one, so \(p(0)\sum_j e^{h_j} = 1\), and substituting \(p(0)\) back gives the formula. With \(K = 1\) the vector is \([0,\ \log(p_{\text{occ}}/p_{\text{free}})]\): the occupancy log-odds of <a href="#d43">Week 8 · Day 1</a>.</p></div>
+
+<h3>4. The observation model, with numbers</h3>
+<p>A ray says three different things to three kinds of cell, and the book's model is piecewise constant along the ray: <span class="src">§16.3.2 · p. 475</span></p>
+\[ \mathbf{l}_i((r, y)) = \begin{cases} \boldsymbol{\phi}^+ + \mathbf{E}_{y+1}\boldsymbol{\psi}^+, & r \text{ indicates } m_i \text{ is occupied},\\ \boldsymbol{\phi}^-, & r \text{ indicates } m_i \text{ is free},\\ \mathbf{0}, & \text{otherwise}. \end{cases} \tag{16.26} \]
+<p>\(\mathbf{E}_k = \mathbf{e}_k\mathbf{e}_k\T\) keeps only entry \(k\) of a vector, and the first entries of \(\boldsymbol{\phi}^+, \boldsymbol{\psi}^+, \boldsymbol{\phi}^-\) are 0. So a hit raises every object class against "free" (\(\boldsymbol{\phi}^+\)) and raises the reported class \(y\) a little more (\(\boldsymbol{\psi}^+\)); a pass-through lowers every object class (\(\boldsymbol{\phi}^-\) has negative entries).</p>
+<figure class="fig"><svg viewBox="0 0 600 130" role="img" aria-label="A sensor on the left sends a ray through a row of six cells. The ray passes through the first four cells and ends in the fifth, where it reports the class chair. Below the cells: phi minus is added to each of the four passed cells, phi plus plus E psi plus to the fifth, and nothing to the sixth, which the ray never reached.">
+  <rect x="110" y="40" width="280" height="50" fill="var(--surface)" stroke="var(--line2)"/>
+  <path d="M180 40 V90 M250 40 V90 M320 40 V90" stroke="var(--line2)"/>
+  <rect x="390" y="40" width="70" height="50" fill="var(--c2-soft)" stroke="var(--c2)" stroke-width="2"/>
+  <rect x="460" y="40" width="70" height="50" fill="var(--soft)" stroke="var(--line2)" stroke-dasharray="4 4"/>
+  <path d="M52 55 L72 65 L52 75 z" fill="var(--ink)"/>
+  <line x1="72" y1="65" x2="425" y2="65" stroke="var(--c3)" stroke-width="2" stroke-dasharray="6 4"/><circle cx="425" cy="65" r="5" fill="var(--c3)"/>
+  <text x="62" y="96" text-anchor="middle" font-size="11" fill="var(--muted)">sensor</text><text x="495" y="60" text-anchor="middle" font-size="11" fill="var(--muted)">not</text><text x="495" y="76" text-anchor="middle" font-size="11" fill="var(--muted)">reached</text>
+  <text x="250" y="28" text-anchor="middle" font-size="12" fill="var(--ink)">ray passes: free</text><text x="425" y="28" text-anchor="middle" font-size="12" fill="var(--ink)">ray ends: "chair"</text><text x="145" y="114" text-anchor="middle" font-size="12" fill="var(--ink)">φ⁻</text><text x="215" y="114" text-anchor="middle" font-size="12" fill="var(--ink)">φ⁻</text><text x="285" y="114" text-anchor="middle" font-size="12" fill="var(--ink)">φ⁻</text><text x="355" y="114" text-anchor="middle" font-size="12" fill="var(--ink)">φ⁻</text><text x="425" y="114" text-anchor="middle" font-size="12" fill="var(--ink)">φ⁺ + E ψ⁺</text><text x="495" y="114" text-anchor="middle" font-size="12" fill="var(--ink)">0</text>
+  <text x="100" y="114" text-anchor="end" font-size="11" fill="var(--muted)">added to h:</text>
+</svg><figcaption>One labelled range measurement updates every cell along its ray: four as free, one as occupied by the reported class.</figcaption></figure>
+
+<div class="box note"><h4>Filling the gap: where the parameter vectors come from, and three updates by hand</h4>
+<p>The entries are log likelihood ratios, as (16.25) says. Take classes {free, chair, table} and this sensor: a ray passes through a free cell with probability 0.9 and reports a false hit of either class with probability 0.05 each; it passes through an occupied cell without stopping with probability 0.2, and when it stops the label is right with probability 0.75, so a chair cell gives "hit, chair" with probability 0.6 and "hit, table" with 0.2. Then</p>
+\[ \mathbf{l}(\text{hit, chair}) = \begin{bmatrix} 0 & \ln\frac{0.6}{0.05} & \ln\frac{0.2}{0.05} \end{bmatrix} = [0,\ 2.48,\ 1.39], \qquad \mathbf{l}(\text{pass}) = \begin{bmatrix} 0 & \ln\frac{0.2}{0.9} & \ln\frac{0.2}{0.9} \end{bmatrix} = [0,\ -1.50,\ -1.50], \]
+<p>which is (16.26) with \(\boldsymbol{\phi}^+ = [0, 1.39, 1.39]\), \(\boldsymbol{\psi}^+ = [0, 1.10, 1.10]\), \(\boldsymbol{\phi}^- = [0, -1.50, -1.50]\). Start a cell at \(\mathbf{h} = [0, 0, 0]\) (all classes equally likely) and fuse three hits labelled chair, table, chair:</p>
+\[ \mathbf{h} = [0,\ 2.48 + 1.39 + 2.48,\ 1.39 + 2.48 + 1.39] = [0,\ 6.36,\ 5.26], \qquad e^{\mathbf{h}} = [1,\ 576,\ 192]. \]
+<p>The softmax gives \(p = [1, 576, 192]/769 = [0.001,\ 0.749,\ 0.250]\). The cell is almost surely occupied, and chair leads table three to one: two votes against one, each worth a factor \(0.6/0.2 = 3\).</p></div>
+
+<p>Try it: press "Sample 1" once. Reset and press "Sample 10". Then set the label accuracy to 50% and sample again.</p>
+<div class="viz" data-viz="w22_fusion"></div>
+<p class="cap">Notice that one hit already gives chair 71%, table 24%, free 6%. Ten samples (eight labelled chair, one labelled table, one pass-through) put chair at 99.95%. At 50% accuracy the labels carry no information: chair and table stay tied, yet "free" is still ruled out, because that part of the evidence comes from the range.</p>
+
+<h3>5. Storing it: the multi-class octree</h3>
+<p>A regular grid wastes memory on large empty volumes. An <strong>octree</strong> (<a href="#d46">Week 8 · Day 4</a>) divides space recursively into eight octants; a node has either 8 children or none, and a node without children is a <strong>leaf</strong>. In a <strong>multi-class octree</strong> every node stores a log-odds vector. <span class="src">§16.3.2 · pp. 475–476</span></p>
+<ul>
+<li><strong>Update.</strong> Cast the ray through the tree, expand each observed leaf down to the finest resolution, and apply (16.24).</li>
+<li><strong>Prune.</strong> If the 8 children of a node are leaves with equal log-odds, delete them and make the parent a leaf. A free block of \(16^3 = 4096\) finest cells collapses to one node. Occupied regions rarely prune, since only their surfaces are observed.</li>
+<li><strong>Clamp.</strong> Noise keeps equal cells from reaching exactly equal values. Limiting each entry of \(\mathbf{h}\) to a fixed interval lets cells settle at the same value and prune, at the price of losing information near certainty.</li>
+<li><strong>Keep few classes.</strong> Cost grows linearly with \(K\) and the chance of pruning falls quickly, so a cell may store only its \(\bar{K}\) most likely classes and lump the rest into "others".</li>
+</ul>
+<p>A parent's vector can be the average of its children's, or, conservatively, that of the child most likely to be occupied. Several robots can build one such map by agreeing on their local octrees over one-hop communication (ROAM). <span class="src">§16.3.2 · pp. 476–478</span></p>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="0"><p class="qq">Q1. With classes {free, 1, 2}, a cell has h = [0, 1.1, −0.7]. What is the probability of class 1?</p><div class="opts"><button type="button" class="opt">0.67</button><button type="button" class="opt">0.75</button><button type="button" class="opt">0.86</button><button type="button" class="opt">0.50</button></div><p class="exp" hidden>e^0 = 1, e^1.1 = 3.00, e^−0.7 = 0.50. Softmax: 3.00/(1 + 3.00 + 0.50) = 0.67.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q2. A sensor reports "hit, class 1" with probability 0.6 if the cell is class 1, 0.1 if it is class 2, and 0.02 if it is free. What does this observation add to the class-2 entry of h?</p><div class="opts"><button type="button" class="opt">3.40</button><button type="button" class="opt">−1.79</button><button type="button" class="opt">1.61</button><button type="button" class="opt">0.10</button></div><p class="exp" hidden>Entry 2 of l(z) is ln[p(z | class 2)/p(z | free)] = ln(0.1/0.02) = ln 5 = 1.61. Even a hit with the other label is evidence that the cell is not free.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. In a city, which rule for handling movable objects in a semantic surfel map worked better according to the chapter?</p><div class="opts"><button type="button" class="opt">Remove every point of a movable class</button><button type="button" class="opt">Keep everything and trust ICP</button><button type="button" class="opt">Remove every point whose label changed class probability by any amount</button><button type="button" class="opt">Remove only surfels whose stored label conflicts with the current scan</button></div><p class="exp" hidden>Parked vehicles are common and useful for registration. Removing all of them discards good constraints, so only surfels with conflicting labels are filtered.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Why does free space compress much better than occupied space in a multi-class octree?</p><div class="opts"><button type="button" class="opt">Free cells are not stored at all</button><button type="button" class="opt">Whole free volumes are observed by rays passing through and reach the same clamped value, while objects are seen only at their surface</button><button type="button" class="opt">Occupied cells use more bits per entry</button><button type="button" class="opt">Pruning is only defined for class 0</button></div><p class="exp" hidden>Pruning needs 8 equal children. Rays cross free volumes everywhere and clamping makes their values equal. The inside of an object is never observed, so its cells differ from the surface cells.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Surfel maps keep a class and a confidence per surfel; conflicting labels lower the confidence.</li>
+<li>A range-category observation gives a range and a class per ray. The voxel map keeps an independent class distribution per cell.</li>
+<li>In log-odds relative to "free", Bayes' rule is \(\mathbf{h} \leftarrow \mathbf{h} + \mathbf{l}(z)\), and the softmax returns probabilities.</li>
+<li>The model (16.26) adds \(\boldsymbol{\phi}^+ + \mathbf{E}_{y+1}\boldsymbol{\psi}^+\) at the ray's end point and \(\boldsymbol{\phi}^-\) along the way. The entries are log likelihood ratios of the sensor.</li>
+<li>A multi-class octree prunes equal children; clamping and keeping few classes make pruning likely.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §16.3.1 "Point-based and Surfel-based Metric-Semantic SLAM" and §16.3.2 "Voxel-based Metric-Semantic SLAM", pp. 471–478.</li>
+<li>Thrun, Burgard, Fox, <em>Probabilistic Robotics</em>, 2005 (the log-odds form of the binary Bayes filter, generalized here to several classes); Hornung, Wurm, Bennewitz, Stachniss, Burgard, <em>OctoMap: An Efficient Probabilistic 3D Mapping Framework Based on Octrees</em>, 2013.</li>
+<li>The sensor probabilities in the worked example are made up for illustration; they are the ones the widget uses.</li>
+</ol></div>
+<p class="next"></p>
+</section>

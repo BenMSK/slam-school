@@ -1,0 +1,98 @@
+<section class="day" data-day="22" id="d22" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 4 · Day 4</span>
+  <h2>Uncertainty on Lie groups and the banana distribution</h2>
+  <p class="lead">After today you can write a Gaussian over rotations or poses as a mean on the group plus noise in the tangent space, and explain why accumulated heading noise produces a banana-shaped cloud that such a Gaussian can follow.</p>
+  <p class="meta">About 60 min · Read §2.1.4, pp. 59–60 (1 page) · Needs Week 1 Day 2 and Week 4 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §2.1.4, pp. 59–60</h4>
+<p>The section is short. While you read, look for:</p>
+<ul>
+<li>Equation (2.21) on p. 60: a random vector written as a mean <em>plus</em> zero-mean noise.</li>
+<li>The reason the book gives for not adding noise to a rotation matrix.</li>
+<li>Equations (2.22) and (2.23): which object is the mean, where the noise \(\boldsymbol{\delta}\) lives, and how the two are combined.</li>
+<li>The closing remark that this is an <em>induced</em> distribution, and that Chapter 6 uses a different kind.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A Gaussian needs a mean and a way to add noise to it. For a pose the mean is a group member \(\bar{\mathbf{T}}\), the noise is an ordinary Gaussian vector \(\boldsymbol{\delta}\) in the tangent space, and "add" means \(\bar{\mathbf{T}}\,\Exp(\boldsymbol{\delta})\). Because Exp bends straight lines into arcs, this family can describe the curved clouds that real robot motion produces, which no Gaussian in \((x, y)\) can.</p></div>
+
+<h3>1. A Gaussian is a mean plus noise</h3>
+<p>For a vector, the book writes a Gaussian random variable as <span class="src">§2.1.4 · p. 60, eq. (2.21)</span></p>
+\[ \mathbf{x} = \boldsymbol{\mu} + \boldsymbol{\delta}, \qquad \boldsymbol{\delta}\sim\N(\mathbf{0},\boldsymbol{\Sigma}) . \]
+<p>This is the Gaussian of <a href="#d2">Week 1 · Day 2</a>, split into two ingredients: a centre \(\boldsymbol{\mu}\) and a zero-mean spread \(\boldsymbol{\delta}\) with covariance \(\boldsymbol{\Sigma}\). The split matters because the "+" is the part that fails for rotations. Adding a noise matrix to \(\mathbf{R}\) breaks \(\mathbf{R}\T\mathbf{R} = \mathbf{I}\), exactly as averaging did on Day 1.</p>
+
+<h3>2. Replace + by ⊕</h3>
+<p>The fix is the perturbation from yesterday. Keep the noise a plain Gaussian vector, but apply it through the exponential map: <span class="src">§2.1.4 · p. 60, eqs. (2.22)–(2.23)</span></p>
+\[ \mathbf{R} = \bar{\mathbf{R}}\oplus\boldsymbol{\delta} = \bar{\mathbf{R}}\,\Exp(\boldsymbol{\delta}), \qquad \mathbf{T} = \bar{\mathbf{T}}\oplus\boldsymbol{\delta} = \bar{\mathbf{T}}\,\Exp(\boldsymbol{\delta}), \qquad \boldsymbol{\delta}\sim\N(\mathbf{0},\boldsymbol{\Sigma}) . \]
+<p>Closure guarantees that every sample is a valid rotation or pose. The mean and the covariance now live in different places:</p>
+<div class="tbl"><table>
+  <tr><th>Group</th><th>Mean</th><th>Noise \(\boldsymbol{\delta}\)</th><th>Covariance \(\boldsymbol{\Sigma}\)</th></tr>
+  <tr><td>\(\SO(2)\)</td><td>2 × 2 rotation</td><td>one angle</td><td>1 × 1 (a variance)</td></tr>
+  <tr><td>\(\SO(3)\)</td><td>3 × 3 rotation</td><td>\(\R^3\)</td><td>3 × 3</td></tr>
+  <tr><td>\(\SE(2)\)</td><td>3 × 3 transformation</td><td>\(\R^3\): \((\rho_1,\rho_2,\theta)\)</td><td>3 × 3</td></tr>
+  <tr><td>\(\SE(3)\)</td><td>4 × 4 transformation</td><td>\(\R^6\): \((\boldsymbol{\rho},\boldsymbol{\theta})\)</td><td>6 × 6</td></tr>
+</table></div>
+<p>To draw a sample: draw \(\boldsymbol{\delta}\) as for any Gaussian vector, then form \(\bar{\mathbf{T}}\,\Exp(\boldsymbol{\delta})\). The simplest case is a heading. With \(\bar{\mathbf{R}}\) a rotation by 30° and a standard deviation of 5°, a draw of \(\delta = -10^\circ\) gives the rotation by 20°. In \(\SO(2)\) this is nothing more than a Gaussian on the angle, because planar rotations commute.</p>
+<p>Because \(\boldsymbol{\delta}\) multiplies on the right, it is expressed in the frame attached to the mean pose. For a robot pose, \(\rho_1\) is error along the robot's own forward direction, whichever way the robot faces in the world.</p>
+<div class="box note"><h4>Filling the gap: what "surjective-only" means, and when it matters</h4>
+<p>The book calls the exponential a "surjective-only mapping". <strong>Surjective</strong> means every group member is reached. "Only" means it is not one-to-one: angles \(\delta\) and \(\delta + 2\pi\) give the same rotation (Day 2). A Gaussian has tails that run to infinity, so some of its probability lands on \(|\delta| \gt \pi\) and wraps around onto rotations that smaller angles also reach.</p>
+<p>How much? With a standard deviation of 10°, the wrap point 180° is 18 standard deviations away, and the wrapped probability is far too small to matter. With a standard deviation of 90° it would matter, and this way of describing uncertainty stops being a good model. The representation is meant for <em>concentrated</em> uncertainty, which is the usual case for a tracked robot.</p></div>
+
+<h3>3. The banana</h3>
+<p>Let a robot drive straight ahead in \(K\) steps of one unit. Each step is a pose increment whose tangent vector is the command \(\mathbf{u} = (1, 0, 0)\) plus a little Gaussian noise, mostly in heading: \(\mathbf{T}_{k+1} = \mathbf{T}_k\,\Exp(\mathbf{u} + \boldsymbol{\delta}_k)\). Where can the robot be after \(K\) steps? Simulate it 500 times.</p>
+<div class="viz" data-viz="w04_banana"></div>
+<p class="cap">Notice that the cloud is curved, and that the pink ellipse, the best Gaussian in (x, y), covers empty ground ahead of the cloud and misses its curled-back ends, while the green contour bends with the cloud. With the default settings (15 steps, 6° of heading noise per step) the mean of (x, y) is at about (14.4, −0.1), 0.6 behind the noise-free end point (15, 0), and the tangent-space mean maps to (15.0, −0.1). The x-coordinate has skewness about −2.2, and a Gaussian has none.</p>
+<p>The green contour is computed as the book's definition suggests. Take \(\bar{\mathbf{T}}\) to be the noise-free end pose, convert every sample to a tangent vector \(\boldsymbol{\xi}_j = \Log(\bar{\mathbf{T}}^{-1}\mathbf{T}_j)\), fit an ordinary mean and covariance to those vectors, and push the two-sigma ellipse of that fit back through \(\bar{\mathbf{T}}\,\Exp(\cdot)\). (The fit is three-dimensional, and the widget draws the ellipse spanned by its two largest principal directions.) An ellipse in the tangent space becomes a banana on the ground.</p>
+<div class="box kid"><h4>In plain words</h4><p>If you walk twenty paces with your eyes closed, you know quite well <em>how far</em> you walked and rather badly <em>in which direction</em>. The places you might be form a piece of a ring around the starting point, not a blob. A description that says "about twenty paces, direction uncertain" fits that ring. A description in east and north coordinates does not.</p></div>
+
+<h3>4. Why a banana, and why the tangent space straightens it</h3>
+<div class="box note"><h4>Filling the gap: a one-step model you can solve by hand</h4>
+<p>Strip the simulation to its core. The robot first turns by an uncertain angle \(\delta_\theta\sim\N(0,\sigma^2)\) and then drives a known distance \(L\). It ends at</p>
+\[ x = L\cos\delta_\theta \approx L\left(1 - \tfrac12\delta_\theta^2\right), \qquad y = L\sin\delta_\theta \approx L\,\delta_\theta , \qquad \text{heading } \delta_\theta . \]
+<p><strong>In (x, y).</strong> The sideways coordinate is linear in the noise, so it is close to Gaussian with standard deviation \(L\sigma\). The forward coordinate is <em>quadratic</em> in the noise: whichever way the robot turns, it falls short of \(L\), never beyond. That one-sided shortfall is the curl of the banana. Its average is \(\E[x] \approx L(1-\tfrac12\sigma^2)\). For \(L = 10\) and \(\sigma = 0.3\) rad (17°) the mean is at \(x \approx 9.55\), a point inside the bend where the robot almost never is. A Gaussian puts its highest density at its mean.</p>
+<p><strong>In the tangent space.</strong> Take the mean pose \(\bar{\mathbf{T}}\) at \((L, 0)\) with heading 0 and try the tangent vector \(\boldsymbol{\delta} = \delta_\theta\,(0, L, 1)\). With \(\boldsymbol{\rho} = (0, L\delta_\theta)\) and \(\theta = \delta_\theta\), the matrix \(\mathbf{V}\) of Day 2 gives</p>
+\[ \mathbf{V}\boldsymbol{\rho} = \frac{\sin\delta_\theta}{\delta_\theta}\begin{bmatrix} 0 \\ L\delta_\theta \end{bmatrix} + \frac{1-\cos\delta_\theta}{\delta_\theta}\begin{bmatrix} -L\delta_\theta \\ 0 \end{bmatrix} = \begin{bmatrix} -L(1-\cos\delta_\theta) \\ L\sin\delta_\theta \end{bmatrix}. \]
+<p>\(\bar{\mathbf{T}}\) only shifts this by \((L, 0)\), so \(\bar{\mathbf{T}}\,\Exp(\boldsymbol{\delta})\) is at \((L\cos\delta_\theta,\ L\sin\delta_\theta)\) with heading \(\delta_\theta\). That is the true end pose, <em>exactly</em>, with no approximation. The tangent vector is a fixed direction \((0, L, 1)\) times the Gaussian number \(\delta_\theta\), so it is exactly Gaussian, with covariance</p>
+\[ \boldsymbol{\Sigma} = \sigma^2\begin{bmatrix} 0 \\ L \\ 1 \end{bmatrix}\begin{bmatrix} 0 & L & 1 \end{bmatrix} = \sigma^2\begin{bmatrix} 0 & 0 & 0 \\ 0 & L^2 & L \\ 0 & L & 1 \end{bmatrix}. \]
+<p>The whole arc of possible end poses is the image under Exp of a straight line in the tangent space. The off-diagonal entry \(L\) says that sideways error and heading error go together: a robot that ended up to the left is also facing left.</p></div>
+<p>The simulation in the widget is messier than this model, since noise enters at every step, and its tangent-space cloud is only approximately Gaussian. The picture still holds: the curvature comes from the group, and a description that respects the group absorbs it. The book points to Long et al. and to Barfoot and Furgale for the full treatment. <span class="src">§2.1.4 · p. 60</span></p>
+
+<h3>5. Where these covariances appear</h3>
+<ul>
+<li><strong>Noise models of factors.</strong> An odometry or loop-closure measurement that is itself a pose carries a covariance of this kind, and its residual is formed in the Lie algebra, as in equation (2.20) from yesterday.</li>
+<li><strong>The uncertainty of an estimate.</strong> Yesterday's Gauss-Newton solved for \(\boldsymbol{\xi}\). The inverse of the final information matrix \(\sum_i\mathbf{H}_i\T\boldsymbol{\Sigma}_i^{-1}\mathbf{H}_i\) is the approximate covariance of that \(\boldsymbol{\xi}\). So the covariance a solver reports for a pose is a tangent-space covariance about the estimate, in the sense of (2.23).</li>
+<li><strong>Left or right.</strong> The book's noise multiplies on the right. Putting it on the left, \(\Exp(\boldsymbol{\delta})\,\bar{\mathbf{T}}\), is equally valid but gives a different \(\boldsymbol{\Sigma}\) for the same cloud. Tomorrow's adjoint converts one into the other.</li>
+</ul>
+<p>The book closes with a caveat: (2.22) <em>induces</em> a distribution on rotations by pushing a tangent-space Gaussian through Exp. One can also define distributions directly on the group, and Chapter 6 does so because it brings computational advantages there. <span class="src">§2.1.4 · p. 60</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The covariance of a pose is the covariance of its matrix entries."</strong> It is the covariance of the tangent vector \(\boldsymbol{\delta}\): 6 × 6 for a 3D pose, not 16 × 16.</li>
+<li><strong>"The first block of Σ is the position uncertainty in world coordinates."</strong> With right-multiplied noise it is expressed in the frame of the mean pose, and \(\boldsymbol{\rho}\) is not the position error once rotation error is present.</li>
+<li><strong>"The mean pose is the average of the sampled matrices."</strong> Averaging matrices leaves the group (Day 1). The mean is the \(\bar{\mathbf{T}}\) about which the tangent vectors average to zero.</li>
+<li><strong>"A Gaussian in the tangent space is always a good model."</strong> Only while the spread is well inside a half turn. For very uncertain headings the tails wrap.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A 3D pose estimate \(\bar{\mathbf{T}}\in\SE(3)\) comes with a covariance in the sense of equation (2.23). What is its size?</p><div class="opts"><button type="button" class="opt">4 × 4</button><button type="button" class="opt">6 × 6</button><button type="button" class="opt">12 × 12</button><button type="button" class="opt">16 × 16</button></div><p class="exp" hidden>The covariance belongs to \(\boldsymbol{\delta}\in\R^6\), one entry per degree of freedom, so it is 6 × 6.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. One-step model: a robot turns by \(\delta_\theta\sim\N(0,\sigma^2)\) with \(\sigma = 0.2\) rad, then drives \(L = 10\) m. Roughly where is the mean of its x-coordinate?</p><div class="opts"><button type="button" class="opt">10.0 m</button><button type="button" class="opt">8.0 m</button><button type="button" class="opt">9.98 m</button><button type="button" class="opt">9.8 m</button></div><p class="exp" hidden>\(\E[x]\approx L(1-\tfrac12\sigma^2) = 10\,(1 - 0.02) = 9.8\) m. Every turn, left or right, shortens the forward progress, so the mean falls behind the noise-free end point.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. Same model with \(L = 10\) m. The robot happened to turn by \(\delta_\theta = 0.1\) rad. Which tangent vector \(\boldsymbol{\delta} = (\rho_1,\rho_2,\theta)\) at \(\bar{\mathbf{T}}\) describes its end pose?</p><div class="opts"><button type="button" class="opt">(0, 1, 0.1)</button><button type="button" class="opt">(−0.05, 1, 0.1)</button><button type="button" class="opt">(10, 0, 0.1)</button><button type="button" class="opt">(0, 0, 0.1)</button></div><p class="exp" hidden>\(\boldsymbol{\delta} = \delta_\theta\,(0, L, 1) = (0, 1, 0.1)\). The option (−0.05, 1, 0.1) is roughly the position offset \((x - L,\ y)\) with the heading, but the tangent vector holds \(\boldsymbol{\rho}\), not the position: the forward shortfall is produced by Exp.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Why does a Gaussian in \((x, y)\) fit the end positions of the simulated robots poorly?</p><div class="opts"><button type="button" class="opt">Because the per-step noise is not Gaussian</button><button type="button" class="opt">Because 500 samples are too few to estimate a covariance</button><button type="button" class="opt">Because position depends nonlinearly on the accumulated heading error, which bends the cloud</button><button type="button" class="opt">Because x and y are uncorrelated</button></div><p class="exp" hidden>The noise in each step is Gaussian. But the position is a sine and cosine of the heading error, and a nonlinear function of a Gaussian is not Gaussian. In tangent coordinates at the mean pose the relation is close to linear, so the Gaussian shape is nearly kept.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>A Gaussian on a Lie group is \(\mathbf{T} = \bar{\mathbf{T}}\,\Exp(\boldsymbol{\delta})\) with \(\boldsymbol{\delta}\sim\N(\mathbf{0},\boldsymbol{\Sigma})\): the mean is on the group, the covariance in the tangent space.</li>
+<li>\(\boldsymbol{\Sigma}\) is 3 × 3 for \(\SO(3)\) and \(\SE(2)\), and 6 × 6 for \(\SE(3)\). With right-multiplied noise it is expressed in the frame of the mean.</li>
+<li>Heading error makes the forward coordinate fall short by about \(\tfrac12 L\delta_\theta^2\), always on one side. That bends the position cloud into a banana.</li>
+<li>In the one-step model the banana is exactly a Gaussian along the line \(\delta_\theta(0, L, 1)\) in the tangent space.</li>
+<li>The model assumes concentrated uncertainty, since Exp is onto but not one-to-one.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §2.1.4 "Uncertainty and Lie Groups", pp. 59–60, equations (2.21)–(2.23).</li>
+<li>Long, Wolfe, Mashner, Chirikjian, <em>The Banana Distribution is Gaussian: A Localization Study with Exponential Coordinates</em>, 2012 (the reference the book cites for the curved position cloud).</li>
+<li>Barfoot and Furgale, <em>Associating Uncertainty with Three-Dimensional Poses for Use in Estimation Problems</em>, 2014 (cited by the book), and Barfoot, <em>State Estimation for Robotics</em>, 2017 (Gaussians on SO(3) and SE(3)).</li>
+<li>The one-step model is worked out here from the SE(2) exponential of Day 2.</li>
+</ol></div>
+<p class="next"></p>
+</section>

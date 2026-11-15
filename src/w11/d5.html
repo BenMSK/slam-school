@@ -1,0 +1,105 @@
+<section class="day" data-day="65" id="d65" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 11 · Day 5</span>
+  <h2>Reprojection error, bundle adjustment, and the geometry of two views</h2>
+  <p class="lead">After today you can derive the reprojection cost from Gaussian pixel noise, state full bundle adjustment and the ways real-time systems cut it down, and derive the epipolar constraint that ties two views together.</p>
+  <p class="meta">About 60 min · Read §7.3.3–7.3.8, pp. 204–207 (4 pages) · Needs Week 11 Days 3–4 and Week 2 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §7.3.3–7.3.8, pp. 204–207 (stop at §7.4)</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>How equation (7.1) follows from the Gaussian likelihood above it (p. 204).</li>
+<li>The unknowns of equation (7.3), and what \(\mathbf{R}^i_w\mathbf{x}^w_j + \mathbf{t}^i_w\) computes (p. 205).</li>
+<li>In Figure 7.4 (p. 206), why the lower-left graph is dense and the lower-right one is not.</li>
+<li>Why initialization is singled out for monocular cameras in §7.3.7 (p. 207).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Feature-based visual SLAM is one least-squares problem: move the cameras and the 3D points until every point, pushed through the camera model, lands on the pixel where it was observed. The mismatch is the <strong>reprojection error</strong>. Everything else is about making that problem small enough to solve in real time and giving it a good enough starting point.</p></div>
+
+<h3>1. The reprojection error</h3>
+<p>For an observed image point \(\mathbf{z}_j \in \R^2\) and a 3D point \(\mathbf{x}^c_j\) in camera coordinates, the <strong>reprojection error</strong> is <span class="src">§7.3.3 · p. 204</span></p>
+\[ \mathbf{e}_{\text{reproj}} = \mathbf{z}_j - \pi(\mathbf{x}^c_j, \boldsymbol{\xi}). \]
+<p>It is a 2-vector in pixels: observed minus predicted. With the camera of Day 3 (\(f = 500\), principal point \((320, 240)\)) and an estimated point \(\mathbf{x}^c = (0.4, -0.2, 2)\), the prediction is \((420, 190)\). If the keypoint was detected at \((423, 186)\), then \(\mathbf{e} = (3, -4)\) and its length is 5 pixels.</p>
+<div class="box note"><h4>Filling the gap: from Gaussian noise to equation (7.1)</h4>
+<p>The book goes from the likelihood to (7.1) in two lines. Here are the steps, which repeat <a href="#d8">Week 2 · Day 2</a> for a camera. Assume the detected pixel is the true projection plus Gaussian noise with covariance \(\boldsymbol{\Sigma}_j\):</p>
+\[ p(\mathbf{z}_j \mid \mathbf{x}^c_j, \boldsymbol{\xi}) = \frac{1}{2\pi\sqrt{\det\boldsymbol{\Sigma}_j}}\exp\!\Big(-\tfrac12\,\mathbf{e}_j\T\boldsymbol{\Sigma}_j^{-1}\mathbf{e}_j\Big), \qquad \mathbf{e}_j = \mathbf{z}_j - \pi(\mathbf{x}^c_j, \boldsymbol{\xi}). \]
+<p>Independent observations multiply, so their logarithms add. Taking the negative logarithm,</p>
+\[ \mathcal{L} = -\sum_j \log p(\mathbf{z}_j \mid \mathbf{x}^c_j, \boldsymbol{\xi}) = \frac12\sum_j \mathbf{e}_j\T\boldsymbol{\Sigma}_j^{-1}\mathbf{e}_j + \underbrace{\sum_j \log\!\big(2\pi\sqrt{\det\boldsymbol{\Sigma}_j}\big)}_{\text{const.}} . \]
+<p>The last sum does not depend on the unknowns. Writing \(\norm{\mathbf{e}}^2_{\boldsymbol{\Sigma}} = \mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\) for the squared Mahalanobis norm and dropping the constant gives the book's</p>
+\[ E_{\text{reproj}} = \frac12\sum_j \norm{\mathbf{z}_j - \pi(\mathbf{x}^c_j, \boldsymbol{\xi})}^2_{\boldsymbol{\Sigma}_j}. \tag{7.1} \]
+<p>Maximizing the likelihood is the same as minimizing this sum. In the simplest case every keypoint has the same isotropic noise, of standard deviation \(\sigma\) pixels in each direction, and each term is \(\norm{\mathbf{e}_j}^2/(2\sigma^2)\). (The book writes this case as \(\boldsymbol{\Sigma}_j = \sigma\mathbf{I}_2\); its \(\sigma\) is then the variance.) For \(\mathbf{e} = (3, -4)\): with \(\sigma = 1\) the term is \(25/2 = 12.5\); with \(\sigma = 2\) it is \(25/8 \approx 3.1\). A keypoint detected on a coarse pyramid level is less precise, gets a larger \(\sigma\), and counts less.</p></div>
+<p>Wrong matches produce huge residuals that a squared cost cannot absorb, so a robust kernel \(\rho\) such as Huber or Tukey (<a href="#d34">Week 6 · Day 4</a>) is wrapped around each term: <span class="src">§7.3.3 · p. 204</span></p>
+\[ E_{\text{robust}} = \frac12\sum_j \rho\Big(\norm{\mathbf{z}_j - \pi(\mathbf{x}^c_j, \boldsymbol{\xi})}_{\boldsymbol{\Sigma}_j}\Big). \tag{7.2} \]
+
+<h3>2. Full bundle adjustment</h3>
+<p>Now let the camera move. Points \(j \in \mathsf{P}\) have unknown world coordinates \(\mathbf{x}^w_j \in \R^3\); images \(i \in \mathsf{C}\) have unknown poses \(\mathbf{T}^i_w \in \SE(3)\), which take world coordinates to the coordinates of camera \(i\): \(\mathbf{x}^c = \mathbf{R}^i_w\mathbf{x}^w_j + \mathbf{t}^i_w\). The observation of point \(j\) in image \(i\) is the pixel \(\mathbf{z}_{ij}\). Minimizing over everything at once is <strong>full BA</strong>: <span class="src">§7.3.4 · p. 205</span></p>
+\[ \{\mathbf{T}^{i*}_w, \mathbf{x}^{w*}_j\} = \argmin_{\mathbf{T}^i_w,\,\mathbf{x}^w_j}\ \frac12\sum_{i,j}\rho\Big(\norm{\mathbf{z}_{ij} - \pi\big(\mathbf{R}^i_w\mathbf{x}^w_j + \mathbf{t}^i_w\big)}_{\boldsymbol{\Sigma}_{ij}}\Big). \tag{7.3} \]
+<p>(The intrinsics \(\boldsymbol{\xi}\) are dropped from the notation from here on.) Count the sizes. Each camera has 6 unknowns and each point 3; each observation gives 2 equations. A map with 200 images and 20,000 points, each seen in 5 images, has \(200\cdot6 + 20{,}000\cdot3 = 61{,}200\) unknowns and \(2\cdot100{,}000 = 200{,}000\) equations. Solving that for every new frame is out of reach, and the book lists how systems cope. <span class="src">§7.3.4 · pp. 205–206</span></p>
+<div class="tbl"><table>
+  <tr><th>Approach</th><th>What it keeps</th><th>Consequence</th></tr>
+  <tr><td><strong>Batch optimization</strong></td><td>All poses, all points, all observations; Gauss-Newton or Levenberg-Marquardt on (7.3)</td><td>The gold standard in SfM; too expensive to run per image</td></tr>
+  <tr><td><strong>Filtering</strong> (EKF, information filter)</td><td>Only the latest camera pose; older poses are marginalized out</td><td>Sparsity is destroyed, which limits the map to a few hundred features; past observations are never re-linearized</td></tr>
+  <tr><td><strong>Keyframe-based</strong></td><td>A few selected images, the <strong>keyframes</strong>; the frames in between and their observations are discarded for mapping</td><td>The problem stays sparse; for the same effort, longer and more accurate maps than filtering</td></tr>
+  <tr><td><strong>Factor graphs</strong></td><td>A language for all of the above: variables are poses and landmarks, factors are reprojection errors and priors</td><td>Part I applies unchanged</td></tr>
+</table></div>
+<p>Figure 7.4 shows why filtering loses sparsity. Marginalizing a pose is the elimination step of <a href="#d15">Week 3 · Day 3</a>: it leaves a new factor joining everything that pose was connected to. Remove the three old poses in the figure, and all five landmarks they observed become linked to each other, 10 landmark pairs for 5 landmarks, and in general about \(n^2/2\) for \(n\). Keyframe methods avoid creating these links by throwing the in-between frames away.</p>
+
+<h3>3. Two views: the epipolar constraint</h3>
+<p>Problem (7.3) is non-linear and is solved iteratively, so it needs a reasonable initial guess. This matters most for a monocular camera, where a single frame does not make the state observable. <span class="src">§7.3.7 · p. 207</span> The book leaves the geometry to the literature. The classical starting point is a relation between two images of the same point that involves <em>no 3D point at all</em>.</p>
+<div class="box note"><h4>Filling the gap: deriving the essential and fundamental matrices</h4>
+<p>Let a point have coordinates \(\mathbf{x}^1\) in camera 1 and \(\mathbf{x}^2\) in camera 2, related by the rigid motion \(\mathbf{x}^2 = \mathbf{R}\,\mathbf{x}^1 + \mathbf{t}\). Each camera sees it along a ray: \(\mathbf{x}^1 = \lambda_1\mathbf{b}_1\) and \(\mathbf{x}^2 = \lambda_2\mathbf{b}_2\), where \(\mathbf{b}_k = \pi^{-1}(\mathbf{z}_k)\) is the unprojected pixel of Day 3 and \(\lambda_k \gt 0\) is the unknown depth. Substituting,</p>
+\[ \lambda_2\,\mathbf{b}_2 = \lambda_1\,\mathbf{R}\,\mathbf{b}_1 + \mathbf{t}. \]
+<p>Step 1: take the cross product of both sides with \(\mathbf{t}\). Since \(\mathbf{t}\times\mathbf{t} = \mathbf{0}\),</p>
+\[ \lambda_2\,\mathbf{t}\times\mathbf{b}_2 = \lambda_1\,\mathbf{t}\times(\mathbf{R}\,\mathbf{b}_1). \]
+<p>Step 2: take the dot product of both sides with \(\mathbf{b}_2\). The left side is zero, because \(\mathbf{t}\times\mathbf{b}_2\) is perpendicular to \(\mathbf{b}_2\). Divide by \(\lambda_1\):</p>
+\[ \mathbf{b}_2\T\,[\mathbf{t}]_\times\mathbf{R}\;\mathbf{b}_1 = 0, \qquad [\mathbf{t}]_\times = \begin{bmatrix} 0 & -t_z & t_y \\ t_z & 0 & -t_x \\ -t_y & t_x & 0 \end{bmatrix}, \]
+<p>where \([\mathbf{t}]_\times\mathbf{a} = \mathbf{t}\times\mathbf{a}\) writes the cross product as a matrix. This is the <strong>epipolar constraint</strong>, and \(\mathbf{E} = [\mathbf{t}]_\times\mathbf{R}\) is the <strong>essential matrix</strong>. Both depths have dropped out. Geometrically it says that the two rays and the line joining the camera centres lie in one plane.</p>
+<p>In pixels, with pinhole cameras and homogeneous pixels \(\mathbf{p}_k = \begin{bmatrix} u_k & v_k & 1 \end{bmatrix}\T\), we have \(\mathbf{b}_k = \mathbf{K}^{-1}\mathbf{p}_k\), so</p>
+\[ \mathbf{p}_2\T\,\mathbf{F}\,\mathbf{p}_1 = 0, \qquad \mathbf{F} = \mathbf{K}^{-\top}\mathbf{E}\,\mathbf{K}^{-1}, \]
+<p>the <strong>fundamental matrix</strong>. For a fixed pixel \(\mathbf{p}_1\), the vector \(\boldsymbol{\ell}_2 = \mathbf{F}\mathbf{p}_1 = (\alpha, \beta, \gamma)\) defines a line \(\alpha u + \beta v + \gamma = 0\) in image 2, the <strong>epipolar line</strong>: the match of \(\mathbf{p}_1\) must lie on it.</p>
+<p><strong>Check with stereo.</strong> Camera 2 is 1 m to the right of camera 1 with the same orientation: \(\mathbf{R} = \mathbf{I}\), \(\mathbf{t} = (-1, 0, 0)\). Then \(\mathbf{E} = \begin{bmatrix} 0 & 0 & 0 \\ 0 & 0 & 1 \\ 0 & -1 & 0 \end{bmatrix}\), and for rays \(\mathbf{b}_k = (x'_k, y'_k, 1)\) the constraint reads \(y'_2 - y'_1 = 0\). Matches lie on the same image row, which is the setting of Day 2's disparity formula.</p>
+<p><strong>Scale.</strong> Replace \(\mathbf{t}\) by \(2\mathbf{t}\): the constraint is unchanged. Two images fix the direction of the translation but not its length. A monocular reconstruction is therefore defined only up to an overall scale. \(\mathbf{E}\) has 5 degrees of freedom (3 for \(\mathbf{R}\), 2 for the direction of \(\mathbf{t}\)), so five correspondences are the minimum to estimate it, inside a RANSAC loop (<a href="#d32">Week 6 · Day 2</a>) because some matches are wrong.</p></div>
+<p>Try it: press Next point a few times. Drag camera 2 in the top view. Then move the two error sliders one at a time.</p>
+<div class="viz" data-viz="w11_twoview"></div>
+<p class="cap">Notice three things. The selected point always sits on its epipolar line in image 2 (0.0 px), while the other points are usually tens of pixels away, so most wrong matches violate the constraint; a few do not (after one press of Next point, another point lies only 3 px from the line). A depth error slides the prediction <em>along</em> the line and is invisible in image 1: +1.5 m gives a 15.6 px residual. A 1° yaw error shifts every prediction by 5 to 6 px and raises the cost from 0 to about 125. Drag camera 2 onto camera 1 and the depth slider stops having any effect: without baseline, depth is unobservable.</p>
+
+<h3>4. From two views to a map</h3>
+<p>The pieces chain into the standard monocular initialization. Match keypoints between two frames (Day 4). Estimate \(\mathbf{E}\) with RANSAC and split it into \(\mathbf{R}\) and the direction of \(\mathbf{t}\). Then <strong>triangulate</strong>: with \(\mathbf{R}, \mathbf{t}\) known, the ray equation \(\lambda_2\mathbf{b}_2 - \lambda_1\mathbf{R}\mathbf{b}_1 = \mathbf{t}\) is three linear equations in the two depths, solved by least squares because noisy rays do not meet exactly. Finally refine everything with BA (7.3). From then on each new frame is located against the existing 3D points, a problem called Perspective-n-Point (PnP), which you met in <a href="#d21">Week 4 · Day 3</a> and which opens Week 12.</p>
+<p>The section closes with four short pointers. <span class="src">§7.3.5–7.3.8 · p. 207</span></p>
+<ul>
+<li><strong>Photometric error</strong>: the alternative to reprojection error used by direct methods. It compares pixel intensities, assuming that a scene point looks equally bright in consecutive frames.</li>
+<li><strong>Visual place recognition</strong>: compute one descriptor per image, \(\mathbf{d} = f(I)\), and retrieve the nearest stored descriptor. <strong>Bag-of-words</strong> methods build it by quantizing local descriptors such as ORB into clusters called visual words; learned descriptors are more invariant to appearance change.</li>
+<li><strong>Initialization</strong>: the topic of this section.</li>
+<li><strong>Map representations</strong>: a balance of accuracy, memory, and computation, treated in Chapter 5 (Week 8).</li>
+</ul>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The reprojection error is a distance in meters."</strong> It lives in the image, in pixels. A 1-pixel error can mean a millimeter for a near point or meters for a far one.</li>
+<li><strong>"The epipolar constraint gives the match."</strong> It gives a line. Any point on that line satisfies it, at any depth.</li>
+<li><strong>"A filter is cheaper because it keeps one pose."</strong> Removing poses makes the remaining landmark block dense, and the cost grows quickly with the number of features.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A keypoint is observed at (212, 148). The current estimate projects the point to (209, 152). With \(\boldsymbol{\Sigma} = \mathbf{I}_2\), what does this observation contribute to \(E_{\text{reproj}}\)?</p><div class="opts"><button type="button" class="opt">5</button><button type="button" class="opt">25</button><button type="button" class="opt">12.5</button><button type="button" class="opt">3.5</button></div><p class="exp" hidden>e = (3, −4), so ‖e‖² = 25 and the term is ½·25 = 12.5.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A bundle adjustment problem has 10 camera poses and 500 points. How many scalar unknowns does (7.3) have?</p><div class="opts"><button type="button" class="opt">1,560</button><button type="button" class="opt">1,530</button><button type="button" class="opt">3,060</button><button type="button" class="opt">510</button></div><p class="exp" hidden>Each pose in SE(3) has 6 degrees of freedom and each point 3: 10·6 + 500·3 = 1,560.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. Two identical pinhole cameras are related by \(\mathbf{R} = \mathbf{I}\), \(\mathbf{t} = (-1, 0, 0)\). A keypoint is at row \(v = 130\) in image 1. Where is its epipolar line in image 2?</p><div class="opts"><button type="button" class="opt">The column with the same u</button><button type="button" class="opt">A line through the image center</button><button type="button" class="opt">It depends on the unknown depth</button><button type="button" class="opt">The row v = 130</button></div><p class="exp" hidden>For a sideways translation with no rotation the constraint reduces to y′₂ = y′₁, and with identical intrinsics equal y′ means equal v. Depth only decides where on that row the match is.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Why are filtering approaches limited to a few hundred features?</p><div class="opts"><button type="button" class="opt">The EKF cannot use the reprojection error</button><button type="button" class="opt">Marginalizing past poses links all landmarks they observed, so the problem becomes dense</button><button type="button" class="opt">Filters need a robust kernel for every landmark</button><button type="button" class="opt">Filters keep every past image in memory</button></div><p class="exp" hidden>Eliminating a pose creates a factor over all its neighbours. After many poses are removed the landmarks are fully connected, and the cost of a dense problem grows much faster than a sparse one.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q5. Why can two images from one moving camera not tell a small nearby scene from a large distant one?</p><div class="opts"><button type="button" class="opt">Because keypoint descriptors are not scale invariant</button><button type="button" class="opt">Because the essential matrix has only rank 2</button><button type="button" class="opt">Because scaling the translation and all depths by the same factor leaves every pixel, and the epipolar constraint, unchanged</button><button type="button" class="opt">Because the principal point is unknown</button></div><p class="exp" hidden>In λ₂b₂ = λ₁Rb₁ + t, multiplying t, λ₁ and λ₂ by the same number keeps the equation true with the same rays. The images carry no information about absolute scale.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Reprojection error: \(\mathbf{e} = \mathbf{z} - \pi(\mathbf{x}^c)\), in pixels. Gaussian pixel noise turns maximum likelihood into the weighted least-squares cost (7.1).</li>
+<li>Full BA (7.3) minimizes the robust reprojection error over all poses \(\mathbf{T}^i_w\) and points \(\mathbf{x}^w_j\).</li>
+<li>Batch is the reference; filtering marginalizes old poses and becomes dense; keyframe methods stay sparse; factor graphs express them all.</li>
+<li>Two views of a point satisfy \(\mathbf{b}_2\T\mathbf{E}\,\mathbf{b}_1 = 0\) with \(\mathbf{E} = [\mathbf{t}]_\times\mathbf{R}\), or \(\mathbf{p}_2\T\mathbf{F}\,\mathbf{p}_1 = 0\) in pixels. The match lies on the epipolar line \(\mathbf{F}\mathbf{p}_1\).</li>
+<li>Monocular initialization: matches, essential matrix, triangulation, then BA. The overall scale stays unknown.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 7, §7.3.3–7.3.8, pp. 204–207, equations (7.1)–(7.3) and Figure 7.4.</li>
+<li>The epipolar constraint, essential and fundamental matrices, the five-point minimal case, and triangulation follow Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004.</li>
+<li>The negative-log-likelihood derivation is the standard Gaussian maximum-likelihood argument, as in Barfoot, <em>State Estimation for Robotics</em>, 2017.</li>
+</ol></div>
+<p class="next"></p>
+</section>

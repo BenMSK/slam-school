@@ -1,0 +1,107 @@
+<section class="day" data-day="143" id="d143" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 24 · Day 5</span>
+  <h2>Measuring a Spatial AI system, and the editors' closing words</h2>
+  <p class="lead">After today you can list the chapter's twelve proposed performance metrics, explain why one accuracy benchmark is not enough, pick a system from a Pareto front, and summarize where the book says the field is heading.</p>
+  <p class="meta">About 60 min · Read §18.8–18.9 and the Epilogue, pp. 545–549 (5 pages) · Needs Week 11 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §18.8, §18.9, and the Epilogue, pp. 545–549</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>How ground truth is obtained for poses, for dense geometry, and for semantic labels (p. 545).</li>
+<li>The specific complaints about benchmarks, including the one about which test sequences get reported (p. 546).</li>
+<li>What SLAMBench measured, and the two words "Pareto fronts" (p. 546).</li>
+<li>The twelve metrics (pp. 546–547), and in the Epilogue (pp. 548–549) the advice you most want to keep.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A Spatial AI system produces many outputs under several resource limits, so no single number ranks two systems. The chapter proposes a short list of metrics covering accuracy, robustness, latency, scene understanding, and resources, and it expects choices to be made by looking at trade-off curves. It also trusts a live demo more than any table.</p></div>
+
+<h3>1. What is measured today, and against what</h3>
+<p>Section 18.8 returns to the hypothesis of <a href="#d139">Day 1</a> that a few measures capture usefulness. Most evaluation today is of <strong>localization accuracy</strong>: a motion-capture system provides an external pose that is treated as <strong>ground truth</strong>, and the SLAM estimate is compared with it. <span class="src">§18.8 · p. 545</span> That is the absolute and relative trajectory error of <a href="#d61">Week 11 · Day 1</a>. Everything else is harder to check.</p>
+<div class="tbl"><table>
+  <tr><th>Output</th><th>Where ground truth comes from</th><th>Example in the book</th><th>The difficulty</th></tr>
+  <tr><td>Camera pose</td><td>Motion capture</td><td>Benchmark trajectory datasets</td><td>Covers one output of many</td></tr>
+  <tr><td>Dense scene model</td><td>Laser scanning of the real scene, or synthetic scenes rendered by computer graphics</td><td>ICL-NUIM (synthetic)</td><td>Scanning is slow and expensive; is a rendered world like the real one?</td></tr>
+  <tr><td>Semantic labels</td><td>Synthetic scenes</td><td>SceneNet RGB-D</td><td>Same doubt</td></tr>
+  <tr><td>Geometry and labels at scale</td><td>Crowdsourced real captures</td><td>ScanNet</td><td>Real data, but hard to gather at scale</td></tr>
+</table></div>
+<p>The chapter accepts the suspicion about synthetic data and still expects it to grow in importance as rendering improves. <span class="src">§18.8 · p. 545</span></p>
+
+<h3>2. Why the chapter distrusts benchmarks, and keeps them anyway</h3>
+<p>The criticism is blunt. Too much effort goes into squeezing a few percentage points out of a dataset. A SLAM benchmark fixes the scene type, the sensors and their placement, the frame rate, and the resolution, and then scores mostly accuracy, while efficiency and robustness, which matter at least as much, go unmeasured. Papers often report only the sequences on which their method basically works. <span class="src">§18.8 · p. 546</span></p>
+<p>Against this the chapter sets the live demo. Playing with a visual SLAM system for a minute, watching its visualization and pushing it around, tells you more than its score. Progress is better read from the line of open real-time systems people could try for themselves: MonoSLAM, PTAM, KinectFusion, LSD-SLAM, ORB-SLAM, OKVIS, SVO, ElasticFusion, DROID-SLAM, Gaussian Splatting SLAM, MASt3R-SLAM. <span class="src">§18.8 · p. 546</span></p>
+<p>Should we benchmark at all? The answer given is yes, with two changes: broaden what a benchmark measures, and trust it less. <span class="src">§18.8 · p. 546</span></p>
+
+<h3>3. Several objectives at once: the Pareto front</h3>
+<p><strong>SLAMBench</strong> was a first step toward judging a whole system. It took one algorithm, KinectFusion, and measured both its accuracy and its computational cost across processor platforms and language implementations. The chapter wants benchmarks to move toward measures that predict performance on real tasks. That gives a set of objectives that pull against each other, and it says the analysis of <strong>Pareto fronts</strong> will let a designer choose for a particular application. <span class="src">§18.8 · p. 546</span></p>
+
+<div class="box note"><h4>Filling the gap: what a Pareto front is and how to find it</h4>
+<p>The book uses the term without defining it. Score every candidate system on each metric, with lower being better. Candidate \(A\) <strong>dominates</strong> candidate \(B\) if \(A\) is at least as good as \(B\) on every metric and strictly better on at least one. Nobody should ever pick a dominated candidate. The <strong>Pareto front</strong> is the set of candidates that nothing dominates. Among those, improving one metric always costs you on another, so the choice depends on the application.</p>
+<p>Five configurations, scored as (power in W, drift in %):</p>
+\[ A = (1,\ 3.0), \quad B = (2,\ 2.0), \quad C = (3,\ 2.5), \quad D = (5,\ 1.0), \quad E = (6,\ 1.5). \]
+<p>\(C\) is dominated by \(B\): \(B\) uses less power (2 against 3) and drifts less (2.0 against 2.5). \(E\) is dominated by \(D\) in the same way. \(A\), \(B\), and \(D\) survive: going from \(A\) to \(B\) to \(D\) buys accuracy with watts each time. The front is \(\{A, B, D\}\).</p>
+<p>To choose, add a constraint from the product. With a budget of 4 W the candidates are \(A\) and \(B\), and \(B\) has the lower drift. For two metrics the front is found by sorting by power and keeping each candidate whose drift is lower than every cheaper one's.</p></div>
+<p>Try it: forty synthetic configurations of one system, scored on power and drift. Move the power budget.</p>
+<div class="viz" data-viz="w24_pareto"></div>
+<p class="cap">Notice that only 10 of the 40 configurations are on the front; each of the other 30 is beaten on both metrics by something else. At a 1 W budget the best choice uses 0.49 W and drifts 1.73%. Raise the budget to 2 W and it drops to 1.06%. From there the curve is nearly flat: at 20 W the best is 0.61%. Where the front bends tells you what a watt is worth.</p>
+
+<h3>4. The twelve metrics</h3>
+<p>The chapter's candidate list, grouped here by what each one protects. <span class="src">§18.8 · pp. 546–547</span></p>
+<div class="tbl"><table>
+  <tr><th>Group</th><th>Metric (book's number)</th><th>Where the course met it</th></tr>
+  <tr><td>Localization</td><td>(1) Local pose accuracy in newly explored areas, the visual odometry drift rate. (2) Long-term metric pose repeatability in well-mapped areas.</td><td>Drift: <a href="#d1">Week 1 · Day 1</a>. The two regimes are the two curves of the <a href="#d139">Day 1</a> widget.</td></tr>
+  <tr><td>Robustness</td><td>(3) Tracking robustness percentage. (4) Relocalisation robustness percentage.</td><td>Outliers, <a href="#d31">Week 6</a>; place recognition, Weeks 11, 13, 14.</td></tr>
+  <tr><td>Timing</td><td>(5) SLAM system latency.</td><td>Incremental solving, <a href="#d17">Week 3 · Day 5</a>.</td></tr>
+  <tr><td>Geometry</td><td>(6) Dense distance prediction accuracy at every pixel.</td><td>Dense maps, Weeks 8 and 20.</td></tr>
+  <tr><td>Semantics</td><td>(7) Object segmentation accuracy. (8) Object classification accuracy.</td><td>Weeks 22 and 23.</td></tr>
+  <tr><td>Display</td><td>(9) Pixel registration accuracy for augmented reality.</td><td>Reprojection error, <a href="#d65">Week 11 · Day 5</a>.</td></tr>
+  <tr><td>Change</td><td>(10) Scene change detection accuracy.</td><td>Week 21.</td></tr>
+  <tr><td>Resources</td><td>(11) Power usage. (12) On-device data movement, in bits × millimetres.</td><td><a href="#d140">Day 2</a>, <a href="#d141">Day 3</a>.</td></tr>
+</table></div>
+<p>The book names these without formulas. Three small calculations show what they would look like. The definitions are natural ones chosen for this lesson; the book does not fix them.</p>
+<ul>
+<li><strong>Drift rate.</strong> End-point error divided by distance travelled, with no loop closures. An error of 0.5 m after 100 m is 0.5%.</li>
+<li><strong>Tracking robustness.</strong> The share of frames on which the tracker held. Tracked on 5 820 of 6 000 frames is 97%.</li>
+<li><strong>Data movement.</strong> Bits sent times the distance they travel. A camera that sends a 1 Mbit frame along a 50 mm link moves \(10^6 \times 50 = 5\times10^7\) bit·mm per frame. If pixel-level processing lets it send 10 kbit of differences, that is \(5\times10^5\), a hundred times less.</li>
+</ul>
+
+<h3>5. Where the book says the field is going</h3>
+<p>Section 18.9 closes the chapter in two moves. First, capability has to rise while the resources it needs fall, and that takes joined-up thinking about algorithms, processors, and sensors: find the computational structure, design for sparse graph patterns in both algorithms and storage, and fit them to the new hardware. Second, hand-designed estimation and machine learning will both stay, and will converge. Estimation systems are gaining learned parts and learned networks are gaining structure and domain knowledge, and the chapter expects both routes to arrive at the same place with the same questions about computational structure. <span class="src">§18.9 · p. 547</span></p>
+<p>The book then ends with an Epilogue: two pages of short, unattributed remarks from its authors. <span class="src">Epilogue · pp. 548–549</span> Read them in the original. Grouped by theme, with the part of this course where you practised each:</p>
+<div class="tbl"><table>
+  <tr><th>Theme</th><th>The advice, paraphrased</th><th>In this course</th></tr>
+  <tr><td>Rigor</td><td>Trust the math. Keep notation clear in your math, your code, and your papers, because that is how modeling errors get caught. Keep SLAM's formulation as an optimization problem rigorous as it grows.</td><td>Certificates, <a href="#d52">Week 9 · Day 4</a>; observability, <a href="#d99">Week 17 · Day 3</a></td></tr>
+  <tr><td>Practice</td><td>Theory sinks in when you apply it on a robot. Start from a toy problem with perfectly controlled synthetic data and build up. Plug in a live camera and visualize: five minutes of that teaches more than many dataset results.</td><td>Every widget in the app is such a toy problem</td></tr>
+  <tr><td>The core skill</td><td>Extracting the truth from measurements that conflict is the most important thing in SLAM.</td><td>Robust estimation, <a href="#d34">Week 6 · Day 4</a></td></tr>
+  <tr><td>Ambition</td><td>Do not accept that SLAM is solved. Work on a problem two or three steps beyond the state of the art. New sensors are waiting to be used, event cameras being one example.</td><td>Open problems at the end of each chapter; <a href="#d85">Week 15</a></td></tr>
+  <tr><td>Purpose</td><td>SLAM is about letting machines perceive, understand, and reason about the world, and it is the backbone of robot autonomy and the interface to decision-making. Differentiable optimization is expected to play a key part.</td><td><a href="#d37">Week 7</a>; Part III</td></tr>
+</table></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The system with the lowest trajectory error is the best system."</strong> It may use ten times the power, fail on half the sequences nobody reported, or respond too late. Accuracy is one of twelve.</li>
+<li><strong>"A point on the Pareto front is the optimum."</strong> Every point on the front is optimal for some trade-off. The application's constraints pick one.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. Four configurations are scored as (power, drift): P = (1 W, 4%), Q = (2 W, 2%), R = (3 W, 3%), S = (4 W, 1%). Which one is dominated?</p><div class="opts"><button type="button" class="opt">P</button><button type="button" class="opt">Q</button><button type="button" class="opt">R</button><button type="button" class="opt">S</button></div><p class="exp" hidden>Q uses less power than R and drifts less, so Q dominates R. P, Q, and S each beat the others on one metric and lose on the other, so they form the front.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. With no loop closures, a visual odometry system is 1.2 m from the truth after travelling 300 m. What is its drift rate?</p><div class="opts"><button type="button" class="opt">0.4%</button><button type="button" class="opt">4%</button><button type="button" class="opt">0.25%</button><button type="button" class="opt">2.5%</button></div><p class="exp" hidden>1.2 / 300 = 0.004, which is 0.4% of the distance travelled.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A sensor sends 500 kbit per frame over a 40 mm link. Near-sensor processing cuts that to 5 kbit. What is the data movement per frame afterwards?</p><div class="opts"><button type="button" class="opt">2 × 10⁷ bit·mm</button><button type="button" class="opt">5 × 10³ bit·mm</button><button type="button" class="opt">1.25 × 10² bit·mm</button><button type="button" class="opt">2 × 10⁵ bit·mm</button></div><p class="exp" hidden>5 000 bits × 40 mm = 2 × 10⁵ bit·mm. Before, it was 500 000 × 40 = 2 × 10⁷, a hundred times more.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Why does the chapter rate a one-minute live demo above a benchmark score?</p><div class="opts"><button type="button" class="opt">Demos are more accurate than motion capture</button><button type="button" class="opt">A demo exposes robustness, efficiency, and flexibility, which accuracy tables leave out</button><button type="button" class="opt">Benchmarks cannot measure trajectory error</button><button type="button" class="opt">Demos need no ground truth, so they are cheaper</button></div><p class="exp" hidden>Datasets capture limited aspects of performance, mostly accuracy, under fixed assumptions. Interacting with a running system shows how it behaves when pushed.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Pose accuracy against motion capture is the usual benchmark. Ground truth for dense geometry and semantics is costly, so synthetic data and crowdsourcing fill in.</li>
+<li>Benchmarks fix too many assumptions and reward accuracy over robustness and efficiency. The chapter keeps them, broadened, and trusts a live demo more.</li>
+<li>With several objectives there is no single winner. The Pareto front is the set of undominated candidates, and the application's limits choose among them.</li>
+<li>The twelve proposed metrics span localization, robustness, latency, geometry, semantics, AR registration, change detection, power, and data movement in bits × millimetres.</li>
+<li>The book's closing view: design algorithms, processors, and sensors together around sparse graph structure, expect estimation and learning to converge, trust the math, and test on real systems.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 18, §18.8 "Performance Metrics" and §18.9 "Further Readings &amp; Recent Trends", pp. 545–547; Epilogue, pp. 548–549.</li>
+<li>Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004 (Pareto optimality in multi-criterion problems, §4.7).</li>
+<li>The metric definitions in Section 4 and the widget's configurations are this app's own illustrations.</li>
+</ol></div>
+<p class="next"></p>
+</section>

@@ -1,0 +1,77 @@
+<section class="day" data-day="12" id="d12" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 2 · Review</span>
+  <h2>Week 2 review: from factor graph to solved estimate</h2>
+  <p class="lead">After today you can take a small SLAM problem from its factor graph to a least-squares cost to a solved linear system, and say what steepest descent, Gauss-Newton, Levenberg-Marquardt, and dogleg each do with that system.</p>
+  <p class="meta">About 60 min · No new pages</p>
+</header>
+
+<div class="box key"><h3>The week in one paragraph</h3><p>The posterior over all poses and landmarks is a product of factors, one per prior or measurement, each touching only a few unknowns; the factor graph draws that product. With Gaussian noise, the negative logarithm of the product is a sum of squared errors, each measured in standard deviations, so the most probable state is the minimizer of a nonlinear least-squares cost. Linearizing every measurement function at the current estimate and whitening gives \(\norm{\mathbf{A}\boldsymbol{\delta}-\mathbf{b}}^2\), which is solved exactly by factoring \(\mathbf{A}\T\mathbf{A}\) (Cholesky) or \(\mathbf{A}\) (QR) into a triangle. Nonlinear solvers repeat that solve. Steepest descent uses only the gradient, Gauss-Newton takes the full linear solution, and Levenberg-Marquardt and Powell's dogleg limit the step to a region where the linear model can be trusted.</p></div>
+
+<h3>1. Formula sheet</h3>
+<div class="tbl"><table>
+  <tr><th>What it is</th><th>Formula</th><th>Where</th></tr>
+  <tr><td>MAP estimate as a product of factors</td><td>\(\mathbf{x}^{\text{MAP}}=\argmax_{\mathbf{x}}\,p(\mathbf{z}\mid\mathbf{x})\,p(\mathbf{x})=\argmax_{\mathbf{x}}\prod_i\phi_i(\mathbf{x}_i)\)</td><td>(1.6), (1.8) · §1.2.1, pp. 26–27 · <a href="#d7">Day 1</a>, <a href="#d8">Day 2</a></td></tr>
+  <tr><td>Squared Mahalanobis distance</td><td>\(\norm{\mathbf{e}}^2_{\boldsymbol{\Sigma}}=\mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e}\)</td><td>(1.10) · §1.2.2, p. 27 · <a href="#d8">Day 2</a></td></tr>
+  <tr><td>Nonlinear least-squares cost</td><td>\(J(\mathbf{x})=\sum_i\norm{\mathbf{z}_i-\mathbf{h}_i(\mathbf{x}_i)}^2_{\boldsymbol{\Sigma}_i}\)</td><td>(1.18), (1.34) · pp. 29, 33 · <a href="#d8">Day 2</a></td></tr>
+  <tr><td>Linearization</td><td>\(\mathbf{h}_i(\mathbf{x}_i^0+\boldsymbol{\delta}_i)\approx\mathbf{h}_i(\mathbf{x}_i^0)+\mathbf{H}_i\boldsymbol{\delta}_i\)</td><td>(1.19) · §1.3.1, p. 30 · <a href="#d9">Day 3</a></td></tr>
+  <tr><td>Whitening</td><td>\(\mathbf{A}_i=\boldsymbol{\Sigma}_i^{-1/2}\mathbf{H}_i,\quad \mathbf{b}_i=\boldsymbol{\Sigma}_i^{-1/2}\bigl(\mathbf{z}_i-\mathbf{h}_i(\mathbf{x}_i^0)\bigr)\)</td><td>(1.23) · §1.3.1, p. 30 · <a href="#d9">Day 3</a></td></tr>
+  <tr><td>Normal equations and Cholesky</td><td>\(\mathbf{A}\T\mathbf{A}\,\boldsymbol{\delta}^*=\mathbf{A}\T\mathbf{b},\quad \mathbf{A}\T\mathbf{A}=\mathbf{R}\T\mathbf{R}\), then \(\mathbf{R}\T\mathbf{y}=\mathbf{A}\T\mathbf{b}\) and \(\mathbf{R}\boldsymbol{\delta}^*=\mathbf{y}\)</td><td>(1.25)–(1.28) · §1.3.3, p. 31 · <a href="#d9">Day 3</a></td></tr>
+  <tr><td>QR route</td><td>\(\norm{\mathbf{A}\boldsymbol{\delta}-\mathbf{b}}^2=\norm{\mathbf{R}\boldsymbol{\delta}-\mathbf{d}}^2+\norm{\mathbf{e}}^2\), so \(\mathbf{R}\boldsymbol{\delta}^*=\mathbf{d}\)</td><td>(1.31), (1.32) · §1.3.3, p. 32 · <a href="#d9">Day 3</a></td></tr>
+  <tr><td>Steepest descent</td><td>\(\boldsymbol{\delta}^{\text{sd}}=-\alpha\nabla J=2\alpha\,\mathbf{A}\T\mathbf{b}\)</td><td>(1.35) · §1.4.1, p. 33 · <a href="#d10">Day 4</a></td></tr>
+  <tr><td>Gauss-Newton</td><td>\(\mathbf{A}\T\mathbf{A}\,\boldsymbol{\delta}^{\text{gn}}=\mathbf{A}\T\mathbf{b}\)</td><td>(1.36) · §1.4.2, p. 34 · <a href="#d10">Day 4</a></td></tr>
+  <tr><td>Levenberg-Marquardt, and the gain ratio</td><td>\(\bigl(\mathbf{A}\T\mathbf{A}+\lambda\,\diag(\mathbf{A}\T\mathbf{A})\bigr)\boldsymbol{\delta}^{\text{lm}}=\mathbf{A}\T\mathbf{b},\quad \rho=\dfrac{J(\mathbf{x}^t)-J(\mathbf{x}^t+\boldsymbol{\delta})}{L(\mathbf{0})-L(\boldsymbol{\delta})}\)</td><td>(1.38), (1.39) · pp. 34–35 · <a href="#d11">Day 5</a></td></tr>
+</table></div>
+
+<h3>2. Mixed quiz</h3>
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A planar pose graph has 6 poses, odometry between consecutive poses, 2 loop closures, and a prior on the first pose. Every factor measures 3 numbers. What is the size of the whitened Jacobian A?</p><div class="opts"><button type="button" class="opt">8 rows, 6 columns</button><button type="button" class="opt">18 rows, 24 columns</button><button type="button" class="opt">24 rows, 18 columns</button><button type="button" class="opt">21 rows, 18 columns</button></div><p class="exp" hidden>Factors: 5 odometry + 2 loop closures + 1 prior = 8, each with 3 rows, so 24 rows. Unknowns: 6 poses × 3 = 18 columns.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A GPS-like sensor measures the absolute position of pose p4. How does it enter the factor graph?</p><div class="opts"><button type="button" class="opt">As a unary factor joined to p4 only</button><button type="button" class="opt">As a new variable node joined to p4</button><button type="button" class="opt">As a binary factor between p3 and p4</button><button type="button" class="opt">As a factor joined to every pose</button></div><p class="exp" hidden>A factor touches exactly the unknowns its measurement depends on. The measured value is a known number inside the factor, not a node.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q3. A scalar factor has error 0.3 and σ = 0.1. How much does it add to the cost (1.18)?</p><div class="opts"><button type="button" class="opt">3</button><button type="button" class="opt">9</button><button type="button" class="opt">0.09</button><button type="button" class="opt">30</button></div><p class="exp" hidden>The squared Mahalanobis distance is (0.3/0.1)² = 9: the error is three standard deviations.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q4. You double the σ assigned to one sensor. What happens to the weight of its squared errors in the cost?</p><div class="opts"><button type="button" class="opt">It doubles</button><button type="button" class="opt">It halves</button><button type="button" class="opt">It is unchanged</button><button type="button" class="opt">It drops to a quarter</button></div><p class="exp" hidden>The weight is 1/σ². Doubling σ divides it by 4, and the estimate moves toward what the other factors say.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. Two direct measurements of a scalar x: 2 with σ = 1, and 5 with σ = 0.5. After whitening, A is the column (1, 2) and b = (2, 10). What is the least-squares estimate?</p><div class="opts"><button type="button" class="opt">3.5</button><button type="button" class="opt">4.4</button><button type="button" class="opt">4.0</button><button type="button" class="opt">4.8</button></div><p class="exp" hidden>AᵀA = 1 + 4 = 5 and Aᵀb = 2 + 20 = 22, so x = 22/5 = 4.4, four fifths of the way toward the more precise measurement.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q6. Back substitution: R has rows (2, 1) and (0, 3), and d = (5, 6). What is δ* in Rδ* = d?</p><div class="opts"><button type="button" class="opt">(1.5, 2)</button><button type="button" class="opt">(2.5, 2)</button><button type="button" class="opt">(2, 1.5)</button><button type="button" class="opt">(1, 3)</button></div><p class="exp" hidden>Bottom row first: 3δ₂ = 6 gives δ₂ = 2. Then 2δ₁ + 2 = 5 gives δ₁ = 1.5.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q7. In which case is the Gauss-Newton matrix 2AᵀA exactly the Hessian of J, so that one step reaches the minimum?</p><div class="opts"><button type="button" class="opt">When the initial estimate is the odometry</button><button type="button" class="opt">When all covariances are equal</button><button type="button" class="opt">When every measurement function is linear in the state</button><button type="button" class="opt">Never</button></div><p class="exp" hidden>The dropped term contains second derivatives of the measurement functions. For linear functions they are zero, the cost is exactly quadratic, and GN is the linear solve of Day 3.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q8. One unknown, A = 3 and b = 6. What is Marquardt's step (1.38) with λ = 1?</p><div class="opts"><button type="button" class="opt">2</button><button type="button" class="opt">1.8</button><button type="button" class="opt">0.5</button><button type="button" class="opt">1</button></div><p class="exp" hidden>(A² + λA²)δ = Ab gives (9 + 9)δ = 18, so δ = 1: half the Gauss-Newton step 18/9 = 2.</p></div>
+</div>
+
+<h3>3. Pen-and-paper problems</h3>
+<ol class="probs">
+  <li><p>A planar robot has poses \(\mathbf{p}_1,\mathbf{p}_2,\mathbf{p}_3\) and sees one landmark \(\boldsymbol{\ell}\) by bearing from \(\mathbf{p}_1\) and from \(\mathbf{p}_3\). There is a prior on \(\mathbf{p}_1\), odometry between consecutive poses, and a loop closure between \(\mathbf{p}_3\) and \(\mathbf{p}_1\). Write the factorization \(\phi(\mathbf{x})\), and give the number of columns and rows of \(\mathbf{A}\).</p>
+      <details class="sol"><summary>Solution</summary><div><p>One factor per piece of information, each a function of the variables it involves:</p>
+      \[ \phi(\mathbf{x})=\phi_1(\mathbf{p}_1)\,\phi_2(\mathbf{p}_1,\mathbf{p}_2)\,\phi_3(\mathbf{p}_2,\mathbf{p}_3)\,\phi_4(\mathbf{p}_3,\mathbf{p}_1)\,\phi_5(\mathbf{p}_1,\boldsymbol{\ell})\,\phi_6(\mathbf{p}_3,\boldsymbol{\ell}). \]
+      <p>Columns: \(3\cdot3+2=11\) unknown numbers. Rows: the prior, the two odometry factors, and the loop closure measure 3 numbers each (12 rows), and each bearing measures 1, so \(\mathbf{A}\) is \(14\times11\). The graph is one unary factor on \(\mathbf{p}_1\), a triangle of pose-pose factors, and two factors reaching up to \(\boldsymbol{\ell}\).</p></div></details></li>
+  <li><p>A scalar \(x\) has a Gaussian prior with mean 1 and \(\sigma=2\). One direct measurement gives \(z=4\) with \(\sigma=1\). Find the MAP estimate by whitening and solving the normal equation, with linearization point \(x^0=0\).</p>
+      <details class="sol"><summary>Solution</summary><div><p>Both factors have Jacobian \(H=1\). Dividing each row by its \(\sigma\): the prior row is \(A_1=1/2=0.5\), \(b_1=(1-0)/2=0.5\). The measurement row is \(A_2=1\), \(b_2=4\).</p>
+      <p>\(\mathbf{A}\T\mathbf{A}=0.25+1=1.25\) and \(\mathbf{A}\T\mathbf{b}=0.25+4=4.25\), so \(\delta^*=4.25/1.25=3.4\) and \(x^{\text{MAP}}=x^0+\delta^*=3.4\).</p>
+      <p>Check with weights \(1/\sigma^2\): \((0.25\cdot1+1\cdot4)/(0.25+1)=3.4\). The estimate sits between prior and measurement, four times closer to the measurement.</p></div></details></li>
+  <li><p>A robot on a line has two unknown positions \(x_1,x_2\). Three factors, all with \(\sigma=1\): a prior \(x_1=0\), odometry \(x_2-x_1=2\), and an absolute measurement \(x_2=3\). Build \(\mathbf{A}\) and \(\mathbf{b}\), then solve by Cholesky factorization and the two substitutions. What cost is left?</p>
+      <details class="sol"><summary>Solution</summary><div>
+      \[ \mathbf{A}=\begin{bmatrix}1 & 0\\ -1 & 1\\ 0 & 1\end{bmatrix},\quad \mathbf{b}=\begin{bmatrix}0\\2\\3\end{bmatrix},\quad \mathbf{A}\T\mathbf{A}=\begin{bmatrix}2 & -1\\ -1 & 2\end{bmatrix},\quad \mathbf{A}\T\mathbf{b}=\begin{bmatrix}-2\\5\end{bmatrix}. \]
+      <p>Cholesky: \(r_{11}=\sqrt2=1.414\), \(r_{12}=-1/1.414=-0.707\), \(r_{22}=\sqrt{2-0.707^2}=\sqrt{1.5}=1.225\).</p>
+      <p>Forward, \(\mathbf{R}\T\mathbf{y}=\mathbf{A}\T\mathbf{b}\): \(y_1=-2/1.414=-1.414\), \(y_2=(5-(-0.707)(-1.414))/1.225=4/1.225=3.266\).</p>
+      <p>Back, \(\mathbf{R}\boldsymbol{\delta}^*=\mathbf{y}\): \(\delta_2=3.266/1.225=2.667\), \(\delta_1=(-1.414+0.707\cdot2.667)/1.414=0.333\).</p>
+      <p>So \(x_1=1/3\) and \(x_2=8/3\). The three residuals are \(1/3\), \((8/3-1/3)-2=1/3\), and \(8/3-3=-1/3\): the disagreement of 1 between "0 + 2" and "3" is shared equally by the three equally trusted factors. The cost left is \(3\cdot(1/3)^2=1/3\).</p></div></details></li>
+  <li><p>A robot is on the \(x\)-axis at unknown position \(x\). A beacon at \((0,3)\) reports range \(z=5\) with \(\sigma=1\), so \(h(x)=\sqrt{x^2+9}\) and the true answer is \(x=4\). Start at \(x^0=1\). (a) Compute \(A\), \(b\), and \(J\). (b) Take one Gauss-Newton step and evaluate \(J\). (c) Take instead one Levenberg step (1.37) with \(\lambda=0.1\). (d) Compute the gain ratio of the step in (c).</p>
+      <details class="sol"><summary>Solution</summary><div><p>(a) \(dh/dx=x/\sqrt{x^2+9}\). At \(x=1\): \(A=1/\sqrt{10}=0.316\), \(b=5-\sqrt{10}=1.838\), \(J=b^2=3.377\).</p>
+      <p>(b) \(\delta^{\text{gn}}=b/A=5.811\), so \(x=6.811\). There \(h=\sqrt{46.39+9}=7.443\) and \(J=(5-7.443)^2=5.97\). The cost went up: the slope of \(h\) at \(x=1\) is only 0.316, but it grows toward 1 as \(x\) grows, so the straight-line model demanded far too long a step.</p>
+      <p>(c) \(A^2=0.1\), so \(\delta^{\text{lm}}=Ab/(A^2+\lambda)=0.581/0.2=2.906\), and \(x=3.906\). There \(h=\sqrt{15.25+9}=4.925\) and \(J=(5-4.925)^2=0.006\). Lower than 3.377: accept, and reduce \(\lambda\).</p>
+      <p>(d) Predicted: \(L(0)-L(\delta)=b^2-(A\delta-b)^2=3.377-(0.919-1.838)^2=3.377-0.844=2.533\). Actual: \(3.377-0.006=3.371\). So \(\rho=3.371/2.533=1.33\), above 0.75: the model was pessimistic, and a trust-region method would enlarge its region.</p></div></details></li>
+</ol>
+
+<div class="box ok"><h4>You are ready for next week if you can</h4><ul>
+<li>Draw the factor graph of a small SLAM problem and write the posterior as a product of factors.</li>
+<li>Explain why Gaussian factors turn MAP inference into the cost (1.18).</li>
+<li>Linearize and whiten a factor, and say which columns of \(\mathbf{A}\) its rows occupy.</li>
+<li>Solve a 2- or 3-unknown normal equation by Cholesky factorization and substitution.</li>
+<li>State the SD, GN, and LM steps, and explain what \(\lambda\) and the trust region are for.</li>
+</ul>
+<p>Next week looks inside \(\mathbf{A}\), \(\mathbf{A}\T\mathbf{A}\), and \(\mathbf{R}\): why they are sparse, how the order of the variables decides how sparse \(\mathbf{R}\) stays, and how the factorization can be updated as new measurements arrive.</p></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 1, §1.1–§1.4, pp. 19–35.</li>
+<li>Nocedal and Wright, <em>Numerical Optimization</em>, 2006 (Gauss-Newton, Levenberg-Marquardt, dogleg, gain ratio).</li>
+<li>Golub and Van Loan, <em>Matrix Computations</em>, 2013 (Cholesky and QR).</li>
+</ol></div>
+<p class="next"></p>
+</section>

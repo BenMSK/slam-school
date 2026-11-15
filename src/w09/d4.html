@@ -1,0 +1,114 @@
+<section class="day" data-day="52" id="d52" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 9 · Day 4</span>
+  <h2>The semidefinite relaxation of pose-graph optimization and its certificate</h2>
+  <p class="lead">After today you can write the semidefinite relaxation of rotation-only pose-graph optimization, derive the dual of a QCQP, and use the certificate matrix to prove that a candidate solution is globally optimal.</p>
+  <p class="meta">About 60 min · Read §6.1.2.2 from "Forming the Relaxation" to Theorem 6.1, pp. 160–161 (2 pages) · Needs Week 9 Day 3</p>
+</header>
+
+<div class="box read"><h4>Read first: §6.1.2.2 "Forming the Relaxation" and Theorem 6.1, pp. 160–161</h4>
+<p>Only two pages today, because the lesson adds the duality theory the book leaves out. While you read, look for:</p>
+<ul>
+<li>The two relaxation steps: from \(\SO(d)\) to \(\operatorname{O}(d)\), then from \(\mathbf{R}\T\mathbf{R}\) to \(\mathbf{Z}\) (p. 160).</li>
+<li>The chain of three optimal values after Problem 6.3 (p. 160).</li>
+<li>The condition in Theorem 6.1 under which the relaxation is exact (p. 161).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Shor's relaxation of Problem 6.2 is an SDP in a matrix \(\mathbf{Z}\) that stands for \(\mathbf{R}\T\mathbf{R}\). Its dual hands you a test: from any candidate \(\hat{\mathbf{R}}\) build a matrix \(\mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda}\); if \(\mathbf{S}\) has no negative eigenvalue, \(\hat{\mathbf{R}}\) is a global optimum. Theorem 6.1 says that for small enough noise the test succeeds at the true optimum.</p></div>
+
+<h3>1. Two relaxation steps</h3>
+<p>Yesterday ended with Problem 6.2, \(\min\tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\) over \(\mathbf{R}=(\mathbf{R}_1\ \cdots\ \mathbf{R}_n)\in\SO(d)^n\). The book relaxes it twice. <span class="src">§6.1.2.2 · p. 160</span></p>
+<p><strong>Step 1: allow reflections.</strong> A rotation is an orthogonal matrix, \(\mathbf{R}_i\T\mathbf{R}_i=\mathbf{I}_d\), with determinant \(+1\). The <strong>orthogonal group</strong> \(\operatorname{O}(d)\) keeps the first condition and drops the second, so it also contains reflections (determinant \(-1\)). Orthonormality is a set of quadratic equations in the entries, so the problem over \(\operatorname{O}(d)^n\) is a QCQP with no linear terms (the book says <em>homogeneous</em>). The map \(\operatorname{BlockDiag}_{d\times d}\) of (6.19) just reads off the \(n\) diagonal blocks of a \(dn\times dn\) matrix, and the diagonal blocks of \(\mathbf{R}\T\mathbf{R}\) are \(\mathbf{R}_i\T\mathbf{R}_i\): <span class="src">eq. (6.20) · p. 160</span></p>
+\[ p^\star_{\mathrm{O}}=\min_{\mathbf{R}\in\R^{d\times dn}}\tr\bigl(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R}\bigr)\quad\text{s.t.}\quad\operatorname{BlockDiag}_{d\times d}(\mathbf{R}\T\mathbf{R})=(\mathbf{I}_d,\dots,\mathbf{I}_d). \]
+<p><strong>Step 2: lift and drop the rank.</strong> The unknown enters only through \(\mathbf{R}\T\mathbf{R}\). This is Day 2 with a matrix in place of the vector \(\mathbf{x}\): \(\mathbf{R}\T\mathbf{R}\) is symmetric, positive semidefinite, and has rank \(d\) (not 1, because \(\mathbf{R}\) has \(d\) rows). Call it \(\mathbf{Z}\), keep "positive semidefinite", delete "rank \(d\)": <span class="src">Problem 6.3, eq. (6.21) · p. 160</span></p>
+\[ p^\star_{\text{SDP}}=\min_{\mathbf{Z}\succeq0}\tr\bigl(\tilde{\mathbf{Q}}\mathbf{Z}\bigr)\quad\text{s.t.}\quad\operatorname{BlockDiag}_{d\times d}(\mathbf{Z})=(\mathbf{I}_d,\dots,\mathbf{I}_d). \]
+<figure class="fig"><svg viewBox="0 0 600 220" role="img" aria-label="Three nested boxes. The innermost is the set of rotations in SO(d) to the n, the real problem, with minimum p star MLE. Around it is the set of Z equal to R transpose R with R in O(d) to the n, of rank d, with minimum p star O. The outermost is the convex set of all positive semidefinite Z with identity diagonal blocks, with minimum p star SDP. The three minima are ordered: p star SDP is at most p star O, which is at most p star MLE.">
+  <rect x="20" y="20" width="400" height="182" rx="16" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="2"/>
+  <text x="36" y="46" font-size="12" fill="var(--ink)">Z ⪰ 0, diagonal blocks I: convex</text>
+  <rect x="50" y="62" width="340" height="126" rx="14" fill="var(--c2-soft)" stroke="var(--c2)" stroke-width="2"/>
+  <text x="66" y="88" font-size="12" fill="var(--ink)">Z = RᵀR with R in O(d)ⁿ: rank d</text>
+  <rect x="80" y="106" width="280" height="66" rx="12" fill="var(--c1-soft)" stroke="var(--c1)" stroke-width="2"/>
+  <text x="96" y="134" font-size="12" fill="var(--ink)">Z = RᵀR with R in SO(d)ⁿ:</text>
+  <text x="96" y="152" font-size="12" fill="var(--ink)">the real problem</text>
+  <text x="440" y="46" font-size="13" fill="var(--ink)">min = p*<tspan baseline-shift="sub" font-size="10">SDP</tspan></text>
+  <text x="470" y="69" font-size="13" fill="var(--muted)">≤</text>
+  <text x="440" y="92" font-size="13" fill="var(--ink)">min = p*<tspan baseline-shift="sub" font-size="10">O</tspan></text>
+  <text x="470" y="115" font-size="13" fill="var(--muted)">≤</text>
+  <text x="440" y="138" font-size="13" fill="var(--ink)">min = p*<tspan baseline-shift="sub" font-size="10">MLE</tspan></text>
+</svg><figcaption>Each step enlarges the feasible set, so each minimum can only go down. Only the outermost set is convex.</figcaption></figure>
+<p>That is the chain \(p^\star_{\text{MLE}}\ge p^\star_{\mathrm{O}}\ge p^\star_{\text{SDP}}\). And as on Day 2: if the SDP minimizer happens to be \(\mathbf{Z}^\star=\mathbf{R}^{\star\mathsf{T}}\mathbf{R}^\star\) with \(\mathbf{R}^\star\in\SO(d)^n\), then \(\mathbf{R}^\star\) is a global optimum of Problem 6.2. <span class="src">pp. 160–161</span></p>
+<p>It helps to see what \(\mathbf{Z}\) contains. Its \((i,j)\) block is \(\mathbf{R}_i\T\mathbf{R}_j\), the relative rotation between poses \(i\) and \(j\). For two planar poses with headings \(\theta_1,\theta_2\),</p>
+\[ \mathbf{Z}=\begin{bmatrix}\mathbf{I}_2 &amp; \mathbf{R}(\theta_2-\theta_1)\\ \mathbf{R}(\theta_1-\theta_2) &amp; \mathbf{I}_2\end{bmatrix}. \]
+<p>Only the difference of the headings appears. Turning the whole solution by a common rotation \(\mathbf{G}\) replaces \(\mathbf{R}\) by \(\mathbf{G}\mathbf{R}\) and leaves \(\mathbf{Z}=\mathbf{R}\T\mathbf{G}\T\mathbf{G}\mathbf{R}\) unchanged. The lifted variable stores all pairwise relative rotations and has no gauge freedom. The cost is its size: for 1000 poses in 3-D, \(\mathbf{Z}\) is \(3000\times3000\).</p>
+
+<h3>2. Lagrangian duality for a QCQP</h3>
+<p>Day 2 got the lower bound by enlarging the feasible set. There is a second route to the same bound, and it is the one that produces certificates. Take the generic problem (QCQP): minimize \(\mathbf{x}\T\mathbf{C}\mathbf{x}\) subject to \(\mathbf{x}\T\mathbf{A}_i\mathbf{x}=b_i\). Introduce one number \(\lambda_i\) per constraint, a <strong>Lagrange multiplier</strong>, and form the <strong>Lagrangian</strong></p>
+\[ L(\mathbf{x},\boldsymbol{\lambda})=\mathbf{x}\T\mathbf{C}\mathbf{x}-\sum_{i=1}^m\lambda_i\bigl(\mathbf{x}\T\mathbf{A}_i\mathbf{x}-b_i\bigr)=\mathbf{x}\T\mathbf{S}(\boldsymbol{\lambda})\,\mathbf{x}+\mathbf{b}\T\boldsymbol{\lambda},\qquad \mathbf{S}(\boldsymbol{\lambda})\triangleq\mathbf{C}-\sum_{i=1}^m\lambda_i\mathbf{A}_i . \]
+<p>Two observations do all the work.</p>
+<ul>
+<li>At any feasible \(\mathbf{x}\), the brackets are zero, so \(L(\mathbf{x},\boldsymbol{\lambda})=\mathbf{x}\T\mathbf{C}\mathbf{x}\) whatever \(\boldsymbol{\lambda}\) is.</li>
+<li>Minimize \(L\) over <em>all</em> \(\mathbf{x}\), ignoring the constraints. If \(\mathbf{S}(\boldsymbol{\lambda})\succeq0\), the quadratic term is never negative and the minimum is \(\mathbf{b}\T\boldsymbol{\lambda}\), at \(\mathbf{x}=\mathbf{0}\). If \(\mathbf{S}(\boldsymbol{\lambda})\) has a direction \(\mathbf{v}\) with \(\mathbf{v}\T\mathbf{S}\mathbf{v}\lt0\), scaling \(\mathbf{x}=s\mathbf{v}\) sends \(L\) to \(-\infty\).</li>
+</ul>
+<p>The unconstrained minimum is called the <strong>dual function</strong> \(q(\boldsymbol{\lambda})\). An unconstrained minimum is at most the value at any particular point, so for every feasible \(\mathbf{x}\): \(q(\boldsymbol{\lambda})\le L(\mathbf{x},\boldsymbol{\lambda})=\mathbf{x}\T\mathbf{C}\mathbf{x}\). Hence \(q(\boldsymbol{\lambda})\le p^\star\) for every \(\boldsymbol{\lambda}\). This is <strong>weak duality</strong>. The best such bound is the <strong>dual problem</strong>:</p>
+\[ \max_{\boldsymbol{\lambda}\in\R^m}\ \mathbf{b}\T\boldsymbol{\lambda}\quad\text{s.t.}\quad\mathbf{C}-\sum_{i=1}^m\lambda_i\mathbf{A}_i\succeq0 . \]
+<p>It is again an SDP, with only \(m\) unknowns. Doing the same construction on Shor's (SDP) gives the very same dual, so the two routes meet: \(\text{dual value}\le d^\star\le p^\star\). For a convex problem with a strictly feasible point (Slater's condition; here \(\mathbf{Z}=\mathbf{I}\) is one for Problem 6.3) the first inequality is an equality, which is called <strong>strong duality</strong>.</p>
+<p>Example: minimize \(\mathbf{x}\T\mathbf{C}\mathbf{x}\) over unit vectors. One constraint, \(\mathbf{A}=\mathbf{I}\), \(b=1\), so \(\mathbf{S}(\lambda)=\mathbf{C}-\lambda\mathbf{I}\), which is positive semidefinite exactly when \(\lambda\) is at most the smallest eigenvalue of \(\mathbf{C}\). The dual optimum is \(\lambda_{\min}(\mathbf{C})\), the same \(-1\) that the disk picture gave for \(\mathbf{C}=\begin{bmatrix}3 &amp; 2\\ 2 &amp; 0\end{bmatrix}\) on Day 2.</p>
+
+<h3>3. The certificate matrix</h3>
+<div class="box note"><h4>Filling the gap: a sufficient condition for global optimality</h4>
+<p><strong>Claim.</strong> Let \(\hat{\mathbf{x}}\) be feasible for (QCQP). If some \(\hat{\boldsymbol{\lambda}}\) gives a matrix \(\mathbf{S}=\mathbf{S}(\hat{\boldsymbol{\lambda}})\) with</p>
+\[ \text{(i)}\ \ \mathbf{S}\hat{\mathbf{x}}=\mathbf{0}\qquad\text{and}\qquad\text{(ii)}\ \ \mathbf{S}\succeq0, \]
+<p>then \(\hat{\mathbf{x}}\) is a global minimizer.</p>
+<p><strong>Proof.</strong> For any feasible \(\mathbf{x}\), using \(\mathbf{C}=\mathbf{S}+\sum_i\hat\lambda_i\mathbf{A}_i\) and the constraints,</p>
+\[ \mathbf{x}\T\mathbf{C}\mathbf{x}=\mathbf{x}\T\mathbf{S}\mathbf{x}+\sum_i\hat\lambda_i\,\mathbf{x}\T\mathbf{A}_i\mathbf{x}=\underbrace{\mathbf{x}\T\mathbf{S}\mathbf{x}}_{\ge0\text{ by (ii)}}+\mathbf{b}\T\hat{\boldsymbol{\lambda}}\ \ge\ \mathbf{b}\T\hat{\boldsymbol{\lambda}} . \]
+<p>For \(\hat{\mathbf{x}}\) itself the first term is zero by (i), so \(\hat{\mathbf{x}}\T\mathbf{C}\hat{\mathbf{x}}=\mathbf{b}\T\hat{\boldsymbol{\lambda}}\). No feasible point costs less than \(\hat{\mathbf{x}}\).</p>
+<p><strong>Finding \(\hat{\boldsymbol{\lambda}}\).</strong> Condition (i) reads \(\sum_i\lambda_i\mathbf{A}_i\hat{\mathbf{x}}=\mathbf{C}\hat{\mathbf{x}}\): linear equations in \(\boldsymbol{\lambda}\). It says the gradient of the Lagrangian, \(2\mathbf{S}\mathbf{x}\), vanishes at \(\hat{\mathbf{x}}\), which is the first-order condition that a local solver's output satisfies. So: take the local solution, solve (i) for the multipliers, and test (ii) by computing the smallest eigenvalue of \(\mathbf{S}\). Conditions (i), (ii), and feasibility are the <strong>KKT conditions</strong> of the relaxation.</p></div>
+<p>Try the test by hand on the three \(\pm1\) variables of Day 2, where \(\mathbf{A}_i\) has a single 1 at \((i,i)\), so \(\sum\lambda_i\mathbf{A}_i=\operatorname{Diag}(\boldsymbol{\lambda})\) and (i) becomes \(\lambda_i=(\mathbf{C}\hat{\mathbf{x}})_i/\hat x_i\).</p>
+<div class="tbl"><table>
+  <tr><th>Case</th><th>\(\mathbf{C}\) and candidate</th><th>Multipliers</th><th>\(\mathbf{S}=\mathbf{C}-\operatorname{Diag}(\hat{\boldsymbol{\lambda}})\)</th><th>Verdict</th></tr>
+  <tr><td>Consistent, couplings \((1,1,-1)\)</td><td>\(\begin{bmatrix}0 &amp; 1 &amp; 1\\ 1 &amp; 0 &amp; -1\\ 1 &amp; -1 &amp; 0\end{bmatrix}\), \(\hat{\mathbf{x}}=(1,-1,-1)\), cost \(-6\)</td><td>\(\mathbf{C}\hat{\mathbf{x}}=(-2,2,2)\), so \(\hat{\boldsymbol{\lambda}}=(-2,-2,-2)\)</td><td>\(\begin{bmatrix}2 &amp; 1 &amp; 1\\ 1 &amp; 2 &amp; -1\\ 1 &amp; -1 &amp; 2\end{bmatrix}=3\mathbf{I}-\hat{\mathbf{x}}\hat{\mathbf{x}}\T\), eigenvalues \(0,3,3\)</td><td>\(\mathbf{S}\succeq0\): certified. \(\mathbf{b}\T\hat{\boldsymbol{\lambda}}=-6\) equals the cost.</td></tr>
+  <tr><td>All disagree, couplings \((1,1,1)\)</td><td>\(\begin{bmatrix}0 &amp; 1 &amp; 1\\ 1 &amp; 0 &amp; 1\\ 1 &amp; 1 &amp; 0\end{bmatrix}\), \(\hat{\mathbf{x}}=(1,1,-1)\), cost \(-2\)</td><td>\(\mathbf{C}\hat{\mathbf{x}}=(0,0,2)\), so \(\hat{\boldsymbol{\lambda}}=(0,0,-2)\)</td><td>\(\begin{bmatrix}0 &amp; 1 &amp; 1\\ 1 &amp; 0 &amp; 1\\ 1 &amp; 1 &amp; 2\end{bmatrix}\); with \(\mathbf{v}=(1,-1,0)\), \(\mathbf{v}\T\mathbf{S}\mathbf{v}=-2\)</td><td>Not positive semidefinite: no certificate, although \(\hat{\mathbf{x}}\) is in fact optimal. The relaxation is not tight (\(d^\star=-3\)).</td></tr>
+</table></div>
+<p>The second row shows the one-sidedness of the test. Passing proves optimality. Failing proves nothing.</p>
+<p><strong>For pose graphs.</strong> In (6.20) the constraints are the \(d\times d\) matrix equations \(\mathbf{R}_i\T\mathbf{R}_i=\mathbf{I}_d\). Each gets a symmetric \(d\times d\) block of multipliers \(\boldsymbol{\Lambda}_i\), and \(\boldsymbol{\Lambda}=\operatorname{Diag}(\boldsymbol{\Lambda}_1,\dots,\boldsymbol{\Lambda}_n)\) plays the role of \(\sum\lambda_i\mathbf{A}_i\). The <strong>certificate matrix</strong> is</p>
+\[ \mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda},\qquad\boldsymbol{\Lambda}_i=\bigl(\tilde{\mathbf{Q}}\hat{\mathbf{R}}\T\hat{\mathbf{R}}\bigr)_{ii}\ \ \text{(the } i\text{th diagonal block, symmetrized)} . \]
+<p>The formula for \(\boldsymbol{\Lambda}_i\) is condition (i), \(\mathbf{S}\hat{\mathbf{R}}\T=\mathbf{0}\): block \(i\) of \(\tilde{\mathbf{Q}}\hat{\mathbf{R}}\T\) must equal \(\boldsymbol{\Lambda}_i\hat{\mathbf{R}}_i\T\), and multiplying on the right by \(\hat{\mathbf{R}}_i\) isolates \(\boldsymbol{\Lambda}_i\). The proof is the same as above with traces: for any feasible \(\mathbf{Z}\), \(\tr(\tilde{\mathbf{Q}}\mathbf{Z})=\tr(\mathbf{S}\mathbf{Z})+\tr(\boldsymbol{\Lambda}\mathbf{Z})\ge\tr(\boldsymbol{\Lambda})\), because \(\tr(\mathbf{S}\mathbf{Z})\ge0\) for two positive semidefinite matrices and \(\tr(\boldsymbol{\Lambda}\mathbf{Z})=\sum_i\tr(\boldsymbol{\Lambda}_i\mathbf{Z}_{ii})=\tr(\boldsymbol{\Lambda})\). At \(\hat{\mathbf{R}}\) the cost equals \(\tr(\boldsymbol{\Lambda})\). So if \(\mathbf{S}\succeq0\), then \(p^\star_{\text{SDP}}=\tr(\tilde{\mathbf{Q}}\hat{\mathbf{R}}\T\hat{\mathbf{R}})\), and \(\hat{\mathbf{R}}\) is optimal for all three problems of section 1 at once.</p>
+<p>In the plane with rotations only, the blocks come out as multiples of the identity, \(\boldsymbol{\Lambda}_i=\lambda_i\mathbf{I}_2\) with</p>
+\[ \lambda_i=\sum_{\text{edges } e \text{ at pose } i}\kappa_e\,(1-\cos r_e), \]
+<p>where \(r_e\) is the edge's angular residual from Day 1. Each pose's multiplier adds up the misfit of the edges that touch it. A pose whose two edges have residuals 60° and 90° (\(\kappa=1\)) gets \(\lambda_i=0.5+1=1.5\).</p>
+
+<h3>4. Try the test, and when it is guaranteed to pass</h3>
+<p>The widget runs gradient descent on the headings of the Day 1 graph, builds \(\mathbf{S}\) at the point where it stops, and plots its 20 eigenvalues.</p>
+<div class="viz" data-viz="w09_cert"></div>
+<p class="cap">Notice that the first run (cost 11.595) has \(\lambda_{\min}(\mathbf{S})=-0.738\): no certificate. Press "New start": cost 0.091, and the smallest eigenvalue is 0.000, a pair of zeros with everything else positive: certified. Now raise the noise, pressing "New start" a few times at each level. Up to 75° some start always earns the certificate. At 80° and above none does: there the relaxation is no longer tight.</p>
+<p>The book's guarantee for when the relaxation is tight is Theorem 6.1. Let \(\bar{\mathbf{Q}}\) be the data matrix built from the true, noise-free relative poses. There is a constant \(\beta\gt0\), depending on \(\bar{\mathbf{Q}}\), such that if \(\norm{\tilde{\mathbf{Q}}-\bar{\mathbf{Q}}}_2\lt\beta\), then Problem 6.3 has a unique solution \(\mathbf{Z}^\star=\mathbf{R}^{\star\mathsf{T}}\mathbf{R}^\star\), where \(\mathbf{R}^\star\in\SO(d)^n\) is a global minimizer of Problem 6.2. <span class="src">Theorem 6.1 · p. 161</span> The norm is the spectral norm, the largest singular value, so the condition says "the noise has not moved the data matrix much". The global minimizer of the full Problem 6.1 then follows from (6.16).</p>
+<div class="box tip"><h4>Intuition: why small noise is enough</h4><p>This is the idea, not the proof (the book refers to the SE-Sync paper for that). With perfect measurements the true rotations have cost 0, the lowest any sum of squares can go. All multipliers are zero, so \(\mathbf{S}=\bar{\mathbf{Q}}\), which is positive semidefinite: the certificate holds. For a connected graph \(\bar{\mathbf{Q}}\) has exactly \(d\) zero eigenvalues, and the rest are strictly positive. Add a little noise. The optimum and \(\mathbf{S}\) move a little. The \(d\) zeros stay at zero, because \(\mathbf{S}\hat{\mathbf{R}}\T=\mathbf{0}\) by construction, and the positive eigenvalues cannot jump below zero. So \(\mathbf{S}\) stays positive semidefinite until the noise is large enough to close that gap. You saw the pair of zeros (\(d=2\)) and the gap in the widget.</p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"A negative eigenvalue of S proves the solution is a bad local minimum."</strong> It proves only that this test cannot certify it. The solution may be suboptimal, or optimal for a problem whose relaxation is not tight.</li>
+<li><strong>"S should be positive definite."</strong> It never is: \(\mathbf{S}\hat{\mathbf{R}}\T=\mathbf{0}\) gives it at least \(d\) zero eigenvalues. The test is \(\lambda_{\min}(\mathbf{S})\ge0\), in practice "not below a small negative tolerance".</li>
+<li><strong>"The SDP optimizes over rotations."</strong> It optimizes over \(\mathbf{Z}\), a table of would-be relative rotations. Only when \(\mathbf{Z}^\star\) has rank \(d\) do actual rotations come out of it.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A pose graph has 100 poses in 3-D. How large is the matrix Z of Problem 6.3?</p><div class="opts"><button type="button" class="opt">100 × 100</button><button type="button" class="opt">300 × 300</button><button type="button" class="opt">600 × 600</button><button type="button" class="opt">3 × 300</button></div><p class="exp" hidden>Z stands for RᵀR with R of size d × dn = 3 × 300, so Z is dn × dn = 300 × 300.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. Why is p*_O never larger than p*_MLE?</p><div class="opts"><button type="button" class="opt">Reflections always fit the data better</button><button type="button" class="opt">The O(d) problem has a different objective</button><button type="button" class="opt">O(d) is convex</button><button type="button" class="opt">Every rotation is an orthogonal matrix, so the O(d) problem minimizes the same cost over a larger set</button></div><p class="exp" hidden>SO(d) is a subset of O(d). A minimum over a superset is at most the minimum over the subset. O(d) is not convex; convexity appears only after the lift.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. In a planar rotation-only pose graph with κ = 1, a pose has three edges with residuals 0°, 60°, and 180°. What is its multiplier λ_i?</p><div class="opts"><button type="button" class="opt">2.5</button><button type="button" class="opt">1.5</button><button type="button" class="opt">0.5</button><button type="button" class="opt">3</button></div><p class="exp" hidden>λ_i = (1 − cos 0°) + (1 − cos 60°) + (1 − cos 180°) = 0 + 0.5 + 2 = 2.5.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. A local solver stops at R̂. You build S and find λmin(S) = −0.7. What follows?</p><div class="opts"><button type="button" class="opt">R̂ is not a local minimum</button><button type="button" class="opt">R̂ is a global minimum</button><button type="button" class="opt">Nothing certain: R̂ may be suboptimal, or the relaxation may not be tight</button><button type="button" class="opt">The measurements contain outliers</button></div><p class="exp" hidden>The condition S ⪰ 0 is sufficient for optimality, not necessary. When it fails you have no certificate, and you cannot tell which of the two reasons applies without more work (Day 5).</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Relax \(\SO(d)\) to \(\operatorname{O}(d)\), then replace \(\mathbf{R}\T\mathbf{R}\) by a positive semidefinite \(\mathbf{Z}\) with identity diagonal blocks: Problem 6.3, with \(p^\star_{\text{MLE}}\ge p^\star_{\mathrm{O}}\ge p^\star_{\text{SDP}}\).</li>
+<li>The Lagrangian of a QCQP is \(\mathbf{x}\T\mathbf{S}(\boldsymbol{\lambda})\mathbf{x}+\mathbf{b}\T\boldsymbol{\lambda}\); its dual maximizes \(\mathbf{b}\T\boldsymbol{\lambda}\) subject to \(\mathbf{S}(\boldsymbol{\lambda})\succeq0\) and always bounds \(p^\star\) from below.</li>
+<li>If a feasible candidate has multipliers with \(\mathbf{S}\hat{\mathbf{x}}=\mathbf{0}\) and \(\mathbf{S}\succeq0\), it is globally optimal. For PGO, \(\mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda}\) with \(\boldsymbol{\Lambda}_i=(\tilde{\mathbf{Q}}\hat{\mathbf{R}}\T\hat{\mathbf{R}})_{ii}\).</li>
+<li>The test is one-sided: passing proves optimality, failing proves nothing.</li>
+<li>Theorem 6.1: for noise below a graph-dependent threshold the relaxation is exact and its unique solution is \(\mathbf{R}^{\star\mathsf{T}}\mathbf{R}^\star\).</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §6.1.2.2 "Forming the Relaxation", pp. 160–161, equations (6.19)–(6.21), Problem 6.3, Theorem 6.1.</li>
+<li>Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004: the Lagrangian, weak and strong duality, Slater's condition, the KKT conditions, and the dual of a QCQP.</li>
+<li>Rosen, Carlone, Bandeira, Leonard, <em>SE-Sync: A certifiably correct algorithm for synchronization over the special Euclidean group</em>, 2019: the certificate matrix \(\mathbf{S}=\tilde{\mathbf{Q}}-\boldsymbol{\Lambda}\) and the proof of Theorem 6.1. The certificate matrix does not appear in these pages of the book.</li>
+</ol></div>
+<p class="next"></p>
+</section>

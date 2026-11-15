@@ -1,0 +1,136 @@
+<section class="day" data-day="87" id="d87" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 15 · Day 3</span>
+  <h2>The front-end: event representations, indirect and direct methods</h2>
+  <p class="lead">After today you can build an event frame, a time surface, and a voxel grid from a packet of events, and explain how indirect, direct, and learned front-ends turn events into poses and a map.</p>
+  <p class="meta">About 60 min · Read §10.4, pp. 289–292 (4 pages) · Needs Week 15 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §10.4, pp. 289–292</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>What the front-end receives and what it outputs (p. 289). It is not quite the definition you met in Week 1.</li>
+<li>Why "each event corresponds to a different camera pose", and the two prices paid for converting events into arrays (p. 290).</li>
+<li>Why it is "natural to track features rather than to match them" (p. 291).</li>
+<li>What an image of warped events is, and what "estimating motion by undoing it" means (p. 292).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>A single event is four numbers and may be noise, so a front-end must combine thousands of them. It makes three design choices: how to hold the events (the representation), whether to reduce them to features or use them all (indirect or direct), and whether the processing is designed or learned. Every choice trades the sensor's speed and sparsity against the convenience of mature image-based tools.</p></div>
+
+<h3>1. What the front-end does</h3>
+<p>In this chapter the <strong>front-end</strong> takes the raw events (and calibration) and outputs camera poses and a scene map. The <strong>back-end</strong> then refines both, runs more slowly, and can feed its result back to reduce drift. <span class="src">§10.4 · p. 289</span> In <a href="#d1">Week 1 · Day 1</a> the front-end handed the back-end pseudo-measurements; here it hands over a first full estimate. The split is the same idea: fast and rough first, slow and careful second.</p>
+<figure class="fig"><svg viewBox="0 0 600 212" role="img" aria-label="Block diagram. Events enter a front-end. Inside it, a representation step feeds either an indirect branch, which extracts features and then uses geometry, or a direct branch, which aligns all events. Both produce poses and an edge map as a first estimate. A back-end refines them and sends corrections back to the front-end.">
+  <defs><marker id="w15ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="118" y="10" width="322" height="168" rx="14" fill="none" stroke="var(--line2)" stroke-dasharray="5 4"/>
+  <text x="130" y="30" font-size="12" font-weight="700" fill="var(--muted)">Front-end</text>
+  <rect x="8" y="75" width="88" height="50" rx="10" fill="var(--c3-soft)" stroke="var(--c3)"/>
+  <text x="52" y="97" text-anchor="middle" font-size="13" fill="var(--ink)">Events</text>
+  <text x="52" y="114" text-anchor="middle" font-size="11" fill="var(--muted)">(x, t, p)</text>
+  <rect x="130" y="75" width="122" height="50" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="191" y="97" text-anchor="middle" font-size="13" fill="var(--ink)">Representation</text>
+  <text x="191" y="114" text-anchor="middle" font-size="11" fill="var(--muted)">arrays, or raw</text>
+  <rect x="288" y="32" width="140" height="52" rx="10" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="358" y="55" text-anchor="middle" font-size="13" fill="var(--ink)">Indirect</text>
+  <text x="358" y="72" text-anchor="middle" font-size="11" fill="var(--muted)">features → geometry</text>
+  <rect x="288" y="116" width="140" height="52" rx="10" fill="var(--c1-soft)" stroke="var(--c1)"/>
+  <text x="358" y="139" text-anchor="middle" font-size="13" fill="var(--ink)">Direct</text>
+  <text x="358" y="156" text-anchor="middle" font-size="11" fill="var(--muted)">align all events</text>
+  <rect x="462" y="75" width="130" height="50" rx="10" fill="var(--surface)" stroke="var(--line2)"/>
+  <text x="527" y="97" text-anchor="middle" font-size="12" fill="var(--ink)">Poses + edge map</text>
+  <text x="527" y="114" text-anchor="middle" font-size="11" fill="var(--muted)">first estimate</text>
+  <rect x="462" y="160" width="130" height="40" rx="10" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="527" y="185" text-anchor="middle" font-size="12" fill="var(--ink)">Back-end refines</text>
+  <line x1="96" y1="100" x2="127" y2="100" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w15ar3)"/>
+  <line x1="252" y1="90" x2="285" y2="64" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w15ar3)"/>
+  <line x1="252" y1="110" x2="285" y2="136" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w15ar3)"/>
+  <line x1="428" y1="64" x2="459" y2="88" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w15ar3)"/>
+  <line x1="428" y1="136" x2="459" y2="112" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w15ar3)"/>
+  <line x1="527" y1="125" x2="527" y2="157" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w15ar3)"/>
+  <path d="M462 190 H250 V181" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#w15ar3)"/>
+  <text x="356" y="206" text-anchor="middle" font-size="11" fill="var(--muted)">corrections fed back</text>
+</svg><figcaption>The parts of an event-based SLAM system as §10.4 and §10.5 describe them. Today covers the dashed box.</figcaption></figure>
+<p>With constant lighting, events come from moving contours, so the problem is posed in terms of scene edges. And since one event carries so little, thousands or millions are needed for a reliable pose or map. <span class="src">§10.4 · p. 289</span></p>
+
+<h3>2. Event representations</h3>
+<p>In an image, all pixels share one timestamp and therefore one camera pose. That shared pose is the assumption on which classical multi-view geometry rests. Events break it: each has its own microsecond timestamp, so each belongs to a slightly different pose. <span class="src">§10.4.1 · p. 290</span></p>
+<p>Many methods nevertheless convert events into an array first, to reuse mature image tools or to feed a neural network. The book warns of two prices: <strong>quantization</strong> (events with similar timestamps are lumped together) and <strong>loss of sparsity</strong> (the array is mostly zeros where nothing happened). It names event images, time surfaces, and voxel grids, and sends you to a survey for the definitions. <span class="src">§10.4.1 · p. 290</span></p>
+<div class="box note"><h4>Filling the gap: three representations, defined</h4>
+<p>Take the events \(e_k = (\mathbf{x}_k, t_k, p_k)\), \(k = 1, \dots, N_e\), that fall in a window from \(t_0\) to \(t_0 + \Delta\).</p>
+<p><strong>Event frame</strong> (event image). Add the polarities that landed on each pixel:</p>
+\[ F(\mathbf{x}) = \sum_{k \,:\, \mathbf{x}_k = \mathbf{x}} p_k . \]
+<p>A variant counts events and ignores polarity. Either way, all timing inside the window is gone.</p>
+<p><strong>Time surface.</strong> For each pixel, store how recently it fired. With \(t_\text{last}(\mathbf{x})\) the time of the pixel's latest event up to now, and a decay constant \(\tau\),</p>
+\[ T(\mathbf{x}, t) = \exp\!\left( -\frac{t - t_\text{last}(\mathbf{x})}{\tau} \right), \]
+<p>and \(T = 0\) where no event has occurred. A pixel that just fired has \(T = 1\); the value fades as the event ages.</p>
+<p><strong>Voxel grid.</strong> Cut the window into \(B\) time bins and let each event vote for its two nearest bins, with weights that depend linearly on its time. Rescale the event time to \(t^*_k = (B-1)(t_k - t_0)/\Delta\), which runs from 0 to \(B-1\). Then for bin \(b = 0, \dots, B-1\)</p>
+\[ V(\mathbf{x}, b) = \sum_{k \,:\, \mathbf{x}_k = \mathbf{x}} p_k \, \max\!\left(0,\; 1 - |b - t^*_k|\right). \]
+<p><strong>A worked example.</strong> One pixel receives three events in a 20 ms window: \(+1\) at 2 ms, \(+1\) at 5 ms, \(-1\) at 16 ms. Use \(B = 3\) bins (centred at 0, 10, 20 ms) and \(\tau = 10\) ms, and evaluate at \(t = 20\) ms.</p>
+<ul>
+<li>Event frame: \(1 + 1 - 1 = 1\).</li>
+<li>Time surface: the last event is 4 ms old, so \(T = e^{-4/10} = 0.67\).</li>
+<li>Voxel grid: the rescaled times are \(t^* = 0.2,\ 0.5,\ 1.6\). The first event gives 0.8 to bin 0 and 0.2 to bin 1. The second gives 0.5 and 0.5. The third gives \(-0.4\) to bin 1 and \(-0.6\) to bin 2. Totals: \(V = (1.3,\ 0.3,\ -0.6)\).</li>
+</ul>
+<p>The three voxel values add up to 1, the event frame, because each event's two weights sum to one. The voxel grid is an event frame with its time axis partly restored.</p></div>
+<p>Try it: the bar from Day 1 again. Lengthen the window to 50 ms, then move "Now" and the decay.</p>
+<div class="viz" data-viz="w15_repr"></div>
+<p class="cap">Notice that with a 20 ms window (140 events) the event frame shows each edge smeared over about 10 pixels, the distance the bar moved in that time. With a 50 ms window ending at 60 ms, 17 pixels have received both ON and OFF events and 14 of them sum to exactly zero: the event frame is blank where the whole bar passed. The voxel grid keeps the two polarities in different time bins. The time surface is a ramp that fades behind each edge, so it shows which way the edge is going.</p>
+<div class="tbl"><table>
+  <tr><th>Representation</th><th>Stored per pixel</th><th>Timing kept</th><th>Example of use in the book</th></tr>
+  <tr><td>Event frame</td><td>One number: sum or count</td><td>None inside the window</td><td>Reusing frame-based feature detectors <span class="src">§10.5 · p. 293</span></td></tr>
+  <tr><td>Time surface</td><td>One number: recency of the last event</td><td>Time of the last event only</td><td>ESVO: stereo matching on time-surface patches <span class="src">Table 10.1 · p. 295</span></td></tr>
+  <tr><td>Voxel grid</td><td>\(B\) numbers</td><td>To about \(\Delta/(B-1)\)</td><td>Common input to neural networks; DEVO <span class="src">p. 297, Table 10.1</span></td></tr>
+  <tr><td>Raw events</td><td>Nothing is converted</td><td>All of it</td><td>EVO's mapping module <span class="src">§10.4.1 · p. 290</span></td></tr>
+</table></div>
+<p>One system can mix them: EVO maps with raw events and tracks the camera with edge-like event images. The book's ideal is a representation that keeps the speed and sparsity of the sensor, and it says plainly that this is still open research. <span class="src">§10.4.1 · p. 290</span></p>
+<p>A number shows why quantization matters. Suppose the camera turns at 300° per second (5.24 rad/s) and its focal length is 200 pixels. Near the image centre the picture then slides at about \(200 \times 5.24 \approx 1050\) pixels per second. An event frame over 10 ms smears every edge across 10 pixels, exactly the motion blur the sensor was built to avoid.</p>
+
+<h3>3. Indirect methods</h3>
+<p><strong>Indirect methods</strong> work in two steps. They first extract and track features in the events (points, lines, or other primitives), then hand those to classical geometric SLAM. Features compress the stream into a few informative primitives, which saves computation. <span class="src">§10.4.2 · p. 291</span></p>
+<p>The hard part is data association. One event is too little, and too dependent on the motion, to be matched by appearance. The sensor offers a way out: events arrive almost continuously, so a feature has barely moved when its next events arrive. Association can be made by closeness in pixel position and time, and it becomes natural to <strong>track</strong> a feature from moment to moment instead of <strong>matching</strong> it between two distant views.</p>
+<p>The rest is the toolbox of Weeks 11 and 12. Camera tracking aligns features with a known map by minimizing the reprojection error (<a href="#d67">Week 12 · Day 1</a>), and the 3D structure comes from triangulating corresponding features from known poses (<a href="#d65">Week 11 · Day 5</a>). The weak link is the feature step: event features are less mature than image features because of noise, sparsity, asynchrony, and motion dependence. That limits accuracy, and some systems add grayscale images or an IMU to compensate. <span class="src">§10.4.2 · p. 291</span></p>
+
+<h3>4. Direct methods</h3>
+<p><strong>Direct methods</strong> use all events, not only those that fit the definition of a feature. They align the events with a map, with an image, or with other events, in one step: the motion or scene parameters are found by optimizing an objective such as a photometric error. If the event rate exceeds what the computer can handle, events are denoised or subsampled first. <span class="src">§10.4.3 · p. 291</span></p>
+<p>Direct methods lean on the near-continuity of the data. Since there is no blind time, the pose changes only a little from one update to the next, so each update can start from the previous pose and compute a small increment. <span class="src">§10.4.3 · p. 292</span></p>
+<p>The most accurate subclass, according to the book, estimates motion by <strong>event alignment</strong>. The idea is to estimate the motion by undoing it. Guess the motion; move every event back along that motion to where it would have been at one reference time; add up the moved events per pixel. The result is the <strong>image of warped events (IWE)</strong>. If the guess is right, events from the same edge pile onto the same pixels and the IWE is sharp. If it is wrong, the IWE is blurred. Searching for the sharpest IWE is called <strong>contrast maximization (CMax)</strong>, and sharpness can be scored by variance, gradient magnitude, or other measures. Tomorrow you will run it. <span class="src">§10.4.3 · p. 292</span></p>
+<p>Data association in direct methods is implicit and soft: events are associated because they land near each other on the pixel grid. <span class="src">§10.4.3 · p. 292</span></p>
+
+<h3>5. Designed or learned</h3>
+<p>Most event-based SLAM so far is <strong>model-based</strong>: hand-designed from the sensor's operating principle and the geometry of the problem. <strong>Learning-based</strong> methods use artificial neural networks instead, either on image-like representations or directly on events with <strong>spiking neural networks</strong>. <span class="src">§10.4.4 · p. 292</span></p>
+<div class="tbl"><table>
+  <tr><th>Training signal</th><th>What it needs</th><th>Difficulty</th></tr>
+  <tr><td>Supervised</td><td>Ground-truth poses or depth</td><td>Ground truth is hard to collect in the real world</td></tr>
+  <tr><td>Self-supervised</td><td>Only the events, or a second sensor such as grayscale frames from the same device; the loss checks temporal or photometric consistency</td><td>The loss must be designed so that a correct answer minimizes it</td></tr>
+</table></div>
+<p>A network can replace one part of the pipeline, such as feature extraction and tracking, or the whole system end to end. Learned methods cope with complicated representations and with noise without a hand-written model. In return they need large training sets, and they can fail on scenes unlike the training data, which is called <strong>domain shift</strong>. <span class="src">§10.4.4 · p. 292</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Converting events to frames costs nothing."</strong> It quantizes time and fills the array with zeros, giving up two of the sensor's advantages.</li>
+<li><strong>"A time surface is a brightness image."</strong> It stores how recently each pixel fired. A bright scene region with no motion has value zero.</li>
+<li><strong>"Direct methods have no data association."</strong> They have it implicitly: events are associated by where they land on the pixel grid.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A window runs from 0 to 30 ms and the voxel grid has B = 4 bins. An event with polarity −1 arrives at 7 ms. What does it add to the grid at its pixel?</p><div class="opts"><button type="button" class="opt">−1 to bin 0 only</button><button type="button" class="opt">−0.7 to bin 0 and −0.3 to bin 1</button><button type="button" class="opt">−0.3 to bin 0 and −0.7 to bin 1</button><button type="button" class="opt">−0.5 to bin 0 and −0.5 to bin 1</button></div><p class="exp" hidden>t* = (4 − 1) × 7 / 30 = 0.7. The weight for bin 0 is 1 − 0.7 = 0.3 and for bin 1 it is 1 − 0.3 = 0.7, both multiplied by the polarity −1.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A time surface uses τ = 20 ms. A pixel last fired 10 ms ago. What is its value?</p><div class="opts"><button type="button" class="opt">0.61</button><button type="button" class="opt">0.50</button><button type="button" class="opt">0.37</button><button type="button" class="opt">0.14</button></div><p class="exp" hidden>exp(−10/20) = exp(−0.5) = 0.61.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. During one window a pixel receives 6 ON events and then 6 OFF events. What does the polarity-summing event frame hold there?</p><div class="opts"><button type="button" class="opt">12</button><button type="button" class="opt">6</button><button type="button" class="opt">−6</button><button type="button" class="opt">0, the same as a pixel that saw nothing</button></div><p class="exp" hidden>6 − 6 = 0. A bright bar that passed completely leaves no trace. A voxel grid would hold positive values in early bins and negative values in late ones.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. Why do indirect event-based methods track features instead of matching them between distant views?</p><div class="opts"><button type="button" class="opt">Because events carry rich descriptors that make matching unnecessary</button><button type="button" class="opt">Because events arrive almost continuously, a feature moves very little between its events, so closeness in space and time identifies it</button><button type="button" class="opt">Because event cameras cannot observe the same point twice</button><button type="button" class="opt">Because tracking does not require any data association</button></div><p class="exp" hidden>Single events have no stable appearance to match, but the high temporal resolution keeps successive events of a feature close together in pixel space, so association by vicinity works.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>The front-end turns raw events into first estimates of poses and an edge map; the back-end refines them.</li>
+<li>Every event has its own timestamp and so its own camera pose. Packing events into arrays quantizes time and loses sparsity.</li>
+<li>Event frame: sum of polarities per pixel. Time surface: \(\exp(-(t - t_\text{last})/\tau)\). Voxel grid: polarity shared linearly between the two nearest of \(B\) time bins.</li>
+<li>Indirect methods extract and track features, then use classical geometry. Direct methods align all events by optimizing one objective; contrast maximization is the leading example.</li>
+<li>Learned methods handle noise and representations implicitly, but need data and can suffer from domain shift.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §10.4 "Front-end of an Event-based SLAM System", pp. 289–292; Table 10.1, p. 295.</li>
+<li>Definitions of the event representations: Gallego et al., <em>Event-based Vision: A Survey</em>, 2022 (the book's reference [361]).</li>
+<li>Time surfaces with exponential decay: Lagorce, Orchard, Galluppi, Shi, Benosman, <em>HOTS: A Hierarchy of Event-Based Time-Surfaces for Pattern Recognition</em>, 2017.</li>
+<li>The voxel grid with linear weights in time: Zhu, Yuan, Chaney, Daniilidis, <em>Unsupervised Event-based Learning of Optical Flow, Depth, and Egomotion</em>, 2019.</li>
+<li>The image-speed estimate uses the small-angle pinhole relation (shift ≈ focal length × angle), as in Hartley and Zisserman, <em>Multiple View Geometry</em>, 2004.</li>
+</ol></div>
+<p class="next"></p>
+</section>

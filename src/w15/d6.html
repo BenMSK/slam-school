@@ -1,0 +1,82 @@
+<section class="day" data-day="90" id="d90" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 15 · Review</span>
+  <h2>Week 15 review: event-based SLAM</h2>
+  <p class="lead">After today you can predict the events a brightness change produces, turn events into the common representations, run contrast maximization by hand, and evaluate a trajectory with ATE and RPE.</p>
+  <p class="meta">About 60 min · No new pages</p>
+</header>
+
+<div class="box key"><h3>The week in one paragraph</h3><p>An event camera's pixels work independently and report only changes: when a pixel's log intensity has moved by the contrast threshold \(C\) since its last event, it sends its position, the time, and the sign of the change. That gives microsecond timing, low latency, low power, and a dynamic range above 120 dB, but the data is sparse, asynchronous, noisy, and depends on the motion, because events sample \(\nabla L \cdot \mathbf{v}\). Methods are sorted by how many events they process at once, by whether they are designed or learned, and by whether they extract features (indirect) or use all events (direct). Front-ends often repack events as event frames, time surfaces, or voxel grids. Back-ends are rare and recent; the direct, event-only ones maximize contrast or minimize a per-event brightness error, so far for rotational motion. Simulators, datasets, and the ATE and RPE metrics are how the field measures itself.</p></div>
+
+<h3>1. Formula sheet</h3>
+<div class="tbl"><table>
+  <tr><th>What it is</th><th>Formula</th><th>Where</th></tr>
+  <tr><td>Event generation model</td><td>\(\Delta L = L(\mathbf{x}_k, t_k) - L(\mathbf{x}_k, t_k - \Delta t_k) = p_k C\), event \(e_k = (\mathbf{x}_k, t_k, p_k)\)</td><td>(10.1), §10.1.1, p. 283 · <a href="#d85">Day 1</a></td></tr>
+  <tr><td>Events from one change, just after a firing</td><td>\(n = \lfloor |\Delta L| / C \rfloor\), where \(\Delta L = \ln(I_\text{new}/I_\text{old})\)</td><td>App · <a href="#d85">Day 1</a></td></tr>
+  <tr><td>Dynamic range in decibels</td><td>\(20 \log_{10}(I_{\max}/I_{\min})\); 120 dB is \(10^6\), 60 dB is \(10^3\)</td><td>§10.1.2, p. 285 · <a href="#d85">Day 1</a></td></tr>
+  <tr><td>Linearized event generation model</td><td>\(-\nabla L \cdot \mathbf{v}\,\Delta t \approx p\,C\); rate \(|\nabla L \cdot \mathbf{v}|/C\); polarity \(\operatorname{sign}(-\nabla L \cdot \mathbf{v})\)</td><td>Named in §10.3, p. 287 · <a href="#d86">Day 2</a></td></tr>
+  <tr><td>Event frame</td><td>\(F(\mathbf{x}) = \sum_{k:\,\mathbf{x}_k = \mathbf{x}} p_k\)</td><td>§10.4.1, p. 290 · <a href="#d87">Day 3</a></td></tr>
+  <tr><td>Time surface</td><td>\(T(\mathbf{x}, t) = \exp\!\left(-(t - t_\text{last}(\mathbf{x}))/\tau\right)\)</td><td>§10.4.1, p. 290 · <a href="#d87">Day 3</a></td></tr>
+  <tr><td>Voxel grid</td><td>\(V(\mathbf{x}, b) = \sum_k p_k \max(0, 1 - |b - t^*_k|)\), \(t^*_k = (B-1)(t_k - t_0)/\Delta\)</td><td>§10.4.1, p. 290 · <a href="#d87">Day 3</a></td></tr>
+  <tr><td>Contrast maximization</td><td>\(\mathbf{x}'_k = \mathbf{x}_k - (t_k - t_\text{ref})\boldsymbol{\theta}\); \(H(\mathbf{x}) = \sum_k b_k\,\delta(\mathbf{x} - \mathbf{x}'_k)\); maximize \(\frac{1}{N_p}\sum_i (H_i - \mu_H)^2\)</td><td>§10.4.3, p. 292; §10.5, p. 294 · <a href="#d88">Day 4</a></td></tr>
+  <tr><td>Simulated event times between two samples</td><td>\(t_j = t_a + \dfrac{L_\text{ref} + jC - L_a}{L_b - L_a}(t_b - t_a)\)</td><td>§10.7.1, pp. 295–296 · <a href="#d89">Day 5</a></td></tr>
+  <tr><td>ATE and RPE</td><td>\(\text{ATE} = \sqrt{\tfrac{1}{n}\sum_i \norm{\mathbf{t}^\text{gt}_i - \mathbf{S}\mathbf{t}^\text{est}_i}^2}\); \(\mathbf{E}_i = (\Delta\mathbf{T}^\text{gt}_i)^{-1}\Delta\mathbf{T}^\text{est}_i\); angle \(= \arccos\frac{\tr(\mathbf{R}) - 1}{2}\)</td><td>§10.7.3, p. 301 · <a href="#d89">Day 5</a></td></tr>
+</table></div>
+
+<h3>2. Mixed quiz</h3>
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="0"><p class="qq">Q1. A pixel has just fired. The light on it then falls from 80 to 20 units. With C = 0.35, what does it send?</p><div class="opts"><button type="button" class="opt">3 OFF events</button><button type="button" class="opt">4 OFF events</button><button type="button" class="opt">3 ON events</button><button type="button" class="opt">60 OFF events</button></div><p class="exp" hidden>ΔL = ln(20/80) = −1.386. Its size is 3.96 thresholds, so 3 events fire, and they are OFF because the brightness fell.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q2. Which of these is not contained in an event?</p><div class="opts"><button type="button" class="opt">The pixel location</button><button type="button" class="opt">The time of the change</button><button type="button" class="opt">The absolute brightness of the pixel</button><button type="button" class="opt">The sign of the change</button></div><p class="exp" hidden>An event is (x, t, p). The brightness itself is never transmitted, only that its logarithm moved by C.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q3. At a pixel, ∇L = (0, 0.6) per pixel and v = (300, 100) px/s. With C = 0.3, what event rate does the linearized model predict?</p><div class="opts"><button type="button" class="opt">600 per second</button><button type="button" class="opt">200 per second</button><button type="button" class="opt">632 per second</button><button type="button" class="opt">0</button></div><p class="exp" hidden>∇L·v = 0.6 × 100 = 60 per second, and 60 / 0.3 = 200. The 300 px/s along the edge adds nothing. (The events are OFF, since −∇L·v is negative.)</p></div>
+  <div class="q" data-a="3"><p class="qq">Q4. What makes a method "direct" in the book's taxonomy?</p><div class="opts"><button type="button" class="opt">It processes one event at a time</button><button type="button" class="opt">It uses a neural network</button><button type="button" class="opt">It needs no map</button><button type="button" class="opt">It maps all events to motion and scene parameters in one step, without extracting features</button></div><p class="exp" hidden>Direct against indirect is about features. Event-by-event against packets, and model-based against learned, are separate axes.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q5. A voxel grid has B = 5 bins over a window from 0 to 20 ms. Where does an event at 15 ms put its weight?</p><div class="opts"><button type="button" class="opt">All of it in bin 3</button><button type="button" class="opt">Half in bin 3, half in bin 4</button><button type="button" class="opt">All of it in bin 4</button><button type="button" class="opt">0.75 in bin 3, 0.25 in bin 4</button></div><p class="exp" hidden>t* = (5 − 1) × 15 / 20 = 3 exactly, so the weight for bin 3 is 1 and for every other bin it is 0.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q6. An event at pixel x = 40 has time 12 ms. With reference time 2 ms and candidate speed θ = 0.5 px/ms, where does contrast maximization warp it?</p><div class="opts"><button type="button" class="opt">x′ = 45</button><button type="button" class="opt">x′ = 34</button><button type="button" class="opt">x′ = 35</button><button type="button" class="opt">x′ = 46</button></div><p class="exp" hidden>x′ = x − (t − t_ref) θ = 40 − 10 × 0.5 = 35.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q7. Most event-based systems run tracking and mapping in parallel. What do they lack compared with a system that has a back-end?</p><div class="opts"><button type="button" class="opt">A map</button><button type="button" class="opt">Pose estimates</button><button type="button" class="opt">Low latency</button><button type="button" class="opt">A joint refinement of poses and map against all the data</button></div><p class="exp" hidden>Each module trusts the other's output, so errors pass back and forth. A back-end such as bundle adjustment refines everything together.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q8. An estimate has 50 steps. Forty-nine relative motions are exact and one has a translation error of 0.7 m. What is the translational RPE (root mean square)?</p><div class="opts"><button type="button" class="opt">0.014 m</button><button type="button" class="opt">0.099 m</button><button type="button" class="opt">0.35 m</button><button type="button" class="opt">0.7 m</button></div><p class="exp" hidden>√(0.7² / 50) = 0.7 / √50 = 0.099 m. Where the bad step occurs makes no difference to the RPE, though it does to the ATE.</p></div>
+</div>
+
+<h3>3. Pen-and-paper problems</h3>
+<ol class="probs">
+  <li><p>A pixel with \(C = 0.25\) has just fired while the light on it was 200 units. The light then goes to 600, then to 300, then to 1000. List the events in order, and give the brightness that corresponds to the pixel's final memorized level.</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>Measure everything from the starting level \(L_0 = \ln 200\). The memory starts at \(L_0\).</p>
+      <p>To 600: \(L = L_0 + \ln 3 = L_0 + 1.099\). That is 4.39 thresholds above the memory: <strong>4 ON</strong>. Memory is now \(L_0 + 1.0\).</p>
+      <p>To 300: \(L = L_0 + \ln 1.5 = L_0 + 0.405\), which is \(0.595\) below the memory, 2.38 thresholds: <strong>2 OFF</strong>. Memory is now \(L_0 + 0.5\).</p>
+      <p>To 1000: \(L = L_0 + \ln 5 = L_0 + 1.609\), which is \(1.109\) above the memory, 4.44 thresholds: <strong>4 ON</strong>. Memory is now \(L_0 + 1.5\).</p>
+      <p>The final memorized level corresponds to \(200\,e^{1.5} = 896\) units. Ten events in all: 4 ON, 2 OFF, 4 ON.</p></div></details></li>
+  <li><p>A pattern with log intensity \(L(x) = 2\sin(2\pi x/40)\), \(x\) in pixels, slides to the right at 400 px/s past a pixel with \(C = 0.2\). (a) Use the linearized model to find the largest event rate. (b) When is the rate zero? (c) How many events does the pixel fire per second on average? Compare with (a).</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>(a) The steepest slope is \(\max |\partial L/\partial x| = 2 \times 2\pi/40 = 0.314\) per pixel. The rate is \(|\nabla L \cdot v|/C = 0.314 \times 400 / 0.2 = 628\) events per second, at the zero crossings of the sine.</p>
+      <p>(b) At the crests and troughs, where the slope is zero. The pixel is momentarily looking at a flat piece of the pattern.</p>
+      <p>(c) One period passes in \(40/400 = 0.1\) s. In that time \(L\) rises by 4 (from \(-2\) to \(2\)) and falls by 4. A rise of 4 is \(4/0.2 = 20\) ON events and the fall is 20 OFF events, so 40 events per 0.1 s, or 400 per second. This is \(2/\pi = 0.64\) of the peak rate, which is the average of \(|\cos|\) over a period, as the linearized model predicts.</p></div></details></li>
+  <li><p>Six events come from two edges moving at the same speed: \((x, t) = (5, 0), (7, 1), (9, 2)\) and \((12, 0), (14, 1), (16, 2)\), with \(x\) in pixels and \(t\) in ms. The image has 20 pixels and \(t_\text{ref} = 0\). (a) Compute the variance of the image of warped events for \(\theta = 0, 1, 2, 3\) px/ms. (b) Now try \(\theta = -1.5\), sharing an event that lands halfway between two pixels equally between them. What does the result tell you about the shape of the objective?</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>The mean is always \(\mu_H = 6/20 = 0.3\), so \(f = \frac{1}{20}\sum_i H_i^2 - 0.09\).</p>
+      <p>(a) \(\theta = 0\): positions 5, 7, 9, 12, 14, 16; six pixels hold 1; \(f = 6/20 - 0.09 = 0.21\). \(\theta = 1\): positions 5, 6, 7 and 12, 13, 14; again \(f = 0.21\). \(\theta = 2\): positions 5, 5, 5 and 12, 12, 12; two pixels hold 3; \(f = 18/20 - 0.09 = 0.81\). \(\theta = 3\): positions 5, 4, 3 and 12, 11, 10; \(f = 0.21\). The maximum is at \(\theta = 2\) px/ms.</p>
+      <p>(b) \(x' = x + 1.5\,t\): the first edge goes to 5, 8.5, 12 and the second to 12, 15.5, 19. Pixel 12 receives one event from each edge. The image is 1 at pixel 5, 0.5 at pixels 8 and 9, 2 at pixel 12, 0.5 at pixels 15 and 16, and 1 at pixel 19. \(\sum H_i^2 = 1 + 0.25 + 0.25 + 4 + 0.25 + 0.25 + 1 = 7\), so \(f = 0.35 - 0.09 = 0.26\). That is above the 0.21 of its neighbours although the motion is wrong: events of different edges met by chance. The objective can have small local maxima away from the true motion, which is why the optimizer should start near the answer, for example from the previous estimate.</p></div></details></li>
+  <li><p>A robot moves along a line. The true positions at five timestamps are 0, 1, 2, 3, 4 m. An odometry estimate gives 0, 1.1, 2.2, 3.3, 4.4 m. (a) Compute the translational RPE for consecutive poses. (b) Compute the ATE, where "alignment" in one dimension is the best constant shift. (c) What happens to each metric if the run continues in the same way to 17 poses?</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>(a) Every true step is 1 m and every estimated step is 1.1 m, so each relative error is 0.1 m and the RPE is 0.1 m.</p>
+      <p>(b) The differences true minus estimate are \(0, -0.1, -0.2, -0.3, -0.4\). The least-squares shift is their mean, \(-0.2\). The residuals are \(0.2, 0.1, 0, -0.1, -0.2\), and</p>
+      \[ \text{ATE} = \sqrt{\frac{0.04 + 0.01 + 0 + 0.01 + 0.04}{5}} = \sqrt{0.02} = 0.141\ \text{m}. \]
+      <p>Without the shift (start points matched) it would be \(\sqrt{(0 + 0.01 + 0.04 + 0.09 + 0.16)/5} = 0.245\) m.</p>
+      <p>(c) The RPE stays 0.1 m. The residuals after the shift are \(0.1\,(i - \bar{\imath})\) for \(i = 0, \dots, n-1\), whose root mean square is \(0.1\sqrt{(n^2 - 1)/12}\). For \(n = 5\) this gives \(0.1\sqrt{2} = 0.141\) as before; for \(n = 17\) it gives \(0.1\sqrt{24} = 0.49\) m. The ATE grows with the length of the run, and the RPE does not. That is the difference between global accuracy and local consistency.</p></div></details></li>
+</ol>
+
+<div class="box ok"><h4>You are ready for next week if you can</h4><ul>
+<li>State the event generation model (10.1) and compute how many events a given brightness change produces.</li>
+<li>Derive \(-\nabla L \cdot \mathbf{v}\,\Delta t \approx pC\) from brightness constancy and use it to predict event rate and polarity.</li>
+<li>Build an event frame, a time surface, and a voxel grid from a short list of events.</li>
+<li>Explain contrast maximization and compute the variance of an image of warped events by hand.</li>
+<li>Compute ATE and RPE for a small trajectory and say what each one grades.</li>
+<li>Say why an IMU is a natural partner for an event camera: it measures angular velocity directly (p. 294). Week 16 starts there.</li>
+</ul></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 10 "Event-based SLAM", pp. 282–303.</li>
+<li>Gallego et al., <em>Event-based Vision: A Survey</em>, 2022 (linearized model, representations).</li>
+<li>Gallego, Rebecq, Scaramuzza, <em>A Unifying Contrast Maximization Framework for Event Cameras, with Applications to Motion, Depth, and Optical Flow Estimation</em>, 2018.</li>
+<li>Sturm, Engelhard, Endres, Burgard, Cremers, <em>A Benchmark for the Evaluation of RGB-D SLAM Systems</em>, 2012 (ATE and RPE).</li>
+</ol></div>
+<p class="next"></p>
+</section>

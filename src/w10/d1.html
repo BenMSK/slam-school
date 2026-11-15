@@ -1,0 +1,131 @@
+<section class="day" data-day="55" id="d55" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 10 · Day 1</span>
+  <h2>Landmarks and range measurements in a certifiable solver</h2>
+  <p class="lead">After today you can add landmarks to SE-Sync by treating them as poses without rotation, and turn a range measurement into a quadratic term by adding a unit vector.</p>
+  <p class="meta">About 60 min · Read §6.1.3–6.1.4.1, pp. 165–169 (5 pages) · Needs Week 9 Days 3–5</p>
+</header>
+
+<div class="box read"><h4>Read first: §6.1.3 and §6.1.4.1, pp. 165–169</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The one new term in Problem 6.5 (p. 166) compared with Problem 6.1, and the sentence that says the rest of the derivation "can be used as is".</li>
+<li>What Figure 6.4(b) and (c) on p. 167 say about run time and about exactness as landmarks are added.</li>
+<li>The single term on p. 168 that stops range-aided SLAM from being a QCQP, and the reformulation (6.33) that fixes it.</li>
+<li>The paragraph on p. 169 on when the range-aided relaxation is <em>not</em> exact.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>The SE-Sync recipe from Week 9 (write the problem as a QCQP, relax it to an SDP, solve the SDP with the Riemannian Staircase, check the certificate) works for any problem you can bring into QCQP form. Landmark measurements already have that form: a landmark is a pose with no rotation. Range measurements do not, until you add one auxiliary unit vector per range.</p></div>
+
+<h3>1. A landmark is a pose without rotation</h3>
+<p>Week 9 ended with a certifiable solver for pose-graph optimization (PGO), where every measurement is a relative pose. Now add \(\ell\) landmarks with unknown positions \(\mathbf{m}_{n+1},\dots,\mathbf{m}_{n+\ell}\in\R^d\) to the \(n\) poses. The robot at pose \(i\) measures the position of landmark \(k\) in its own frame (a range-and-bearing measurement). The model is the same as for the translation part of a relative pose in equation (6.8): <span class="src">§6.1.3 · p. 165</span></p>
+\[ \tilde{\mathbf{m}}_{ik} = \bar{\mathbf{m}}_{ik} + \mathbf{m}^{\epsilon}_{ik}, \qquad \mathbf{m}^{\epsilon}_{ik}\sim\N\!\left(\mathbf{0},\ \mu_{ik}^{-1}\mathbf{I}_d\right), \qquad \bar{\mathbf{m}}_{ik} = \mathbf{R}_i\T(\mathbf{m}_k-\mathbf{t}_i). \tag{6.28} \]
+<p>Here \(\bar{\mathbf{m}}_{ik}\) is the true relative position, and \(\mu_{ik}\) is the <strong>precision</strong> (inverse variance) of the measurement. The noise is <strong>isotropic</strong>: the same in every direction. The graph gets a second kind of vertex and a second kind of edge.</p>
+<figure class="fig"><svg viewBox="0 0 600 240" role="img" aria-label="A graph with four pose vertices in a row joined by solid odometry edges, and two landmark vertices above them joined to the poses by dashed landmark-measurement edges. Landmarks carry a position only; poses carry a rotation and a position.">
+  <line x1="90" y1="150" x2="230" y2="150" stroke="var(--ink)" stroke-width="2"/>
+  <line x1="230" y1="150" x2="370" y2="150" stroke="var(--ink)" stroke-width="2"/>
+  <line x1="370" y1="150" x2="510" y2="150" stroke="var(--ink)" stroke-width="2"/>
+  <line x1="90" y1="150" x2="190" y2="60" stroke="var(--c5)" stroke-width="2" stroke-dasharray="6 5"/>
+  <line x1="230" y1="150" x2="190" y2="60" stroke="var(--c5)" stroke-width="2" stroke-dasharray="6 5"/>
+  <line x1="230" y1="150" x2="430" y2="60" stroke="var(--c5)" stroke-width="2" stroke-dasharray="6 5"/>
+  <line x1="370" y1="150" x2="430" y2="60" stroke="var(--c5)" stroke-width="2" stroke-dasharray="6 5"/>
+  <line x1="510" y1="150" x2="430" y2="60" stroke="var(--c5)" stroke-width="2" stroke-dasharray="6 5"/>
+  <circle cx="90" cy="150" r="13" fill="var(--c2-soft)" stroke="var(--c2)" stroke-width="2"/>
+  <circle cx="230" cy="150" r="13" fill="var(--c2-soft)" stroke="var(--c2)" stroke-width="2"/>
+  <circle cx="370" cy="150" r="13" fill="var(--c2-soft)" stroke="var(--c2)" stroke-width="2"/>
+  <circle cx="510" cy="150" r="13" fill="var(--c2-soft)" stroke="var(--c2)" stroke-width="2"/>
+  <rect x="177" y="47" width="26" height="26" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="2"/>
+  <rect x="417" y="47" width="26" height="26" fill="var(--c5-soft)" stroke="var(--c5)" stroke-width="2"/>
+  <text x="90" y="185" text-anchor="middle" font-size="13" fill="var(--ink)">pose 1</text>
+  <text x="230" y="185" text-anchor="middle" font-size="13" fill="var(--ink)">pose 2</text>
+  <text x="370" y="185" text-anchor="middle" font-size="13" fill="var(--ink)">pose 3</text>
+  <text x="510" y="185" text-anchor="middle" font-size="13" fill="var(--ink)">pose 4</text>
+  <text x="190" y="36" text-anchor="middle" font-size="13" fill="var(--ink)">landmark 5</text>
+  <text x="430" y="36" text-anchor="middle" font-size="13" fill="var(--ink)">landmark 6</text>
+  <text x="20" y="222" font-size="12" fill="var(--muted)">solid: relative pose, weights κ and τ</text>
+  <text x="320" y="222" font-size="12" fill="var(--muted)">dashed: landmark position, weight μ</text>
+</svg><figcaption>Poses (circles) carry a rotation and a translation. Landmarks (squares) carry a position only. The book calls the solid edge set \(\vec{\mathcal{E}}_r\) and the dashed one \(\vec{\mathcal{E}}_m\).</figcaption></figure>
+<p>Maximum likelihood under these models gives Problem 6.5: <span class="src">§6.1.3 · p. 166</span></p>
+\[ \min_{\mathbf{R}_i\in\SO(d),\ \mathbf{t}_i,\mathbf{m}_k\in\R^d}\ \sum_{(i,j)\in\vec{\mathcal{E}}_r}\Big(\kappa_{ij}\norm{\mathbf{R}_j-\mathbf{R}_i\tilde{\mathbf{R}}_{ij}}_F^2+\tau_{ij}\norm{\mathbf{t}_j-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{t}}_{ij}}_2^2\Big)+\sum_{(i,k)\in\vec{\mathcal{E}}_m}\mu_{ik}\norm{\mathbf{m}_k-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{m}}_{ik}}_2^2 . \tag{6.29} \]
+<div class="box note"><h4>Filling the gap: where the landmark term comes from</h4>
+<p>The measurement lives in the robot frame, so the natural residual is \(\tilde{\mathbf{m}}_{ik}-\mathbf{R}_i\T(\mathbf{m}_k-\mathbf{t}_i)\). Pull \(\mathbf{R}_i\T\) out in front:</p>
+\[ \tilde{\mathbf{m}}_{ik}-\mathbf{R}_i\T(\mathbf{m}_k-\mathbf{t}_i) = -\,\mathbf{R}_i\T\big(\mathbf{m}_k-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{m}}_{ik}\big). \]
+<p>A rotation does not change the length of a vector, \(\norm{\mathbf{R}\T\mathbf{v}}_2=\norm{\mathbf{v}}_2\), so the squared residual equals \(\norm{\mathbf{m}_k-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{m}}_{ik}}_2^2\). The negative log of the Gaussian in (6.28) is \(\tfrac{\mu_{ik}}{2}\) times that, plus a constant; dropping the common factor \(\tfrac12\) gives the last sum in (6.29). This step needs isotropic noise. Tomorrow you will see what breaks without it.</p></div>
+<p>Compare the two translation-like terms. Replace \(\mathbf{t}_j\) by \(\mathbf{m}_k\), \(\tilde{\mathbf{t}}_{ij}\) by \(\tilde{\mathbf{m}}_{ik}\), and \(\tau_{ij}\) by \(\mu_{ik}\), and the pose term becomes the landmark term. A landmark behaves exactly like a pose whose rotation nobody measures. So the book reuses all of §6.1.2 and only enlarges two matrices: the weight matrix becomes \(\boldsymbol{\Omega}=\operatorname{BlockDiag}(\boldsymbol{\Omega}_\tau,\boldsymbol{\Omega}_\mu)\) and the measurement matrix \(\tilde{\mathbf{D}}\) gets one more row per landmark edge, holding \(-\tilde{\mathbf{m}}_{kj}\T\) (equation (6.30)). The connection Laplacian \(\mathbf{L}(\tilde G^\rho)\), which is built from rotation measurements only, does not change. <span class="src">§6.1.3 · p. 166</span></p>
+
+<h3>2. Why positions can be solved for and removed</h3>
+<p>SE-Sync's first move (<a href="#d51">Week 9 · Day 3</a>) was to eliminate the translations and keep a problem in the rotations only. The same move now removes the landmarks too.</p>
+<div class="box note"><h4>Filling the gap: with rotations fixed, positions are a linear least-squares problem on a graph</h4>
+<p>Fix every \(\mathbf{R}_i\). Then \(\mathbf{c}_e=\mathbf{R}_i\tilde{\mathbf{t}}_{ij}\) (or \(\mathbf{R}_i\tilde{\mathbf{m}}_{ik}\)) is a known vector for each edge \(e\), and with \(\mathbf{p}\) standing for any position, pose or landmark, the position part of (6.29) is</p>
+\[ \sum_{e=(i,j)} w_e\,\norm{\mathbf{p}_j-\mathbf{p}_i-\mathbf{c}_e}_2^2 , \]
+<p>a sum of squares of functions that are <em>linear</em> in the unknown positions. Setting its gradient to zero gives linear equations whose matrix is the weighted graph Laplacian of Box 6.1 (p. 157). A one-dimensional example with three positions, \(p_0=0\) held fixed, unit weights, and measurements \(p_1-p_0=1.0\), \(p_2-p_1=1.0\), \(p_2-p_0=2.3\):</p>
+\[ f(p_1,p_2)=(p_1-1)^2+(p_2-p_1-1)^2+(p_2-2.3)^2 . \]
+\[ \tfrac12\frac{\partial f}{\partial p_1}=(p_1-1)-(p_2-p_1-1)=2p_1-p_2=0,\qquad \tfrac12\frac{\partial f}{\partial p_2}=(p_2-p_1-1)+(p_2-2.3)=-p_1+2p_2-3.3=0 . \]
+\[ \begin{bmatrix} 2 & -1 \\ -1 & 2 \end{bmatrix}\begin{bmatrix} p_1 \\ p_2 \end{bmatrix}=\begin{bmatrix} 0 \\ 3.3 \end{bmatrix}\quad\Longrightarrow\quad p_1=1.1,\ \ p_2=2.2 . \]
+<p>The matrix is the Laplacian of the triangle graph with the row and column of the fixed node removed. The 0.3 of disagreement around the loop is shared equally: the three residuals are \(0.1,\ 0.1,\ -0.1\).</p>
+<p>In general the optimal positions are a linear function of the right-hand side, and the right-hand side is linear in the rotations. That is what (6.16) and its landmark version (6.31) say, \(\begin{bmatrix}\mathbf{t}^{*\mathsf T} & \mathbf{m}^{*\mathsf T}\end{bmatrix}\T=-\operatorname{vec}\!\big(\mathbf{R}^*\tilde{\mathbf{V}}\T\mathbf{L}(W^\tau)^{\dagger}\big)\). The dagger is a pseudo-inverse because the full Laplacian is singular: shifting every position by the same vector changes nothing. Substituting a linear function of \(\mathbf{R}\) into a quadratic cost leaves a cost that is quadratic in \(\mathbf{R}\), so the reduced problem is still \(\min \tr(\tilde{\mathbf{Q}}\mathbf{R}\T\mathbf{R})\) with a new \(\tilde{\mathbf{Q}}\), and Shor's relaxation applies as before.</p></div>
+
+<h3>3. Many landmarks: cost and exactness</h3>
+<p>A typical map has far more landmarks than poses. Two facts keep the method practical. <span class="src">§6.1.3 · pp. 166–167</span></p>
+<ul>
+<li><strong>Cost.</strong> With many landmarks the slow step is building \(\tilde{\mathbf{Q}}\). The <strong>Schur complement</strong> trick makes that step linear in the number of landmarks, and the other parts of SE-Sync do not get slower (Figure 6.4(b)).</li>
+<li><strong>Exactness.</strong> More landmarks, and more pose-to-landmark edges, raise the noise level up to which the relaxation stays exact (Figure 6.4(c)).</li>
+</ul>
+<div class="box note"><h4>Filling the gap: why eliminating landmarks is cheap</h4>
+<p>The book names the trick without showing it. The structural reason is the one you met for bundle adjustment in <a href="#d15">Week 3 · Day 3</a>. Order the positions as poses first, landmarks second, and split the weighted Laplacian into blocks:</p>
+\[ \mathbf{L}=\begin{bmatrix}\mathbf{L}_{tt} & \mathbf{L}_{tm}\\ \mathbf{L}_{mt} & \mathbf{L}_{mm}\end{bmatrix},\qquad \text{Schur complement: } \mathbf{L}_{tt}-\mathbf{L}_{tm}\mathbf{L}_{mm}^{-1}\mathbf{L}_{mt}. \]
+<p>An off-diagonal entry of a Laplacian is non-zero only where an edge exists. No measurement joins two landmarks, so \(\mathbf{L}_{mm}\) is <em>diagonal</em>: entry \(k\) is the sum of the weights \(\mu_{ik}\) of the edges at landmark \(k\). Inverting a diagonal matrix is one division per landmark, so the work grows in proportion to the number of landmarks.</p></div>
+
+<h3>4. Range measurements: one square root too many</h3>
+<p>Some sensors, such as ultra-wideband radios, report only a distance \(\tilde r_{ij}\) between two things, with no direction. Problem 6.6 adds such terms, weighted by their inverse variance \(\gamma_{ij}\): <span class="src">§6.1.4.1 · p. 168</span></p>
+\[ \min_{\mathbf{R}_i\in\SO(d),\ \mathbf{t}_i\in\R^d}\ \sum_{(i,j)\in\vec{\mathcal{E}}}\Big(\kappa_{ij}\norm{\mathbf{R}_j-\mathbf{R}_i\tilde{\mathbf{R}}_{ij}}_F^2+\tau_{ij}\norm{\mathbf{t}_j-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{t}}_{ij}}_2^2\Big)+\sum_{(i,j)\in\vec{\mathcal{E}}_d}\gamma_{ij}\big(\norm{\mathbf{t}_j-\mathbf{t}_i}_2-\tilde r_{ij}\big)^2 . \tag{6.32} \]
+<p>Expand one range term:</p>
+\[ \big(\norm{\mathbf{t}_j-\mathbf{t}_i}-\tilde r_{ij}\big)^2=\norm{\mathbf{t}_j-\mathbf{t}_i}^2-2\,\tilde r_{ij}\norm{\mathbf{t}_j-\mathbf{t}_i}+\tilde r_{ij}^2 . \]
+<p>The first and last terms are fine. The middle one contains a norm that is <em>not</em> squared, which is a square root of a quadratic and therefore not a polynomial. So (6.32) is not a QCQP and Shor's relaxation has nothing to act on. (The book prints the middle term with a plus sign on p. 168; the sign does not affect the argument.)</p>
+<p>Try it: the simplest range-only problem, one unknown position and three beacons. Leave the start where it is and read the three tiles. Then drag the start above the beacons. Then switch to 2 beacons.</p>
+<div class="viz" data-viz="w10_range"></div>
+<p class="cap">Notice: from the default start, Gauss-Newton stops below the beacons near (6.06, 1.09) with cost 0.131, although the true position (6, 4.8) has cost 0. The low point below the row of beacons is a mirror image of the true one, and a local solver cannot tell that a better point exists. With 2 beacons the mirror point has cost 0 as well: then the data really are ambiguous, and no solver can fix that.</p>
+
+<div class="box note"><h4>Filling the gap: why the unit-vector trick is exact</h4>
+<p>The reformulation (6.33) replaces each range term by \(\gamma_{ij}\norm{\mathbf{t}_j-\mathbf{t}_i-\tilde r_{ij}\mathbf{b}_{ij}}_2^2\) with a new unknown unit vector \(\mathbf{b}_{ij}\). Claim: for any vector \(\mathbf{v}\) and any \(r\ge 0\),</p>
+\[ \min_{\norm{\mathbf{b}}=1}\ \norm{\mathbf{v}-r\,\mathbf{b}}^2=\big(\norm{\mathbf{v}}-r\big)^2 . \]
+<p>Proof. Expand, using \(\norm{\mathbf{b}}=1\): \(\norm{\mathbf{v}-r\mathbf{b}}^2=\norm{\mathbf{v}}^2-2r\,\mathbf{v}\T\mathbf{b}+r^2\). Only the middle term depends on \(\mathbf{b}\), and it is smallest when \(\mathbf{v}\T\mathbf{b}\) is largest. By the Cauchy-Schwarz inequality \(\mathbf{v}\T\mathbf{b}\le\norm{\mathbf{v}}\), with equality when \(\mathbf{b}=\mathbf{v}/\norm{\mathbf{v}}\). Substituting gives \(\norm{\mathbf{v}}^2-2r\norm{\mathbf{v}}+r^2=(\norm{\mathbf{v}}-r)^2\).</p>
+<p>Example: \(\mathbf{v}=(3,4)\), \(r=4\). Then \(\norm{\mathbf{v}}=5\), the best \(\mathbf{b}=(0.6,0.8)\), and \(\mathbf{v}-r\mathbf{b}=(0.6,0.8)\) has squared length \(1=(5-4)^2\).</p>
+<p>So minimizing (6.33) over the \(\mathbf{b}_{ij}\) first gives back (6.32): the two problems have the same optimal poses. In the widget, the violet segment is \(\tilde r\,\mathbf{b}\) for the best \(\mathbf{b}\) and the thick pink segment is what is left over.</p></div>
+<p>The new problem <em>is</em> a QCQP. The range term is now quadratic in the unknowns \(\mathbf{t}_i,\mathbf{t}_j,\mathbf{b}_{ij}\), and the new constraint \(\mathbf{b}_{ij}\T\mathbf{b}_{ij}=1\) is quadratic too. In words, the solver also estimates the bearing that the sensor did not measure, which turns a range into a range-and-bearing measurement like those of Section 1. Shor's relaxation plus the Riemannian Staircase then gives <strong>CORA</strong>, a certifiable solver for range-aided SLAM. <span class="src">§6.1.4.1 · pp. 168–169</span></p>
+<div class="tbl"><table>
+  <tr><th>Problem</th><th>Extra unknowns</th><th>QCQP?</th><th>Is the relaxation exact?</th></tr>
+  <tr><td>PGO (Problem 6.1)</td><td>none</td><td>yes</td><td>Yes for noise below a threshold (Theorem 6.1)</td></tr>
+  <tr><td>Landmark SLAM (Problem 6.5)</td><td>landmark positions</td><td>yes</td><td>In experiments yes, up to a noise level that grows with the number of landmarks and their connectivity</td></tr>
+  <tr><td>Range-aided SLAM (Problem 6.6)</td><td>one unit vector per range</td><td>only after (6.33)</td><td>Not in general. Often yes in practice, but typically not for several robots tied together by ranges alone</td></tr>
+</table></div>
+<p>The last row matters. For range-aided SLAM the relaxation is not generically exact under bounded noise. The work behind CORA found that with several robots it is typically not exact unless some relative <em>pose</em> measurements link the robots. More generally, how well connected the measurement graph is strongly affects exactness. <span class="src">§6.1.4.1 · p. 169</span> The same graph connectivity returns on Day 4, where it controls accuracy.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Adding the vectors b changes the answer."</strong> It changes the list of unknowns, not the optimal poses. Minimizing over each \(\mathbf{b}_{ij}\) gives back the original range term exactly.</li>
+<li><strong>"A certified optimum is the true position."</strong> A certificate says no other point has lower cost. With 2 beacons both mirror points are optimal, and with noise the optimum is not the truth. How far it can be from the truth is the subject of Days 3–5.</li>
+<li><strong>"Landmarks add rotation unknowns."</strong> They add positions only, which is why the connection Laplacian is unchanged.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. Why can SE-Sync treat a landmark as "a pose without rotation"?</p><div class="opts"><button type="button" class="opt">Landmarks are always observed from exactly one pose</button><button type="button" class="opt">Landmark noise is smaller than odometry noise</button><button type="button" class="opt">Its measurement term has the same algebraic form as the translation term of a relative pose, and no rotation term is attached to it</button><button type="button" class="opt">The landmark positions are known in advance</button></div><p class="exp" hidden>Swap t_j for m_k and τ for μ and the two terms in (6.29) are the same expression. Nothing measures a landmark's orientation, so it has no rotation term.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. Two positions differ by v = t_j − t_i = (6, 8) and the measured range is 7. What is the minimum over unit vectors b of ‖v − 7b‖²?</p><div class="opts"><button type="button" class="opt">9</button><button type="button" class="opt">3</button><button type="button" class="opt">1</button><button type="button" class="opt">49</button></div><p class="exp" hidden>‖v‖ = 10, and the minimum is (‖v‖ − r)² = (10 − 7)² = 9, reached at b = (0.6, 0.8).</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. Which part of the range-aided cost (6.32) stops it from being a QCQP?</p><div class="opts"><button type="button" class="opt">The constraint that each R_i is a rotation</button><button type="button" class="opt">The squared norm ‖t_j − t_i‖²</button><button type="button" class="opt">The constant r̃²</button><button type="button" class="opt">The cross term −2 r̃ ‖t_j − t_i‖, which contains an unsquared norm</button></div><p class="exp" hidden>An unsquared norm is the square root of a quadratic, so it is not a polynomial. The rotation constraints are quadratic and were already handled in Week 9.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. In the one-dimensional example of Section 2, change the third measurement to p₂ − p₀ = 2.6 (the other two stay 1.0). What is the optimal p₂?</p><div class="opts"><button type="button" class="opt">2.6</button><button type="button" class="opt">2.4</button><button type="button" class="opt">2.0</button><button type="button" class="opt">2.3</button></div><p class="exp" hidden>The equations become 2p₁ − p₂ = 0 and −p₁ + 2p₂ = 3.6, so p₁ = 1.2 and p₂ = 2.4. The loop disagreement of 0.6 is split into three residuals of size 0.2.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>A landmark measurement with isotropic noise gives the term \(\mu_{ik}\norm{\mathbf{m}_k-\mathbf{t}_i-\mathbf{R}_i\tilde{\mathbf{m}}_{ik}}^2\), the same form as a relative translation. Landmarks are poses without rotation.</li>
+<li>With rotations fixed, all positions solve a linear least-squares problem whose matrix is a graph Laplacian, so they can be eliminated and the rotation-only QCQP of SE-Sync remains.</li>
+<li>Landmarks are cheap to eliminate because their Laplacian block is diagonal, and more landmarks make the relaxation exact at higher noise.</li>
+<li>A range term is not quadratic. Adding a unit vector \(\mathbf{b}_{ij}\) with \(\norm{\mathbf{b}_{ij}}=1\) makes it quadratic without changing the optimum; relaxing that QCQP gives CORA.</li>
+<li>The range-aided relaxation is not always exact; graph connectivity decides.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §6.1.3 "Landmark-based SLAM" and §6.1.4.1 "A Fast Certifiable Algorithm for Range-Aided SLAM", pp. 165–169; Box 6.1, pp. 157–158.</li>
+<li>Boyd and Vandenberghe, <em>Convex Optimization</em>, 2004 (Schur complement; least squares and normal equations).</li>
+<li>The unit-vector identity in Section 4 is a direct use of the Cauchy-Schwarz inequality; the worked numbers are our own.</li>
+</ol></div>
+<p class="next"></p>
+</section>

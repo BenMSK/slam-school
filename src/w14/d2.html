@@ -1,0 +1,137 @@
+<section class="day" data-day="80" id="d80" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 14 · Day 2</span>
+  <h2>Triangular chirps, angle of arrival, and picking targets out of noise with CFAR</h2>
+  <p class="lead">After today you can separate range from Doppler with an up chirp and a down chirp, compute an angle of arrival from the phase difference between two antennas, and set a CA-CFAR threshold for a chosen false alarm probability.</p>
+  <p class="meta">About 60 min · Read §9.1.2.4–9.1.4, pp. 256–261 (5 pages) · Needs Week 14 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: §9.1.2.4–9.1.4, pp. 256–261</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>Equations (9.6)–(9.8) on p. 256: which of the two frequency shifts changes sign on a down chirp.</li>
+<li>Figure 9.5 and equation (9.10) on p. 257: the extra path \(\ell\sin\theta\) to the second receive antenna.</li>
+<li>Figure 9.6 on p. 258: find the speckle and the row of repeated multipath returns.</li>
+<li>The CFAR paragraph on p. 260 and Figure 9.7 on p. 261: the cell under test, training cells and guard cells, and how the k-strongest filter differs.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Radar gets every quantity by comparing two almost identical measurements: two chirp slopes separate range from Doppler, and two antennas give the angle. What comes out is a noisy power map and not a point cloud, so a filter has to decide which cells hold targets. CFAR decides by comparing each cell with its neighbours, which keeps the false alarm rate constant when the noise level changes.</p></div>
+
+<h3>1. Triangular modulation: separating range and Doppler</h3>
+<p>Day 1 treated the beat frequency as pure range. That is not exact. If the target moves, the echo is also Doppler-shifted, and the beat frequency of an up chirp is the sum of a time-of-flight part \(f_{0,t}\) and a Doppler part \(f_{0,d}\). <strong>Triangular modulation</strong> follows each up chirp with a down chirp of the same slope. On the down chirp the time-of-flight part changes sign and the Doppler part does not: <span class="src">§9.1.2.4 · p. 256</span></p>
+\[ f_{0,\text{up}} = f_{0,t} + f_{0,d}, \tag{9.6} \]
+\[ f_{0,\text{down}} = -f_{0,t} + f_{0,d}. \tag{9.7} \]
+<p>Two equations, two unknowns. Subtract and add:</p>
+\[ f_{0,t} = \frac{f_{0,\text{up}} - f_{0,\text{down}}}{2}, \qquad f_{0,d} = \frac{f_{0,\text{up}} + f_{0,\text{down}}}{2}. \tag{9.8} \]
+<p>The range then follows from the time-of-flight part alone, \(d = c f_{0,t}/(2S)\), which is the first half of equation (9.9). <span class="src">§9.1.2.4 · p. 257</span></p>
+<div class="box note"><h4>Filling the gap: how large is the Doppler part, and why the signs behave this way</h4>
+<p>Equation (9.4) says the beat phase advances by \(4\pi vT/\lambda\) during a time \(T\). A phase that advances at a steady rate is a frequency: divide by \(2\pi T\) and you get</p>
+\[ f_{0,d} = \frac{2v}{\lambda} \qquad\Longleftrightarrow\qquad v = \frac{\lambda\, f_{0,d}}{2}. \]
+<p>This is the standard two-way Doppler shift. The factor 2 is there because the path to the target and back changes by \(2\,\Delta d\).</p>
+<p>For the signs, redo the geometry of Day 1 for a down chirp with frequency \(f_M - St\). The echo that arrives at time \(t\) left at \(t - t_0\), when the frequency was <em>higher</em>, \(f_M - S(t - t_0)\). Transmitted minus received is now \(-S t_0\): the time-of-flight part has flipped. The Doppler shift comes from the motion of the target and does not care which way the chirp slopes.</p>
+<p>A caution about the second half of equation (9.9). It is printed as \(v = c f_{0,d}/(2ST)\). The product \(ST\) is the bandwidth \(B\). The derivation above, which uses only the book's own equation (9.4), gives \(v = \lambda f_{0,d}/2 = c f_{0,d}/(2f)\) with the carrier frequency \(f\) in that place. We use \(v = \lambda f_{0,d}/2\) below.</p></div>
+<p><strong>Worked example.</strong> Use the radar of Day 1: \(S = 7.5\times10^{12}\) Hz/s, \(\lambda = 3.896\) mm. A target at 12 m moves away at 5 m/s. Then \(f_{0,t} = 600\) kHz and \(f_{0,d} = 2\times5/0.003896 = 2.57\) kHz.</p>
+<div class="tbl"><table>
+  <tr><th>Quantity</th><th>Value</th><th>What you conclude</th></tr>
+  <tr><td>Up-chirp beat, (9.6)</td><td>600 + 2.57 = 602.57 kHz</td><td>Sawtooth range by (9.2): 3 × 10⁸ × 602 570/(1.5 × 10¹³) = 12.05 m, 5 cm too far</td></tr>
+  <tr><td>Down-chirp beat, (9.7)</td><td>−600 + 2.57 = −597.43 kHz</td><td>Alone it has the same problem</td></tr>
+  <tr><td>Half the difference, (9.8)</td><td>600.00 kHz</td><td>Range 12.00 m, free of Doppler</td></tr>
+  <tr><td>Half the sum, (9.8)</td><td>2.57 kHz</td><td>v = λ f₀,d/2 = 5.0 m/s, with no phase measurement</td></tr>
+</table></div>
+<p>The 5 cm in the first row is the offset you saw in yesterday's widget. The book states the trade: the sawtooth range of (9.2) is not corrected for Doppler and the triangular one is, the triangular scheme does not need the phase, and its price is latency, because one answer needs two chirps and the first is slightly old. <span class="src">§9.1.2.4 · p. 257</span></p>
+
+<h3>2. Angle of arrival</h3>
+<p>A spinning radar knows the angle of a return: it is where the antenna points. An SoC radar has to compute it. Take two receive antennas (RX) a distance \(\ell\) apart, and a far target at angle \(\theta\) from the array's forward direction. The reflected wave reaches the two antennas along parallel paths, and the path to the second antenna is longer by \(\Delta d = \ell\sin\theta\) (Figure 9.5). A path difference is a phase difference: <span class="src">§9.1.2.5 · p. 257</span></p>
+\[ \Delta\phi = \frac{2\pi}{\lambda}\,\ell\sin\theta \qquad\Longrightarrow\qquad \theta = \arcsin\frac{\lambda\,\Delta\phi}{2\pi\ell}. \tag{9.10} \]
+<p>The factor is \(2\pi/\lambda\) here and \(4\pi/\lambda\) in equation (9.3). In (9.3) a range change is travelled twice, out and back. Here the extra path is travelled once, on the way in.</p>
+<p><strong>Worked example.</strong> Antennas half a wavelength apart, \(\ell = \lambda/2\), measure \(\Delta\phi = \pi/2\). Then \(\sin\theta = (\lambda\cdot\pi/2)/(2\pi\cdot\lambda/2) = 1/2\), so \(\theta = 30°\).</p>
+<div class="box note"><h4>Filling the gap: antenna spacing and angular resolution</h4>
+<p>As with velocity, the phase is unambiguous only while \(|\Delta\phi| \lt \pi\). From (9.10) that means \(|\sin\theta| \lt \lambda/(2\ell)\). With \(\ell = \lambda/2\) every angle from −90° to 90° is covered, which is why arrays use half-wavelength spacing. With \(\ell = \lambda\) only angles within ±30° are unambiguous.</p>
+<p>With \(N\) antennas in a row, the phase steps by the same \(\Delta\phi\) from one antenna to the next, and an FFT across the antennas finds it, exactly like the FFT across chirps on Day 1. <span class="src">§9.1.2.5 · p. 257</span> By the same resolution argument, \(N\) samples resolve \(\Delta\phi\) to \(2\pi/N\), so two targets can be separated when</p>
+\[ \Delta(\sin\theta) \approx \frac{\lambda}{N\ell} = \frac{2}{N} \quad\text{for } \ell = \lambda/2 . \]
+<p>Eight antennas give 0.25 rad, about 14° straight ahead. This is the reason radar angles are coarse next to LiDAR, and the reason a point far away is uncertain sideways: 0.25 rad at 50 m is 12.5 m. Keep it in mind for Day 3, where registration methods give far points a larger covariance.</p></div>
+<p>The two-receiver example is a single-input, multiple-output (SIMO) array. Most SLAM radars are <strong>MIMO</strong>: several TX and several RX antennas. Adding one more transmitter gives the same angular resolution as doubling the receivers, provided the receivers can tell the transmitters apart. They can if the transmitters use different frequency bands, different codes, or different time slots (TDMA). A two-dimensional array measures elevation as well, which gives 3+1D data. <span class="src">§9.1.2.5 · p. 258</span></p>
+
+<h3>3. What goes wrong: speckle, multipath, motion distortion</h3>
+<p>Radar data is harder to use than LiDAR data, and the reasons are physical. <span class="src">§9.1.3 · pp. 258–259</span></p>
+<p><strong>Speckle noise.</strong> One pulse collects energy from everything inside a wide beam. The scattered waves add up, sometimes reinforcing and sometimes cancelling. Together with thermal noise and changing RCS this produces peaks where there is no object and removes peaks where there is one. Without a way to tell them apart, the output is a scatter of spurious points.</p>
+<p><strong>Multipath.</strong> Part of the energy reaches the target and returns by way of the ground or a wall. The radar only knows the path length and the arrival direction, so it places a second target beyond the reflecting surface: a <strong>ghost object</strong>.</p>
+<figure class="fig"><svg viewBox="0 0 600 200" role="img" aria-label="Top view of multipath. A radar and a real target are on the near side of a wall. One echo travels straight between them. Another bounces off the wall. The radar extends that bounced path in a straight line and places a ghost target behind the wall, at the mirror image of the real target.">
+  <line x1="40" y1="100" x2="560" y2="100" stroke="var(--muted)" stroke-width="4"/>
+  <text x="556" y="90" text-anchor="end" font-size="12" fill="var(--muted)">wall</text>
+  <line x1="70" y1="170" x2="330" y2="150" stroke="var(--c1)" stroke-width="2.5"/>
+  <line x1="70" y1="170" x2="221.7" y2="100" stroke="var(--c3)" stroke-width="2.5"/>
+  <line x1="221.7" y1="100" x2="330" y2="150" stroke="var(--c3)" stroke-width="2.5"/>
+  <line x1="221.7" y1="100" x2="330" y2="50" stroke="var(--c3)" stroke-width="2" stroke-dasharray="5 5"/>
+  <rect x="58" y="162" width="24" height="16" rx="4" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+  <circle cx="330" cy="150" r="8" fill="var(--c1)"/>
+  <circle cx="330" cy="50" r="8" fill="var(--surface)" stroke="var(--c3)" stroke-width="2" stroke-dasharray="3 3"/>
+  <text x="70" y="194" text-anchor="middle" font-size="12" fill="var(--ink)">radar</text>
+  <text x="346" y="154" font-size="12" fill="var(--ink)">real target</text>
+  <text x="346" y="46" font-size="12" fill="var(--ink)">ghost target</text>
+  <text x="346" y="62" font-size="11" fill="var(--muted)">same path length, seen through the wall</text>
+  <text x="84" y="124" font-size="11" fill="var(--c3)">bounced echo</text>
+  <text x="160" y="184" font-size="11" fill="var(--c1)">direct echo</text>
+</svg><figcaption>The bounced path has the same length as the straight path to the mirror image of the target. The ghost is not random: it appears in the same place in every scan from this spot, which is why the book calls ghosts static outliers.</figcaption></figure>
+<p><strong>Motion distortion.</strong> A spinning radar builds one image during one rotation. The book's example sensor rotates at 4 Hz, so a scan takes 0.25 s. A car at 20 m/s moves 5 m in that time, and an object seen at the start and at the end of the rotation is recorded 5 m apart. Faster sensors exist (10 Hz, up to 50 Hz), but on a fast vehicle the effect stays significant. <span class="src">§9.1.3.3 · p. 259</span> Day 3 shows how to undo it. The book also lists biased and sparse range readings caused by the wide beam, and receiver saturation. <span class="src">§9.1.3 · p. 258</span></p>
+
+<h3>4. Filtering with CFAR</h3>
+<p>The obvious filter, keeping every cell above a fixed power, fails because the noise level is not fixed. It changes with range, direction and surroundings, so one threshold is too strict in one place and lets false alarms through in another. <span class="src">§9.1.4 · p. 259</span></p>
+<p>The <strong>constant false alarm rate (CFAR)</strong> filter works along one azimuth and slides a window over the range cells. The cell being judged is the <strong>cell under test (CUT)</strong>. The <strong>training cells</strong> on both sides estimate the local noise level. Optional <strong>guard cells</strong> next to the CUT are left out, so that a target that spills into its neighbours does not raise its own noise estimate. In <strong>cell-averaging CFAR (CA-CFAR)</strong> the threshold is the mean power of the training cells times a multiplier chosen from the wanted probability of false alarm. <span class="src">§9.1.4 · p. 260</span></p>
+<figure class="fig"><svg viewBox="0 0 600 140" role="img" aria-label="A row of seventeen range cells. The middle cell is the cell under test. The two cells on each side of it are guard cells. The next four cells on each side are training cells. The threshold is alpha times the mean power of the training cells.">
+  <rect x="20" y="50" width="60" height="34" fill="var(--surface)" stroke="var(--line2)"/>
+  <rect x="80" y="50" width="120" height="34" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <rect x="200" y="50" width="60" height="34" fill="var(--soft)" stroke="var(--line2)"/>
+  <rect x="260" y="50" width="30" height="34" fill="var(--c3-soft)" stroke="var(--c3)" stroke-width="2"/>
+  <rect x="290" y="50" width="60" height="34" fill="var(--soft)" stroke="var(--line2)"/>
+  <rect x="350" y="50" width="120" height="34" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <rect x="470" y="50" width="60" height="34" fill="var(--surface)" stroke="var(--line2)"/>
+  <path d="M50 50 V84 M110 50 V84 M140 50 V84 M170 50 V84 M230 50 V84 M320 50 V84 M380 50 V84 M410 50 V84 M440 50 V84 M500 50 V84" stroke="var(--line2)" fill="none"/>
+  <text x="275" y="38" text-anchor="middle" font-size="12" fill="var(--ink)">cell under test</text>
+  <text x="140" y="104" text-anchor="middle" font-size="12" fill="var(--ink)">training cells</text>
+  <text x="410" y="104" text-anchor="middle" font-size="12" fill="var(--ink)">training cells</text>
+  <text x="230" y="104" text-anchor="middle" font-size="12" fill="var(--muted)">guard</text>
+  <text x="320" y="104" text-anchor="middle" font-size="12" fill="var(--muted)">guard</text>
+  <text x="540" y="72" font-size="12" fill="var(--muted)">range →</text>
+  <text x="275" y="130" text-anchor="middle" font-size="13" fill="var(--ink)">threshold = α × mean power of the training cells</text>
+</svg><figcaption>The CA-CFAR window with 4 training cells and 2 guard cells per side. It slides one cell at a time, and the cell under test is kept if its power is above the threshold.</figcaption></figure>
+<div class="box note"><h4>Filling the gap: where the multiplier comes from</h4>
+<p>The book says the multiplier is "selected from the desired probability of false alarm" and stops. Here is the calculation for the standard noise model, in which the power \(x\) of a noise-only cell is exponentially distributed with mean \(\mu\): \(p(x) = \frac{1}{\mu}e^{-x/\mu}\). This is what a receiver produces when it squares the two components of complex Gaussian noise.</p>
+<p><em>If \(\mu\) were known</em>, a threshold \(\tau\) would be exceeded by noise with probability \(P(x \gt \tau) = e^{-\tau/\mu}\). Setting this equal to \(P_{fa}\) gives \(\tau = -\mu\ln P_{fa}\). For \(P_{fa} = 10^{-3}\) the threshold is \(6.91\,\mu\).</p>
+<p><em>But \(\mu\) is unknown</em>, so CA-CFAR estimates it from \(N\) training cells, \(\hat\mu = \frac1N\sum_i x_i\), and uses \(\tau = \alpha\hat\mu\). The threshold is now random, so average the false alarm probability over it. The training cells are independent, and for an exponential variable \(\E[e^{-s x}] = 1/(1 + s\mu)\):</p>
+\[ P_{fa} = \E\!\left[e^{-\alpha\hat\mu/\mu}\right] = \prod_{i=1}^{N}\E\!\left[e^{-\frac{\alpha}{N\mu}x_i}\right] = \left(1 + \frac{\alpha}{N}\right)^{-N}. \]
+<p>The unknown \(\mu\) has cancelled. Whatever the noise level, the false alarm probability is the same: that is the "constant" in CFAR. Solve for the multiplier:</p>
+\[ \alpha = N\left(P_{fa}^{-1/N} - 1\right). \]
+<p>For \(N = 20\) and \(P_{fa} = 10^{-3}\): \(\alpha = 20\,(10^{0.15} - 1) = 20 \times 0.4125 = 8.25\). That is more than 6.91, the price of having to estimate the noise. With only \(N = 4\) cells, \(\alpha = 4\,(10^{0.75} - 1) = 18.5\). As \(N\) grows, \(\alpha\) falls towards \(-\ln P_{fa}\).</p></div>
+<p>Try it: the grey curve is the power along one azimuth, with five targets and a stretch of stronger clutter. Compare the adaptive threshold with the dashed fixed one, then set the training cells to 3 per side.</p>
+<div class="viz" data-viz="w14_cfar"></div>
+<p class="cap">Notice: at the start CA-CFAR finds 4 of the 5 targets with no false alarm, while the fixed threshold finds all 5 and adds 24 false alarms inside the clutter. The target CFAR misses is the one at 31 m: the stronger target 3 m behind it lies in its training window and lifts the threshold. With 3 training cells per side the window is short enough, all 5 are found, and the multiplier has risen from 8.25 to 12.97. At "1 in 100" two false alarms appear, exactly at the two edges of the clutter, where half the window sees quiet noise.</p>
+<p>The misses and edge effects you just saw are the known weaknesses of averaging. <strong>Ordered-statistic CFAR (OS-CFAR)</strong> replaces the mean by a robust statistic such as the median, which a single strong neighbour cannot move. <strong>BFAR</strong> (bounded false alarm rate), designed for radar odometry, applies an affine map \(T = aZ + b\) to the CFAR output \(Z\), with a learnable \(b\), so that the result blends the adaptive threshold with a fixed level. <span class="src">§9.1.4 · p. 260</span></p>
+<p>Many odometry and SLAM pipelines use something simpler than CFAR. CFAR was built for detection, where missing a weak target is costly. Odometry wants only points that will be found again in the next scan and from another viewpoint. Two common choices are to keep the <strong>k strongest returns</strong> above a static threshold along each azimuth, or to keep every return more than one standard deviation above the mean. In Figure 9.7 CFAR reports several false alarms, and k-strongest with k = 12 keeps only points around the main targets. <span class="src">§9.1.4 · pp. 260–261</span> A third route is learned filtering: networks trained with LiDAR as ground truth that keep only the returns a LiDAR would also see. <span class="src">§9.1.4 · pp. 260–261</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"CFAR removes false alarms."</strong> It fixes their rate. At \(P_{fa} = 10^{-3}\), a radargram with a million cells still produces about a thousand of them per scan.</li>
+<li><strong>"More training cells are always better."</strong> They lower the multiplier, but they assume the noise is the same across the whole window. A window that reaches another target or a clutter edge gives a wrong noise estimate.</li>
+<li><strong>"Ghosts average out like noise."</strong> A multipath ghost is repeatable from the same place. It has to be rejected as an outlier, not averaged.</li></ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A triangular radar measures a beat of 410 kHz on the up chirp and −390 kHz on the down chirp. What are the time-of-flight and Doppler parts?</p><div class="opts"><button type="button" class="opt">410 kHz and 390 kHz</button><button type="button" class="opt">10 kHz and 400 kHz</button><button type="button" class="opt">400 kHz and 10 kHz</button><button type="button" class="opt">800 kHz and 20 kHz</button></div><p class="exp" hidden>By (9.8): half the difference is (410 − (−390))/2 = 400 kHz, half the sum is (410 + (−390))/2 = 10 kHz.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. Two receive antennas are half a wavelength apart and measure a phase difference of π/3. What is the angle of arrival?</p><div class="opts"><button type="button" class="opt">About 19.5°</button><button type="button" class="opt">30°</button><button type="button" class="opt">60°</button><button type="button" class="opt">About 9.6°</button></div><p class="exp" hidden>sin θ = λΔφ/(2πℓ) = (π/3)/π = 1/3, so θ = arcsin(1/3) ≈ 19.5°.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q3. A CA-CFAR filter uses N = 10 training cells and a false alarm probability of 0.01. What multiplier does it need?</p><div class="opts"><button type="button" class="opt">4.61</button><button type="button" class="opt">5.85</button><button type="button" class="opt">10</button><button type="button" class="opt">58.5</button></div><p class="exp" hidden>α = N(P_fa^(−1/N) − 1) = 10 × (100^0.1 − 1) = 10 × 0.585 = 5.85. The value 4.61 = −ln 0.01 would be right only if the noise level were known exactly.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q4. Why do radar odometry pipelines often keep the k strongest returns per azimuth instead of running CFAR?</p><div class="opts"><button type="button" class="opt">CFAR cannot run in real time</button><button type="button" class="opt">k-strongest has a lower false alarm probability by construction</button><button type="button" class="opt">CFAR needs Doppler measurements</button><button type="button" class="opt">Odometry needs few, repeatable points more than it needs every weak target</button></div><p class="exp" hidden>CFAR was designed for detection, where a missed weak target is costly, and it passes ambiguous peaks. Odometry wants points that are detected again in later scans and from other viewpoints (p. 260).</p></div></div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>An up chirp measures \(f_{0,t} + f_{0,d}\) and a down chirp \(-f_{0,t} + f_{0,d}\). Half the difference gives range, half the sum gives the Doppler shift \(2v/\lambda\).</li>
+<li>Two antennas \(\ell\) apart see a phase difference \((2\pi/\lambda)\ell\sin\theta\), so \(\theta = \arcsin(\lambda\Delta\phi/(2\pi\ell))\). More antennas, real or virtual (MIMO), give finer angles.</li>
+<li>Radar suffers from speckle, multipath ghosts, wide beams and, for spinning sensors, motion distortion.</li>
+<li>CA-CFAR compares each cell with \(\alpha\) times the mean of its training cells, with \(\alpha = N(P_{fa}^{-1/N} - 1)\). The false alarm rate then does not depend on the noise level.</li>
+<li>SLAM pipelines often prefer conservative filters such as k-strongest, because they need repeatable points.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Ch. 9, §9.1.2.4–9.1.2.5, §9.1.3 "Challenges to Radar Applications", §9.1.4 "Radar Filtering", pp. 256–261, equations (9.6)–(9.10), Figures 9.5–9.7.</li>
+<li>Richards, <em>Fundamentals of Radar Signal Processing</em>, 2nd ed., 2014 (two-way Doppler shift, array spacing and angular resolution, exponential noise power and the CA-CFAR multiplier).</li>
+<li>Skolnik, <em>Introduction to Radar Systems</em>, 3rd ed., 2001 (triangular FMCW, CFAR).</li>
+</ol></div>
+<p class="next"></p>
+</section>

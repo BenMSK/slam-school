@@ -1,0 +1,78 @@
+<section class="day" data-day="66" id="d66" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 11 · Review</span>
+  <h2>Week 11 review: cameras, features, and the pipeline</h2>
+  <p class="lead">After today you can project and unproject with a camera model, score a corner, match descriptors, write the reprojection cost and bundle adjustment, relate two views with the epipolar constraint, and score a trajectory.</p>
+  <p class="meta">About 60 min · No new pages</p>
+</header>
+
+<div class="box key"><h3>The week in one paragraph</h3><p>Part II turns from the back-end to the front-end: how each sensor produces odometry factors, loop-closure factors, and unary factors, and how the result is scored (ATE, RPE, precision and recall). Visual SLAM is the first and reference case. A camera maps a 3D point to a pixel through a projection function \(\pi\) with calibrated intrinsics, and loses the depth on the way; depth returns only through a second view, with an uncertainty that grows as \(z^2\) and shrinks with the baseline. Feature-based systems reduce each image to keypoints (corners found with the second-moment matrix, described by vectors or bit strings, matched by distance), and estimate cameras and points by minimizing the reprojection error. Done over everything at once this is bundle adjustment; real-time systems keep it tractable with keyframes, and start it from two-view geometry.</p></div>
+
+<h3>1. Formula sheet</h3>
+<div class="tbl"><table>
+  <tr><th>What it is</th><th>Formula</th><th>Where</th></tr>
+  <tr><td>Absolute trajectory error</td><td>\(\sqrt{\tfrac1n\sum_i\norm{\mathbf{q}_i - (\mathbf{R}\mathbf{p}_i + \mathbf{t})}^2}\) after the best rigid alignment \((\mathbf{R},\mathbf{t})\)</td><td>Day 1 (extra; §II.3, p. 191 points to it)</td></tr>
+  <tr><td>Relative pose error</td><td>\(\mathbf{E}_i = (\mathbf{Q}_i^{-1}\mathbf{Q}_{i+\Delta})^{-1}(\mathbf{P}_i^{-1}\mathbf{P}_{i+\Delta})\), then the RMS of its translation part</td><td>Day 1 (extra)</td></tr>
+  <tr><td>Precision and recall</td><td>\(\dfrac{TP}{TP+FP}\) and \(\dfrac{TP}{TP+FN}\)</td><td>Day 1; §II.3, p. 191</td></tr>
+  <tr><td>Depth from disparity</td><td>\(z = \dfrac{f\,b}{d}\), \(\quad\sigma_z \approx \dfrac{z^2}{f\,b}\,\sigma_d\)</td><td>Day 2 (extra)</td></tr>
+  <tr><td>Pinhole projection and unprojection</td><td>\(\pi_p(\mathbf{x}^c) = \begin{bmatrix} f_u x/z + u_0 \\ f_v y/z + v_0 \end{bmatrix}\), \(\quad\pi_p^{-1}(\mathbf{z}) \sim \begin{bmatrix} (u-u_0)/f_u \\ (v-v_0)/f_v \\ 1 \end{bmatrix}\)</td><td>Day 3; §7.3.1.1, p. 198</td></tr>
+  <tr><td>Radial distortion</td><td>\(x'' = x'(1 + k_1 r^2 + k_2 r^4)\), same for \(y''\), with \(x' = x/z\), \(r^2 = x'^2 + y'^2\)</td><td>Day 3; §7.3.1.1, p. 199</td></tr>
+  <tr><td>Second-moment matrix and corner scores</td><td>\(\mathbf{M} = \sum_W \begin{bmatrix} I_u^2 & I_uI_v \\ I_uI_v & I_v^2 \end{bmatrix}\); Shi-Tomasi \(\lambda_2\); Harris \(\det\mathbf{M} - k(\tr\mathbf{M})^2\)</td><td>Day 4; §7.3.2.1, p. 201</td></tr>
+  <tr><td>Reprojection cost</td><td>\(E_{\text{reproj}} = \tfrac12\sum_j\norm{\mathbf{z}_j - \pi(\mathbf{x}^c_j, \boldsymbol{\xi})}^2_{\boldsymbol{\Sigma}_j}\)</td><td>Day 5; eq. (7.1), p. 204</td></tr>
+  <tr><td>Full bundle adjustment</td><td>\(\argmin_{\mathbf{T}^i_w, \mathbf{x}^w_j} \tfrac12\sum_{i,j}\rho\big(\norm{\mathbf{z}_{ij} - \pi(\mathbf{R}^i_w\mathbf{x}^w_j + \mathbf{t}^i_w)}_{\boldsymbol{\Sigma}_{ij}}\big)\)</td><td>Day 5; eq. (7.3), p. 205</td></tr>
+  <tr><td>Epipolar constraint</td><td>\(\mathbf{b}_2\T\mathbf{E}\,\mathbf{b}_1 = 0\), \(\mathbf{E} = [\mathbf{t}]_\times\mathbf{R}\); in pixels \(\mathbf{p}_2\T\mathbf{F}\,\mathbf{p}_1 = 0\), \(\mathbf{F} = \mathbf{K}^{-\top}\mathbf{E}\,\mathbf{K}^{-1}\)</td><td>Day 5 (extra)</td></tr>
+</table></div>
+
+<h3>2. Mixed quiz</h3>
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. Place recognition has found that the current LiDAR scan resembles scan 87. What must happen before the back-end can use this?</p><div class="opts"><button type="button" class="opt">Nothing: the pair of indices is the factor</button><button type="button" class="opt">The two scans are registered to estimate a relative pose, which becomes a binary factor</button><button type="button" class="opt">A unary prior is added to the current node</button><button type="button" class="opt">The odometry between the two nodes is re-integrated</button></div><p class="exp" hidden>Loop closure has two steps: detection gives a candidate, and relative pose estimation turns it into a measurement between the two nodes.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. A robot moves along a line. True positions: 0, 1, 2, 3 m. Estimated: 0, 1.1, 2.2, 3.3 m. What is the translational RPE for Δ = 1?</p><div class="opts"><button type="button" class="opt">0.3 m</button><button type="button" class="opt">0.2 m</button><button type="button" class="opt">0.0 m</button><button type="button" class="opt">0.1 m</button></div><p class="exp" hidden>Every estimated step is 1.1 m against a true 1.0 m, an error of 0.1 m each, so the RMS is 0.1 m. The 0.3 m is the accumulated error at the end.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. A stereo rig has f = 700 px and baseline 0.1 m. For a point 7 m away, with disparity noise of 0.5 px, the depth standard deviation is about</p><div class="opts"><button type="button" class="opt">0.35 m</button><button type="button" class="opt">0.05 m</button><button type="button" class="opt">3.5 m</button><button type="button" class="opt">0.7 m</button></div><p class="exp" hidden>σ_z ≈ z²σ_d/(f·b) = 49 × 0.5 / 70 = 0.35 m. (The disparity itself is 700 × 0.1 / 7 = 10 px.)</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Which statement describes feature-based (indirect) visual odometry, as opposed to direct?</p><div class="opts"><button type="button" class="opt">It minimizes brightness differences between images</button><button type="button" class="opt">It must run coarse-to-fine to converge</button><button type="button" class="opt">Data association is explicit: matches are fixed before the motion is estimated</button><button type="button" class="opt">It needs no outlier rejection</button></div><p class="exp" hidden>Feature-based methods detect, match, then minimize reprojection error. The matches make the basin of convergence larger, but some are wrong, so outlier rejection is essential.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. A pinhole camera has \(f_u = f_v = 600\) and principal point (400, 300). Where does \(\mathbf{x}^c = (-0.5, 0.25, 5)\) project?</p><div class="opts"><button type="button" class="opt">(460, 330)</button><button type="button" class="opt">(340, 330)</button><button type="button" class="opt">(340, 270)</button><button type="button" class="opt">(100, 450)</button></div><p class="exp" hidden>u = 600·(−0.5/5) + 400 = 340 and v = 600·(0.25/5) + 300 = 330.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q6. Which camera model does the book describe as suited to fisheye lenses and as having a closed-form unprojection?</p><div class="opts"><button type="button" class="opt">Pinhole</button><button type="button" class="opt">Radial-tangential</button><button type="button" class="opt">Kannala-Brandt</button><button type="button" class="opt">Double Sphere</button></div><p class="exp" hidden>The Double Sphere model has a closed-form unprojection and is reported to be about five times faster to compute than Kannala-Brandt at comparable reprojection error (p. 199).</p></div>
+  <div class="q" data-a="0"><p class="qq">Q7. What is the Shi-Tomasi score of a patch with \(\mathbf{M} = \begin{bmatrix} 6 & 2 \\ 2 & 3 \end{bmatrix}\)?</p><div class="opts"><button type="button" class="opt">2</button><button type="button" class="opt">7</button><button type="button" class="opt">14</button><button type="button" class="opt">9</button></div><p class="exp" hidden>The eigenvalues are 4.5 ± √(1.5² + 2²) = 4.5 ± 2.5, that is 7 and 2. Shi-Tomasi uses the smaller one, 2.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q8. A camera moves straight forward without rotating: \(\mathbf{R} = \mathbf{I}\), \(\mathbf{t}\) along the optical axis. What do the epipolar lines in the second image look like?</p><div class="opts"><button type="button" class="opt">Horizontal rows</button><button type="button" class="opt">Vertical columns</button><button type="button" class="opt">Lines radiating from the principal point</button><button type="button" class="opt">Circles around the principal point</button></div><p class="exp" hidden>With t = (0, 0, t_z), E b₁ is proportional to (−y′₁, x′₁, 0), so the constraint is x′₁y′₂ − y′₁x′₂ = 0: the match lies on the line through the image center and the original point. Points appear to flow outward along these lines.</p></div>
+</div>
+
+<h3>3. Pen-and-paper problems</h3>
+<ol class="probs">
+  <li><p>A camera has \(f_u = f_v = 800\) and principal point \((640, 360)\). Its pose is \(\mathbf{R}^i_w = \mathbf{I}\), \(\mathbf{t}^i_w = (-1, 0, 0)\). A landmark is estimated at \(\mathbf{x}^w = (2, 1, 10)\) and was observed at pixel \((722, 437)\) with isotropic noise of standard deviation 2 pixels. Compute the point in camera coordinates, its predicted pixel, the reprojection error, and its term in (7.1).</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>Camera coordinates: \(\mathbf{x}^c = \mathbf{R}^i_w\mathbf{x}^w + \mathbf{t}^i_w = (2-1, 1, 10) = (1, 1, 10)\).</p>
+      <p>Prediction: \(u = 800\cdot\tfrac{1}{10} + 640 = 720\), \(v = 800\cdot\tfrac{1}{10} + 360 = 440\).</p>
+      <p>Error: \(\mathbf{e} = (722, 437) - (720, 440) = (2, -3)\), so \(\norm{\mathbf{e}}^2 = 13\).</p>
+      <p>Cost term: with covariance \(\sigma^2\mathbf{I} = 4\,\mathbf{I}\), \(\tfrac12\mathbf{e}\T\boldsymbol{\Sigma}^{-1}\mathbf{e} = \tfrac{13}{2\cdot4} = 1.625\).</p></div></details></li>
+  <li><p>A lens has \(k_1 = -0.3\), \(k_2 = 0.1\), no tangential distortion, \(f_u = f_v = 400\), principal point \((320, 240)\). (a) Project \(\mathbf{x}^c = (1, 1, 2)\) with and without distortion. (b) Starting from the distorted normalized coordinates, do two iterations of the fixed-point undistortion of Day 3.</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>(a) \(x' = y' = 0.5\), \(r^2 = 0.5\), \(r^4 = 0.25\). Factor: \(1 - 0.3\cdot0.5 + 0.1\cdot0.25 = 0.875\). So \(x'' = y'' = 0.4375\) and the pixel is \((400\cdot0.4375 + 320,\ 400\cdot0.4375 + 240) = (495, 415)\). Without distortion it would be \((520, 440)\): the point moved 25 pixels in each direction, about 35 pixels toward the center.</p>
+      <p>(b) Start at \(x' = y' = 0.4375\). Iteration 1: \(r^2 = 2\cdot0.4375^2 = 0.3828\), \(r^4 = 0.1465\), \(g = 1 - 0.1148 + 0.0147 = 0.8998\), \(x' = 0.4375/0.8998 = 0.4862\). Iteration 2: \(r^2 = 2\cdot0.4862^2 = 0.4728\), \(r^4 = 0.2235\), \(g = 1 - 0.1418 + 0.0224 = 0.8805\), \(x' = 0.4375/0.8805 = 0.4969\). The iterates approach the true value 0.5.</p></div></details></li>
+  <li><p>Two \(2\times2\)-pixel patches have these image gradients \((I_u, I_v)\) at their four pixels. Patch A: \((2,0), (2,0), (0,1), (0,1)\). Patch B: \((1,1), (1,1), (1,1), (1,1)\). For each, compute \(\mathbf{M}\), its eigenvalues, the Shi-Tomasi score, and the Harris response with \(k = 0.04\). Which is a corner?</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>Patch A: \(\sum I_u^2 = 4+4 = 8\), \(\sum I_v^2 = 1+1 = 2\), \(\sum I_uI_v = 0\). \(\mathbf{M} = \begin{bmatrix} 8 & 0 \\ 0 & 2 \end{bmatrix}\), eigenvalues 8 and 2. Shi-Tomasi score 2. Harris: \(16 - 0.04\cdot10^2 = 12\). Both eigenvalues are well above zero and \(R \gt 0\): a corner (gradients point in two different directions).</p>
+      <p>Patch B: every entry sums to 4. \(\mathbf{M} = \begin{bmatrix} 4 & 4 \\ 4 & 4 \end{bmatrix}\), eigenvalues \(4 \pm 4\), that is 8 and 0. Shi-Tomasi score 0. Harris: \(0 - 0.04\cdot8^2 = -2.56\). An edge, running diagonally: all gradients are parallel, and sliding the patch along \((1,-1)\) changes nothing. Note that the diagonal entries of \(\mathbf{M}\) alone would not reveal this; the off-diagonal entry matters.</p></div></details></li>
+  <li><p>(Stretch.) Two identical cameras have \(f = 500\), principal point \((320, 240)\), and are related by \(\mathbf{R} = \mathbf{I}\), \(\mathbf{t} = (-0.5, 0, 0)\). A keypoint is at \(\mathbf{z}_1 = (420, 190)\) in image 1. (a) Use the essential matrix to find its epipolar line in image 2. (b) The match is found at \(u_2 = 395\) on that line. Find the 3D point in camera-1 coordinates and verify it by projecting into camera 2. (c) If the disparity has standard deviation 0.5 px, how uncertain is the depth? (d) What changes if the true baseline was 1 m instead of 0.5 m?</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>(a) \(\mathbf{b}_1 = \big(\tfrac{420-320}{500}, \tfrac{190-240}{500}, 1\big) = (0.2, -0.1, 1)\). With \(\mathbf{t} = (-0.5, 0, 0)\), \(\mathbf{E} = [\mathbf{t}]_\times = \begin{bmatrix} 0 & 0 & 0 \\ 0 & 0 & 0.5 \\ 0 & -0.5 & 0 \end{bmatrix}\) and \(\mathbf{E}\mathbf{b}_1 = (0, 0.5, 0.05)\). The constraint \(\mathbf{b}_2\T\mathbf{E}\mathbf{b}_1 = 0.5\,y'_2 + 0.05 = 0\) gives \(y'_2 = -0.1\), that is \(v_2 = 500\cdot(-0.1) + 240 = 190\). The epipolar line is the row \(v = 190\).</p>
+      <p>(b) Disparity \(d = 420 - 395 = 25\) px, so \(z = f\,b/d = 500\cdot0.5/25 = 10\) m, and \(\mathbf{x}^1 = 10\,\mathbf{b}_1 = (2, -1, 10)\). Check: \(\mathbf{x}^2 = \mathbf{x}^1 + \mathbf{t} = (1.5, -1, 10)\), which projects to \(u = 500\cdot0.15 + 320 = 395\), \(v = 500\cdot(-0.1) + 240 = 190\). It matches.</p>
+      <p>(c) \(\sigma_z \approx z^2\sigma_d/(f\,b) = 100\cdot0.5/250 = 0.2\) m.</p>
+      <p>(d) The pixels are the same, so the rays are the same; \(z = 500\cdot1/25 = 20\) m and the point becomes \((4, -2, 20)\). Everything doubles. The images alone cannot tell the two cases apart, which is the monocular scale ambiguity. A stereo rig, where \(b\) is calibrated, or an IMU resolves it.</p></div></details></li>
+</ol>
+
+<div class="box ok"><h4>You are ready for next week if you can</h4><ul>
+<li>Say what odometry, loop closure, and unary factors are, and give one sensor example of each.</li>
+<li>Project a point with \(\pi_p\), unproject a pixel to a ray, and explain why the depth is lost.</li>
+<li>Explain why a corner is a better keypoint than an edge, using the eigenvalues of \(\mathbf{M}\).</li>
+<li>Write equation (7.1) and say where the \(\tfrac12\) and the \(\boldsymbol{\Sigma}_j\) come from.</li>
+<li>Name the unknowns of bundle adjustment (7.3) and say why keyframes keep it sparse.</li>
+<li>State the epipolar constraint and explain why a monocular reconstruction has no absolute scale.</li>
+</ul></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Prelude to Part II, pp. 185–192, and Chapter 7, §7.1–7.3, pp. 193–207.</li>
+<li>Hartley and Zisserman, <em>Multiple View Geometry in Computer Vision</em>, 2004 (two-view geometry, stereo depth).</li>
+<li>Sturm, Engelhard, Endres, Burgard, Cremers, <em>A Benchmark for the Evaluation of RGB-D SLAM Systems</em>, 2012 (ATE and RPE).</li>
+<li>Harris and Stephens, <em>A Combined Corner and Edge Detector</em>, 1988; Shi and Tomasi, <em>Good Features to Track</em>, 1994.</li>
+</ol></div>
+<p class="next"></p>
+</section>

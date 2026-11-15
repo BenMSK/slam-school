@@ -1,0 +1,80 @@
+<section class="day" data-day="84" id="d84" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 14 · Review</span>
+  <h2>Week 14 review: radar from chirp to pose graph</h2>
+  <p class="lead">After today you can compute range, velocity and angle from FMCW measurements, set a CFAR threshold, fit an ego-velocity to Doppler readings, and describe how a radar SLAM pipeline finds and verifies loop closures.</p>
+  <p class="meta">About 60 min · No new pages</p>
+</header>
+
+<div class="box key"><h3>The week in one paragraph</h3><p>An FMCW radar sends chirps and compares each echo with the transmitted signal. The beat frequency gives range, the phase change between chirps gives radial velocity, and the phase change between antennas gives angle. The raw output is a noisy power map with speckle and multipath ghosts, so a filter such as CFAR or k-strongest picks the cells that become points. Odometry comes either from Doppler alone, by fitting the sensor velocity to the radial velocities of static points, or from matching scans as with LiDAR, usually against several keyframes and after motion compensation. Place recognition adapts LiDAR descriptors by storing intensity instead of height. A full system feeds odometry and carefully verified loop constraints into an ordinary pose graph.</p></div>
+
+<h3>1. Formula sheet</h3>
+<div class="tbl"><table>
+  <tr><th>What it is</th><th>Formula</th><th>Where</th></tr>
+  <tr><td>Echo delay and range</td><td>\(d = \tfrac{c}{2}t_0\)</td><td>(9.1), p. 254 · Day 1</td></tr>
+  <tr><td>Beat frequency of a chirp with slope \(S = B/T\)</td><td>\(f_0 = \dfrac{2Sd}{c}\), so \(d = \dfrac{c f_0}{2S}\)</td><td>(9.2), p. 255 · Day 1</td></tr>
+  <tr><td>Range resolution and unambiguous range with \(N\) complex samples</td><td>\(\Delta d = \dfrac{c}{2B}\), \(d_{\max} = N\dfrac{c}{2B}\)</td><td>App · Day 1</td></tr>
+  <tr><td>Velocity from the phase change between chirps</td><td>\(v = \dfrac{\lambda\,\Delta\phi}{4\pi T}\), \(v_{\max} = \dfrac{\lambda}{4T}\)</td><td>(9.4)–(9.5), p. 256 · Day 1</td></tr>
+  <tr><td>Triangular modulation</td><td>\(f_{0,t} = \tfrac12(f_{0,\text{up}} - f_{0,\text{down}})\), \(f_{0,d} = \tfrac12(f_{0,\text{up}} + f_{0,\text{down}})\), \(f_{0,d} = 2v/\lambda\)</td><td>(9.8), p. 256 · Day 2</td></tr>
+  <tr><td>Angle of arrival, antennas \(\ell\) apart</td><td>\(\theta = \arcsin\dfrac{\lambda\,\Delta\phi}{2\pi\ell}\)</td><td>(9.10), p. 257 · Day 2</td></tr>
+  <tr><td>CA-CFAR threshold with \(N\) training cells</td><td>\(\tau = \alpha\,\hat\mu\), \(\alpha = N\left(P_{fa}^{-1/N} - 1\right)\)</td><td>§9.1.4, p. 260 and App · Day 2</td></tr>
+  <tr><td>Doppler residual of a static target, and the ego-velocity that minimises its squares</td><td>\(e_{d,k} = v_{d,k} - \mathbf{v}^{s\top}_k \dfrac{\mathbf{r}^s_{d,k}}{\norm{\mathbf{r}^s_{d,k}}}\), \(\hat{\mathbf{v}} = (\mathbf{A}\T\mathbf{A})^{-1}\mathbf{A}\T\mathbf{y}\)</td><td>(9.14), p. 264 and App · Day 3</td></tr>
+  <tr><td>Scan Context distance</td><td>\(\min_s \dfrac{1}{N_s}\sum_j \left(1 - \dfrac{\mathbf{q}_j\T\mathbf{c}_{j+s}}{\norm{\mathbf{q}_j}\norm{\mathbf{c}_{j+s}}}\right)\)</td><td>App · Day 4</td></tr>
+  <tr><td>Joint loop retrieval</td><td>\(c = \argmin_c\ d_{\text{descriptor}}(q,c) + d_{\text{odometry}}(q,c)\)</td><td>§9.4.2, p. 276 · Day 5</td></tr>
+</table></div>
+
+<h3>2. Mixed quiz</h3>
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. A chirp has slope S = 10¹³ Hz/s. What beat frequency does a target at 30 m produce? (c = 3 × 10⁸ m/s)</p><div class="opts"><button type="button" class="opt">1 MHz</button><button type="button" class="opt">2 MHz</button><button type="button" class="opt">4 MHz</button><button type="button" class="opt">200 kHz</button></div><p class="exp" hidden>f₀ = 2Sd/c = 2 × 10¹³ × 30/(3 × 10⁸) = 2 × 10⁶ Hz.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. You want range bins half as large. What do you change?</p><div class="opts"><button type="button" class="opt">Double the bandwidth</button><button type="button" class="opt">Double the chirp duration and keep the bandwidth</button><button type="button" class="opt">Double the carrier frequency</button><button type="button" class="opt">Double the time between chirps</button></div><p class="exp" hidden>The bin size is c/(2B). Only the bandwidth appears in it.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A radar with λ = 4 mm sends chirps 100 µs apart. What is the largest radial speed it reports without aliasing?</p><div class="opts"><button type="button" class="opt">2.5 m/s</button><button type="button" class="opt">5 m/s</button><button type="button" class="opt">20 m/s</button><button type="button" class="opt">10 m/s</button></div><p class="exp" hidden>v_max = λ/(4T) = 0.004/(4 × 10⁻⁴) = 10 m/s.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. Two receive antennas are one full wavelength apart. For which angles of arrival is the phase difference unambiguous?</p><div class="opts"><button type="button" class="opt">Within ±90°</button><button type="button" class="opt">Within ±60°</button><button type="button" class="opt">Within ±30°</button><button type="button" class="opt">Within ±15°</button></div><p class="exp" hidden>|Δφ| below π requires |sin θ| below λ/(2ℓ) = 1/2, that is, θ within ±30°.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. The noise power doubles in every cell of a radargram. What happens to the false alarm probability of a CA-CFAR filter?</p><div class="opts"><button type="button" class="opt">It doubles</button><button type="button" class="opt">It stays the same</button><button type="button" class="opt">It is squared</button><button type="button" class="opt">It halves</button></div><p class="exp" hidden>The threshold is a multiple of the measured local noise level, so it doubles too. P_fa = (1 + α/N)^(−N) does not contain the noise level.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q6. A static point straight ahead (azimuth 0°) has a closing speed of 8 m/s, and a static point at azimuth 90° (to the left) has −2 m/s. What is the sensor velocity?</p><div class="opts"><button type="button" class="opt">8 m/s forward and 2 m/s to the right</button><button type="button" class="opt">8 m/s forward and 2 m/s to the left</button><button type="button" class="opt">6 m/s forward</button><button type="button" class="opt">2 m/s forward and 8 m/s to the right</button></div><p class="exp" hidden>The reading at 0° is v_x = 8. The reading at 90° is v_y = −2: the sensor moves away from the point on its left, so it drifts to the right.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q7. A radar Scan Context has 40 sectors. The best match with a stored descriptor is at a shift of 5 columns. What heading change does that indicate?</p><div class="opts"><button type="button" class="opt">5°</button><button type="button" class="opt">8°</button><button type="button" class="opt">45°</button><button type="button" class="opt">200°</button></div><p class="exp" hidden>One sector is 360°/40 = 9°, so 5 columns are 45°.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q8. In TBV-SLAM, what finally keeps a wrong loop candidate with a good descriptor score out of the pose graph?</p><div class="opts"><button type="button" class="opt">The keyframe distance threshold</button><button type="button" class="opt">The k-strongest filter</button><button type="button" class="opt">Motion compensation</button><button type="button" class="opt">Registration of the pair followed by alignment verification</button></div><p class="exp" hidden>Candidates are scored with odometry, then registered, and the alignment is checked by overlap measures and a misalignment detector. Only verified candidates become constraints (pp. 275–276).</p></div>
+</div>
+
+<h3>3. Pen-and-paper problems</h3>
+<ol class="probs">
+  <li><p>An FMCW radar uses chirps with \(B = 750\) MHz and \(T = 50\ \mu\text{s}\). A target produces a beat frequency of 2 MHz. (a) How far away is it? (b) What is the range resolution? (c) With 256 complex samples per chirp, what is the largest unambiguous range? Use \(c = 3\times10^8\) m/s.</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>(a) \(S = B/T = 7.5\times10^{8}/5\times10^{-5} = 1.5\times10^{13}\) Hz/s. \(d = c f_0/(2S) = (3\times10^{8})(2\times10^{6})/(3\times10^{13}) = 20\) m.</p>
+      <p>(b) \(\Delta d = c/(2B) = 3\times10^{8}/(1.5\times10^{9}) = 0.2\) m.</p>
+      <p>(c) \(d_{\max} = N\,c/(2B) = 256 \times 0.2 = 51.2\) m. Check: the sampling rate is \(N/T = 5.12\) MHz, and a target at 51.2 m has \(f_0 = 2Sd/c = 5.12\) MHz.</p></div></details></li>
+  <li><p>A radar has \(\lambda = 3.9\) mm and sends chirps \(T = 60\ \mu\text{s}\) apart. (a) The beat phase changes by 0.8 rad between two chirps. What is the radial velocity? (b) What is \(v_{\max}\)? (c) A target recedes at 20 m/s. What velocity does the radar report?</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>(a) \(v = \lambda\Delta\phi/(4\pi T) = (3.9\times10^{-3})(0.8)/(4\pi \times 6\times10^{-5}) = 3.12\times10^{-3}/7.54\times10^{-4} = 4.14\) m/s.</p>
+      <p>(b) \(v_{\max} = \lambda/(4T) = 3.9\times10^{-3}/2.4\times10^{-4} = 16.25\) m/s.</p>
+      <p>(c) The true phase change is \(4\pi v T/\lambda = 4\pi(20)(6\times10^{-5})/(3.9\times10^{-3}) = 3.867\) rad, which is more than \(\pi\). The radar sees it wrapped: \(3.867 - 2\pi = -2.416\) rad, and reports \(v = (3.9\times10^{-3})(-2.416)/(7.54\times10^{-4}) = -12.5\) m/s. Equivalently \(20 - 2v_{\max} = -12.5\). The target seems to approach.</p></div></details></li>
+  <li><p>A 2D radar reports closing speeds for five points: 8.00 m/s at azimuth 0°, 1.00 m/s at 90°, −1.00 m/s at −90°, 6.36 m/s at 45°, and −2.00 m/s at 180°. (a) Fit the sensor velocity to the first four points by least squares. (b) Compute the residual of the fifth point and interpret it. (c) Fit all five points and compare.</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>(a) The rows of \(\mathbf{A}\) are \((1,0)\), \((0,1)\), \((0,-1)\), \((0.707, 0.707)\). Then</p>
+      \[ \mathbf{A}\T\mathbf{A} = \begin{bmatrix} 1.5 & 0.5 \\ 0.5 & 2.5 \end{bmatrix}, \qquad \mathbf{A}\T\mathbf{y} = \begin{bmatrix} 8 + 4.5 \\ 1 + 1 + 4.5 \end{bmatrix} = \begin{bmatrix} 12.5 \\ 6.5 \end{bmatrix}. \]
+      <p>The determinant is \(1.5 \times 2.5 - 0.25 = 3.5\), so \(v_x = (2.5 \times 12.5 - 0.5 \times 6.5)/3.5 = 8\) and \(v_y = (1.5 \times 6.5 - 0.5 \times 12.5)/3.5 = 1\). The sensor moves at (8, 1) m/s, and all four residuals are zero.</p>
+      <p>(b) A static point at 180° would read \(8\cos180° + 1\sin180° = -8\) m/s. The measurement is −2, so the residual is \(-2 - (-8) = 6\) m/s. The point is not static: it is something behind the sensor that follows it at 6 m/s along the line of sight.</p>
+      <p>(c) The fifth row is \((-1, 0)\). Now \(\mathbf{A}\T\mathbf{A} = \begin{bmatrix} 2.5 & 0.5 \\ 0.5 & 2.5 \end{bmatrix}\) and \(\mathbf{A}\T\mathbf{y} = (12.5 + 2,\ 6.5) = (14.5,\ 6.5)\). The determinant is 6, so \(v_x = (2.5 \times 14.5 - 0.5 \times 6.5)/6 = 5.5\) and \(v_y = (2.5 \times 6.5 - 0.5 \times 14.5)/6 = 1.5\). One moving point out of five has pulled the forward speed from 8 to 5.5 m/s. This is why the outlier is rejected before the fit.</p></div></details></li>
+  <li><p>A CA-CFAR filter uses \(N = 8\) training cells and \(P_{fa} = 10^{-4}\). (a) Compute the multiplier \(\alpha\). (b) The eight training cells have powers that sum to 12, and the cell under test has power 30. Is it a detection? (c) One training cell, of power 1.5, is replaced by a second target of power 40. Is the cell under test still detected? (d) Show that \(\alpha \to -\ln P_{fa}\) as \(N \to \infty\), and give its value here.</p>
+      <details class="sol"><summary>Solution</summary><div>
+      <p>(a) \(\alpha = 8\,(10^{4/8} - 1) = 8\,(3.162 - 1) = 17.30\).</p>
+      <p>(b) The mean is \(12/8 = 1.5\), the threshold is \(17.30 \times 1.5 = 25.9\). Since \(30 \gt 25.9\), it is a detection.</p>
+      <p>(c) The sum becomes \(12 - 1.5 + 40 = 50.5\), the mean 6.31, the threshold \(17.30 \times 6.31 = 109.2\). Now \(30 \lt 109.2\) and the target is missed. A strong neighbour inside the training window masks a weaker target. The median of the eight cells would hardly move, which is the argument for OS-CFAR.</p>
+      <p>(d) Write \(P_{fa}^{-1/N} = e^{-\ln P_{fa}/N}\). For large \(N\) the exponent is small and \(e^{x} \approx 1 + x\), so \(\alpha = N(e^{-\ln P_{fa}/N} - 1) \approx N \cdot (-\ln P_{fa}/N) = -\ln P_{fa}\). For \(P_{fa} = 10^{-4}\) this is 9.21: the threshold you would use if the noise level were known exactly. With 8 cells the multiplier is almost twice that.</p></div></details></li>
+</ol>
+
+<div class="box ok"><h4>You are ready for next week if you can</h4><ul>
+<li>Explain, without formulas, how a chirp turns a delay into a frequency and why the phase between chirps gives velocity.</li>
+<li>Compute range, range resolution, velocity and the aliasing limit from chirp parameters.</li>
+<li>Say what speckle, multipath and motion distortion do to a radar scan, and how CFAR and k-strongest filtering differ in purpose.</li>
+<li>Set up and solve the least-squares problem for ego-velocity, and explain why moving objects must be rejected and why rotation is not observable.</li>
+<li>Describe how Scan Context is adapted to radar and why a narrow field of view breaks rotation invariance.</li>
+<li>List the checks a loop candidate passes before it becomes a constraint in a radar pose graph.</li>
+</ul></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Ch. 9 "Radar SLAM", pp. 250–281.</li>
+<li>Richards, <em>Fundamentals of Radar Signal Processing</em>, 2nd ed., 2014 (range and velocity resolution, CA-CFAR multiplier).</li>
+<li>Kim and Kim, <em>Scan Context: Egocentric Spatial Descriptor for Place Recognition within 3D Point Cloud Map</em>, 2018.</li>
+</ol></div>
+<p class="next"></p>
+</section>

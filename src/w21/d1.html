@@ -1,0 +1,105 @@
+<section class="day" data-day="121" id="d121" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 21 · Day 1</span>
+  <h2>When the world moves: short-term, long-term, and deformable scenes</h2>
+  <p class="lead">After today you can classify a changing scene as short-term dynamic, long-term dynamic, or deformable from how fast it changes relative to how often the robot observes it, and place a method on the chapter's three design axes.</p>
+  <p class="meta">About 60 min · Read Ch. 15 opening and §15.1, pp. 417–423 (7 pages, three of them mostly figures) · Needs Week 6 Day 1</p>
+</header>
+
+<div class="box read"><h4>Read first: Chapter 15 opening and §15.1, pp. 417–423</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The sentence on p. 419 that says what the short-term / long-term distinction depends on, and what it does <em>not</em> depend on.</li>
+<li>Examples A–D under Figure 15.2 (p. 420), and Figure 15.3 (p. 421): one motion, two robots, two verdicts.</li>
+<li>What an offline method has that an online method cannot have (top of p. 423).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Every method so far assumed that only the robot moves. Real scenes change, and the kind of change is defined by what the robot sees. If the scene changes little between two observations, the change looks smooth and can be tracked (<strong>short-term dynamics</strong>). If it changes a lot, it looks like a jump and must be re-identified (<strong>long-term dynamics</strong>). When no part of the scene is static, the problem is <strong>deformable SLAM</strong>.</p></div>
+
+<h3>1. What the static-world assumption bought us</h3>
+<p>The <strong>static-world assumption</strong> says the scene does not change and only the robot moves. Two results rest on it. A feature that is detected again constrains the robot pose, because the feature is taken to be where it was (Chapter 1, <a href="#d7">Week 2 · Day 1</a>). A dense map can be built by fusing many posed observations, because they show the same surfaces (Chapter 5, <a href="#d43">Week 8 · Day 1</a>). The chapter opens with three scenes where it fails: a car in city traffic, a home robot whose users rearrange the room, and a surgical robot inside the body, where there is no static background and everything deforms. <span class="src">Ch. 15 opening · p. 417</span></p>
+<p>The oldest remedy lets outlier rejection (RANSAC, <a href="#d32">Week 6 · Day 2</a>) separate measurements that move consistently with the sensor from those that move on their own, as the stars move together while the planets wander.</p>
+
+<div class="box note"><h4>Filling the gap: how much damage does one moving object do?</h4>
+<p>A robot drives forward 1.00 m between two frames and tracks 10 features. In its own frame each static feature appears to shift by \(-1.00\) m. Three features sit on a truck that drove forward 0.60 m in the same time, so they shift by only \(-0.40\) m. Least squares picks the shift \(s\) that minimizes \(\sum_i (s_i - s)^2\), the mean:</p>
+\[ \hat{s} = \frac{7 \times (-1.00) + 3 \times (-0.40)}{10} = -0.82 \ \text{m}. \]
+<p>The robot concludes it moved 0.82 m, an 18 cm error from one frame pair, repeated for as long as the truck is in view. The median of the ten shifts is \(-1.00\) m, the right answer: the robust-estimation idea of <a href="#d31">Week 6 · Day 1</a>.</p>
+<p>Now let the truck cover six of the ten features. The mean is \(-0.64\) m and the median is \(-0.40\) m. The consensus is now the truck. Rejection works only while the static scene holds the majority.</p></div>
+
+<h3>2. Short-term and long-term: a ratio, not a duration</h3>
+<p>The book classifies dynamics by how they appear in the observations. <strong>Short-term dynamics</strong> give observations that change gradually (<em>transient</em> characteristics). <strong>Long-term dynamics</strong> give observations that change abruptly. Almost every physical process is continuous if sampled often enough, so the class does not depend on how long the process takes. It depends on the relation between the <strong>rate of change</strong> of the scene and the <strong>rate of observation</strong> of the robot. <span class="src">§15.1.1 · p. 419</span></p>
+
+<div class="box note"><h4>Filling the gap: put a number on the ratio</h4>
+<p>An object moving at speed \(v\), observed \(f\) times per second, moves</p>
+\[ d = \frac{v}{f} \]
+<p>between two observations. Compare \(d\) with the distance to the nearest thing the object could be confused with. If \(d\) is much smaller, each detection is closest to its own previous position and the object is easy to follow. If \(d\) is larger, the nearest detection is often something else, and the object must be recognized again from its appearance or shape.</p>
+<p>Example D of Figure 15.2: a tennis ball at 250 km/h is \(69.4\) m/s. At 340 Hz it moves \(69.4/340 = 0.20\) m between frames, so a very fast object still gives a smooth track. A person walking at 1.5 m/s seen by a 10 Hz LiDAR moves 0.15 m per scan; seen once a minute, up to 90 m.</p></div>
+
+<p>The other examples of Figure 15.2 follow the same logic. Plant growth measured daily (A) is short-term although the rate is very low, because plants grow little in a day. A building patrolled daily (B) is long-term, because parts of it change completely between patrols, and so are objects rearranged while the robot was gone for a minute (C). <span class="src">Figure 15.2 · p. 420</span></p>
+
+<p>In most robotics the two rates are of the same order: objects move at about \(10^{-1}\) to \(10^{2}\) m/s and sensors run at about \(10^{0}\) to \(10^{3}\) Hz. The sensor then sees motion as continuous whenever the object is in view, and the distinction becomes simple: short-term is motion <em>within view</em>, long-term is change that happened <em>out of view</em>. <span class="src">§15.1.1 · p. 419</span></p>
+<p>Try it: eight identical objects, one observer. Lower the observation rate step by step.</p>
+<div class="viz" data-viz="w21_rate"></div>
+<p class="cap">Notice: at 1.5 m/s and 10 Hz each object moves 0.15 m between observations, about an eighth of the distance to its nearest neighbour, and 99% of the nearest-neighbour matches are right. At 0.5 Hz it moves 3 m, twice that distance, and 15% are right, close to the 12.5% of a blind guess among eight. Then set 3 m/s and 20 Hz: the picture is the same as at the start, because only \(v/f\) matters.</p>
+
+<h3>3. The observer decides</h3>
+<p>Since the class depends on the observations, it is not a property of the object or of the environment. The same physical motion can be short-term for one robot and long-term for another. <span class="src">§15.1.1 · pp. 419–421, Figure 15.3</span></p>
+<figure class="fig"><svg viewBox="0 0 600 246" role="img" aria-label="One object moves steadily from left to right. Robot 1 observes it nine times along the way and sees eight small steps. Robot 2 observes it only at the start and at the end, with a long stretch of not observing in between, and sees a single jump.">
+  <defs><marker id="w21ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <text x="150" y="22" font-size="12" fill="var(--muted)">True motion of the object, the same in both rows</text>
+  <line x1="150" y1="38" x2="540" y2="38" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#w21ar1)"/>
+  <text x="10" y="90" font-size="13" font-weight="700" fill="var(--ink)">Robot 1</text>
+  <text x="10" y="106" font-size="11" fill="var(--muted)">watches all the time</text>
+  <line x1="160" y1="92" x2="520" y2="92" stroke="var(--c1)" stroke-width="2"/>
+  <line x1="160" y1="92" x2="521" y2="92" stroke="var(--c1)" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 45"/>
+  <text x="340" y="122" text-anchor="middle" font-size="12" fill="var(--ink)">eight small steps: the motion looks smooth (short-term)</text>
+  <text x="10" y="172" font-size="13" font-weight="700" fill="var(--ink)">Robot 2</text>
+  <text x="10" y="188" font-size="11" fill="var(--muted)">looks away</text>
+  <rect x="186" y="158" width="308" height="32" rx="6" fill="var(--soft)" stroke="var(--line2)" stroke-dasharray="4 4"/>
+  <text x="340" y="179" text-anchor="middle" font-size="12" fill="var(--muted)">not observing</text>
+  <circle cx="160" cy="174" r="6" fill="var(--c3)"/><circle cx="520" cy="174" r="6" fill="var(--c3)"/>
+  <path d="M164 184 Q340 228 513 185" fill="none" stroke="var(--c3)" stroke-width="2" marker-end="url(#w21ar1)"/>
+  <text x="340" y="238" text-anchor="middle" font-size="12" fill="var(--ink)">one jump: the object seems to teleport (long-term)</text>
+</svg><figcaption>Each dot is one observation of the object. What differs between the rows is the observer, not the motion.</figcaption></figure>
+<p>The book's example is a bottle that a person picks up and puts down next to where it stood: a robot that sees the table only before and after sees a bottle that jumped. Mapping a place in several sessions is the extreme case, with the scene static during each visit and the changes piling up in between. <span class="src">§15.1.1 · p. 419</span> Both classes assume some static background. In endoscopic surgery the whole scene moves and deforms around the sensor; this setting with no static part is <strong>deformable SLAM</strong> (Day 5). <span class="src">§15.1.1 · p. 420</span></p>
+<p>Papers use other words. <em>Dynamic</em> or <em>high-dynamic</em> means short-term. <em>Semi-static</em>, <em>quasi-static</em>, or <em>low-dynamic</em> means long-term: objects that could move but stand still while observed, or changes between visits. <em>Spatio-temporal</em> or <em>4D</em> models keep the history of the scene, 3D plus time (not radar's 4D, whose fourth dimension is velocity). <em>Lifelong</em>, <em>persistent</em>, or <em>continuous</em> systems cope with a varying environment over long time spans. <span class="src">§15.1.1.1 · pp. 420–421</span></p>
+<p>The classes also mix: one rigid moving object, a person who moves and deforms, a building that changes only between patrols, a home with all of these. Estimating every effect jointly gets, in the book's words, exponentially more complex, so knowing which effects to expect allows a narrower system that works better. <span class="src">§15.1.1.2 · pp. 421–422</span></p>
+
+<h3>4. Three axes for placing a method</h3>
+<p>Figure 15.1 organizes the chapter along three questions. <span class="src">§15.1 · pp. 418–419</span></p>
+<div class="tbl"><table>
+  <tr><th>Axis</th><th>The question</th><th>Values</th></tr>
+  <tr><td>1. Observation characteristics</td><td>Which dynamic effects appear in the observations?</td><td>Short-term, long-term</td></tr>
+  <tr><td>2. Level of reconstruction</td><td>How much must the robot understand for its task?</td><td>Pose → scene geometry → temporal scene understanding</td></tr>
+  <tr><td>3. Time criticality</td><td>When, and how fast, must the answer be ready?</td><td>Online, offline</td></tr>
+</table></div>
+<p>Ordinary pose-graph SLAM sits at one corner: pose only, online, moving parts rejected as outliers. Multi-session change detection sits far from it: a detailed account of how a scene evolved, from a few sessions. <span class="src">Figure 15.1 · p. 418</span></p>
+<p><strong>Axis 2.</strong> If the application needs only the robot state, it is often adequate to treat dynamic observations as outliers and localize against the static background. If a dense map is wanted, the robot must detect and represent the motion and change. <span class="src">§15.1.2 · p. 422</span></p>
+<p><strong>Axis 3.</strong> Robots mostly must act at once, so the chapter concentrates on real-time methods. Offline processing has more computation and all the data: to decide whether something in frame \(F_t\) moved, it can use the later frames \(F_{t+1}, \dots, F_T\), which an online method has not seen yet. <span class="src">§15.1.3 · pp. 422–423</span></p>
+<p>The week follows the chapter: short-term dynamics on Day 2, long-term on Days 3 and 4, deformable SLAM on Day 5.</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"Long-term means slow, or a long time ago."</strong> A bottle moved during the minute the robot looked away is long-term. Plant growth measured daily is short-term. Only the ratio of the two rates counts.</li>
+<li><strong>"Robust estimation always finds the static scene."</strong> It finds the largest consistent group. When a moving object fills most of the view, that group is the object.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. A 10 Hz LiDAR watches a cyclist riding at 6 m/s. How far does the cyclist move between two scans?</p><div class="opts"><button type="button" class="opt">6 cm</button><button type="button" class="opt">1.67 m</button><button type="button" class="opt">0.6 m</button><button type="button" class="opt">60 m</button></div><p class="exp" hidden>d = v / f = 6 / 10 = 0.6 m, small next to the spacing of road users, so the cyclist can be followed from scan to scan.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A camera photographs a glacier once a day. Between photos the ice moves 30 cm, and its distinctive features are about 20 m apart. How do these dynamics appear to the camera?</p><div class="opts"><button type="button" class="opt">Short-term: the change per observation is small, so features can be tracked</button><button type="button" class="opt">Long-term: one observation per day is a low rate</button><button type="button" class="opt">Long-term: a glacier moves for years</button><button type="button" class="opt">Deformable SLAM: ice is not rigid</button></div><p class="exp" hidden>The change between observations (0.3 m) is small compared with the feature spacing (20 m), as in example A. Neither the low rate nor the duration decides it.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A robot tracks 10 features. Eight are static and appear to shift by −0.50 m. Two are on a moving cart and appear to shift by −0.10 m. What forward motion does plain least squares report?</p><div class="opts"><button type="button" class="opt">0.50 m</button><button type="button" class="opt">0.30 m</button><button type="button" class="opt">0.10 m</button><button type="button" class="opt">0.42 m</button></div><p class="exp" hidden>The mean shift is (8 × (−0.50) + 2 × (−0.10)) / 10 = −0.42 m, so the robot reports 0.42 m instead of 0.50 m.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. What can an offline method use to decide whether a point in frame t belongs to a moving object, that an online method cannot?</p><div class="opts"><button type="button" class="opt">The robot's odometry up to frame t</button><button type="button" class="opt">The frames recorded after frame t</button><button type="button" class="opt">A robust loss function</button><button type="button" class="opt">Semantic labels of the points</button></div><p class="exp" hidden>Offline, frames t+1 … T are already recorded. Online methods cannot use the future.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>The static-world assumption lets a re-detected feature constrain the pose and posed observations be fused. Moving things break both.</li>
+<li>Short-term dynamics look smooth to the robot, long-term dynamics look like jumps. The class is set by rate of change against rate of observation: \(d = v/f\) against the spacing of confusable things.</li>
+<li>In practice short-term means motion in view and long-term means change out of view; the same motion can be either. Deformable SLAM is the case with no static part.</li>
+<li>A method is placed by three axes: which dynamics it sees, how much it reconstructs, and whether it runs online or offline.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 15 opening and §15.1 "Characterizing the Dynamic SLAM Problem", pp. 417–423, Figures 15.1–15.3.</li>
+<li>The mean-versus-median example and \(d = v/f\) are arithmetic added by this course; robust estimation is Week 6 (<em>SLAM Handbook</em>, Chapter 3).</li>
+</ol></div>
+<p class="next"></p>
+</section>

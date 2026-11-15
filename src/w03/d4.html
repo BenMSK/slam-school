@@ -1,0 +1,123 @@
+<section class="day" data-day="16" id="d16" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 3 · Day 4</span>
+  <h2>The Bayes tree, and why a new measurement touches only part of it</h2>
+  <p class="lead">After today you can group the conditionals of an eliminated factor graph into a Bayes tree, name the frontal and separator variables of each clique, and predict which cliques a new factor forces you to recompute.</p>
+  <p class="meta">About 60 min · Read §1.7 to §1.7.2, pp. 46–49 (4 pages) · Needs Week 3 Day 3</p>
+</header>
+
+<div class="box read"><h4>Read first: §1.7, §1.7.1 and §1.7.2, pp. 46–49</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The reason on p. 46 why updating a matrix factorization is not enough for SLAM.</li>
+<li>The definition of "chordal" on p. 46, and the cycle the book points to in the toy Bayes net (p. 47).</li>
+<li>Figure 1.13 on p. 47: the three cliques, and which rows of \(\mathbf{R}\) carry which colour.</li>
+<li>The two properties of the Bayes tree in the last paragraph of p. 48.</li>
+<li>Figure 1.14 on p. 49: which clique is left alone when a factor between \(\mathbf{p}_1\) and \(\mathbf{p}_3\) is added.</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>The conditionals of a Bayes net that came from elimination can be grouped into cliques, and those cliques form a tree. During elimination, information only travels from the leaves up to the root. A new factor can therefore change only the cliques that hold its variables and the cliques above them. Take that part of the tree apart, eliminate it again, and hang the untouched sub-trees back on.</p></div>
+
+<h3>1. The problem: measurements never stop</h3>
+<p>A robot wants a fresh estimate every time a measurement arrives. Refactoring \(\boldsymbol{\Lambda}\) from scratch each time costs more and more as the trajectory grows, although one new measurement changes very little. For a <em>linear</em> problem there are classical ways to update an existing factorization (tomorrow shows one). But SLAM is nonlinear: when the estimate moves, old factors must be linearized again, old rows of \(\mathbf{A}\) change, and it is not clear how to do that without factoring everything again. The book's answer is to stop thinking of \(\mathbf{R}\) as a matrix and to store it as a graphical model that can be edited locally, the <strong>Bayes tree</strong>. <span class="src">§1.7 · p. 46</span></p>
+
+<h3>2. Elimination gives a chordal Bayes net, and chordal graphs have cliques that form a tree</h3>
+<p>A graph is <strong>chordal</strong> (or triangulated) if every cycle of more than three nodes has a <strong>chord</strong>, an edge joining two nodes that are not consecutive on the cycle. Ignoring arrow directions, the Bayes net produced by the elimination algorithm is always chordal. <span class="src">§1.7.1 · p. 46</span></p>
+<div class="box note"><h4>Filling the gap: why elimination always produces a chordal graph</h4>
+<p>Take any cycle in the Bayes net and let \(v\) be the variable on it that was eliminated first. Its two neighbours on the cycle, \(u\) and \(w\), were eliminated later, so the edges \(v\)–\(u\) and \(v\)–\(w\) mean that both were in the separator of \(v\). Yesterday's rule says eliminating \(v\) joins all members of its separator, so \(u\) and \(w\) share a factor from then on, and whichever of the two is eliminated first gets the other in its separator. The Bayes net therefore has the edge \(u\)–\(w\). If the cycle has more than three nodes, \(u\) and \(w\) are not consecutive on it, and this edge is a chord.</p>
+<p>The same argument shows that each variable together with its separator is a <strong>clique</strong>, a set of variables that are all joined pairwise.</p></div>
+<p>The toy Bayes net (last panel of Figure 1.10) has the cycle \(\mathbf{p}_1\)–\(\mathbf{p}_2\)–\(\boldsymbol{\ell}_1\), so at the level of single variables it is not a tree. <span class="src">§1.7.1 · p. 47</span> But its largest cliques are \(\{\boldsymbol{\ell}_1, \mathbf{p}_1, \mathbf{p}_2\}\), \(\{\mathbf{p}_2, \mathbf{p}_3\}\) and \(\{\boldsymbol{\ell}_2, \mathbf{p}_3\}\), and these three overlap like a tree: the first and the third each share one variable with the middle one and nothing with each other. For chordal graphs this always works. The book states it without proof. The undirected version is known as a clique tree or junction tree.</p>
+
+<h3>3. The Bayes tree</h3>
+<p>A <strong>Bayes tree</strong> is a directed tree whose nodes are the cliques \(\mathbf{c}_k\) of the chordal Bayes net. For each clique: <span class="src">§1.7.1 · p. 47</span></p>
+<ul>
+<li>the <strong>separator</strong> \(\mathbf{s}_k = \mathbf{c}_k \cap \boldsymbol{\varpi}_k\) is what the clique shares with its parent clique \(\boldsymbol{\varpi}_k\);</li>
+<li>the <strong>frontal variables</strong> \(\mathbf{f}_k = \mathbf{c}_k \setminus \mathbf{s}_k\) are the rest;</li>
+<li>the node stores one conditional \(p(\mathbf{f}_k \mid \mathbf{s}_k)\), and the clique is written \(\mathbf{f}_k : \mathbf{s}_k\).</li>
+</ul>
+<p>The joint density is the product over the cliques, equation (1.55): \(p(\mathbf{x}) = \prod_k p(\mathbf{f}_k \mid \mathbf{s}_k)\). The root has an empty separator and stores a prior \(p(\mathbf{f}_r)\). Every variable is frontal in exactly one clique.</p>
+<figure class="fig"><svg viewBox="0 0 600 200" role="img" aria-label="The Bayes tree of the toy example. The root clique holds p2 and p3 and stores p of p2 given p3 times p of p3, rows 4 and 5 of R. Its left child is the clique l1, p1 with separator p2, storing p of l1 given p1 and p2 times p of p1 given p2, rows 1 and 3 of R. Its right child is the clique l2 with separator p3, storing p of l2 given p3, row 2 of R.">
+  <defs><marker id="w03ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+  <rect x="180" y="12" width="240" height="64" rx="14" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <text x="300" y="32" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">p₂, p₃</text>
+  <text x="300" y="50" text-anchor="middle" font-size="12" fill="var(--ink)">p(p₂ | p₃) · p(p₃)</text>
+  <text x="300" y="66" text-anchor="middle" font-size="11" fill="var(--muted)">root · rows 4 and 5 of R</text>
+  <rect x="20" y="124" width="260" height="64" rx="14" fill="var(--c1-soft)" stroke="var(--c1)"/>
+  <text x="150" y="144" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">ℓ₁, p₁ : p₂</text>
+  <text x="150" y="162" text-anchor="middle" font-size="12" fill="var(--ink)">p(ℓ₁ | p₁, p₂) · p(p₁ | p₂)</text>
+  <text x="150" y="178" text-anchor="middle" font-size="11" fill="var(--muted)">rows 1 and 3 of R</text>
+  <rect x="340" y="124" width="240" height="64" rx="14" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <text x="460" y="144" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">ℓ₂ : p₃</text>
+  <text x="460" y="162" text-anchor="middle" font-size="12" fill="var(--ink)">p(ℓ₂ | p₃)</text>
+  <text x="460" y="178" text-anchor="middle" font-size="11" fill="var(--muted)">row 2 of R</text>
+  <line x1="250" y1="76" x2="172" y2="121" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w03ar2)"/>
+  <line x1="350" y1="76" x2="438" y2="121" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#w03ar2)"/>
+  <text x="186" y="96" text-anchor="end" font-size="11" fill="var(--muted)">shares p₂</text>
+  <text x="414" y="96" font-size="11" fill="var(--muted)">shares p₃</text>
+</svg><figcaption>The toy Bayes tree of Figure 1.13 with the contents of each clique written out. Multiply the three boxes and you get the five conditionals of equation (1.44). The tree is the matrix R with its rows sorted into groups.</figcaption></figure>
+<div class="box note"><h4>Filling the gap: building the tree from the Bayes net</h4>
+<p>The book says the cliques can be "identified". The procedure, from the iSAM2 paper, visits the conditionals in <em>reverse</em> elimination order. For \(p(\mathbf{x}_j \mid \mathbf{s}_j)\): if \(\mathbf{s}_j\) is empty, start a root clique. Otherwise find the clique in which the first-eliminated variable of \(\mathbf{s}_j\) is frontal. If that clique's variables are exactly \(\mathbf{s}_j\), add \(\mathbf{x}_j\) to it as another frontal variable. If not, start a new clique \(\mathbf{x}_j : \mathbf{s}_j\) as its child. For the toy example:</p>
+<div class="tbl"><table>
+<tr><th>Conditional</th><th>Clique found</th><th>Same variables as the separator?</th><th>Tree afterwards</th></tr>
+<tr><td>p(p₃)</td><td>none, the separator is empty</td><td></td><td>root: p₃</td></tr>
+<tr><td>p(p₂ | p₃)</td><td>root, {p₃}</td><td>yes, join it</td><td>root: p₂, p₃</td></tr>
+<tr><td>p(p₁ | p₂)</td><td>root, {p₂, p₃}</td><td>no, new child</td><td>adds p₁ : p₂</td></tr>
+<tr><td>p(ℓ₂ | p₃)</td><td>root, {p₂, p₃}</td><td>no, new child</td><td>adds ℓ₂ : p₃</td></tr>
+<tr><td>p(ℓ₁ | p₁, p₂)</td><td>p₁ : p₂, which is {p₁, p₂}</td><td>yes, join it</td><td>that clique becomes ℓ₁, p₁ : p₂</td></tr>
+</table></div></div>
+<p>Each clique is a small dense piece of \(\mathbf{R}\): the rows of its frontal variables, with nonzeros only in the columns of the clique. The book calls the Bayes tree "a deeply meaningful sparse storage scheme" for the square-root information matrix. <span class="src">§1.7.2 · p. 48</span> Rows of different branches overlap only in columns that belong to a common ancestor: in Figure 1.13(c), the rows of the two child cliques meet only in the root's columns.</p>
+
+<h3>4. Updating: only the path to the root</h3>
+<p>Two facts about how the tree was made explain everything. <span class="src">§1.7.2 · p. 48</span></p>
+<ol>
+<li><strong>Information flows upward only.</strong> A clique is computed from its own factors and from the new factors \(\tau\) passed up by its children. Nothing computed in a parent is ever used in a child.</li>
+<li><strong>A factor enters at the first of its variables to be eliminated</strong>, that is, in the clique where that variable is frontal.</li>
+</ol>
+<p>So a new factor \(\phi(\mathbf{x}_j, \mathbf{x}_{j'})\) changes the cliques where \(\mathbf{x}_j\) and \(\mathbf{x}_{j'}\) are frontal and every clique above them, up to the root. Sub-trees hanging below or beside these paths were computed from factors that have not changed. The update is an edit of the tree:</p>
+<pre class="code"><code>1. detach the affected cliques (the paths from the new factor's variables to the root)
+2. turn each of them back into a factor on its variables f_k and s_k
+3. add the new factor
+4. eliminate this small factor graph, in any convenient order -> a new top of the tree
+5. re-attach the untouched sub-trees ("orphans") below it</code></pre>
+<p>Figure 1.14 adds a factor between \(\mathbf{p}_1\) and \(\mathbf{p}_3\). \(\mathbf{p}_1\) is frontal in the left clique and \(\mathbf{p}_3\) in the root, so those two are detached. They become a factor on \((\boldsymbol{\ell}_1, \mathbf{p}_1, \mathbf{p}_2)\) and a factor on \((\mathbf{p}_2, \mathbf{p}_3)\). Add \(f(\mathbf{p}_1, \mathbf{p}_3)\) and eliminate in the order \(\boldsymbol{\ell}_1, \mathbf{p}_1, \mathbf{p}_2, \mathbf{p}_3\):</p>
+<ul>
+<li>\(\boldsymbol{\ell}_1\): separator \(\{\mathbf{p}_1, \mathbf{p}_2\}\), as before.</li>
+<li>\(\mathbf{p}_1\): its factors are \(\tau(\mathbf{p}_1, \mathbf{p}_2)\) and the new \(f(\mathbf{p}_1, \mathbf{p}_3)\), so its separator is now \(\{\mathbf{p}_2, \mathbf{p}_3\}\) and not just \(\{\mathbf{p}_2\}\).</li>
+<li>\(\mathbf{p}_2\): separator \(\{\mathbf{p}_3\}\). Then \(\mathbf{p}_3\), with none.</li>
+</ul>
+<p>Run the tree-building procedure on these four conditionals and you get a root \(\mathbf{p}_1, \mathbf{p}_2, \mathbf{p}_3\) with a child \(\boldsymbol{\ell}_1 : \mathbf{p}_1, \mathbf{p}_2\). The clique \(\boldsymbol{\ell}_2 : \mathbf{p}_3\) is hung back under the root unchanged. <span class="src">§1.7.2 · p. 49</span></p>
+<div class="box tip"><h4>Intuition</h4><p>Why is \(\boldsymbol{\ell}_2 : \mathbf{p}_3\) untouched although the new factor involves \(\mathbf{p}_3\)? Because \(\mathbf{p}_3\) is only its separator. The clique stores "how to place \(\boldsymbol{\ell}_2\) once \(\mathbf{p}_3\) is known", and that rule was built from \(\phi_5\) and \(\phi_9\) alone. The new measurement changes what we believe about \(\mathbf{p}_3\), which is stored in the root. The <em>value</em> of \(\boldsymbol{\ell}_2\) will still move when back-substitution runs again; its conditional does not.</p></div>
+<p>Try it: the tree on the right was built by the steps on the left. Press "Add next pose" and watch which cliques turn pink. Go on to step 11, where the robot returns to its start.</p>
+<div class="viz" data-viz="w03_isam"></div>
+<p class="cap">Notice that an ordinary step redoes only 3 or 4 variables next to the root, however long the trajectory already is. Step 11 adds a loop closure to x1, which sits at the very bottom of the tree, so the path to the root is the whole tree and all 14 variables are redone. Step 12 sees landmark l1 again and costs almost as much. Steps 13 and 14 are cheap again. Over the run the incremental updates re-eliminate 67 variables, against 135 for refactoring everything at every step.</p>
+<p>Figure 1.15 shows the same effect at a larger scale: the Bayes tree at step 400 of a simulated Manhattan-world sequence, with only a small part recalculated. <span class="src">§1.7.2 · pp. 49–50</span></p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"The root is where the robot started."</strong> The root holds the variables eliminated <em>last</em>. A good incremental ordering puts the most recent poses there, because that is where the next factors will arrive.</li>
+<li><strong>"The Bayes tree is a different, approximate model."</strong> It is the same density and the same \(\mathbf{R}\) as the Bayes net, grouped by clique.</li>
+<li><strong>"A factor between two variables changes two cliques."</strong> It changes their cliques and all the ancestors of both. If one of the variables is deep in the tree, that can be most of it.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. In the clique written ℓ₁, p₁ : p₂, which variables are frontal?</p><div class="opts"><button type="button" class="opt">p₂ only</button><button type="button" class="opt">All three</button><button type="button" class="opt">ℓ₁ and p₁</button><button type="button" class="opt">ℓ₁ only</button></div><p class="exp" hidden>Frontal variables are written before the colon and the separator after it. The clique stores p(ℓ₁, p₁ | p₂).</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. A cycle a – b – c – d – a has no other edges. Is the graph chordal?</p><div class="opts"><button type="button" class="opt">No: a cycle of four nodes needs a chord, a – c or b – d</button><button type="button" class="opt">Yes: every cycle is chordal</button><button type="button" class="opt">Yes: it has no triangles</button><button type="button" class="opt">Only if the edges are directed</button></div><p class="exp" hidden>Chordal means every cycle longer than three has a chord. Elimination would add one: whichever node goes first, its two neighbours are joined.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. In the toy Bayes tree a second prior factor on ℓ₂ alone arrives. Which cliques must be recomputed?</p><div class="opts"><button type="button" class="opt">Only ℓ₂ : p₃</button><button type="button" class="opt">All three</button><button type="button" class="opt">Only the root</button><button type="button" class="opt">ℓ₂ : p₃ and the root</button></div><p class="exp" hidden>The factor enters where ℓ₂ is frontal, and the new factor that clique passes upward changes its parent, the root. The clique ℓ₁, p₁ : p₂ is on no path from ℓ₂ to the root.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. With ordering ℓ₁, ℓ₂, p₁, p₂, p₃, which rows of R belong to the root clique?</p><div class="opts"><button type="button" class="opt">Rows 1 and 2</button><button type="button" class="opt">Rows 4 and 5</button><button type="button" class="opt">Row 5 only</button><button type="button" class="opt">Rows 3, 4 and 5</button></div><p class="exp" hidden>The root's frontal variables are p₂ and p₃, the last two eliminated, so its conditionals are the last two rows. Row 3, p(p₁ | p₂), went into the left child.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q5. Why can the sub-trees that are not on a path to the root be reused as they are?</p><div class="opts"><button type="button" class="opt">Because their variables are far away in space</button><button type="button" class="opt">Because their estimates cannot change</button><button type="button" class="opt">Because their conditionals were computed only from factors below them, none of which changed</button><button type="button" class="opt">Because they contain no separator variables</button></div><p class="exp" hidden>Information flows upward during elimination, so a clique depends only on its own factors and its descendants. The estimates of its variables may still change, through the separator, when back-substitution is run.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Batch refactoring wastes work, and plain incremental matrix updates do not handle relinearization. The Bayes tree is \(\mathbf{R}\) stored so it can be edited.</li>
+<li>Elimination yields a chordal Bayes net. Its cliques form a tree.</li>
+<li>Each clique \(\mathbf{f}_k : \mathbf{s}_k\) stores \(p(\mathbf{f}_k \mid \mathbf{s}_k)\); the separator is what it shares with its parent; \(p(\mathbf{x}) = \prod_k p(\mathbf{f}_k \mid \mathbf{s}_k)\).</li>
+<li>Information flows from leaves to root, and a factor enters at its first eliminated variable.</li>
+<li>A new factor affects only the cliques of its variables and their ancestors. Detach them, add the factor, re-eliminate, re-attach the orphans.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §1.7 "Incremental SLAM", §1.7.1 "The Bayes Tree", §1.7.2 "Updating the Bayes Tree", pp. 46–50, equations (1.54)–(1.55), Figures 1.13–1.15.</li>
+<li>Kaess, Johannsson, Roberts, Ila, Leonard, Dellaert, <em>iSAM2: Incremental smoothing and mapping using the Bayes tree</em>, 2012 (the procedure that builds the tree from the chordal Bayes net).</li>
+<li>Koller and Friedman, <em>Probabilistic Graphical Models</em>, 2009 (chordal graphs and clique trees).</li>
+</ol></div>
+<p class="next"></p>
+</section>

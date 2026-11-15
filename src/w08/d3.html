@@ -1,0 +1,131 @@
+<section class="day" data-day="45" id="d45" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 8 · Day 3</span>
+  <h2>Points, surfels, meshes, voxels, and functions</h2>
+  <p class="lead">After today you can describe the five spatial abstractions used for dense maps, interpolate a value inside a voxel grid, and turn a signed distance grid into an outline with marching squares.</p>
+  <p class="meta">About 60 min · Read §5.3.1–5.3.2, pp. 126–132 (6 pages) · Needs Week 8 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §5.3.1 and §5.3.2, pp. 126–132</h4>
+<p>While you read, look for:</p>
+<ul>
+<li>The four categories of §5.3.1 (pp. 126–127), next to Figure 5.4 back on p. 123.</li>
+<li>What a surfel stores (p. 128), and how the normal distributions transform reads a surface normal from a covariance matrix (p. 129).</li>
+<li>The sentence on p. 130 that calls a voxel "merely a container", and the two different meanings a voxel value can have.</li>
+<li>§5.3.2.6 on conversions, and Figure 5.8 (p. 131).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Yesterday's question was which quantity to estimate. Today's is which geometric building block carries it: points, small discs, triangles, cells, or a continuous function. Each one makes some operations trivial and others awkward, so real systems convert between them. The conversion to know by heart is Marching Cubes, which turns a signed distance grid into a mesh.</p></div>
+
+<h3>1. Two ways to sort representations</h3>
+<p>The book sorts representations along two axes: whether they describe the <em>surface</em> or the whole <em>volume</em>, and whether the geometry is stored <em>explicitly</em>, as elements you can list, or <em>implicitly</em>, as a function you evaluate. <span class="src">§5.3.1 · pp. 126–127</span></p>
+<div class="tbl"><table>
+  <tr><th>Stored as</th><th>Surface (the boundary of objects)</th><th>Volume (all of space)</th></tr>
+  <tr><td>Explicit: a list of elements</td><td>Point cloud, surfels, polygon mesh</td><td>Points as used in LiDAR SLAM; voxels holding occupancy or distance</td></tr>
+  <tr><td>Implicit: a function</td><td>The zero set of a signed distance function</td><td>Gaussian process maps, Hilbert maps</td></tr>
+</table></div>
+<p>The boxes are not sealed, as the caption of Figure 5.4 warns. A TSDF grid is the standard mix: voxels, which are explicit volume elements, hold samples of a function whose zero set is an implicit surface.</p>
+
+<h3>2. Points and surfels</h3>
+<p>The simplest dense map is every point ever measured. Each scan \(\mathsf{P}_t\) lives in its own sensor frame, so it is first moved into the map frame with the pose \(\mathbf{T}^1_t\) that the back-end estimated, and then added to the map cloud: <span class="src">§5.3.2.1 · p. 127</span></p>
+\[ \mathsf{P}_M = \bigcup_{t} \left\{ \mathbf{T}^1_t\,\mathbf{p} \;:\; \mathbf{p} \in \mathsf{P}_t \right\}. \]
+<p>This grows without bound, since every revisit of a place adds the same wall again. The usual cure is to keep only a few points per small cube of space, or only scans chosen as keyframes. A second weakness is that a bare point says nothing about the surface it came from: once the viewpoint is forgotten, you cannot tell which side is inside. <span class="src">§5.3.2.1 · p. 127</span></p>
+<p>A <strong>surfel</strong> (surface element) repairs that. It is a small disc: a position \(\mathbf{p} \in \R^3\), a normal \(\mathbf{n} \in \R^3\), and a radius \(r\). Many nearby measurements are merged into one disc, which loses fine detail but saves memory: in the book's Figure 5.7 the accumulated point cloud takes 2.95 GB and the surfel map of the same drive 160 MB. <span class="src">§5.3.2.2 · pp. 128–129</span></p>
+<p>The <strong>normal distributions transform (NDT)</strong> is a close relative. Space is cut into voxels, and each voxel stores the mean \(\boldsymbol{\mu}\) and covariance \(\boldsymbol{\Sigma}\) of the points that fell in it. If the eigenvalues of \(\boldsymbol{\Sigma}\) are \(\lambda_1 \lt \lambda_2 \lt \lambda_3\) and \(\lambda_1 \ll \lambda_2\), the points form a flat patch whose normal is the eigenvector \(\mathbf{v}_1\). <span class="src">§5.3.2.2 · p. 129</span></p>
+<div class="box note"><h4>Filling the gap: why the smallest eigenvector is the normal</h4>
+<p>Take a unit vector \(\mathbf{u}\). The spread of the points along \(\mathbf{u}\) is the variance of their projections,</p>
+\[ \frac{1}{N}\sum_i \left(\mathbf{u}\T(\mathbf{p}_i - \boldsymbol{\mu})\right)^2 = \mathbf{u}\T \left[\frac{1}{N}\sum_i (\mathbf{p}_i - \boldsymbol{\mu})(\mathbf{p}_i - \boldsymbol{\mu})\T\right] \mathbf{u} = \mathbf{u}\T\boldsymbol{\Sigma}\,\mathbf{u}. \]
+<p>Points on a plane have almost no spread along the plane's normal, so the normal is the \(\mathbf{u}\) that minimizes \(\mathbf{u}\T\boldsymbol{\Sigma}\mathbf{u}\). Write \(\mathbf{u} = \sum_j c_j \mathbf{v}_j\) in the orthonormal eigenvectors of \(\boldsymbol{\Sigma}\), with \(\sum_j c_j^2 = 1\). Then \(\mathbf{u}\T\boldsymbol{\Sigma}\mathbf{u} = \sum_j \lambda_j c_j^2 \ge \lambda_1\), with equality when \(\mathbf{u} = \mathbf{v}_1\). The smallest eigenvalue is the variance across the patch, and its eigenvector is the normal.</p>
+<p>A 2D example. Four points \((0, 0)\), \((1, 0.1)\), \((2, -0.1)\), \((3, 0)\) lie roughly on the x axis. Their mean is \((1.5, 0)\) and</p>
+\[ \boldsymbol{\Sigma} = \begin{bmatrix} 1.25 & -0.025 \\ -0.025 & 0.005 \end{bmatrix}, \qquad \lambda_1 = 0.0045,\quad \lambda_2 = 1.2505 . \]
+<p>Solving \((\boldsymbol{\Sigma} - \lambda_1\mathbf{I})\mathbf{v}_1 = \mathbf{0}\) gives \(\mathbf{v}_1 \propto (0.02, 1)\): the normal points along y, as it should, and the thickness of the patch is \(\sqrt{0.0045} = 0.067\) m.</p></div>
+
+<h3>3. Meshes and voxels</h3>
+<p>Points and surfels do not say which piece of surface connects to which. A <strong>mesh</strong> does: it is a set of <strong>vertices</strong> joined into polygon <strong>faces</strong>, usually triangles, since any polygon can be cut into triangles. Connectivity makes a surface watertight and lets you walk along it or interpolate on it. The element count follows the complexity of the shape, not its size: a flat wall of any extent is two triangles and four vertices. <span class="src">§5.3.2.3 · p. 129</span></p>
+<p>Occupancy and signed distance are defined at every point of space, not only on surfaces. The direct way to store them is a regular grid of cells, called <strong>voxels</strong> in 3D. A voxel is only a container, and what its number means depends on the method. <span class="src">§5.3.2.4 · p. 130</span></p>
+<div class="tbl"><table>
+  <tr><th>Grid</th><th>A voxel's value means</th><th>Value at an arbitrary point</th></tr>
+  <tr><td>Occupancy grid</td><td>The probability that the cell contains an obstacle</td><td>The value of the voxel that contains the point</td></tr>
+  <tr><td>Signed distance field</td><td>The signed distance at the voxel's centre</td><td>Interpolated from the neighbouring voxel centres</td></tr>
+</table></div>
+<div class="box note"><h4>Filling the gap: interpolating between voxel centres</h4>
+<p>In 2D, let the four nearest centres hold \(f_{00}, f_{10}, f_{01}, f_{11}\) (first index along x, second along y), and let the query point sit a fraction \(a\) of the way along x and \(b\) along y, both between 0 and 1. Interpolate along x on the two rows, then along y between the results:</p>
+\[ f(a, b) = (1-b)\big[(1-a) f_{00} + a f_{10}\big] + b\big[(1-a) f_{01} + a f_{11}\big]. \]
+<p>This is <strong>bilinear interpolation</strong>. Each corner's weight is the product of two factors, the four weights sum to 1, and at a corner the formula returns that corner's value. Example: \(f_{00} = 0.10\), \(f_{10} = -0.06\), \(f_{01} = 0.14\), \(f_{11} = -0.02\), and \((a, b) = (0.5, 0.25)\). The rows give \(0.02\) and \(0.06\), and \(f = 0.75 \times 0.02 + 0.25 \times 0.06 = 0.03\). In 3D the same idea with eight corners and three factors is <strong>trilinear interpolation</strong>.</p></div>
+
+<h3>4. Continuous functions</h3>
+<p>The last abstraction drops the grid. Mapping becomes regression: fit a function to the measurements and evaluate it wherever you like. Functions with few parameters, such as lines in 2D or planes in 3D, are compact and fast but assume the world is made of them. Control-point functions such as B-splines and non-parametric ones such as Gaussian processes assume less. Their advantages are that the resolution is not fixed in advance, that they fill gaps between measurements, and that a function which is at least once differentiable provides gradients, and so surface normals. <span class="src">§5.3.2.5 · pp. 130–131</span> Day 5 builds one.</p>
+
+<h3>5. Conversions, and marching squares</h3>
+<p>Systems rarely stay in one representation. <span class="src">§5.3.2.6 · pp. 131–132</span></p>
+<div class="tbl"><table>
+  <tr><th>From</th><th>To</th><th>How</th></tr>
+  <tr><td>Points or mesh</td><td>Signed distance</td><td>Closest-point lookup where needed, or a wavefront over a whole grid (fast marching)</td></tr>
+  <tr><td>Signed distance grid</td><td>Mesh</td><td>Marching Cubes</td></tr>
+  <tr><td>Mesh (also CAD and building models)</td><td>Points or surfels</td><td>Sample the faces</td></tr>
+  <tr><td>Any discrete data</td><td>Continuous function</td><td>Fit its parameters by optimization</td></tr>
+</table></div>
+<p><strong>Marching Cubes</strong> visits every cube of eight neighbouring samples on its own, looks at the signs at the corners, and emits the triangles for that sign pattern from a table. Its 2D version, <strong>marching squares</strong>, shows the whole idea. A square has four corners, so there are \(2^4 = 16\) sign patterns, and they fall into four kinds:</p>
+<figure class="fig"><svg viewBox="0 0 600 178" role="img" aria-label="Four squares with corners marked inside or outside. With all corners alike there is no line. With one corner different, a short line cuts that corner off. With two adjacent corners inside, a line crosses the square from side to side. With two opposite corners inside, there are two valid ways to draw two lines.">
+  <text x="90" y="24" text-anchor="middle" font-size="12" fill="var(--ink)">no crossing</text>
+  <text x="230" y="24" text-anchor="middle" font-size="12" fill="var(--ink)">one corner</text>
+  <text x="370" y="24" text-anchor="middle" font-size="12" fill="var(--ink)">two adjacent</text>
+  <text x="510" y="24" text-anchor="middle" font-size="12" fill="var(--ink)">two opposite</text>
+  <rect x="45" y="40" width="90" height="90" fill="none" stroke="var(--line2)" stroke-width="1.5"/>
+  <rect x="185" y="40" width="90" height="90" fill="none" stroke="var(--line2)" stroke-width="1.5"/>
+  <rect x="325" y="40" width="90" height="90" fill="none" stroke="var(--line2)" stroke-width="1.5"/>
+  <rect x="465" y="40" width="90" height="90" fill="none" stroke="var(--line2)" stroke-width="1.5"/>
+  <text x="56" y="60" font-size="11" fill="var(--muted)">1</text>
+  <text x="124" y="60" text-anchor="end" font-size="11" fill="var(--muted)">2</text>
+  <text x="124" y="122" text-anchor="end" font-size="11" fill="var(--muted)">4</text>
+  <text x="56" y="122" font-size="11" fill="var(--muted)">8</text>
+  <line x1="225" y1="40" x2="185" y2="90" stroke="var(--ink)" stroke-width="2.5"/>
+  <line x1="325" y1="82" x2="415" y2="92" stroke="var(--ink)" stroke-width="2.5"/>
+  <line x1="505" y1="40" x2="465" y2="85" stroke="var(--ink)" stroke-width="2.5"/>
+  <line x1="555" y1="85" x2="515" y2="130" stroke="var(--ink)" stroke-width="2.5"/>
+  <line x1="517" y1="40" x2="555" y2="73" stroke="var(--c3)" stroke-width="2" stroke-dasharray="4 4"/>
+  <line x1="465" y1="97" x2="503" y2="130" stroke="var(--c3)" stroke-width="2" stroke-dasharray="4 4"/>
+  <circle cx="45" cy="40" r="6" fill="var(--surface)" stroke="var(--c2)" stroke-width="2"/><circle cx="135" cy="40" r="6" fill="var(--surface)" stroke="var(--c2)" stroke-width="2"/><circle cx="135" cy="130" r="6" fill="var(--surface)" stroke="var(--c2)" stroke-width="2"/><circle cx="45" cy="130" r="6" fill="var(--surface)" stroke="var(--c2)" stroke-width="2"/>
+  <circle cx="185" cy="40" r="6" fill="var(--c5)"/><circle cx="275" cy="40" r="6" fill="var(--surface)" stroke="var(--c2)" stroke-width="2"/><circle cx="275" cy="130" r="6" fill="var(--surface)" stroke="var(--c2)" stroke-width="2"/><circle cx="185" cy="130" r="6" fill="var(--surface)" stroke="var(--c2)" stroke-width="2"/>
+  <circle cx="325" cy="40" r="6" fill="var(--c5)"/><circle cx="415" cy="40" r="6" fill="var(--c5)"/><circle cx="415" cy="130" r="6" fill="var(--surface)" stroke="var(--c2)" stroke-width="2"/><circle cx="325" cy="130" r="6" fill="var(--surface)" stroke="var(--c2)" stroke-width="2"/>
+  <circle cx="465" cy="40" r="6" fill="var(--c5)"/><circle cx="555" cy="40" r="6" fill="var(--surface)" stroke="var(--c2)" stroke-width="2"/><circle cx="555" cy="130" r="6" fill="var(--c5)"/><circle cx="465" cy="130" r="6" fill="var(--surface)" stroke="var(--c2)" stroke-width="2"/>
+  <text x="90" y="154" text-anchor="middle" font-size="11" fill="var(--muted)">cases 0, 15</text>
+  <text x="230" y="154" text-anchor="middle" font-size="11" fill="var(--muted)">cases 1, 2, 4, 8</text>
+  <text x="230" y="169" text-anchor="middle" font-size="11" fill="var(--muted)">and 7, 11, 13, 14</text>
+  <text x="370" y="154" text-anchor="middle" font-size="11" fill="var(--muted)">cases 3, 6, 9, 12</text>
+  <text x="510" y="154" text-anchor="middle" font-size="11" fill="var(--muted)">cases 5, 10</text>
+  <text x="510" y="169" text-anchor="middle" font-size="11" fill="var(--muted)">two valid answers</text>
+</svg><figcaption>Filled corner: negative (inside). The case number adds 1, 2, 4, 8 for the inside corners, as labelled in the first square. Swapping inside and outside gives the same lines.</figcaption></figure>
+<p>The table only says which edges the line crosses. Where on each edge is refined by linear interpolation, the same formula as yesterday's zero crossing: on an edge whose ends hold \(f_a\) and \(f_b\) of opposite sign, the vertex sits at the fraction \(t = f_a / (f_a - f_b)\) from end \(a\). With \(f_a = 0.3\) and \(f_b = -0.1\), \(t = 0.75\). In 3D a cube has \(2^8 = 256\) sign patterns, which symmetry reduces to the 15 configurations of Figure 5.8. <span class="src">§5.3.2.6 · p. 131</span></p>
+<p>Try it: the disk below is sampled every metre. Switch interpolation off and on. Then choose the room and step the grid spacing from 0.5 m down to 0.125 m, watching the thin wall in the middle.</p>
+<div class="viz" data-viz="w08_march"></div>
+<p class="cap">Notice that at 1 m spacing the 20 vertices lie 2.7 cm from the true circle on average with interpolation, and 21 cm without it, where the outline becomes a staircase of straight and 45° pieces. In the room, the 10 cm wall is absent down to 0.25 m spacing, because no sample falls inside it. It appears at 0.125 m, and the outline length jumps from 40.9 m to 45.3 m (true value 45.7 m).</p>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"A voxel is a little solid cube."</strong> It is a storage slot. In an occupancy grid its value does stand for the whole cell; in a distance field it is a sample at one point, meant to be interpolated.</li>
+<li><strong>"A point cloud is a surface."</strong> It is samples of one, with no normals, no connectivity, and no inside or outside. Turning it into a mesh or a distance field needs extra information such as the viewpoint, or assumptions.</li>
+<li><strong>"Marching Cubes can recover detail the grid missed."</strong> It only reads signs and values at the samples. If no sample falls inside an object, there is no sign change and the object is absent from the mesh.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="2"><p class="qq">Q1. An NDT voxel has covariance eigenvalues 0.0004, 0.09, and 0.12 m². What do the points in it look like?</p><div class="opts"><button type="button" class="opt">A thin rod along the first eigenvector</button><button type="button" class="opt">A round blob with no preferred direction</button><button type="button" class="opt">A flat patch whose normal is the first eigenvector</button><button type="button" class="opt">A flat patch whose normal is the third eigenvector</button></div><p class="exp" hidden>The spread is large in two directions and tiny (2 cm standard deviation) in one, so the points lie on a plane. The direction of smallest spread is the normal. A rod would have one large eigenvalue and two small ones.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q2. Four neighbouring voxel centres hold f₀₀ = 0.2, f₁₀ = 0.0, f₀₁ = 0.4, f₁₁ = 0.2. What is the bilinear value at a = 0.25, b = 0.5?</p><div class="opts"><button type="button" class="opt">0.25</button><button type="button" class="opt">0.20</button><button type="button" class="opt">0.30</button><button type="button" class="opt">0.15</button></div><p class="exp" hidden>Along x: the lower row gives 0.75 × 0.2 + 0.25 × 0.0 = 0.15, the upper row 0.75 × 0.4 + 0.25 × 0.2 = 0.35. Along y: 0.5 × 0.15 + 0.5 × 0.35 = 0.25.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A grid edge is 10 cm long. Its ends hold +0.3 and −0.1. Where does marching squares put the vertex?</p><div class="opts"><button type="button" class="opt">2.5 cm from the positive end</button><button type="button" class="opt">5 cm from the positive end</button><button type="button" class="opt">3 cm from the positive end</button><button type="button" class="opt">7.5 cm from the positive end</button></div><p class="exp" hidden>t = 0.3 / (0.3 + 0.1) = 0.75 of the way from the positive end, which is 7.5 cm. The zero is closer to the end whose value is closer to zero.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. A wall 4 cm thick stands between two columns of a signed distance grid with 10 cm spacing, touching no sample. What does marching squares output for it?</p><div class="opts"><button type="button" class="opt">Two parallel lines 4 cm apart</button><button type="button" class="opt">Nothing: every sample is positive, so no edge changes sign</button><button type="button" class="opt">One line through the middle of the wall</button><button type="button" class="opt">Two lines 10 cm apart</button></div><p class="exp" hidden>The algorithm sees only the corner samples. With no negative sample there is no sign change and no line. This is the thin-obstacle weakness of sampled implicit surfaces from §5.2.3.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Representations differ in what they describe (surface or volume) and how (explicit elements or an implicit function), and real systems mix them.</li>
+<li>Points are raw samples. Surfels add a normal and a radius. An NDT voxel stores a mean and covariance, whose smallest eigenvector is the surface normal.</li>
+<li>Meshes add connectivity. Voxels are containers: an occupancy value covers the cell, a distance value is a sample to interpolate (bilinear in 2D, trilinear in 3D).</li>
+<li>Continuous functions have no fixed resolution and can provide gradients.</li>
+<li>Marching Cubes converts a distance grid to a mesh: corner signs select the pattern, linear interpolation \(t = f_a/(f_a - f_b)\) places the vertices.</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §5.3.1 "Explicitness of Target Spatial Structures" and §5.3.2 "Types of Spatial Abstractions", pp. 126–132; Figure 5.4, p. 123.</li>
+<li>Lorensen and Cline, <em>Marching Cubes: A High Resolution 3D Surface Construction Algorithm</em>, 1987 (the algorithm; marching squares is its 2D form).</li>
+<li>The eigenvector argument and bilinear interpolation are standard linear algebra and numerical analysis; see Strang, <em>Introduction to Linear Algebra</em>, 2016, for the eigenvalue bound on \(\mathbf{u}\T\boldsymbol{\Sigma}\mathbf{u}\).</li>
+</ol></div>
+<p class="next"></p>
+</section>

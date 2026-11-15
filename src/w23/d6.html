@@ -1,0 +1,61 @@
+<section class="day" data-day="138" id="d138" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 23 · Review</span>
+  <h2>Week 23 review: open-world maps and foundation models</h2>
+  <p class="lead">After today you can compute the contrastive loss, fuse and query feature maps, match masks to objects, and compute a LERF relevancy and a task-driven merge cost by hand.</p>
+  <p class="meta">About 60 min · No new pages</p>
+</header>
+
+<div class="box key"><h3>The week in one paragraph</h3><p>Models trained on internet-scale data without human labels produce features tied to no class list. CLIP's contrastive training puts images and text in one space where similarity is an inner product. An open-vocabulary map stores such features on points, objects, graph nodes, or in a radiance field, fuses them over views by a weighted average, and is questioned afterwards by encoding text and comparing. Captions and LLMs handle complex questions; a task list can decide what an object is. Whether large models will replace explicit maps is open as of the book's April 2026 edition.</p></div>
+
+<h3>1. Formula sheet</h3>
+<div class="tbl"><table>
+<tr><th>What it is</th><th>Formula</th><th>Where</th></tr>
+<tr><td>Contrastive (InfoNCE) loss</td><td>\(\ell_i = -\log \dfrac{\exp(s_{ii}/\tau)}{\sum_{j} \exp(s_{ij}/\tau)}\); gradient \((p_{ij} - \delta_{ij})/\tau\)</td><td>Added to pp. 492–494 · Day 1</td></tr>
+<tr><td>Cosine similarity; unit vectors</td><td>\(\dfrac{\langle \mathbf{a}, \mathbf{b} \rangle}{\norm{\mathbf{a}}\norm{\mathbf{b}}}\); \(\norm{\mathbf{a}-\mathbf{b}}^2 = 2 - 2\langle \mathbf{a}, \mathbf{b} \rangle\)</td><td>p. 496 · Day 2</td></tr>
+<tr><td>Feature fusion</td><td>\(\mathbf{f}_k \leftarrow \dfrac{c_k \mathbf{f}_k + \alpha \mathbf{f}^P_{u,v}}{c_k + \alpha}\), \(c_k \leftarrow c_k + \alpha\), \(\alpha = e^{-\gamma^2/2\sigma^2}\) (17.2)–(17.3)</td><td>p. 502 · Day 3</td></tr>
+<tr><td>Zero-shot classifier (17.1), map labels (17.4), query score</td><td>\(\argmax_{c} \langle \mathbf{f}_I, \mathbf{f}_c \rangle\); \(y_k = \argmax_{C \in \mathsf{C}} \langle \mathbf{f}_k, \mathbf{f}_C \rangle\) (17.4); \(\langle \mathbf{f}_k, \mathbf{f}_T \rangle\)</td><td>pp. 497, 503 · Days 2–3</td></tr>
+<tr><td>Object maps</td><td>\(\phi_{sim} = \tfrac12(\langle \mathbf{f}_i, \mathbf{f}_{o_j} \rangle + 1)\); \(\mathbf{f}_{o_j} \leftarrow \dfrac{n_{o_j}\mathbf{f}_{o_j} + \mathbf{f}_i}{n_{o_j}+1}\); \(o^* = \argmax_o \langle \mathbf{f}_o, \mathbf{f}_T \rangle\)</td><td>pp. 505–506 · Day 3</td></tr>
+<tr><td>LERF relevancy</td><td>\(\min_i \dfrac{e^{a}}{e^{b_i} + e^{a}} = \dfrac{1}{1 + e^{\,b_{\max} - a}}\) (17.7)</td><td>p. 510 · Day 4</td></tr>
+<tr><td>Task-driven clustering</td><td>\(\min I(X;\tilde{X}) - \beta I(\tilde{X};Y)\) (17.8); \(d_{ij} = (p_i + p_j)\, D_{\mathrm{JS}}\) (17.9)</td><td>pp. 512–513 · Day 4</td></tr>
+</table></div>
+
+<h3>2. Mixed quiz</h3>
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="1"><p class="qq">Q1. In a batch of 8 pairs, every image is equally similar to all 8 captions. What is the contrastive loss per image?</p><div class="opts"><button type="button" class="opt">0</button><button type="button" class="opt">log 8 = 2.08</button><button type="button" class="opt">1/8</button><button type="button" class="opt">8</button></div><p class="exp" hidden>Every softmax weight is 1/8, so the loss is log 8.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q2. Why does §17.1.1 say foundation models are harder to build for LiDAR or radar?</p><div class="opts"><button type="button" class="opt">Transformers cannot read point clouds</button><button type="button" class="opt">Contrastive learning needs captions</button><button type="button" class="opt">The sensors are too noisy</button><button type="button" class="opt">No readily available internet-scale data</button></div><p class="exp" hidden>Internet-scale data is a key ingredient, and these modalities lack it.</p></div>
+  <div class="q" data-a="0"><p class="qq">Q3. An image has unit feature (0.6, 0.8, 0). Prompts encode to A = (1, 0, 0), B = (0, 0.8, 0.6), C = (0, 0, 1). What does (17.1) return?</p><div class="opts"><button type="button" class="opt">B, with 0.64</button><button type="button" class="opt">A, with 0.60</button><button type="button" class="opt">C, with 0.80</button><button type="button" class="opt">A and B tie</button></div><p class="exp" hidden>A: 0.6. B: 0.8 × 0.8 = 0.64. C: 0.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q4. A language model gives the three tokens of a sentence conditional probabilities 0.5, 0.2, 0.1. What is the probability of the sentence?</p><div class="opts"><button type="button" class="opt">0.8</button><button type="button" class="opt">0.1</button><button type="button" class="opt">0.01</button><button type="button" class="opt">0.27</button></div><p class="exp" hidden>The chain rule multiplies them: 0.5 × 0.2 × 0.1 = 0.01.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q5. A map point has c = 1, f = (1, 0). A view adds (0, 1) with α = 1. After normalizing, what is its similarity to the query (0, 1)?</p><div class="opts"><button type="button" class="opt">0.50</button><button type="button" class="opt">0.71</button><button type="button" class="opt">1.00</button><button type="button" class="opt">0.25</button></div><p class="exp" hidden>The fused feature (0.5, 0.5) normalizes to (0.707, 0.707).</p></div>
+  <div class="q" data-a="0"><p class="qq">Q6. A dense map has 2 million points, each with a 512-number feature of 4-byte numbers. How much memory is that?</p><div class="opts"><button type="button" class="opt">About 4 GB</button><button type="button" class="opt">About 4 MB</button><button type="button" class="opt">About 1 GB</button><button type="button" class="opt">About 40 GB</button></div><p class="exp" hidden>2 × 10⁶ × 512 × 4 bytes = 4.1 × 10⁹ bytes.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q7. In task-driven clustering, a task is added that cares about the individual keys of a piano. What changes?</p><div class="opts"><button type="button" class="opt">Nothing: geometry defines objects</button><button type="button" class="opt">The piano merges with the floor</button><button type="button" class="opt">Everything merges into one cluster</button><button type="button" class="opt">Merging keys now costs task information, so they stay apart</button></div><p class="exp" hidden>The cost (17.9) grows with how differently two clusters relate to the tasks.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q8. Which statement matches the book's position, as of its April 2026 edition?</p><div class="opts"><button type="button" class="opt">Long-context VLMs have made maps obsolete</button><button type="button" class="opt">Generalist policies cannot work without a metric map</button><button type="button" class="opt">It depends on the task's spatial and temporal horizons</button><button type="button" class="opt">Maps are needed only outdoors</button></div><p class="exp" hidden>§17.4.2 says so; §17.4.4 calls maps and generalist policies complementary.</p></div>
+</div>
+
+<h3>3. Pen-and-paper problems</h3>
+<ol class="probs">
+  <li><p>\(N = 3\), \(\tau = 0.5\). Image 1 has similarities \(0.9\) (own caption), \(0.1\), \(0.5\). Compute its loss and the derivative with respect to each similarity.</p>
+      <details class="sol"><summary>Solution</summary><div><p>\(e^{1.8} = 6.050\), \(e^{0.2} = 1.221\), \(e^{1.0} = 2.718\), sum \(9.989\). Softmax \(p = (0.606, 0.122, 0.272)\), loss \(-\log 0.606 = 0.502\). Derivatives \((p_{1j} - \delta_{1j})/\tau\): \(-0.789\), \(0.244\), \(0.544\).</p></div></details></li>
+  <li><p>A map point starts with \(c_k = 0\). View 1 gives \((1, 0, 0)\) at \(\gamma = 0\); view 2 gives \((0.6, 0.8, 0)\) at \(\gamma = \sigma\). Fuse them with (17.2)–(17.3). Does a query with \(\mathbf{f}_T = (0.8, 0.6, 0)\) and threshold 0.9 retrieve the point?</p>
+      <details class="sol"><summary>Solution</summary><div><p>\(\alpha_1 = 1\), \(\alpha_2 = e^{-1/2} = 0.607\). Fused: \(((1,0,0) + 0.607\,(0.6, 0.8, 0))/1.607 = (0.849, 0.302, 0)\), \(c_k = 1.607\). Length \(0.901\), unit feature \((0.942, 0.335, 0)\). Similarity \(0.942 \times 0.8 + 0.335 \times 0.6 = 0.955\): retrieved. Unnormalized it would be \(0.860\) and wrongly rejected.</p></div></details></li>
+  <li><p>In one dimension, a mask's points are at \(0.0, 0.1, 0.2, 0.3, 1.0\) m. An object has points at \(0.05, 0.15, 0.25\) m, feature \((0.6, 0.8)\), count 3. The mask's feature is \((1, 0)\) and \(\delta_{nn} = 0.08\) m. Compute \(\phi_{geo}\) and \(\phi_{sim}\); if both exceed 0.5, update the object.</p>
+      <details class="sol"><summary>Solution</summary><div><p>Four mask points are 0.05 m from an object point; the one at 1.0 is 0.75 m away. \(\phi_{geo} = 4/5 = 0.8\). Inner product \(0.6\), so \(\phi_{sim} = 0.8\). Match. \(\mathbf{f}_o \leftarrow (3\,(0.6, 0.8) + (1, 0))/4 = (0.7, 0.6)\), count 4, and the mask points join the cloud.</p></div></details></li>
+  <li><p>Primitives A, B, C in a row, each with probability \(1/3\), have \(p(y \mid A) = p(y \mid B) = (0.9, 0.1)\) and \(p(y \mid C) = (0.1, 0.9)\). (a) Compute \(d_{AB}\) and \(d_{BC}\). (b) Merge the cheaper pair and cost the last merge. (c) Check that the costs add up to \(I(X;Y)\).</p>
+      <details class="sol"><summary>Solution</summary><div><p>(a) \(d_{AB} = 0\). For B, C: \(\bar{p} = (0.5, 0.5)\), \(D_{\mathrm{KL}} = 0.9 \log 1.8 + 0.1 \log 0.2 = 0.368\) for each, so \(D_{\mathrm{JS}} = 0.368\), \(d_{BC} = \tfrac23 \times 0.368 = 0.245\) nats.</p>
+      <p>(b) AB has probability \(\tfrac23\) and distribution \((0.9, 0.1)\). With C: \(\bar{p} = (0.633, 0.367)\), and the same formula gives \(D_{\mathrm{KL}} = 0.186\) for AB and \(0.624\) for C. \(D_{\mathrm{JS}} = \tfrac23(0.186) + \tfrac13(0.624) = 0.332\), so \(d = 0.332\) nats.</p>
+      <p>(c) \(p(y) = (0.633, 0.367) = \bar{p}\), so \(I(X;Y) = \tfrac13(0.186 + 0.186 + 0.624) = 0.332 = 0 + 0.332\).</p></div></details></li>
+</ol>
+
+<div class="box ok"><h4>You are ready for next week if you can</h4><ul>
+<li>Write the contrastive loss and say which way its gradient moves each similarity.</li>
+<li>Apply (17.2)–(17.3) by hand, and normalize before thresholding.</li>
+<li>Compute a relevancy score (17.7) and a merge cost (17.9).</li>
+<li>Say why storing features, not detections, makes a map open-vocabulary.</li>
+</ul></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, Chapter 17, pp. 490–520.</li>
+<li>Extra math as cited on Days 1–5.</li>
+</ol></div>
+<p class="next"></p>
+</section>

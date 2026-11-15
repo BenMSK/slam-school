@@ -1,0 +1,121 @@
+<section class="day" data-day="27" id="d27" hidden>
+<header class="day-h">
+  <span class="eyebrow">Week 5 · Day 3</span>
+  <h2>Gaussian-process priors from a stochastic differential equation</h2>
+  <p class="lead">After today you can write a motion prior as a differential equation driven by white noise, compute its transition function and kernel matrix, and show why the inverse kernel matrix is block-tridiagonal.</p>
+  <p class="meta">About 60 min · Read §2.2.3, pp. 66–68 (3 pages) · Needs Week 3 Day 1 and Week 5 Day 2</p>
+</header>
+
+<div class="box read"><h4>Read first: §2.2.3, pp. 66–68</h4>
+<p>Read from the heading "2.2.3 Gaussian Processes" to the sentence about STEAM under equation (2.52). The last paragraph of p. 68 is for tomorrow. While you read, look for:</p>
+<ul>
+<li>What each symbol in equation (2.46) is (pp. 66–67).</li>
+<li>The two kinds of motion-prior factor in Figure 2.4, and how many variables each touches (p. 67).</li>
+<li>The difference between the matrices in (2.50) and (2.51): count the nonzero blocks in a row (p. 68).</li>
+<li>Why the state in (2.52) contains the velocity as well as the pose (p. 68).</li>
+</ul></div>
+
+<div class="box key"><h3>Today's big idea</h3><p>Do not pick a kernel formula. Pick a simple physical model of how the robot moves, driven by random noise, and let the kernel be whatever covariance that model implies. Because the model's state is Markovian (the future depends on the past only through the present), the inverse kernel matrix links each state only to its neighbours in time. The prior over the whole trajectory becomes a chain of small binary factors.</p></div>
+
+<h3>1. A Gaussian process, and the plan</h3>
+<p>A <strong>Gaussian process (GP)</strong> is a probability distribution over functions with one defining property: the values of the function at any finite set of times are jointly Gaussian. It is fixed by a mean function and a kernel function \(\mathcal{K}(t,t')\), which gives the covariance between the values at two times. We write \(\mathbf{x}(t) \sim \mathcal{GP}(\mathbf{0}, \mathcal{K}(t,t'))\). Yesterday you saw that the kernel matrix is the prior covariance of the trajectory at the measurement times, so choosing a kernel is the same as choosing a GP prior.</p>
+<p>Yesterday also ended with a problem: equation (2.45) needs \(\mathbf{K}^{-1}\), which is dense for a general kernel. The book's plan is to construct kernels whose inverse is sparse by design. <span class="src">§2.2.3 · p. 66</span></p>
+
+<h3>2. A motion model driven by white noise</h3>
+<p>The construction starts from a linear, time-invariant <strong>stochastic differential equation (SDE)</strong>: <span class="src">§2.2.3 · pp. 66–67</span></p>
+\[ \dot{\mathbf{x}}(t) = \mathbf{A}\,\mathbf{x}(t) + \mathbf{L}\,\mathbf{w}(t), \qquad \mathbf{w}(t) \sim \mathcal{GP}\big(\mathbf{0},\ \boldsymbol{\mathcal{Q}}\,\delta(t-t')\big) . \tag{2.46} \]
+<p>Here \(\mathbf{x}(t)\) is the state, \(\mathbf{A}\) says how the state would evolve with no noise, and \(\mathbf{w}(t)\) is <strong>white noise</strong>: a random signal whose values at any two different times are uncorrelated (that is what the Dirac delta \(\delta(t-t')\) says). \(\mathbf{L}\) selects which components of the state the noise pushes on, and \(\boldsymbol{\mathcal{Q}}\) is the <strong>power spectral density</strong>, which sets how strong the noise is. The two priors used this week:</p>
+<div class="tbl"><table>
+<tr><th>Prior</th><th>State x</th><th>A</th><th>L</th><th>In words</th></tr>
+<tr><td>Random walk</td><td>\(\mathbf{p}\)</td><td>\(\mathbf{0}\)</td><td>\(\mathbf{I}\)</td><td>The velocity is white noise. The pose wanders.</td></tr>
+<tr><td>Constant velocity, equation (2.52)</td><td>\((\mathbf{p}, \mathbf{v})\)</td><td>\(\begin{bmatrix} \mathbf{0} &amp; \mathbf{I} \\ \mathbf{0} &amp; \mathbf{0} \end{bmatrix}\)</td><td>\(\begin{bmatrix} \mathbf{0} \\ \mathbf{I} \end{bmatrix}\)</td><td>The acceleration is white noise. The velocity wanders, so the pose is smooth.</td></tr>
+</table></div>
+<p>The name "constant velocity" describes the noise-free part: \(\dot{\mathbf{p}} = \mathbf{v}\), \(\dot{\mathbf{v}} = \mathbf{0}\). The noise lets the velocity change, slowly if \(\boldsymbol{\mathcal{Q}}\) is small.</p>
+<div class="box note"><h4>Filling the gap: what white noise does over an interval</h4>
+<p>White noise is never used on its own, only integrated. Take the scalar random walk \(\dot p = w\) with power spectral density \(Q_c\). The change in \(p\) over an interval is \(\int_s^t w(\tau)\,d\tau\). It has mean zero, and its variance is</p>
+\[ \E\Big[ \int_s^t\! w(\tau)\,d\tau \int_s^t\! w(\tau')\,d\tau' \Big] = \int_s^t\!\!\int_s^t Q_c\,\delta(\tau-\tau')\,d\tau\,d\tau' = \int_s^t Q_c\,d\tau = Q_c\,(t-s) . \]
+<p>The delta function removes one of the two integrals. So the variance of the accumulated change grows in proportion to elapsed time, and \(Q_c\) is that variance per second. If \(p\) is in metres, \(Q_c\) is in m²/s. Example: \(Q_c = 0.5\) m²/s over 4 s gives variance 2 m², a standard deviation of 1.41 m.</p></div>
+
+<h3>3. The transition function and one discrete step</h3>
+<p>A linear SDE can be integrated in closed form: <span class="src">§2.2.3 · p. 67</span></p>
+\[ \mathbf{x}(t) = \boldsymbol{\Phi}(t,t_1)\,\mathbf{x}(t_1) + \int_{t_1}^{t} \boldsymbol{\Phi}(t,s)\,\mathbf{L}\,\mathbf{w}(s)\,ds, \qquad \boldsymbol{\Phi}(t,s) = \exp\big(\mathbf{A}(t-s)\big) . \tag{2.47} \]
+<p>The <strong>transition function</strong> \(\boldsymbol{\Phi}(t,s)\) carries a state from time \(s\) to time \(t\) when there is no noise. The integral adds up the noise that arrived in between, each piece carried forward to time \(t\). Since \(\mathbf{x}(t)\) is a linear function of Gaussian quantities, it is itself a GP.</p>
+<div class="box note"><h4>Filling the gap: Φ and the step covariance for the two priors</h4>
+<p>The matrix exponential is the series \(\exp(\mathbf{M}) = \mathbf{I} + \mathbf{M} + \tfrac12\mathbf{M}^2 + \dots\) from <a href="#d20">Week 4 · Day 2</a>. For the random walk \(\mathbf{A} = \mathbf{0}\), so \(\boldsymbol{\Phi} = \mathbf{I}\). For constant velocity \(\mathbf{A}^2 = \mathbf{0}\) (multiply it out), so the series stops after two terms. With \(\Delta t = t - s\):</p>
+\[ \boldsymbol{\Phi}(t,s) = \mathbf{I} + \mathbf{A}\,\Delta t = \begin{bmatrix} \mathbf{I} &amp; \Delta t\,\mathbf{I} \\ \mathbf{0} &amp; \mathbf{I} \end{bmatrix} , \]
+<p>which is "new position = old position + velocity × time, velocity unchanged".</p>
+<p>Apply (2.47) between two consecutive times \(t_{i-1}\) and \(t_i\). It reads \(\mathbf{x}_i = \boldsymbol{\Phi}(t_i,t_{i-1})\,\mathbf{x}_{i-1} + \mathbf{w}_i\), where \(\mathbf{w}_i\) is the integral term: a zero-mean Gaussian with the covariance the book defines under equation (2.49),</p>
+\[ \mathbf{Q}_i = \int_{t_{i-1}}^{t_i} \boldsymbol{\Phi}(t_i,s)\,\mathbf{L}\,\boldsymbol{\mathcal{Q}}\,\mathbf{L}\T\,\boldsymbol{\Phi}(t_i,s)\T\,ds . \]
+<p>Random walk, one axis: the integrand is \(Q_c\), so \(Q_i = Q_c\,\Delta t\), as in the box above. Constant velocity, one axis: \(\boldsymbol{\Phi}(t_i,s)\,\mathbf{L} = \begin{bmatrix} 1 &amp; t_i - s \\ 0 &amp; 1 \end{bmatrix}\begin{bmatrix} 0 \\ 1 \end{bmatrix} = \begin{bmatrix} t_i - s \\ 1 \end{bmatrix}\). Substituting \(\tau = t_i - s\), which runs from 0 to \(\Delta t\):</p>
+\[ \mathbf{Q}_i = Q_c \int_0^{\Delta t} \begin{bmatrix} \tau^2 &amp; \tau \\ \tau &amp; 1 \end{bmatrix} d\tau = Q_c \begin{bmatrix} \tfrac13\Delta t^3 &amp; \tfrac12\Delta t^2 \\ \tfrac12\Delta t^2 &amp; \Delta t \end{bmatrix} . \]
+<p>With \(Q_c = 2\) and \(\Delta t = 0.5\) s this is \(\begin{bmatrix} 0.083 &amp; 0.25 \\ 0.25 &amp; 1 \end{bmatrix}\). The velocity variance grows like \(\Delta t\) and the position variance like \(\Delta t^3\): over short intervals the position barely deviates from a straight line.</p></div>
+
+<h3>4. The kernel matrix and its inverse</h3>
+<p>Assume the initial state has mean zero and covariance \(\mathcal{K}(t_1,t_1)\). Taking the covariance of (2.47) at two times gives the kernel function: <span class="src">§2.2.3 · p. 67</span></p>
+\[ \mathcal{K}(t,t') = \boldsymbol{\Phi}(t,t_1)\,\mathcal{K}(t_1,t_1)\,\boldsymbol{\Phi}(t',t_1)\T + \int_{t_1}^{\min(t,t')} \boldsymbol{\Phi}(t,s)\,\mathbf{L}\boldsymbol{\mathcal{Q}}\mathbf{L}\T\,\boldsymbol{\Phi}(t',s)\T\,ds . \tag{2.48} \]
+<p>Read it as two sources of shared randomness. The first term is the uncertain starting state, carried to both times. The second is the noise that arrived before the earlier of the two times: only that noise has reached both states.</p>
+<figure class="fig"><svg viewBox="0 0 600 130" role="img" aria-label="A time axis with three marks: t one, t, and t prime. The interval from t one to t is shaded and labelled noise shared by x of t and x of t prime. The interval from t to t prime is shaded differently and labelled reaches only x of t prime.">
+  <rect x="90" y="52" width="210" height="26" fill="var(--c5-soft)" stroke="var(--c5)"/>
+  <rect x="300" y="52" width="170" height="26" fill="var(--c2-soft)" stroke="var(--c2)"/>
+  <line x1="50" y1="92" x2="560" y2="92" stroke="var(--line2)" stroke-width="1.5"/>
+  <line x1="90" y1="86" x2="90" y2="98" stroke="var(--ink)" stroke-width="1.5"/>
+  <line x1="300" y1="86" x2="300" y2="98" stroke="var(--ink)" stroke-width="1.5"/>
+  <line x1="470" y1="86" x2="470" y2="98" stroke="var(--ink)" stroke-width="1.5"/>
+  <text x="90" y="116" text-anchor="middle" font-size="13" fill="var(--ink)">t₁</text>
+  <text x="300" y="116" text-anchor="middle" font-size="13" fill="var(--ink)">t = min(t, t′)</text>
+  <text x="470" y="116" text-anchor="middle" font-size="13" fill="var(--ink)">t′</text>
+  <text x="195" y="40" text-anchor="middle" font-size="12" fill="var(--ink)">noise shared by x(t) and x(t′)</text>
+  <text x="385" y="40" text-anchor="middle" font-size="12" fill="var(--ink)">reaches only x(t′)</text>
+</svg><figcaption>Why the integral in (2.48) stops at min(t, t′). Noise that arrives after the earlier time affects only the later state, so it adds nothing to their covariance.</figcaption></figure>
+<p>For the scalar random walk (\(\Phi = 1\)) the formula collapses to \(\mathcal{K}(t,t') = \mathcal{K}(t_1,t_1) + Q_c\,(\min(t,t') - t_1)\). The book then states that the kernel matrix at all the measurement times has the tidy form \(\mathbf{K} = \boldsymbol{\Phi}\mathbf{Q}\boldsymbol{\Phi}\T\), equation (2.49), and that \(\boldsymbol{\Phi}^{-1}\) is almost empty. Here is why both are true. <span class="src">§2.2.3 · pp. 67–68</span></p>
+<div class="box note"><h4>Filling the gap: where K = ΦQΦᵀ and its sparse inverse come from</h4>
+<p>Write \(\mathbf{x}_i = \mathbf{x}(t_i)\) and \(\boldsymbol{\Phi}_{i,j} = \boldsymbol{\Phi}(t_i,t_j)\). Call the initial state \(\mathbf{w}_1 = \mathbf{x}_1\), and use the one-step form from section 3:</p>
+\[ \mathbf{x}_1 = \mathbf{w}_1, \qquad \mathbf{x}_i = \boldsymbol{\Phi}_{i,i-1}\,\mathbf{x}_{i-1} + \mathbf{w}_i \quad (i = 2,\dots,M) . \]
+<p>The \(\mathbf{w}_i\) are independent, because they integrate white noise over intervals that do not overlap. Their covariances are \(\mathcal{K}(t_1,t_1), \mathbf{Q}_2, \dots, \mathbf{Q}_M\). Stack these on the diagonal of a block-diagonal matrix \(\mathbf{Q}\). (Figure 2.4 labels each step covariance by the index of the interval's first state, so its \(\mathbf{Q}_1\) is the \(\mathbf{Q}_2\) here.)</p>
+<p><strong>Forward.</strong> Unroll the recursion: \(\mathbf{x}_2 = \boldsymbol{\Phi}_{2,1}\mathbf{w}_1 + \mathbf{w}_2\), \(\mathbf{x}_3 = \boldsymbol{\Phi}_{3,1}\mathbf{w}_1 + \boldsymbol{\Phi}_{3,2}\mathbf{w}_2 + \mathbf{w}_3\), and so on, using \(\boldsymbol{\Phi}_{3,2}\boldsymbol{\Phi}_{2,1} = \boldsymbol{\Phi}_{3,1}\). Every state is a sum over all earlier noises. Stacked, \(\mathbf{x} = \boldsymbol{\Phi}\mathbf{w}\) with the full lower-triangular \(\boldsymbol{\Phi}\) of equation (2.50). The covariance of a linear function of \(\mathbf{w}\) is then \(\mathbf{K} = \boldsymbol{\Phi}\mathbf{Q}\boldsymbol{\Phi}\T\).</p>
+<p><strong>Backward.</strong> Solve the same recursion for the noises: \(\mathbf{w}_1 = \mathbf{x}_1\) and \(\mathbf{w}_i = \mathbf{x}_i - \boldsymbol{\Phi}_{i,i-1}\mathbf{x}_{i-1}\). Each noise involves only two neighbouring states. Stacked, \(\mathbf{w} = \boldsymbol{\Phi}^{-1}\mathbf{x}\), and you can read off \(\boldsymbol{\Phi}^{-1}\) with no computation: identity blocks on the diagonal and \(-\boldsymbol{\Phi}_{i,i-1}\) just below it, which is equation (2.51).</p>
+<p><strong>The prior as factors.</strong> With \(\mathbf{K}^{-1} = \boldsymbol{\Phi}^{-\mathsf{T}}\mathbf{Q}^{-1}\boldsymbol{\Phi}^{-1}\), the prior's negative log is</p>
+\[ \mathbf{x}\T\mathbf{K}^{-1}\mathbf{x} = \mathbf{w}\T\mathbf{Q}^{-1}\mathbf{w} = \norm{\mathbf{x}_1}^2_{\mathcal{K}(t_1,t_1)} + \sum_{i=2}^{M} \norm{\mathbf{x}_i - \boldsymbol{\Phi}_{i,i-1}\,\mathbf{x}_{i-1}}^2_{\mathbf{Q}_i} . \]
+<p>That is one unary factor on the first state and one binary factor between each pair of consecutive states: the motion-prior factors of Figure 2.4. No term couples \(\mathbf{x}_i\) with \(\mathbf{x}_j\) unless \(|i-j| \le 1\), so \(\mathbf{K}^{-1}\) is <strong>block-tridiagonal</strong>, however long the trajectory.</p></div>
+<p>Worked example: scalar random walk at \(t = 0, 1, 2\) s with \(\mathcal{K}(t_1,t_1) = 1\) and \(Q_c = 1\), so \(\mathbf{Q} = \mathbf{I}\).</p>
+\[ \boldsymbol{\Phi} = \begin{bmatrix} 1 &amp; 0 &amp; 0 \\ 1 &amp; 1 &amp; 0 \\ 1 &amp; 1 &amp; 1 \end{bmatrix},\quad \mathbf{K} = \boldsymbol{\Phi}\boldsymbol{\Phi}\T = \begin{bmatrix} 1 &amp; 1 &amp; 1 \\ 1 &amp; 2 &amp; 2 \\ 1 &amp; 2 &amp; 3 \end{bmatrix},\quad \boldsymbol{\Phi}^{-1} = \begin{bmatrix} 1 &amp; 0 &amp; 0 \\ -1 &amp; 1 &amp; 0 \\ 0 &amp; -1 &amp; 1 \end{bmatrix},\quad \mathbf{K}^{-1} = \begin{bmatrix} 2 &amp; -1 &amp; 0 \\ -1 &amp; 2 &amp; -1 \\ 0 &amp; -1 &amp; 1 \end{bmatrix} . \]
+<p>\(\mathbf{K}\) has no zeros and agrees with the kernel formula, \(K_{ij} = 1 + \min(t_i,t_j)\). Its inverse has a zero in the corner: the first and third states are not directly linked. Check one product: row 3 of \(\mathbf{K}\) times column 1 of \(\mathbf{K}^{-1}\) is \(1\cdot2 + 2\cdot(-1) + 3\cdot0 = 0\).</p>
+<p>Try it: set the number of times to 3 to see the matrices above, then raise it. Then switch the prior.</p>
+<div class="viz" data-viz="w05_sparse"></div>
+<p class="cap">Notice that K is full for every prior. For the random walk at six times, K⁻¹ has 16 nonzero entries out of 36: the diagonal and its two neighbours. For constant velocity with state (p, v) the inverse is block-tridiagonal with 2 × 2 blocks. For "constant velocity, positions only" and for the squared exponential, every entry of the inverse is nonzero.</p>
+
+<h3>5. Markov, and why the state carries velocity</h3>
+<p>The inverse is sparse because the state of the SDE is <strong>Markovian</strong>: once you know \(\mathbf{x}_{i-1}\), nothing earlier helps to predict \(\mathbf{x}_i\). <span class="src">§2.2.3 · p. 68</span> In <a href="#d13">Week 3 · Day 1</a> you saw that a zero block in the information matrix means "no factor between these two variables". Here it is the same statement, and \(\mathbf{K}^{-1}\) is the information matrix of the prior.</p>
+<p>The price is that the state must contain everything the model needs to predict the next step. For the constant-velocity prior a position alone is not enough: to predict where the robot goes next you also need its velocity. So the state is \(\mathbf{x} = (\mathbf{p}, \mathbf{v})\), as in equation (2.52), and the estimator solves for a velocity at every estimation time alongside the pose. The book notes this variant is sometimes called <strong>simultaneous trajectory estimation and mapping (STEAM)</strong>. <span class="src">§2.2.3 · p. 68</span></p>
+<p>The widget's third option shows what happens if you refuse. Dropping the velocities from the constant-velocity kernel is the marginalization of <a href="#d15">Week 3 · Day 3</a>, and it fills the information matrix in: positions alone are not Markovian, because two earlier positions together reveal the velocity.</p>
+<div class="box kid"><h4>In plain words</h4><p>The prior is a rule of the form "the next state should be close to what the current state predicts". A rule like that only ever compares neighbours. A thousand such rules in a row describe a smooth path of any length, and none of them mentions two states that are far apart.</p></div>
+
+<div class="box dont"><h4>Common mistakes</h4><ul>
+<li><strong>"A sparse inverse means distant poses are uncorrelated."</strong> No. \(\mathbf{K}\) is full: every pose is correlated with every other. The zeros are in \(\mathbf{K}^{-1}\), and mean there is no <em>direct</em> factor between distant poses.</li>
+<li><strong>"Constant-velocity prior means the robot moves at constant velocity."</strong> It means deviations from constant velocity are penalized, with a strength set by \(\boldsymbol{\mathcal{Q}}\). The measurements can still bend the trajectory.</li>
+<li><strong>"The velocities are extra work."</strong> They are what keeps the factor graph a chain. Leaving them out makes the prior dense.</li>
+</ul></div>
+
+<div class="quiz"><h3>Check yourself</h3>
+  <div class="q" data-a="0"><p class="qq">Q1. A scalar random-walk prior has power spectral density 0.5 m²/s. What is the standard deviation of the change in position over 8 s?</p><div class="opts"><button type="button" class="opt">2 m</button><button type="button" class="opt">4 m</button><button type="button" class="opt">0.5 m</button><button type="button" class="opt">1.41 m</button></div><p class="exp" hidden>The variance is Q_c Δt = 0.5 × 8 = 4 m², so the standard deviation is 2 m.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q2. Under the constant-velocity model, the state is (p, v) = (1, 3). With no noise, what is the state 2 s later?</p><div class="opts"><button type="button" class="opt">(1, 3)</button><button type="button" class="opt">(4, 3)</button><button type="button" class="opt">(7, 3)</button><button type="button" class="opt">(7, 6)</button></div><p class="exp" hidden>Φ = [[1, 2], [0, 1]], so p becomes 1 + 2·3 = 7 and v stays 3.</p></div>
+  <div class="q" data-a="3"><p class="qq">Q3. A scalar random walk is evaluated at 5 times. How many entries of the 5 × 5 inverse kernel matrix are nonzero?</p><div class="opts"><button type="button" class="opt">5</button><button type="button" class="opt">25</button><button type="button" class="opt">9</button><button type="button" class="opt">13</button></div><p class="exp" hidden>Tridiagonal: 5 on the diagonal plus 4 above and 4 below, 13 in all.</p></div>
+  <div class="q" data-a="1"><p class="qq">Q4. A scalar random walk starts at t₁ = 0 with zero initial variance and has Q_c = 1. What is the kernel value K(2, 5)?</p><div class="opts"><button type="button" class="opt">5</button><button type="button" class="opt">2</button><button type="button" class="opt">3</button><button type="button" class="opt">10</button></div><p class="exp" hidden>K(t, t′) = Q_c · min(t, t′) = 2. Only the noise up to the earlier time is shared by both values.</p></div>
+  <div class="q" data-a="2"><p class="qq">Q5. Why does the constant-velocity prior use a state with both pose and velocity?</p><div class="opts"><button type="button" class="opt">Because velocity is always measured by a sensor</button><button type="button" class="opt">To make the kernel matrix K sparse</button><button type="button" class="opt">Because the state must be Markovian for the inverse kernel matrix to be block-tridiagonal, and position alone is not</button><button type="button" class="opt">Because the transition function does not exist for a position-only state</button></div><p class="exp" hidden>Predicting the next position needs the current velocity. With (p, v) as the state each step depends only on the previous state, which gives the chain of binary factors.</p></div>
+</div>
+
+<div class="box ok"><h4>Recap</h4><ol>
+<li>Motion prior: \(\dot{\mathbf{x}} = \mathbf{A}\mathbf{x} + \mathbf{L}\mathbf{w}\) with white noise of power spectral density \(\boldsymbol{\mathcal{Q}}\), equation (2.46). Its solution is a GP.</li>
+<li>One step: \(\mathbf{x}_i = \boldsymbol{\Phi}(t_i,t_{i-1})\mathbf{x}_{i-1} + \mathbf{w}_i\), \(\mathbf{w}_i \sim \N(\mathbf{0}, \mathbf{Q}_i)\). Constant velocity: \(\boldsymbol{\Phi} = \begin{bmatrix} 1 &amp; \Delta t \\ 0 &amp; 1 \end{bmatrix}\), \(\mathbf{Q}_i = Q_c\begin{bmatrix} \Delta t^3/3 &amp; \Delta t^2/2 \\ \Delta t^2/2 &amp; \Delta t \end{bmatrix}\) per axis.</li>
+<li>\(\mathbf{K} = \boldsymbol{\Phi}\mathbf{Q}\boldsymbol{\Phi}\T\) is dense. \(\mathbf{K}^{-1} = \boldsymbol{\Phi}^{-\mathsf{T}}\mathbf{Q}^{-1}\boldsymbol{\Phi}^{-1}\) is block-tridiagonal.</li>
+<li>As factors: one unary factor on the first state and a binary factor \(\norm{\mathbf{x}_i - \boldsymbol{\Phi}\mathbf{x}_{i-1}}^2_{\mathbf{Q}_i}\) between consecutive states.</li>
+<li>This needs a Markovian state, so higher-order priors estimate derivatives too (STEAM).</li>
+</ol></div>
+
+<div class="refs"><h4>Sources</h4><ol>
+<li><em>SLAM Handbook</em>, §2.2.3 "Gaussian Processes", pp. 66–68, equations (2.46)–(2.52), Figure 2.4.</li>
+<li>The unrolled-recursion derivation of \(\mathbf{K} = \boldsymbol{\Phi}\mathbf{Q}\boldsymbol{\Phi}\T\) and the closed form of \(\mathbf{Q}_i\) for white noise on acceleration follow Barfoot, <em>State Estimation for Robotics</em>, 2017.</li>
+<li>White noise, its integral, and the matrix-exponential solution of a linear SDE follow Särkkä and Solin, <em>Applied Stochastic Differential Equations</em>, 2019. The definition of a Gaussian process follows Rasmussen and Williams, <em>Gaussian Processes for Machine Learning</em>, 2006.</li>
+</ol></div>
+<p class="next"></p>
+</section>
